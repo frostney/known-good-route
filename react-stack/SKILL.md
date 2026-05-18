@@ -53,6 +53,8 @@ These defaults apply to both profiles. Profile sections only add or override.
 
   Pivot to a provider's native integration only when the Gateway cannot meet a specific verified need; isolate and document it.
 - **Schema validation outside Convex: Zod.** Inside Convex, use Convex's `v` validators (see `convex-conventions/SKILL.md`).
+- **Local dev URLs: Portless.** Stable `https://<app>.localhost` URLs via `portless` instead of bare port numbers — solves port conflicts, hardcoded ports, cookie / storage clashes between apps, and gives each git worktree its own subdomain. Multi-app projects use a `portless.json` at the repo root with zero-arg mode to start every dev script concurrently.
+- **Environment variables: Doppler when shared across a team.** A solo project can stay on `.env.local`. Once more than one developer needs the same secrets, switch to Doppler for centralized per-environment secret management (`doppler run -- bun dev` for local execution). `.env.local` remains in `.gitignore`; the canonical secret source is Doppler.
 - **Aggregator script:** a single `bun run check` entry point that runs format-check + lint + test + typecheck + build (parallel where possible). Acceptable shapes:
   - Parallel: `bun run --parallel check:biome check:typescript check:knip`
   - Sequential: `biome check && tsc --noEmit`
