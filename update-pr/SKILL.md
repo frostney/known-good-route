@@ -5,6 +5,10 @@ description: >-
   pushes to the current PR branch, and refreshes PR title/body when stale. Use
   when the user runs /update-pr or asks to update a pull request with the latest
   commits.
+license: Unlicense OR MIT
+compatibility: >-
+  Requires git and the GitHub CLI (gh) authenticated to the target repository,
+  plus network access.
 ---
 
 # Update PR

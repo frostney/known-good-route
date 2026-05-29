@@ -4,6 +4,10 @@ description: >-
   Commits relevant local changes, pushes a focused branch, and opens a draft
   pull request on the current GitHub repository using the project's PR template
   (single or multi-template). Use when the user runs /create-pr.
+license: Unlicense OR MIT
+compatibility: >-
+  Requires git and the GitHub CLI (gh) authenticated to the target repository,
+  plus network access.
 ---
 
 # Create PR

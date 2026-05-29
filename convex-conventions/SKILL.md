@@ -9,6 +9,10 @@ description: >-
   upstream get-convex/agent-skills, and let the live Convex docs override this
   skill when they disagree. Use when scaffolding, reviewing, or refactoring
   Convex functions, schemas, or auth.
+license: Unlicense OR MIT
+compatibility: >-
+  Assumes a Bun-based Convex project; verifies APIs against the live
+  docs.convex.dev, so network access is required.
 ---
 
 # Convex conventions

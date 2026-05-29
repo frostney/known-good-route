@@ -9,6 +9,10 @@ description: >-
   conventions and project-structure for deeper specifics. Use when scaffolding
   a new React-based app, upgrading deps, choosing tooling for an MVP, or
   deciding which profile a project belongs to.
+license: Unlicense OR MIT
+compatibility: >-
+  Assumes a Bun-only TypeScript project (Next.js App Router or Expo Router)
+  using Tailwind, Convex, Clerk, and Lefthook.
 ---
 
 # React stack

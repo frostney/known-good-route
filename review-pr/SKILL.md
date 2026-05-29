@@ -6,6 +6,10 @@ description: >-
   top-level PR or issue comments. Prefers the /resolve-reviews skill when it is
   available and falls back to a standalone workflow otherwise. Use when the
   user runs /review-pr.
+license: Unlicense OR MIT
+compatibility: >-
+  Requires the GitHub CLI (gh) authenticated to the target repository and
+  network access.
 ---
 
 # Review PR

@@ -1,0 +1,47 @@
+name: Validate skills
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install skills-ref
+        run: pip install skills-ref
+
+      - name: Validate every skill against the Agent Skills spec
+        run: |
+          set -uo pipefail
+          status=0
+          found=0
+          for dir in */; do
+            if [ -f "${dir}SKILL.md" ]; then
+              found=1
+              echo "::group::Validating ${dir%/}"
+              if agentskills validate "${dir%/}"; then
+                echo "OK: ${dir%/}"
+              else
+                echo "::error file=${dir}SKILL.md::Skill ${dir%/} failed validation"
+                status=1
+              fi
+              echo "::endgroup::"
+            fi
+          done
+          if [ "$found" -eq 0 ]; then
+            echo "::error::No skill directories (containing SKILL.md) were found"
+            exit 1
+          fi
+          exit $status

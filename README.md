@@ -31,7 +31,7 @@ The skills split into two groups:
 
 ## Conventions across all skills
 
-- Each skill is a single `SKILL.md` with YAML frontmatter (`name`, third-person `description` ending with "Use when…") and a `## Instructions` body. No `disable-model-invocation` — these are meant to be invoked from ambient context.
+- Each skill is a single `SKILL.md` with YAML frontmatter (`name`, third-person `description` ending with "Use when…", `license`, and `compatibility` where the skill has real environment requirements) and a `## Instructions` body. The frontmatter conforms to the [Agent Skills specification](https://agentskills.io/specification). No `disable-model-invocation` — these are meant to be invoked from ambient context.
 - **Workflow skills** lead with `### Rules`, then `### Steps`: the constraints under which the procedure runs, then the procedure itself.
 - **Setup / audit skills** open with the conventions and close with a `### Rules` section listing audit-checkable invariants.
 - **Verify versions live** is a recurring rule across stack skills: the agent confirms the current stable version of every dependency from the registry (`bun pm view <package> version`) or official release notes before adding or upgrading any dependency. Memory and prior conversation turns are not acceptable sources.
@@ -45,3 +45,16 @@ The skills split into two groups:
 - `review-pr` invokes `/update-pr` for the commit/push step (and `/resolve-reviews` when registered).
 - `create-issue` and `implement-issue` invoke `/grill-with-docs` (preferred) or `/grill-me` for thoroughness when registered.
 - `react-stack` and `native-nostalgia-stack` defer to `project-structure` for repo layout and to their respective domain skills (`convex-conventions`) for deeper specifics.
+
+## Validation
+
+Every skill is validated against the [Agent Skills specification](https://agentskills.io/specification) in CI via the [`skills-ref`](https://github.com/agentskills/agentskills) reference implementation — see [`.github/workflows/validate-skills.yml`](.github/workflows/validate-skills.yml). To validate locally:
+
+```bash
+pip install skills-ref
+agentskills validate ./convex-conventions
+```
+
+## License
+
+Dual-licensed under either of [The Unlicense](LICENSE) (public domain) or the [MIT License](LICENSE-MIT) at your option — SPDX expression `Unlicense OR MIT`. Each skill declares the same in its frontmatter.

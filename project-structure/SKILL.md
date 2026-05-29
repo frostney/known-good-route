@@ -14,6 +14,7 @@ description: >-
   Stack-specific tools (test runners, linters, generators) live in the
   matching stack skill. Use when scaffolding or restructuring any repo,
   writing AGENTS.md or docs, or laying out folders.
+license: Unlicense OR MIT
 ---
 
 # Project structure
