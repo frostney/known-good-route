@@ -36,6 +36,8 @@ These three gates are mandatory. Most failures of this skill come from skipping 
 - ❌ "Since `/implement-issue` is an implementation command, I'll proceed with option A." → No. The command requires you to wait for the choice. Implementation is what happens *after* the user picks.
 - ❌ "The choice is obvious, so I'll skip the question." → No. Present options and wait. The user may know constraints you don't.
 - ❌ "Grill isn't strictly necessary here." → No. If it's registered, run it.
+- ❌ "I treated `grill-with-docs` as 'answer with doc-grounding' instead of actually running the grilling loop." → No. Invoking grill means **executing the grill skill itself** — its real, interactive question loop — not answering in a doc-grounded style, not paraphrasing what it would ask. Load the skill and run it.
+- ❌ "I'll ask a couple of clarifying questions of my own; that's basically grilling." → No. That is not the grill skill. Run the actual `grill-with-docs` / `grill-me` skill.
 - ❌ "I found the likely cause in this one file, no need to look further." → No. Complete the full-context investigation first.
 
 If you are a smaller / non-frontier model: treat steps 6, 5, and 8 as literal hard stops. Run the tool, finish the checklist, ask the question, then wait.
@@ -43,6 +45,15 @@ If you are a smaller / non-frontier model: treat steps 6, 5, and 8 as literal ha
 ### Use the grill skill for thoroughness (always when available)
 
 Before forming a hypothesis or presenting implementation options, the agent **always invokes the grill skill** when it is registered in this environment — not only when something is ambiguous. This is GATE A above. The grill output is folded into the implementation plan and validation step so the result is more thorough than the raw issue text would produce.
+
+**Invoking the grill skill means literally running that skill — not imitating its spirit.** `grill-with-docs` and `grill-me` are separate skills with their own multi-question interrogation loop. To invoke one you **read its `SKILL.md` and execute its procedure**: actually ask the user the grilling questions it generates and wait for the answers, iterating until the loop completes. The following are **NOT** invoking it and are forbidden substitutes:
+
+- Treating the mention of `grill-with-docs` as a style instruction — "answer with doc-grounding," "be thorough," "cite the docs" — and then proceeding. ❌
+- Summarizing or paraphrasing the questions grilling *would* ask instead of asking them. ❌
+- Asking one or two clarifying questions of your own and calling that grilling. ❌
+- Skipping it because you believe you already understand the request. ❌
+
+If you cannot run the grill skill, do not silently downgrade it to "doc-grounded answering" — say explicitly that no grill skill was found (see discovery hint) and proceed on the input as given.
 
 - **`/grill-with-docs` is preferred.** Use `/grill-me` only when `/grill-with-docs` is not registered.
 - Discovery hint: look for a skill or command named `grill-with-docs` or `grill-me` (e.g. `~/.cursor/skills/grill-with-docs/`, `~/.cursor/skills/grill-me/`, `.cursor/skills/...`, `.agents/skills/...`).
@@ -82,7 +93,7 @@ gh api "repos/$OWNER/$REPO/issues/$ISSUE_NUMBER"
    - **Case: already fixed BUT not covered by a regression test.** The behavior works but nothing prevents it from regressing. The work becomes **adding a regression test** (and any missing edge-case tests) that would fail against the pre-fix code and passes now — no production-code change. Name the test after the issue so the linkage is obvious.
    - **Case: fixed for the reported path but adjacent paths are untested or still broken.** Add tests for the sibling paths surfaced in the broad search above, and fix any that are genuinely broken. Treat each broken sibling as in-scope only if it shares the issue's root cause; otherwise note it for a separate issue.
    - In all three cases, confirm the "already fixed" conclusion with evidence (the passing reproduction, the responsible code, the existing or missing test) before presenting it — a behavior that merely looks fixed in one spot may still fail on another path.
-6. **Run the grill skill (GATE A).** When `grill-with-docs` / `grill-me` is registered, invoke it now on the issue plus your investigation findings, and fold its output into the options and verification plan. If none is registered, say so explicitly and continue.
+6. **Run the grill skill (GATE A).** When `grill-with-docs` / `grill-me` is registered, **read that skill and execute its actual question loop now** on the issue plus your investigation findings — ask the questions, wait for answers, iterate to completion — then fold its output into the options and verification plan. Do not substitute a "doc-grounded" answer or your own ad-hoc questions for the skill. If none is registered, say so explicitly and continue.
 7. Validate before coding:
    - The issue exists, is open, and is not a pull request.
    - No `blocked`, `duplicate`, `wontfix`, or equivalent label/comment.
