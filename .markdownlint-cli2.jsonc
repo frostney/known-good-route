@@ -1,0 +1,28 @@
+// markdownlint-cli2 config for the Known Good Route skills corpus.
+//
+// Consumed by .github/workflows/lint-markdown.yml
+// (DavidAnson/markdownlint-cli2-action@v19). The job is blocking — any
+// failure rejects the PR.
+//
+// Rule set is reused from the LWPT corpus. Disabled rules below are
+// deliberate: SKILL.md files are long-form prose with repeated section
+// headings (Rules, Steps, Checklist) and occasional inline HTML.
+{
+  "config": {
+    "MD013": false,   // line-length — skills intentionally have long sentences
+    "MD024": false,   // no-duplicate-heading — skills repeat "Rules"/"Steps"/"Checklist"
+    "MD029": false,   // ol-prefix — numbered Steps use sequential, cross-referenced numbers ("step 6", "step 15") interrupted by code blocks
+    "MD033": false,   // no-inline-html — occasional inline HTML in prose
+    "MD034": false,   // no-bare-urls — discovery hints include bare paths/URLs
+    "MD041": false,   // first-line-must-be-h1 — frontmatter precedes the H1
+    "MD060": false,   // table-column-style — keep the compact separator style
+
+    "MD003": { "style": "atx" },           // heading style: # not underline
+    "MD007": { "indent": 2 },              // list indent: 2 spaces
+    "MD040": true,                          // fenced-code-blocks must have a language tag
+    "MD046": { "style": "fenced" }         // code-block style: ``` not indent
+  },
+  "ignores": [
+    "node_modules/"
+  ]
+}
