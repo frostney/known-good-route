@@ -11,7 +11,6 @@
   "config": {
     "MD013": false,   // line-length — skills intentionally have long sentences
     "MD024": false,   // no-duplicate-heading — skills repeat "Rules"/"Steps"/"Checklist"
-    "MD029": false,   // ol-prefix — numbered Steps use sequential, cross-referenced numbers ("step 6", "step 15") interrupted by code blocks
     "MD033": false,   // no-inline-html — occasional inline HTML in prose
     "MD034": false,   // no-bare-urls — discovery hints include bare paths/URLs
     "MD041": false,   // first-line-must-be-h1 — frontmatter precedes the H1
