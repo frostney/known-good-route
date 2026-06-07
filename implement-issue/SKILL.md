@@ -114,13 +114,13 @@ If you cannot run the grill skill, do not silently downgrade it to "doc-grounded
 10. Implement the smallest complete change that satisfies the chosen approach.
 11. Update tests and documentation per the repository's contribution guidance (`CONTRIBUTING.md`, `AGENTS.md`, or equivalent) when present.
 12. Run targeted verification first (focused tests, types, lint) on the changed area, then broader verification when the change has wider impact.
-13. **If the change is UI/UX, also:**
-    - Run the app (or Storybook / component sandbox) and load the affected screens or components.
-    - Compare against the design or current state from the issue. Capture before/after screenshots or short recordings.
+13. **If the change is UI/UX, rendering and visual evidence are mandatory (do not skip).** A UI/UX change handed off without screenshots of the actual rendered result is incomplete:
+    - Run the app (or Storybook / component sandbox) and load every affected screen, component, and state — never assert the UI is correct without rendering it.
+    - Capture before/after screenshots (or short recordings) of each affected screen and state, at the project's supported breakpoints and across light/dark/system themes when applicable.
+    - Compare the captures against the design or the issue's expected state, and fix any discrepancy before handoff.
     - Verify accessibility: keyboard navigation and focus order, visible focus styles, ARIA roles/labels for new interactive elements, color contrast meeting WCAG AA (or the project's standard), and `prefers-reduced-motion` respected for animations.
-    - Verify responsive behavior at the project's supported breakpoints and across light/dark/system themes when applicable.
     - Reuse existing design-system components and tokens; do not introduce one-off styles for primitives that already exist.
-    - Attach before/after media and accessibility notes to the PR description so reviewers can evaluate without re-running the app.
+    - **Attach the screenshots/recordings and accessibility notes to the PR — this is mandatory, not optional.** The PR must be fully reviewable from these artifacts alone, without re-running the app, so the change can be judged asynchronously. A UI/UX PR missing this visual evidence is not ready for `/create-pr`.
 14. **Run the project's full verification gate before invoking `/create-pr`.** Prefer the project's aggregator script when it exists (e.g. `bun run check`) — that's the canonical "ready to commit" signal. Otherwise run the per-step gate explicitly:
 
     ```bash
