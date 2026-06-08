@@ -86,6 +86,18 @@ If you cannot run the grill skill, do not silently downgrade it to "doc-grounded
 - Discovery hint: look for a skill or command named `grill-with-docs` or `grill-me` (e.g. `~/.cursor/skills/grill-with-docs/`, `~/.cursor/skills/grill-me/`, `.cursor/skills/...`, `.agents/skills/...`).
 - If neither is registered, state explicitly that no grill skill was found, then proceed with the workflow on the input as given.
 
+When this workflow invokes an external grill skill, treat it as a nested planning dependency: obey that skill's procedure exactly, do not implement product code during the grill sub-session unless that skill explicitly requires documentation/context updates, then return to this workflow and continue with validation and options.
+
+### Active context declaration
+
+Do not declare the active context at invocation time. First confirm the mini-spec, read project/area context, discover matching skills, investigate the relevant code paths, and run the grill skill when available. Then, immediately before presenting implementation options, briefly state the context and skills that are now active, for example:
+
+```text
+Active context before planning: AGENTS.md, project-area/AGENTS.md, project-area/CONTEXT.md, docs/adr/0003-..., react-stack, convex, grill-with-docs. No matching <domain> skill found.
+```
+
+This is a gate immediately before options: if a relevant project, stack, domain, or grill skill exists but is missing from the declaration, load it before continuing. A context note before grill does not satisfy this gate; the active context must be restated with the implementation options.
+
 ### Steps
 
 1. Capture the raw idea from the user. If no idea was provided, ask for it.
@@ -112,12 +124,12 @@ If you cannot run the grill skill, do not silently downgrade it to "doc-grounded
    - **Case: already implemented and covered.** Point to the existing implementation and its tests. The recommended outcome is to use it as-is or close the idea as already covered, not to write duplicate code.
    - **Case: partially implemented.** Identify what exists versus what the spec still needs; the work becomes extending the existing implementation, not starting fresh.
    - Confirm any "already exists" conclusion with evidence (the responsible code and tests) before presenting it.
-5. **Run the grill skill (GATE B).** When `grill-with-docs` / `grill-me` is registered, **read that skill and execute its actual question loop now** on the confirmed mini-spec plus your investigation findings — ask the questions, wait for answers, iterate to completion — then fold its output into the options and verification plan. Do not substitute a "doc-grounded" answer or your own ad-hoc questions for the skill. If none is registered, say so explicitly and continue.
+5. **Run the grill skill (GATE B).** When `grill-with-docs` / `grill-me` is registered, **read that skill and execute its actual question loop now** on the confirmed mini-spec plus your investigation findings — ask the questions, wait for answers, iterate to completion — then fold its output into the options and verification plan. Provide the grill skill with the project, stack, domain, docs, ADR, and investigation context discovered in steps 3–4. Do not substitute a "doc-grounded" answer or your own ad-hoc questions for the skill. Do not implement product code during the grill sub-session unless the grill skill explicitly requires documentation/context updates. If no grill skill is registered, say so explicitly and continue.
 6. Validate before coding:
    - The mini-spec is confirmed, the scope is bounded, and the success criteria are clear enough to verify against.
    - The idea is not already fully implemented (per step 4).
    - If the spec is still ambiguous or the scope keeps growing, stop and return to step 2.
-7. **Present implementation options, then STOP and wait (GATE D).** Always present exactly three distinct options for delivering the idea, with tradeoffs, a verification plan tied to the success criteria, and a recommendation grounded in the step 4 investigation and step 5 grill output. The three must be genuinely different approaches (e.g. scope/architecture/effort tradeoffs), not trivial variations of one. When step 4 found the idea **already implemented**, the options reflect that instead of inventing duplicate code — e.g. (a) use/close as already covered, (b) extend the existing implementation to meet the remaining spec, (c) a thin alternative that reuses the existing code. **Do not write any implementation code until the user explicitly picks an option or explicitly tells you to proceed with the recommendation.** Do not interpret "this is an implementation command" as permission to skip the choice. End your turn here and wait for the user's reply.
+7. **Declare active context, present implementation options, then STOP and wait (GATE D).** Before listing options, state the active context/skills discovered and used in steps 3–5, including any applicable project, stack, domain, docs, ADR, and grill skills. If the declaration reveals a relevant missing skill or context file, load it before continuing. Then present exactly three distinct options for delivering the idea, with tradeoffs, a verification plan tied to the success criteria, and a recommendation grounded in the step 4 investigation and step 5 grill output. The three must be genuinely different approaches (e.g. scope/architecture/effort tradeoffs), not trivial variations of one. When step 4 found the idea **already implemented**, the options reflect that instead of inventing duplicate code — e.g. (a) use/close as already covered, (b) extend the existing implementation to meet the remaining spec, (c) a thin alternative that reuses the existing code. **Do not write any implementation code until the user explicitly picks an option or explicitly tells you to proceed with the recommendation.** Do not interpret "this is an implementation command" as permission to skip the choice. End your turn here and wait for the user's reply.
    *If the chosen option is "already covered" with no code or test change, skip steps 8–16: report the existing implementation and stop. The remaining steps apply only when there is a code or test change to ship.*
 
 8. Branch / worktree:

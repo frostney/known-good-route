@@ -63,6 +63,18 @@ If you cannot run the grill skill, do not silently downgrade it to "doc-grounded
 - Discovery hint: look for a skill or command named `grill-with-docs` or `grill-me` (e.g. `~/.cursor/skills/grill-with-docs/`, `~/.cursor/skills/grill-me/`, `.cursor/skills/...`, `.agents/skills/...`).
 - If neither is registered, state explicitly that no grill skill was found, then proceed with the workflow on the input as given.
 
+When this workflow invokes an external grill skill, treat it as a nested planning dependency: obey that skill's procedure exactly, do not implement product code during the grill sub-session unless that skill explicitly requires documentation/context updates, then return to this workflow and continue with validation and options.
+
+### Active context declaration
+
+Do not declare the active context at invocation time. First fetch the issue, read project/area context, discover matching skills, investigate/reproduce the relevant behavior, and run the grill skill when available. Then, immediately before presenting implementation options, briefly state the context and skills that are now active, for example:
+
+```text
+Active context before planning: AGENTS.md, project-area/AGENTS.md, project-area/CONTEXT.md, docs/adr/0003-..., react-stack, convex, grill-with-docs. No matching <domain> skill found.
+```
+
+This is a gate immediately before options: if a relevant project, stack, domain, or grill skill exists but is missing from the declaration, load it before continuing. A context note before grill does not satisfy this gate; the active context must be restated with the implementation options.
+
 ### Steps
 
 1. Parse the issue number. If missing or non-numeric, ask.
@@ -97,13 +109,13 @@ If you cannot run the grill skill, do not silently downgrade it to "doc-grounded
    - **Case: already fixed BUT not covered by a regression test.** The behavior works but nothing prevents it from regressing. The work becomes **adding a regression test** (and any missing edge-case tests) that would fail against the pre-fix code and passes now — no production-code change. Name the test after the issue so the linkage is obvious.
    - **Case: fixed for the reported path but adjacent paths are untested or still broken.** Add tests for the sibling paths surfaced in the broad search above, and fix any that are genuinely broken. Treat each broken sibling as in-scope only if it shares the issue's root cause; otherwise note it for a separate issue.
    - In all three cases, confirm the "already fixed" conclusion with evidence (the passing reproduction, the responsible code, the existing or missing test) before presenting it — a behavior that merely looks fixed in one spot may still fail on another path.
-6. **Run the grill skill (GATE A).** When `grill-with-docs` / `grill-me` is registered, **read that skill and execute its actual question loop now** on the issue plus your investigation findings — ask the questions, wait for answers, iterate to completion — then fold its output into the options and verification plan. Do not substitute a "doc-grounded" answer or your own ad-hoc questions for the skill. If none is registered, say so explicitly and continue.
+6. **Run the grill skill (GATE A).** When `grill-with-docs` / `grill-me` is registered, **read that skill and execute its actual question loop now** on the issue plus your investigation findings — ask the questions, wait for answers, iterate to completion — then fold its output into the options and verification plan. Provide the grill skill with the project, stack, domain, docs, ADR, and investigation context discovered in steps 4–5. Do not substitute a "doc-grounded" answer or your own ad-hoc questions for the skill. Do not implement product code during the grill sub-session unless the grill skill explicitly requires documentation/context updates. If no grill skill is registered, say so explicitly and continue.
 7. Validate before coding:
    - The issue exists, is open, and is not a pull request.
    - No `blocked`, `duplicate`, `wontfix`, or equivalent label/comment.
    - Expected behavior and acceptance criteria are clear enough to implement.
    - If validation fails or requirements are ambiguous, stop and ask.
-8. **Present implementation options, then STOP and wait (GATE C).** Always present exactly three distinct options with tradeoffs, a verification plan, and a recommendation grounded in the step 5 investigation and step 6 grill output. The three must be genuinely different approaches, not trivial variations of one. When step 5 found the issue **already fixed**, the options reflect that situation instead of inventing a code change — e.g. (a) close as already resolved citing the fixing commit and covering test, (b) add a regression test (plus missing edge-case tests) that would have caught the original bug, (c) extend coverage/fixes to the adjacent paths surfaced in the search. **Do not write any implementation code until the user explicitly picks an option or explicitly tells you to proceed with the recommendation.** Do not interpret "this is an implementation command" as permission to skip the choice. End your turn here and wait for the user's reply.
+8. **Declare active context, present implementation options, then STOP and wait (GATE C).** Before listing options, state the active context/skills discovered and used in steps 4–6, including any applicable project, stack, domain, docs, ADR, and grill skills. If the declaration reveals a relevant missing skill or context file, load it before continuing. Then present exactly three distinct options with tradeoffs, a verification plan, and a recommendation grounded in the step 5 investigation and step 6 grill output. The three must be genuinely different approaches, not trivial variations of one. When step 5 found the issue **already fixed**, the options reflect that situation instead of inventing a code change — e.g. (a) close as already resolved citing the fixing commit and covering test, (b) add a regression test (plus missing edge-case tests) that would have caught the original bug, (c) extend coverage/fixes to the adjacent paths surfaced in the search. **Do not write any implementation code until the user explicitly picks an option or explicitly tells you to proceed with the recommendation.** Do not interpret "this is an implementation command" as permission to skip the choice. End your turn here and wait for the user's reply.
    *If the chosen option is "close as already resolved" with no code or test change, skip steps 9–17: instead, comment on the issue with the evidence (fixing commit + covering test) and close it (or ask the user to). The remaining steps apply only when there is a code or test change to ship.*
 
 9. Branch / worktree:
