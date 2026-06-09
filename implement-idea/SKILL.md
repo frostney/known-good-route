@@ -8,10 +8,12 @@ description: >-
   full-context investigation, invokes the grill skill when registered, presents
   exactly three options and stops for the user's choice before coding, updates
   the branch against origin's default branch, implements the chosen option,
+  searches project context for DEFINITION_OF_READY.md before implementation,
   runs verification (UI/UX checks plus the project's full check gate), reviews
-  against the spec's success criteria, runs a /review code review, and always
-  hands off via /create-pr. Use when the user runs /implement-idea or wants to
-  build something that is not an existing issue.
+  against the spec's success criteria and project-context DEFINITION_OF_DONE.md
+  before handoff, runs a /review code review, and always hands off via
+  /create-pr. Use when the user runs /implement-idea or wants to build something
+  that is not an existing issue.
 license: Unlicense OR MIT
 compatibility: >-
   Requires git and the GitHub CLI (gh) for the /create-pr handoff, plus network
@@ -38,6 +40,7 @@ These five gates are mandatory. Most failures of this skill come from skipping o
 
 - ❌ "The idea is clear enough, I'll just start building." → No. Formulate scope, outcome, and success criteria and get confirmation first (GATE A).
 - ❌ "Since `/implement-idea` is an implementation command, I'll proceed with option A." → No. The command requires you to wait for the choice. Implementation is what happens *after* the user picks.
+- ❌ "The user said 'Agreed' / 'go ahead' / 'sounds good' before I ran grill and showed options." → No. That only counts as implementation approval if it comes **after** the required grill/options gate. To skip the gate entirely, the user must explicitly say something like: "skip the implement-idea gate and code directly."
 - ❌ "The choice is obvious, so I'll skip the question." → No. Present options and wait. The user may know constraints you don't.
 - ❌ "Grill isn't strictly necessary here." → No. If it's registered, run it.
 - ❌ "I treated `grill-with-docs` as 'answer with doc-grounding' instead of actually running the grilling loop." → No. Invoking grill means **executing the grill skill itself** — its real, interactive question loop — not answering in a doc-grounded style, not paraphrasing what it would ask. Load the skill and run it.
@@ -96,16 +99,36 @@ Do not declare the active context at invocation time. First confirm the mini-spe
 Active context before planning: AGENTS.md, project-area/AGENTS.md, project-area/CONTEXT.md, docs/adr/0003-..., react-stack, convex, grill-with-docs. No matching <domain> skill found.
 ```
 
-This is a gate immediately before options: if a relevant project, stack, domain, or grill skill exists but is missing from the declaration, load it before continuing. A context note before grill does not satisfy this gate; the active context must be restated with the implementation options.
+This is a gate immediately before options: actively search for relevant project, stack, domain, and grill context before the declaration. If the declaration is missing any discovered context, load it before continuing. A context note before grill does not satisfy this gate; the active context must be restated with the implementation options.
+
+### Pre-edit approval checklist
+
+Before any file edit or implementation command, run this checklist out loud in commentary:
+
+```text
+Gate check: I have not edited files yet. I'm running the grill/options step first.
+```
+
+Then confirm all five items are true:
+
+- Grill-with-docs / grill-me has run, or the user explicitly waived it.
+- The project-context Definition of Ready search is complete, every discovered Definition of Ready has been read, and the selected path satisfies every applicable readiness item before any file edit.
+- Exactly three implementation options were presented.
+- One option was recommended.
+- The user explicitly selected an option, or explicitly approved the recommendation, **after** seeing those options.
+
+If any item is missing, stop. Ask for the missing grill step, Definition of Ready search/readiness resolution, options gate, recommendation, or post-options approval before editing. Generic approval language such as "Agreed", "go ahead", "sounds good", or equivalent does not satisfy this checklist unless it follows the three presented options. The only way to bypass this checklist before options is an explicit user instruction such as: "skip the implement-idea gate and code directly."
 
 ### Steps
 
 1. Capture the raw idea from the user. If no idea was provided, ask for it.
 2. **Formulate and confirm the idea (GATE A).** Ask focused follow-up questions across **scope**, **outcome**, and **success criteria**, shaping the spec with `/create-issue`'s good-issue components (see "Formulating the idea" above). Iterate until all three are pinned down, then write the mini-spec back as a short Scope / Outcome / Success-criteria block and get the user's explicit confirmation. Do not investigate or plan until the spec is confirmed. If the user cannot commit to success criteria, surface that as a risk and agree on a provisional definition of done.
 3. **Read the project's agent context before forming a hypothesis or editing.** In this order:
-   - The **root** `AGENTS.md` (and `CLAUDE.md` if present — usually an alias).
+   - The **root** `AGENTS.md`.
+   - **Agent-alias files (mandatory search).** Search for `CLAUDE.md` and equivalent root agent aliases. Read each discovered alias and confirm whether it is a symlink/alias to `AGENTS.md` or contains additional instructions. Carry any additional instructions into the active context declaration.
    - The **nearest** `<area>/AGENTS.md` to the files the idea touches in a multi-area repo. Nested files override the root for that area.
-   - `CONTRIBUTING.md` when it exists; treat it as authoritative for what may be merged.
+   - **Contribution rules (mandatory search).** Search the root, nearest affected area, `docs/`, and any `AGENTS.md`-referenced context for `CONTRIBUTING.md` or equivalent contribution/review guidance. Read every match. Treat the nearest/most specific match as authoritative for what may be merged, and carry all matches into the active context declaration.
+   - **Project-context Definition files (mandatory search).** Search the root, nearest affected area, `docs/`, and any `AGENTS.md`-referenced context for `DEFINITION_OF_READY.md`, `DEFINITION_OF_DONE.md`, and spelling/case variants such as `Definition of Ready`, `Definition-of-Done`, `definition_of_ready`, or `defintion_of_done`. Read every match. Treat the nearest/most specific match as authoritative for the affected area, and carry all matches into the active context declaration.
    - The repo's `docs/` index (`docs/README.md`, `docs/architecture.md`, `docs/code-style.md`, or equivalent) for the area being changed.
    Do not skip this step even when the idea looks small — Hard Constraints sections (e.g. "Bun only, no npm/pnpm/yarn", "AI SDK via Vercel AI Gateway only") frequently change the implementation path.
 
@@ -128,6 +151,8 @@ This is a gate immediately before options: if a relevant project, stack, domain,
 6. Validate before coding:
    - The mini-spec is confirmed, the scope is bounded, and the success criteria are clear enough to verify against.
    - The idea is not already fully implemented (per step 4).
+   - The project-context Definition of Ready search from step 3 is complete and documented in the active context. The confirmed mini-spec, investigation findings, and selected implementation path satisfy every applicable Definition of Ready item before branching or editing. Any unmet readiness item is a hard stop: resolve it with the user before implementation.
+   - Absence protocol: after the mandatory search finds no Definition of Ready, state that no project-context Definition of Ready was found and continue with the workflow's readiness checks.
    - If the spec is still ambiguous or the scope keeps growing, stop and return to step 2.
 7. **Declare active context, present implementation options, then STOP and wait (GATE D).** Before listing options, state the active context/skills discovered and used in steps 3–5, including any applicable project, stack, domain, docs, ADR, and grill skills. If the declaration reveals a relevant missing skill or context file, load it before continuing. Then present exactly three distinct options for delivering the idea, with tradeoffs, a verification plan tied to the success criteria, and a recommendation grounded in the step 4 investigation and step 5 grill output. The three must be genuinely different approaches (e.g. scope/architecture/effort tradeoffs), not trivial variations of one. When step 4 found the idea **already implemented**, the options reflect that instead of inventing duplicate code — e.g. (a) use/close as already covered, (b) extend the existing implementation to meet the remaining spec, (c) a thin alternative that reuses the existing code. **Do not write any implementation code until the user explicitly picks an option or explicitly tells you to proceed with the recommendation.** Do not interpret "this is an implementation command" as permission to skip the choice. End your turn here and wait for the user's reply.
    *If the chosen option is "already covered" with no code or test change, skip steps 8–16: report the existing implementation and stop. The remaining steps apply only when there is a code or test change to ship.*
@@ -138,7 +163,7 @@ This is a gate immediately before options: if a relevant project, stack, domain,
    - Otherwise create a focused branch named from the idea (e.g. `idea-short-slug`); use a worktree when practical.
    - **Update the branch/worktree against the latest baseline before implementing.** Run `git fetch origin`, then merge the remote default branch into the working branch (e.g. `git merge origin/<default-branch>` — never rebase, per the `git-workflow` skill). Resolve any conflicts and commit the merge before writing new code, so the work starts from the current `origin` main.
 9. Implement the smallest complete change that satisfies the chosen approach and the confirmed success criteria.
-10. Update tests and documentation per the repository's contribution guidance (`CONTRIBUTING.md`, `AGENTS.md`, or equivalent) when present.
+10. Update tests and documentation per the contribution guidance discovered in step 3 (`CONTRIBUTING.md`, `AGENTS.md`, or equivalent). Absence protocol: after the mandatory search finds no contribution guidance, state that no project contribution guidance was found and follow the confirmed spec, Definition of Ready, Definition of Done, and local code patterns.
 11. Run targeted verification first (focused tests, types, lint) on the changed area, then broader verification when the change has wider impact.
 12. **If the change is UI/UX, rendering and visual evidence are mandatory (do not skip).** A UI/UX change handed off without screenshots of the actual rendered result is incomplete:
     - Run the app (or Storybook / component sandbox) and load every affected screen, component, and state — never assert the UI is correct without rendering it.
@@ -147,7 +172,7 @@ This is a gate immediately before options: if a relevant project, stack, domain,
     - Verify accessibility: keyboard navigation and focus order, visible focus styles, ARIA roles/labels for new interactive elements, color contrast meeting WCAG AA (or the project's standard), and `prefers-reduced-motion` respected for animations.
     - Reuse existing design-system components and tokens; do not introduce one-off styles for primitives that already exist.
     - **Attach the screenshots/recordings and accessibility notes to the PR — this is mandatory, not optional.** The PR must be fully reviewable from these artifacts alone, without re-running the app, so the change can be judged asynchronously. A UI/UX PR missing this visual evidence is not ready for `/create-pr`.
-13. **Run the project's full verification gate before invoking `/create-pr`.** Prefer the project's aggregator script when it exists (e.g. `bun run check`) — that's the canonical "ready to commit" signal. Otherwise run the per-step gate explicitly:
+13. **Run the project's full verification gate before invoking `/create-pr`.** Use the project's aggregator script discovered while enumerating real commands (e.g. `bun run check`) — that's the canonical "ready to commit" signal. Absence protocol: after command enumeration finds no aggregator script, run the per-step gate explicitly:
 
     ```bash
     bun install --frozen-lockfile
@@ -162,6 +187,7 @@ This is a gate immediately before options: if a relevant project, stack, domain,
 
 14. **Review the implementation before handoff (do not skip).** After the gate is green but before `/create-pr`, audit your own change critically — as a reviewer who did not write it would:
     - **Check against the spec, criterion by criterion.** Walk each success criterion in the confirmed mini-spec and confirm the change actually satisfies it, citing the code or test that does so; confirm the delivered scope and outcome match what was confirmed. Anything unmet is unfinished work, not a follow-up. When the scope was deliberately changed across later turns or grill sessions, match that updated intent instead — and note the divergence from the original idea in the PR description so reviewers understand why.
+    - **Check the Definition of Done.** Re-read every project-context Definition of Done discovered in step 3 before handoff. Verify the implementation, tests, documentation, review evidence, and handoff artifacts satisfy every applicable item. Any unmet completion item is a hard stop: fix it before `/review` or `/create-pr`, or stop and get explicit user agreement that the item is out of scope. Absence protocol: after the mandatory search found no Definition of Done, state that no project-context Definition of Done was found.
     - **No shortcuts.** No stubbed logic, hardcoded values standing in for real behavior, `TODO`/`FIXME` left behind, swallowed errors, skipped/`.only`/commented-out tests, or "happy path only" handling of cases the spec requires. Confirm the real layer was built, not a façade.
     - **No tech debt introduced.** No dead code, no duplication that should be extracted, no copy-paste of an existing pattern that has a shared helper, no weakened types (`any`, unsafe casts) or loosened lint/type rules to make the gate pass, no leftover debug output.
     - **Consistency.** The change follows the repo's conventions (from step 3 agent context and `docs/code-style.md`) and reuses existing components/utilities rather than reinventing them.

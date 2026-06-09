@@ -61,15 +61,16 @@ Do not declare the active context at invocation time. First resolve the issue te
 Active context before drafting: AGENTS.md, project-area/AGENTS.md, project-area/CONTEXT.md, docs/adr/0003-..., react-stack, convex, grill-with-docs. No matching <domain> skill found.
 ```
 
-This is a gate immediately before drafting: if a relevant project, stack, domain, or grill skill exists but is missing from the declaration, load it before continuing. A context note before grill does not satisfy this gate; the active context must be restated with the issue draft.
+This is a gate immediately before drafting: actively search for relevant project, stack, domain, and grill context before the declaration. If the declaration is missing any discovered context, load it before continuing. A context note before grill does not satisfy this gate; the active context must be restated with the issue draft.
 
 ### Steps
 
 1. Parse the tagline or short description. If missing, ask.
 2. Resolve the issue template:
-   - Prefer `.github/ISSUE_TEMPLATE/` (multiple templates); pick the one matching the issue type (bug, feature, chore, etc.).
-   - Fall back to `.github/ISSUE_TEMPLATE/default.md` or `.github/ISSUE_TEMPLATE.md`.
-   - If no template exists, use a minimal structure: Summary, Reproduction (bugs), Current vs Expected, Scope, Related.
+   - Search `.github/ISSUE_TEMPLATE/`, `.github/ISSUE_TEMPLATE/default.md`, and `.github/ISSUE_TEMPLATE.md`.
+   - Prefer `.github/ISSUE_TEMPLATE/` when multiple templates are discovered; pick the one matching the issue type (bug, feature, chore, etc.).
+   - Fall back to `.github/ISSUE_TEMPLATE/default.md` or `.github/ISSUE_TEMPLATE.md` when discovered.
+   - Absence protocol: after the template search finds no issue template, state that no project issue template was found and use a minimal structure: Summary, Reproduction (bugs), Current vs Expected, Scope, Related.
 3. **Investigate before drafting (GATE B):**
    - Search code, docs, tests, and existing open/closed issues for duplicates and related work.
    - Read the implementation area the issue touches. Do not draft from the tagline alone.
