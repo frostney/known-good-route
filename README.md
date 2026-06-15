@@ -21,9 +21,9 @@ These are [Agent Skills](https://agentskills.io): any skills-compatible agent lo
 | Skill | What it does |
 | --- | --- |
 | [`git-workflow`](git-workflow/SKILL.md) | Default git workflow: feature branches off the remote default, merge (never rebase) for baseline updates, plain pushes, always-new commits, squash-merge for PRs. |
-| [`create-issue`](create-issue/SKILL.md) | File a well-structured GitHub issue from a tagline using the project's issue template, capturing UI/UX context, and grilling the user for thoroughness when a grill skill is registered. |
-| [`implement-issue`](implement-issue/SKILL.md) | Validate an issue against the codebase, read the nearest `AGENTS.md`/`CLAUDE.md`, present implementation options, implement the chosen one, run UI/UX checks plus the project's full verification gate, and hand off via `/create-pr`. |
-| [`implement-idea`](implement-idea/SKILL.md) | Like `implement-issue` but with no GitHub issue: formulate the idea via follow-up questions (scope, outcome, success criteria) into a confirmed mini-spec, then run the same investigate → grill → options → implement → verify → review → `/create-pr` flow. |
+| [`create-issue`](create-issue/SKILL.md) | File a well-structured GitHub issue from a tagline using the project's issue template and `VISION.md` when present, capturing UI/UX context, and grilling the user for thoroughness when a grill skill is registered. Supports `automatic` mode for project-context template/label/body selection. |
+| [`implement-issue`](implement-issue/SKILL.md) | Validate an issue against the codebase, read the nearest `AGENTS.md`/`CLAUDE.md` and `VISION.md` when present, present implementation options, implement the chosen one, run UI/UX checks plus the project's full verification gate, and hand off via `/create-pr`. Supports `automatic` mode for project-context option selection. |
+| [`implement-idea`](implement-idea/SKILL.md) | Like `implement-issue` but with no GitHub issue: formulate the idea via follow-up questions (scope, outcome, success criteria) into a confirmed mini-spec, then run the same investigate → grill → options → implement → verify → review → `/create-pr` flow. Supports `automatic` mode for project-context option selection. |
 | [`create-pr`](create-pr/SKILL.md) | Commit relevant local changes, push a focused branch, and open a draft pull request using the project's PR template. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and push to the current PR, merge the baseline when behind, refresh PR title/body when stale. No amend, no force push. |
 | [`review-pr`](review-pr/SKILL.md) | Resolve review threads in-place — no top-level PR/issue comments, no force pushes — preferring `/resolve-reviews` when registered and using `/update-pr` for the commit/push step. |
@@ -56,6 +56,8 @@ Design decisions and conventions shared across every skill in this collection.
 - `implement-issue` and `implement-idea` invoke `/create-pr` at handoff.
 - `review-pr` invokes `/update-pr` for the commit/push step (and `/resolve-reviews` when registered).
 - `create-issue`, `implement-issue`, and `implement-idea` invoke `/grill-with-docs` (preferred) or `/grill-me` for thoroughness when registered.
+- `create-issue`, `implement-issue`, and `implement-idea` read `VISION.md` when present and stop for clarification when the request conflicts with it.
+- `create-issue`, `implement-issue`, and `implement-idea` support an explicit `automatic` prompt mode where the agent auto-selects the project-context recommendation after completing the required investigation/gates.
 - `implement-idea` borrows `/create-issue`'s good-issue components when formulating the idea.
 - `react-stack` and `native-nostalgia-stack` defer to `project-structure` for repo layout and to their respective domain skills (`convex-conventions`) for deeper specifics.
 

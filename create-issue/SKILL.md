@@ -2,12 +2,12 @@
 name: create-issue
 description: >-
   Creates a well-structured GitHub issue from a tagline or short description in
-  any repository, investigating for duplicates and invoking the grill skill
-  (grill-with-docs / grill-me) as a mandatory gate before drafting, using the
-  project's issue template and label conventions, and capturing UI/UX context
-  (screenshots, design references, accessibility, responsive, theme) when the
-  change is user-facing. Use when the user runs /create-issue or asks to file a
-  GitHub issue.
+  any repository, investigating for duplicates, reading VISION.md when present,
+  and invoking the grill skill (grill-with-docs / grill-me) as a mandatory gate
+  before drafting, using the project's issue template and label conventions, and
+  capturing UI/UX context (screenshots, design references, accessibility,
+  responsive, theme) when the change is user-facing. Use when the user runs
+  /create-issue or asks to file a GitHub issue.
 license: Unlicense OR MIT
 compatibility: >-
   Requires the GitHub CLI (gh) authenticated to the target repository and
@@ -53,6 +53,14 @@ If you cannot run the grill skill, do not silently downgrade it to "doc-grounded
 
 When this workflow invokes an external grill skill, treat it as a nested issue-shaping dependency: obey that skill's procedure exactly, do not implement product code during the grill sub-session unless that skill explicitly requires documentation/context updates, then return to this workflow and draft the issue.
 
+### Automatic mode
+
+Automatic mode is opt-in. It is active only when the user's original `/create-issue` prompt includes the standalone word `automatic` or explicitly asks for automatic mode.
+
+In automatic mode, do **not** skip template discovery, duplicate investigation, `VISION.md` review, grill, active context declaration, or issue drafting. Auto-select the issue template, labels, title, and final issue body based on the project context, then create the issue without pausing for user review. State the choices you made and why they fit the project context.
+
+If the issue would be contrary to `VISION.md`, appears duplicate, needs missing facts that cannot be inferred from the project, or has materially risky scope, automatic mode does not apply: stop and ask the user for clarification.
+
 ### Active context declaration
 
 Do not declare the active context at invocation time. First resolve the issue template, investigate duplicates/related code, read project/area context, discover matching skills, and run the grill skill when available. Then, immediately before drafting the issue, briefly state the context and skills that are now active, for example:
@@ -72,11 +80,12 @@ This is a gate immediately before drafting: actively search for relevant project
    - Fall back to `.github/ISSUE_TEMPLATE/default.md` or `.github/ISSUE_TEMPLATE.md` when discovered.
    - Absence protocol: after the template search finds no issue template, state that no project issue template was found and use a minimal structure: Summary, Reproduction (bugs), Current vs Expected, Scope, Related.
 3. **Investigate before drafting (GATE B):**
+   - Search for `VISION.md` at the repository root and in relevant product/docs areas. Read every discovered vision document and use it to shape the issue scope, non-goals, and acceptance criteria. If the tagline asks for behavior contrary to the stated product or technical vision, call out the conflict explicitly and ask the user whether to revise the issue, override the vision for this work, or abandon the issue before drafting or creating it.
    - Search code, docs, tests, and existing open/closed issues for duplicates and related work.
    - Read the implementation area the issue touches. Do not draft from the tagline alone.
    - If the tagline cannot become a concrete issue without guessing, stop and ask.
 4. **Run the grill skill (GATE A).** When `grill-with-docs` / `grill-me` is registered, **read that skill and execute its actual question loop now** on the tagline plus your investigation findings — ask the questions, wait for answers, iterate to completion — then fold its output into the issue body. Provide the grill skill with the project, stack, domain, docs, ADR, and investigation context discovered in steps 2–3. Do not substitute a "doc-grounded" answer or your own ad-hoc questions for the skill. Do not implement product code during the grill sub-session unless the grill skill explicitly requires documentation/context updates. If no grill skill is registered, say so explicitly and continue.
-5. **Declare active context, then draft the issue.** Before drafting, state the active context/skills discovered and used in steps 2–4, including any applicable project, stack, domain, docs, ADR, and grill skills. If the declaration reveals a relevant missing skill or context file, load it before continuing. A good issue typically includes:
+5. **Declare active context, then draft the issue.** Before drafting, state the active context/skills discovered and used in steps 2–4, including any applicable project, vision, stack, domain, docs, ADR, and grill skills. If the declaration reveals a relevant missing skill or context file, load it before continuing. A good issue typically includes:
    - A specific, plain-language title with no area prefix (use labels for area/type).
    - A short problem summary.
    - For bugs: reproduction command or minimal code/UI sample; current vs expected behavior.
@@ -91,7 +100,7 @@ This is a gate immediately before drafting: actively search for relevant project
    - Responsive scope: which breakpoints and devices apply, and which themes (light/dark/system).
    - Design system or component library in use, and the specific tokens or components involved.
 7. Choose labels by matching existing repo conventions. Use labels (not title prefixes) for area and type. Do not invent labels unless the user asks.
-8. Show the title, labels, and body to the user before creating, unless the user asked to create without review.
+8. Show the title, labels, and body to the user before creating, unless the user asked to create without review or automatic mode applies. In automatic mode, state the auto-selected template, labels, title, and body rationale, then continue to issue creation without waiting.
 9. Resolve the repository ID, then create the issue with GraphQL:
 
    ```bash
