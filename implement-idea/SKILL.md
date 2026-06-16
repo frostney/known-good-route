@@ -18,7 +18,8 @@ description: >-
 license: Unlicense OR MIT
 compatibility: >-
   Requires git and the GitHub CLI (gh) for the /create-pr handoff, plus network
-  access; verification examples assume a Bun toolchain.
+  access; verification is driven by the project's DEFINITION_OF_DONE.md and its
+  own declared commands rather than any assumed toolchain.
 ---
 
 # Implement idea
@@ -113,7 +114,7 @@ Gate check: I have not edited files yet. I'm running the grill/options step firs
 Then confirm all five items are true:
 
 - Grill-with-docs / grill-me has run, or the user explicitly waived it.
-- The project-context Definition of Ready search is complete, every discovered Definition of Ready has been read, and the selected path satisfies every applicable readiness item before any file edit.
+- The project-context Definition of Ready search is complete, every discovered Definition of Ready has been read, and the selected path satisfies every applicable readiness item before any file edit. If no `DEFINITION_OF_READY.md` was found, the **DoR/DoD absence protocol** has been applied (flagged, not silently passed over).
 - Exactly three implementation options were presented.
 - One option was recommended.
 - The user explicitly selected an option, explicitly approved the recommendation **after** seeing those options, or the original prompt requested `automatic` mode and the recommendation was auto-selected with a project-context rationale.
@@ -127,6 +128,16 @@ Automatic mode is opt-in. It is active only when the user's original `/implement
 In automatic mode, do **not** skip idea formulation, spec confirmation, investigation, grill, readiness checks, active context declaration, or the exactly-three-options presentation. After presenting the three options, select the recommended option yourself based on the confirmed mini-spec, `VISION.md` when present, Definition of Ready, stack/conventions skills, project architecture, risk, and verification cost. State the selected option and why it best fits the project context, then continue without waiting for the user's choice.
 
 If the best option is unclear, materially risky, or conflicts with `VISION.md`, automatic mode does not apply: stop and ask the user for clarification.
+
+### Definition of Ready / Definition of Done are canonical (absence protocol)
+
+`DEFINITION_OF_READY.md` and `DEFINITION_OF_DONE.md` (and the case/spelling variants searched in step 3) are the **canonical truth** for when this work may start and when it is shippable. When present, every applicable item is a hard gate — do not invent your own readiness or completion bar to replace them.
+
+**DoR/DoD absence protocol — referenced by the steps below.** If either file is missing after the mandatory search, do **not** silently proceed and do **not** invent a substitute:
+
+- State prominently to the user that no project-context `DEFINITION_OF_READY.md` / `DEFINITION_OF_DONE.md` was found, so readiness / completion cannot be checked against a project definition, and recommend adding one.
+- Carry the flagged absence into the active context declaration and the PR description so it is visible to reviewers.
+- Continue with the workflow's built-in readiness/review checks and only the project's actually-declared commands — never a guessed or stack-assumed gate.
 
 ### Steps
 
@@ -162,7 +173,7 @@ If the best option is unclear, materially risky, or conflicts with `VISION.md`, 
    - The mini-spec is confirmed, the scope is bounded, and the success criteria are clear enough to verify against.
    - The idea is not already fully implemented (per step 4).
    - The project-context Definition of Ready search from step 3 is complete and documented in the active context. The confirmed mini-spec, investigation findings, and selected implementation path satisfy every applicable Definition of Ready item before branching or editing. Any unmet readiness item is a hard stop: resolve it with the user before implementation.
-   - Absence protocol: after the mandatory search finds no Definition of Ready, state that no project-context Definition of Ready was found and continue with the workflow's readiness checks.
+   - Absence protocol: if the mandatory search finds no Definition of Ready, apply the **DoR/DoD absence protocol** (see the section above the steps).
    - If the spec is still ambiguous or the scope keeps growing, stop and return to step 2.
 7. **Declare active context, present implementation options, then STOP and wait unless automatic mode applies (GATE D).** Before listing options, state the active context/skills discovered and used in steps 3–5, including any applicable project, vision, stack, domain, docs, ADR, and grill skills. If the declaration reveals a relevant missing skill or context file, load it before continuing. Then present exactly three distinct options for delivering the idea, with tradeoffs, a verification plan tied to the success criteria, and a recommendation grounded in the step 4 investigation and step 5 grill output. The three must be genuinely different approaches (e.g. scope/architecture/effort tradeoffs), not trivial variations of one. When step 4 found the idea **already implemented**, the options reflect that instead of inventing duplicate code — e.g. (a) use/close as already covered, (b) extend the existing implementation to meet the remaining spec, (c) a thin alternative that reuses the existing code. **Do not write any implementation code until the user explicitly picks an option, explicitly tells you to proceed with the recommendation, or automatic mode auto-selects the recommendation.** Do not interpret "this is an implementation command" as permission to skip the choice. If automatic mode applies, state the auto-selected option and why it best fits the project context, then continue; otherwise, end your turn here and wait for the user's reply.
    *If the chosen option is "already covered" with no code or test change, skip steps 8–16: report the existing implementation and stop. The remaining steps apply only when there is a code or test change to ship.*
@@ -182,22 +193,15 @@ If the best option is unclear, materially risky, or conflicts with `VISION.md`, 
     - Verify accessibility: keyboard navigation and focus order, visible focus styles, ARIA roles/labels for new interactive elements, color contrast meeting WCAG AA (or the project's standard), and `prefers-reduced-motion` respected for animations.
     - Reuse existing design-system components and tokens; do not introduce one-off styles for primitives that already exist.
     - **Attach the screenshots/recordings and accessibility notes to the PR — this is mandatory, not optional.** The PR must be fully reviewable from these artifacts alone, without re-running the app, so the change can be judged asynchronously. A UI/UX PR missing this visual evidence is not ready for `/create-pr`.
-13. **Run the project's full verification gate before invoking `/create-pr`.** Use the project's aggregator script discovered while enumerating real commands (e.g. `bun run check`) — that's the canonical "ready to commit" signal. Absence protocol: after command enumeration finds no aggregator script, run the per-step gate explicitly:
+13. **Run the project's full verification gate before invoking `/create-pr`.** The gate is defined by the project-context `DEFINITION_OF_DONE.md` together with the project's aggregator script and actually-enumerated real commands (e.g. the project's `check`) — these are the canonical "ready to commit" signal. Run every verification the Definition of Done requires, using only the commands the repo actually declares. Do **not** invent commands or assume a stack: if a verification the Definition of Done requires has no corresponding command in the repo, that is a finding to raise with the user, not a command to make up.
 
-    ```bash
-    bun install --frozen-lockfile
-    bun run format:check   # or biome check
-    bun run lint           # or biome lint .
-    bun test
-    bun run typecheck      # or tsc --noEmit / bunx tsc --noEmit
-    bun run build
-    ```
+    Absence protocol — no `DEFINITION_OF_DONE.md`: apply the **DoR/DoD absence protocol** (see the section above the steps) — run only the project's actually-declared commands; do not substitute an invented gate.
 
     Do not skip steps because they "should pass." If any step fails, fix the cause; do not invoke `/create-pr` with a red gate.
 
 14. **Review the implementation before handoff (do not skip).** After the gate is green but before `/create-pr`, audit your own change critically — as a reviewer who did not write it would:
     - **Check against the spec, criterion by criterion.** Walk each success criterion in the confirmed mini-spec and confirm the change actually satisfies it, citing the code or test that does so; confirm the delivered scope and outcome match what was confirmed. Anything unmet is unfinished work, not a follow-up. When the scope was deliberately changed across later turns or grill sessions, match that updated intent instead — and note the divergence from the original idea in the PR description so reviewers understand why.
-    - **Check the Definition of Done.** Re-read every project-context Definition of Done discovered in step 3 before handoff. Verify the implementation, tests, documentation, review evidence, and handoff artifacts satisfy every applicable item. Any unmet completion item is a hard stop: fix it before `/review` or `/create-pr`, or stop and get explicit user agreement that the item is out of scope. Absence protocol: after the mandatory search found no Definition of Done, state that no project-context Definition of Done was found.
+    - **Check the Definition of Done.** Re-read every project-context Definition of Done discovered in step 3 before handoff. Verify the implementation, tests, documentation, review evidence, and handoff artifacts satisfy every applicable item. Any unmet completion item is a hard stop: fix it before `/review` or `/create-pr`, or stop and get explicit user agreement that the item is out of scope. Absence protocol: if no Definition of Done was found, apply the **DoR/DoD absence protocol** (see the section above the steps).
     - **No shortcuts.** No stubbed logic, hardcoded values standing in for real behavior, `TODO`/`FIXME` left behind, swallowed errors, skipped/`.only`/commented-out tests, or "happy path only" handling of cases the spec requires. Confirm the real layer was built, not a façade.
     - **No tech debt introduced.** No dead code, no duplication that should be extracted, no copy-paste of an existing pattern that has a shared helper, no weakened types (`any`, unsafe casts) or loosened lint/type rules to make the gate pass, no leftover debug output.
     - **Consistency.** The change follows the repo's conventions (from step 3 agent context and `docs/code-style.md`) and reuses existing components/utilities rather than reinventing them.
