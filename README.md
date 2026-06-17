@@ -37,6 +37,7 @@ These are [Agent Skills](https://agentskills.io): any skills-compatible agent lo
 | [`native-nostalgia-stack`](native-nostalgia-stack/SKILL.md) | FreePascal toolchain — FPC in Delphi mode (compiler flags in a shared include), namespace-based unit naming (flat by default), code-style starting points, build / formatter / codebase-health contracts (implementation is the project's choice), Lefthook pre-commit, InstantFPC for one-off scripts. |
 | [`convex-conventions`](convex-conventions/SKILL.md) | Convex backend rules — shared validators, Clerk JWT bridge, `args` + `returns` on every public function, in-code filtering, `.take()` caps, rate-limited mutations, action/mutation split, schema with soft-delete and audit trails, single re-export module for client types. The live Convex docs override this skill on conflict. |
 | [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Ambient engineering quality standard for writing, editing, reviewing, debugging, refactoring, designing, or spiking code: ground in reality, solve the full scope, reuse before creating, validate to the real bar, and use maintainability as the governor. |
+| [`bleeding-edge`](bleeding-edge/SKILL.md) | Ambient lens that tilts technology choices toward the newest viable option — latest stable (incl. just-released majors), newly-stable language/platform features, modern tooling, current AI models, and pre-release channels with a documented reason — while staying under `software-engineering-excellence`: verify live, pin, keep it reversible and gate-green, and never silently swap a decided choice. |
 
 ## Background
 
@@ -61,6 +62,7 @@ Design decisions and conventions shared across every skill in this collection.
 - `create-issue`, `implement-issue`, and `implement-idea` support an explicit `automatic` prompt mode where the agent auto-selects the project-context recommendation after completing the required investigation/gates.
 - `implement-idea` borrows `/create-issue`'s good-issue components when formulating the idea.
 - `react-stack` and `native-nostalgia-stack` defer to `project-structure` for repo layout and to their respective domain skills (`convex-conventions`) for deeper specifics.
+- `bleeding-edge` sits beneath `software-engineering-excellence` as a subordinate lens — it tilts the default technology choice toward the newest viable option while SEE remains the governor and maintainability stays the tiebreaker. It reuses the cross-skill "verify versions live" rule, and it applies its bias *within* the choices decided by the stack skills and `AGENTS.md` Hard Constraints rather than silently swapping them.
 
 ## Contributing
 
