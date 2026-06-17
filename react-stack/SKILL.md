@@ -3,16 +3,21 @@ name: react-stack
 description: >-
   Defines the user's default React-based stack across two project profiles —
   web (Next.js App Router) and universal (Expo Router) — sharing a common core
-  (Bun-only, TypeScript, Tailwind 4, co-located bun test, single aggregator
+  (Bun-only, TypeScript, Tailwind on web / React Native StyleSheet on native,
+  co-located bun test, single aggregator
   check, Vercel AI Gateway, Clerk auth, Convex data, Plop scaffolding,
-  Lefthook pre-commit, AGENTS.md hard constraints) and pointing to convex-
-  conventions and project-structure for deeper specifics. Use when scaffolding
+  Lefthook pre-commit, AGENTS.md hard constraints), carrying the React-specific
+  project structure (src/app routing both profiles, Atomic Design component
+  folders, one-export-per-file naming where the filename matches the export),
+  and pointing to convex-conventions and project-structure for deeper
+  specifics. Use when scaffolding
   a new React-based app, upgrading deps, choosing tooling for an MVP, or
   deciding which profile a project belongs to.
 license: Unlicense OR MIT
 compatibility: >-
   Assumes a Bun-only TypeScript project (Next.js App Router or Expo Router)
-  using Tailwind, Convex, Clerk, and Lefthook.
+  using Tailwind on web / React Native StyleSheet on native, plus Convex,
+  Clerk, and Lefthook.
 ---
 
 # React stack
@@ -45,14 +50,17 @@ These defaults apply to both profiles. Profile sections only add or override.
 - **Runtime / PM: Bun only.** No `npm`, `pnpm`, `yarn`. Keep `bun.lock`. Forbid `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`. Encode this as a "Hard Constraints" section in the project's AGENTS.md (see `project-structure/SKILL.md`).
 - **Language: TypeScript** everywhere, `tsc --noEmit` (or `bunx tsc --noEmit`) as the typecheck.
 - **Tests: `bun test`, co-located `*.test.ts`** next to the module under test.
-- **Styling: Tailwind v4** via `@tailwindcss/postcss`.
+- **Styling: profile-specific.**
+  - **Web (Next.js):** Tailwind (latest stable) via `@tailwindcss/postcss`. Verify the current major before pinning (`bun pm view tailwindcss version`).
+  - **Universal (Expo / React Native):** React Native `StyleSheet` (`StyleSheet.create`). Co-locate per-component styles in the component folder's `Button.styles.ts` companion (see **Project structure**). Do not pull Tailwind/NativeWind into the native target by default.
 - **Lint/format: Biome** with a tight ruleset from the start (every available rule on `error` unless the project has a documented reason to relax it). Replaces ESLint + Prettier + import-sort.
 - **Code style starting points** (enforced by Biome where possible, otherwise by review):
   - **`any` is not allowed.** Use `unknown` + narrowing, generics, or precise types.
   - **Prefer functional style over classes.** Functions, closures, and plain object types as the default; classes only at unavoidable React or external-library boundaries.
   - **Prefer immutability by convention.** `const`, structural updates, `map` / `filter` / `reduce`; avoid in-place mutation of arrays and objects.
   - **Names carry intent. Be explicit. Avoid abbreviations** — `getUserById`, not `getUsrById`; `parseInvoice`, not `parseInv`.
-  - **Avoid `lib` and `helper` for naming, anywhere.** No `lib/` folder, no `helpers/` folder, no `*-lib.ts` / `*-helper.ts` files, no `…Helper` functions. Name modules and functions by what they do (`format-date.ts`, `currency.ts`, `auth-session.ts`).
+  - **Avoid `lib` and `helper` for naming, anywhere.** No `lib/` folder, no `helpers/` folder, no `*-lib.ts` / `*-helper.ts` files, no `…Helper` functions. Name modules and functions by what they do (`formatDate.ts`, `parseInvoice.ts`, `authSession.ts`).
+  - **One public export per file; the filename matches the export.** `formatDate` → `formatDate.ts`, `Button` → `Button.tsx`, `useCart` → `useCart.ts`. No barrel (`index.ts`) re-export files. See **Project structure** below.
 - **AI integration:** **Vercel AI Gateway** via `@ai-sdk/gateway` is the default. One unified API across OpenAI, Anthropic, Google, and other providers, with provider routing and fallbacks, embeddings, reranking, image and video generation, observability, and zero-markup billing. Use `@ai-sdk/react` for chat UI when applicable.
 
   Pivot to a provider's native integration only when the Gateway cannot meet a specific verified need; isolate and document it.
@@ -63,11 +71,64 @@ These defaults apply to both profiles. Profile sections only add or override.
   - Parallel: `bun run --parallel check:biome check:typescript check:knip`
   - Sequential: `biome check && tsc --noEmit`
   - Explicit gate: `bun install --frozen-lockfile && bun run format:check && bun run lint && bun test && bun run typecheck && bun run build`
-- **Source organization: `src/`, by domain.** All project source lives under `src/`. Inside `src/`, organize by domain (`src/types/`, `src/components/`, `src/auth/`, `src/billing/`, etc.) — never by genericity (no `src/lib/`, no `src/helpers/`, no `src/utils/` catch-all). Toolchain folders that the framework or runtime requires at the repo root (e.g. `convex/`, `app.json`, `eas.json`) stay at the root; everything else goes under `src/`.
-- **Component layout: Atomic Design** — `src/components/atoms/`, `src/components/molecules/`, `src/components/organisms/`. Dependencies flow downward only (organisms can depend on molecules and atoms; atoms cannot depend on molecules or organisms).
+- **Source organization: `src/`, by domain.** All project source lives under `src/`, organized by domain (`src/types/`, `src/auth/`, `src/billing/`, etc.) — never by genericity (no `src/lib/`, no `src/helpers/`, no `src/utils/` catch-all). Toolchain folders the framework or runtime requires at the repo root (e.g. `convex/`, `app.json`, `app.config.ts`, `eas.json`, `next.config.*`, `metro.config.*`, `tsconfig.json`, `public/`) stay at the root; everything else goes under `src/`. See **Project structure** below for the canonical tree.
+- **Component layout: Atomic Design** — `src/components/atoms/`, `src/components/molecules/`, `src/components/organisms/`. Dependencies flow downward only (organisms can depend on molecules and atoms; atoms cannot depend on molecules or organisms). Each component is a folder (see **Project structure**).
 - **Dead code: Knip.** On by default. Configure `knip.json` entry points to match the project's dependency-graph roots (e.g. `src/**`, `convex/**`).
 - **Codebase health: Fallow.** On by default. `fallow health` surfaces high-complexity functions (cyclomatic and cognitive thresholds), file-level health scores, hotspot analysis (complexity × git churn), and prioritized refactor targets. Wire it into the `bun run check` aggregator.
 - **Repo layout & docs:** see `project-structure/SKILL.md` for the language-agnostic patterns (docs/ template, AGENTS.md template, nested area files, scripts directory, agent-skills symlinks).
+
+### Project structure
+
+Builds on the language-agnostic roles in `project-structure/SKILL.md` and pins the React-specific tree. Both profiles share the layout below; the only difference is what lives under `src/app/` (see each profile section). A project's own `AGENTS.md` may override any of this.
+
+**File naming — one export per file, filename matches the export:**
+
+- **One public export per file.** One component, one hook, one function, or one type per file, named exactly after what it exports. Tightly-coupled internals stay private (unexported) in the same file.
+- **Filename matches the export verbatim.** PascalCase export → PascalCase file (`Button` → `Button.tsx`, `UserCard` → `UserCard.tsx`); camelCase export → camelCase file (`useCart` → `useCart.ts`, `formatDate` → `formatDate.ts`).
+- **No barrels.** No `index.ts` re-export files; import the source module directly (`@/components/atoms/Button/Button`). Barrels fight the one-export rule and muddy Knip's dead-code graph.
+- **Framework route files keep their mandated names** (per profile below), regardless of the above.
+
+**Components are folders.** Each component is a folder named after the component, with companions co-located and namespaced by role. Only the component file and its test are expected; the rest are optional:
+
+```text
+src/components/atoms/Button/
+  Button.tsx          # the component (one export: Button) — required
+  Button.test.tsx     # co-located unit test — expected
+  Button.types.ts     # component-local types — optional
+  Button.constants.ts # component-local constants — optional
+  Button.styles.ts    # Universal/React Native styles — optional (web uses Tailwind classes)
+```
+
+Hooks and plain modules stay single files by default (`useCart.ts` + `useCart.test.ts`) and adopt the same folder shape only once they accrue companions.
+
+**Tests.** Unit tests are co-located next to the module and name-matched (`Button.test.tsx`, `useCart.test.ts`) — see `bun test` in the shared core. End-to-end tests live in a top-level `e2e/` at the repo root (Playwright for Web; the project's chosen runner for Universal).
+
+**Shared tree (both profiles):**
+
+```text
+.
+├── convex/                 # Convex backend: functions, schema.ts, auth.config.ts (root, toolchain)
+├── e2e/                    # end-to-end tests (root)
+├── plop-templates/         # generator templates (root)
+├── plopfile.ts             # (root)
+├── public/                 # static assets (root)
+├── src/
+│   ├── app/                # routes ONLY — framework-owned (see profile section)
+│   ├── components/
+│   │   ├── atoms/          # each component is a folder (see above)
+│   │   ├── molecules/
+│   │   └── organisms/
+│   ├── hooks/              # useThing.ts (+ useThing.test.ts)
+│   ├── types/
+│   ├── <domain>/           # auth/, billing/, … domain logic and modules
+│   └── providers.tsx       # ClerkProvider + ConvexProviderWithClerk wiring (one export)
+└── …config at root         # tsconfig.json, biome.json, knip.json, lefthook.yml, etc.
+```
+
+`src/app/` is **routes only** — never put components, hooks, or utilities there (Expo treats stray files as routes; Next.js follows the same rule for parity). Route-private, single-use pieces:
+
+- **Web (Next.js):** colocate inside the route segment in a private folder (`src/app/(dashboard)/_components/`, `_hooks/`). Promote to `src/components` / `src/hooks` once reused by more than one route.
+- **Universal (Expo):** keep them under `src/` (by domain or feature); `src/app/` stays routes-only.
 
 ### Auth & billing
 
@@ -162,6 +223,8 @@ Verify the current Lefthook major version (`bun pm view lefthook version`) befor
 ### Profile: Web (Next.js App Router)
 
 - **Framework:** Next.js latest stable, App Router.
+- **Routes:** under `src/app/`. Route files keep their framework-mandated names: `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `not-found.tsx`, `route.ts` (route handlers), route groups `(group)`, dynamic segments `[param]`, private folders `_components/` / `_hooks/` for route-local code.
+- **Providers & proxy:** `src/app/layout.tsx` renders `src/providers.tsx` (`<ClerkProvider>` + `<ConvexProviderWithClerk>`); `src/proxy.ts` holds the Clerk request handler (Next.js 16 renamed the former `middleware.ts` convention to `proxy.ts` — `export function proxy`, Node.js runtime by default); `src/app/globals.css` is the Tailwind entry. `next.config.*`, `postcss.config.*`, and `tsconfig.json` stay at the repo root.
 - **Rendering — use the narrowest mode per route:**
   - **SSG** for content that rarely changes (use `generateStaticParams`, static imports, cached data).
   - **SSR** when every request needs fresh or personalized data (auth/session, headers/cookies).
@@ -171,6 +234,9 @@ Verify the current Lefthook major version (`bun pm view lefthook version`) befor
 ### Profile: Universal (Expo Router)
 
 - **Framework:** Expo (latest stable) with Expo Router.
+- **Routes:** under `src/app/` (Expo Router SDK 55+ default; `src/app/` takes precedence over a root `app/`). Route files keep their framework-mandated names: `_layout.tsx`, `index.tsx`, dynamic `[id].tsx`, route groups `(group)/`, `+not-found.tsx`; kebab-case route segments. `src/app/_layout.tsx` renders `src/providers.tsx`.
+- **Config at root:** `app.json` / `app.config.ts`, `eas.json`, `metro.config.js`, `tsconfig.json` (with `@/*` → `./src/*`), and `public/` stay at the repo root.
+- **Styling:** React Native `StyleSheet` (`StyleSheet.create`), per-component styles in the component folder's `*.styles.ts` companion. No Tailwind/NativeWind by default.
 - **Native packages:** `@react-native-async-storage/async-storage` (persistence), `@react-native-community/netinfo` (connectivity), `react-native-reanimated`, `react-native-gesture-handler`, `expo-router`, `expo-updates`, Expo Google Fonts.
 - **Toasts:** `sonner-native` (mirroring `sonner` on web).
 - **Builds:** **EAS** for iOS/Android (`eas build`, `eas submit`). **Vercel** for the web target.
@@ -180,6 +246,7 @@ Verify the current Lefthook major version (`bun pm view lefthook version`) befor
 ### Rules
 
 - **Project profile is explicit.** Every project on this skill is one of `web` or `universal`, and the choice is documented (in `AGENTS.md`, `docs/architecture.md`, or the equivalent). If neither fits, the project's own AGENTS.md takes precedence over this skill.
+- **Project structure follows the canonical tree.** Routes under `src/app/` (both profiles) and nothing but routes there; all other source under `src/` by domain; Atomic Design components as folders. One public export per file, the filename matches the export, and no barrel (`index.ts`) re-export files. Deviations are documented in the project's `AGENTS.md`.
 - **Dependency versions are verified live.** Before adding or changing any dependency (Bun, Next.js or Expo, React, Convex, Clerk, Tailwind, TypeScript, AI SDK + Gateway, Sentry, PostHog, Biome, Lefthook, Plop, Knip, etc.), the agent confirms the current stable version via `bun pm view <package> version`, GitHub releases, or vendor release notes. Memory and prior conversation turns are not acceptable sources.
 - **Cross-tool compatibility is confirmed before merging.** Bun runs on the deployment target; React Native, Reanimated, and the Expo SDK align for Universal projects.
 - **Release / migration notes are read before any major or minor jump** on the profile's framework, Convex, or Clerk.
