@@ -229,6 +229,8 @@ Generate the changelog from conventional commits with **git-cliff**.
 - Adopt conventional commit messages so types map cleanly to changelog sections (`feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`, `build`, `ci`, `style`, `revert`).
 - Verify the current `git-cliff` version before running.
 - `git-cliff --tag <new-tag>` produces the release notes; do not hand-edit them. If wording is wrong, edit the conventional commit and regenerate.
+- Configure `commit_parsers` to skip the `chore(release)` commit so the release commit itself never appears in a later changelog.
+- This section owns the `cliff.toml` configuration only. The end-to-end release flow — compute version → changelog → release PR → tag the merge commit → publish — lives in `create-release`, which keeps the changelog committed *before* the tag so the release always contains it.
 
 git-cliff is the default because it is language-agnostic, single-binary, reads commit history directly, and uses one declarative config file. **Alternatives are only acceptable when git-cliff cannot meet a specific need:**
 
