@@ -28,6 +28,7 @@ These are [Agent Skills](https://agentskills.io): any skills-compatible agent lo
 | [`update-pr`](update-pr/SKILL.md) | Commit and push to the current PR, merge the baseline when behind, refresh PR title/body when stale. No amend, no force push. |
 | [`review-pr`](review-pr/SKILL.md) | Resolve review threads in-place — no top-level PR/issue comments, no force pushes — preferring `/resolve-reviews` when registered and using `/update-pr` for the commit/push step. |
 | [`create-release`](create-release/SKILL.md) | Cut a release so the tag always contains its own changelog: compute the next version from the conventional commits, write the changelog and bump the version on a release branch, open a release PR, and only after squash-merge tag the merge commit and publish the GitHub release — never a changelog PR that lands after the tag. Defaults to git-cliff but works with any changelog tool, across languages. |
+| [`roadmap-review`](roadmap-review/SKILL.md) | Review a project's roadmap from freshly-pulled data — assess current state and release cadence, measure delivery velocity from history, verify candidate work against the source, produce a parallelized throughput-anchored version plan, and (optionally, on confirmation) create milestones and issues. |
 
 ### One-off project setup, guidance, and audit skills
 
@@ -59,6 +60,7 @@ Design decisions and conventions shared across every skill in this collection.
 - `implement-issue` and `implement-idea` invoke `/create-pr` at handoff.
 - `review-pr` invokes `/update-pr` for the commit/push step (and `/resolve-reviews` when registered).
 - `create-release` invokes `/create-pr` to open the release PR, follows `git-workflow` for branching, squash-merge, and push rules, and defers to `project-structure` for changelog tooling (git-cliff by default).
+- `roadmap-review` defers to `software-engineering-excellence` for the general engineering bar, to `project-structure` for `VISION.md` / docs and milestone conventions, recommends (but never performs) release cuts via `/create-release`, and delegates issue creation in the Execute phase to `/create-issue`.
 - `create-issue`, `implement-issue`, and `implement-idea` invoke `/grill-with-docs` (preferred) or `/grill-me` for thoroughness when registered.
 - `create-issue`, `implement-issue`, and `implement-idea` read `VISION.md` when present and stop for clarification when the request conflicts with it.
 - `create-issue`, `implement-issue`, and `implement-idea` support an explicit `automatic` prompt mode where the agent auto-selects the project-context recommendation after completing the required investigation/gates.
