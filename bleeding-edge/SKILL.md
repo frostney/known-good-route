@@ -1,19 +1,10 @@
 ---
 name: bleeding-edge
 description: >-
-  An ambient lens that tilts technology choices toward the newest viable option
-  so the work keeps up with the ever-changing times without leaving the known
-  good route. It biases the default toward the latest stable release (including
-  just-released majors), newly-stable language and platform features, modern
-  tooling, and current AI models/capabilities, and allows pre-release channels
-  (beta/RC/canary, and nightly only with a documented reason) when a concrete
-  need justifies the climb. It sits beneath software-engineering-excellence:
-  maintainability stays the tiebreaker, every adoption is verified live, pinned,
-  reversible, free of known blockers, and green on the full validation gate, and
-  decided choices and AGENTS.md Hard Constraints are never silently swapped. Use
-  when selecting a dependency, framework, runtime, language feature, tool, or AI
-  model; when picking or upgrading a version; or whenever deciding how current a
-  technology choice should be.
+  Biases technology choices toward the newest viable option while preserving
+  maintainability, live verification, reversibility, and decided constraints.
+  Use when selecting or upgrading a dependency, runtime, tool, language feature,
+  or AI model.
 license: Unlicense OR MIT
 ---
 

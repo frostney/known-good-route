@@ -1,13 +1,9 @@
 ---
 name: roadmap-review
 description: >-
-  Review a project's roadmap from freshly-pulled data — assess current state and
-  release cadence, measure delivery velocity from history, and verify candidate
-  work against the source — then produce a parallelized, throughput-anchored
-  version plan, and (optionally, on confirmation) create the milestones and
-  issues. Use when the user wants to review the roadmap, plan upcoming
-  versions/releases, decide when to cut the next release, or sequence a backlog
-  into a realistic plan.
+  Reviews a roadmap from fresh project evidence and produces a verified,
+  throughput-anchored version plan, with execution gated on confirmation. Use
+  when reviewing a roadmap, planning releases, or sequencing a backlog.
 license: Unlicense OR MIT
 compatibility: >-
   Requires the GitHub CLI (gh) authenticated to the target repository and
@@ -26,21 +22,15 @@ Work in six phases: **Ground → Assess → Measure velocity → Verify against 
 
 Defer the general engineering discipline (ground-in-reality, the After-Correction Rule, recommend-and-wait under uncertainty) to `software-engineering-excellence`; this skill encodes only the four roadmap-specific gates below.
 
-### Non-negotiable gates (do not skip, do not rationalize)
+### Non-negotiable gates
 
 #### GATE A — Ground every claim in fresh data
 
 Every quantitative or status claim must come from data pulled *this session* — never from memory, training data, or a previous session's numbers; re-pull if a number is reused across a long session. If something genuinely cannot be measured, say so explicitly — never substitute an estimate for a measurement.
 
-- **Mandatory sources** (exist on any active repo): open issues (by milestone and label), releases with dates, milestones, merged-PR history, and `VISION.md` / docs (see `project-structure` for where these live).
+- **Core sources:** open issues, releases, milestones, merged-PR history, and
+  project vision/docs. Pull each source when present and state material absences.
 - **Best-effort source** (auto-detect; may be absent): a domain progress metric published to CI artifacts — conformance, coverage, or benchmark results. If absent, state that and proceed without it; never fabricate one.
-
-Forbidden rationalizations:
-
-- ❌ "I recall the last release was…" → pull `releases`.
-- ❌ "the baseline is probably…" → fetch the artifact, or say it's unavailable.
-- ❌ "velocity is roughly…" → measure it (GATE B).
-- ❌ "the milestones are likely…" → list them. (Note: the forge's open-issue count often includes PRs — reconcile it.)
 
 #### GATE B — Derive timelines from measured rates, applied literally
 
@@ -52,32 +42,13 @@ Never pad. An estimate is a measured rate applied to a counted backlog, with a s
 - **Domain burndown**: when a domain metric exists, **measure its slope from spaced historical CI artifacts** (download the metric artifact from several past runs and diff the counts) — do not estimate the slope.
 - **Allocation ≠ capacity**: per-label or per-area rates show where effort *went*, not the ceiling — a focused milestone can draw most of total throughput.
 
-Forbidden rationalizations:
-
-- ❌ "to be safe, call it 2–3 weeks" (padding past the measured rate).
-- ❌ "velocity's probably lower than measured."
-- ❌ "treat that label's N/week as the cap" (allocation, not capacity).
-
 #### GATE C — Verify before you propose or characterize
 
-Before proposing any feature or work item, classify it against the **current source** as **Done / Partial / Absent** with file:line evidence — propose only Absent or Partial. Before asserting any characterization (what a test category is, what "best practice" is, what a flag does), confirm it against the **primary source** — the code, the actual tests, the official spec/docs — not memory or inference. Fan this verification out to subagents when the surface is large.
-
-Forbidden rationalizations:
-
-- ❌ "this is an obvious gap" (un-grepped).
-- ❌ "the vision implies X is missing."
-- ❌ "that category is probably <out of scope / engine-specific>" → read the actual tests.
-- ❌ "the standard tool for this is <stale default>" → check current reality, and separate distinct concerns rather than conflating them (e.g. a measurement library vs. a workload corpus).
+Before proposing any feature or work item, classify it against the **current source** as **Done / Partial / Absent** with file:line evidence — propose only Absent or Partial. Confirm characterizations against code, tests, or primary specifications rather than memory or positioning. When subagents are available and the evidence surface splits into independent areas, fan out verification and synthesize it before planning.
 
 #### GATE D — Never mutate the forge without confirmation
 
 The Execute phase is opt-in. Never create or re-theme milestones, file issues, set due-dates, or relabel without explicit confirmation of the **finalized** plan. Every issue created meets `/create-issue` quality — delegate to it.
-
-Forbidden rationalizations:
-
-- ❌ "I'll create thin issues now and flesh them out later."
-- ❌ "this clearly needs a milestone, I'll just make it."
-- ❌ mutating the forge before the plan is confirmed.
 
 ### Defer to sibling skills
 
@@ -95,7 +66,7 @@ Forbidden rationalizations:
 
 3. **Measure velocity** (GATE B). Throughput over 90 days; lead time (issue→merge, with the PR→merge fallback caveat and triage exclusion); the domain slope from historical artifacts; and the allocation-vs-capacity read. Attach a basis and confidence to every number.
 
-4. **Verify against source** (GATE C). For every candidate feature or characterization, check the actual code/tests/spec; classify Done / Partial / Absent with evidence; drop anything already shipped. Fan out to subagents for breadth.
+4. **Verify against source** (GATE C). For every candidate feature or characterization, check the actual code/tests/spec; classify Done / Partial / Absent with evidence; drop anything already shipped. When subagents are available and the work splits cleanly, fan out independent evidence areas and synthesize them before planning.
 
 5. **Plan.** Produce the report (see Output). Group the verified work into **independent tracks that can progress in parallel**, using the project's own architectural seams as the axis (e.g. an engine/runtime split). Size each epic from counted work, sequence into **themed releases**, and anchor each release to the measured rates. Call out cross-track dependencies and the longest pole. Surface the **decisions that are genuinely the human's** (scope cuts, policy forks) with a recommendation each — then stop for those decisions; do not pre-decide them.
 

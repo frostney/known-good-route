@@ -27,7 +27,7 @@ These are [Agent Skills](https://agentskills.io): any skills-compatible agent lo
 | [`create-pr`](create-pr/SKILL.md) | Commit relevant local changes, push a focused branch, and open a draft pull request using the project's PR template. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and push to the current PR, merge the baseline when behind, refresh PR title/body when stale. No amend, no force push. |
 | [`review-pr`](review-pr/SKILL.md) | Resolve review threads in-place — no top-level PR/issue comments, no force pushes — preferring `/resolve-reviews` when registered and using `/update-pr` for the commit/push step. |
-| [`create-release`](create-release/SKILL.md) | Cut a release so the tag always contains its own changelog: compute the next version from the conventional commits, write the changelog and bump the version on a release branch, open a release PR, and only after squash-merge tag the merge commit and publish the GitHub release — never a changelog PR that lands after the tag. Defaults to git-cliff but works with any changelog tool, across languages. |
+| [`create-release`](create-release/SKILL.md) | Prepare a changelog-first release PR, then publish only when authorized and through exactly one evidence-backed path. Existing workflows own publication when configured; the agent never double-publishes with `gh release create`. |
 | [`roadmap-review`](roadmap-review/SKILL.md) | Review a project's roadmap from freshly-pulled data — assess current state and release cadence, measure delivery velocity from history, verify candidate work against the source, produce a parallelized throughput-anchored version plan, and (optionally, on confirmation) create milestones and issues. |
 
 ### One-off project setup, guidance, and audit skills
@@ -45,21 +45,47 @@ These are [Agent Skills](https://agentskills.io): any skills-compatible agent lo
 
 Design decisions and conventions shared across every skill in this collection.
 
+### Model-neutral prompt contract
+
+The skills target current frontier models without relying on one model's default
+behavior:
+
+- Lead with the owned outcome, completion evidence, boundaries, and stop rules;
+  prescribe an exact procedure only when the route itself is load-bearing.
+- Use `must`, `never`, and `only` for genuine invariants. Use decision rules for
+  investigation depth, delegation, optional tools, and proportional validation.
+- State each runtime rule once and positively. Avoid model-specific warnings,
+  repeated forbidden-rationalization lists, and narrated compliance checklists.
+- Keep startup descriptions limited to outcome and activation criteria. Put
+  model effort, verbosity, thinking, phase, and progress plumbing in the harness.
+- Report sparse, outcome-based progress at material phase changes rather than
+  narrating routine tool calls.
+- Validate prompt changes incrementally on the same representative scenarios.
+
 ### Conventions across all skills
 
 - Each skill is a single `SKILL.md` with YAML frontmatter (`name`, third-person `description` ending with "Use when…", `license`, and `compatibility` where the skill has real environment requirements) and a `## Instructions` body. The frontmatter conforms to the [Agent Skills specification](https://agentskills.io/specification). No `disable-model-invocation` — these are meant to be invoked from ambient context.
-- **Workflow skills** lead with `### Rules`, then `### Steps`: the constraints under which the procedure runs, then the procedure itself.
+- **Workflow skills** state their outcome, true gates, authorization boundaries,
+  and stop rules before `### Steps`; exact mechanics follow only where the route
+  itself is load-bearing.
 - **Setup / audit skills** open with the conventions and close with a `### Rules` section listing audit-checkable invariants.
 - **Verify versions live** is a recurring rule across stack skills: the agent confirms the current stable version of every dependency from the registry (`bun pm view <package> version`) or official release notes before adding or upgrading any dependency. Memory and prior conversation turns are not acceptable sources.
 - **Live docs override the skill on conflict** for any third-party surface that evolves quickly (Convex, AI Gateway, etc.).
 - **No project names** appear in any skill body — patterns are extracted, named projects aren't.
 - **Examples** are concrete and venue-agnostic — never tied to a specific repo I work on.
+- **Standalone duplication stays minimal.** The grill gate is duplicated in
+  `create-issue`, `implement-issue`, and `implement-idea` because a skill cannot
+  depend on another skill's internal reference file. Update all three copies
+  together, but do not duplicate rationale or negative examples.
 
 ### Cross-skill references
 
 - `implement-issue` and `implement-idea` invoke `/create-pr` at handoff.
 - `review-pr` invokes `/update-pr` for the commit/push step (and `/resolve-reviews` when registered).
-- `create-release` invokes `/create-pr` to open the release PR, follows `git-workflow` for branching, squash-merge, and push rules, and defers to `project-structure` for changelog tooling (git-cliff by default).
+- `create-release` invokes `/create-pr` to open the release PR, follows
+  `git-workflow` for branching and push rules, and defers to `project-structure`
+  for changelog tooling. Its publication gate re-reads merged workflows and
+  chooses exactly one tag/release publisher before acting.
 - `roadmap-review` defers to `software-engineering-excellence` for the general engineering bar, to `project-structure` for `VISION.md` / docs and milestone conventions, recommends (but never performs) release cuts via `/create-release`, and delegates issue creation in the Execute phase to `/create-issue`.
 - `create-issue`, `implement-issue`, and `implement-idea` invoke `/grill-with-docs` (preferred) or `/grill-me` for thoroughness when registered.
 - `create-issue`, `implement-issue`, and `implement-idea` read `VISION.md` when present and stop for clarification when the request conflicts with it.
@@ -78,6 +104,18 @@ agentskills validate ./<skill>
 ```
 
 Every skill is validated against the [Agent Skills specification](https://agentskills.io/specification) in CI via [`skills-ref`](https://github.com/agentskills/agentskills) — see [`.github/workflows/validate-skills.yml`](.github/workflows/validate-skills.yml).
+
+For behavioral changes, also run the same representative scenarios against the
+supported frontier models:
+
+| Scenario | Expected invariant |
+| --- | --- |
+| Clear implementation with one selected option | Completes without another permission prompt |
+| Materially ambiguous architecture | Surfaces the decision and recommendation before editing |
+| Already-fixed issue | Reports source/test evidence instead of inventing a change |
+| Branch with committed work and a clean tree | Opens the PR without creating an empty commit |
+| Tag-triggered release workflow | Pushes the tag once, monitors automation, and never calls `gh release create` |
+| No release publisher configured | Uses the manual publisher only after the publication gate |
 
 **Validator freshness policy:** `skills-ref` is intentionally installed unpinned (`pip install --upgrade skills-ref`) so CI always validates against the latest published spec implementation rather than a frozen snapshot. The workflow caches `~/.cache/pip` to speed up installs; this is safe because pip still resolves the newest release from the index on every run and only reuses a cached wheel when that exact version was already downloaded, so caching never holds back the validator version. This "always latest" rule applies only to the validator package itself — the workflow's GitHub Actions (`checkout`, `setup-python`, `cache`) are pinned to full commit SHAs (with the version in a trailing comment) for supply-chain safety, which is the recommended hardening practice for third-party actions.
 

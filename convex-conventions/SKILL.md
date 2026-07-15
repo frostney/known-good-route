@@ -1,14 +1,9 @@
 ---
 name: convex-conventions
 description: >-
-  House-style defaults for Convex backends — Clerk JWT bridge for auth, soft
-  delete + append-only audit trails, rate-limited mutations, a single shared
-  validators module, a single client-types re-export module, and a semantic vs
-  structural validation split. This skill is opinions only; for workflow tasks
-  (scaffolding, auth setup, migrations, performance, components) defer to the
-  upstream get-convex/agent-skills, and let the live Convex docs override this
-  skill when they disagree. Use when scaffolding, reviewing, or refactoring
-  Convex functions, schemas, or auth.
+  Applies the user's Convex backend conventions while deferring mechanics to
+  upstream Convex skills and current APIs to the live Convex docs. Use when
+  scaffolding, reviewing, or refactoring Convex functions, schemas, or auth.
 license: Unlicense OR MIT
 compatibility: >-
   Assumes a Bun-based Convex project; verifies APIs against the live
