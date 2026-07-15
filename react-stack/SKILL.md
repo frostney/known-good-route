@@ -1,18 +1,10 @@
 ---
 name: react-stack
 description: >-
-  Defines the user's default React-based stack across two project profiles —
-  web (Next.js App Router) and universal (Expo Router) — sharing a common core
-  (Bun-only, TypeScript, Tailwind on web / React Native StyleSheet on native,
-  co-located bun test, single aggregator
-  check, Vercel AI Gateway, Clerk auth, Convex data, Plop scaffolding,
-  Lefthook pre-commit, AGENTS.md hard constraints), carrying the React-specific
-  project structure (src/app routing both profiles, Atomic Design component
-  folders, one-export-per-file naming where the filename matches the export),
-  and pointing to convex-conventions and project-structure for deeper
-  specifics. Use when scaffolding
-  a new React-based app, upgrading deps, choosing tooling for an MVP, or
-  deciding which profile a project belongs to.
+  Applies the user's Bun-based React stack across Next.js web and Expo universal
+  profiles, deferring backend and repository details to their domain skills.
+  Use when scaffolding a React app, upgrading dependencies, choosing MVP tooling,
+  or selecting a project profile.
 license: Unlicense OR MIT
 compatibility: >-
   Assumes a Bun-only TypeScript project (Next.js App Router or Expo Router)
