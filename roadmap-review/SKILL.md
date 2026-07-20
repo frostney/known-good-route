@@ -28,8 +28,12 @@ Defer the general engineering discipline (ground-in-reality, the After-Correctio
 
 Every quantitative or status claim must come from data pulled *this session* — never from memory, training data, or a previous session's numbers; re-pull if a number is reused across a long session. If something genuinely cannot be measured, say so explicitly — never substitute an estimate for a measurement.
 
-- **Core sources:** open issues, releases, milestones, merged-PR history, and
-  project vision/docs. Pull each source when present and state material absences.
+- **Core forge sources:** open issues, releases, milestones, and merged-PR
+  history. Pull each source when present and state material absences.
+- **Project direction sources** (best effort; may be absent): `VISION.md` and
+  dedicated roadmap/product documentation. When unavailable, record the
+  absence, continue with lower confidence, and do not infer scope, quality
+  objectives, or architectural boundaries unsupported by the available data.
 - **Best-effort source** (auto-detect; may be absent): a domain progress metric published to CI artifacts — conformance, coverage, or benchmark results. If absent, state that and proceed without it; never fabricate one.
 
 #### GATE B — Derive timelines from measured rates, applied literally
@@ -55,12 +59,12 @@ The Execute phase is opt-in. Never create or re-theme milestones, file issues, s
 - **`software-engineering-excellence`** — the general engineering bar (ground-in-reality, After-Correction Rule, recommend-and-wait). Not duplicated here.
 - **`/create-issue`** — all issue creation in the Execute phase (mechanics and body quality).
 - **`/create-release`** — this skill *recommends whether and when to cut the next release* but never cuts it; hand off to `/create-release`.
-- **`project-structure`** — locating `VISION.md` / docs and the milestone & changelog conventions.
+- **`project-structure`** — locating `VISION.md` / docs when present and the milestone & changelog conventions.
 - **`git-workflow`** — any branch/PR mechanics during execution.
 
 ### Steps
 
-1. **Ground** (GATE A). Pull repo metadata, open issues by milestone and label, releases with dates, milestones, and merged-PR history. Read `VISION.md` / docs for scope (in/out), the quality/conformance objective, and architectural boundaries. Auto-detect a domain progress metric and its CI artifacts. Reconcile the open-issue count against the forge's number (it may include PRs).
+1. **Ground** (GATE A). Pull repo metadata, open issues by milestone and label, releases with dates, milestones, and merged-PR history. Locate and read `VISION.md` / dedicated roadmap or product docs when present for scope (in/out), the quality/conformance objective, and architectural boundaries. When they are absent, record that fact, proceed with lower confidence, and restrict conclusions to what the available evidence supports. Auto-detect a domain progress metric and its CI artifacts. Reconcile the open-issue count against the forge's number (it may include PRs).
 
 2. **Assess current state.** Time since the last release and the historical cadence; the volume of merged-but-unreleased work; **milestone-on-paper vs. work-in-commits drift** (what is actually being worked vs. what the milestones claim); the stated scope and non-goals. Produce a **release-cadence recommendation**: "N days since the last release with M unreleased commits → cut now / wait," plus a suggested cadence.
 
