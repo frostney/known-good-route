@@ -2,23 +2,25 @@
 name: run-retro
 description: >-
   Reviews a completed workstream from conversation, repository, and forge
-  evidence, uses grilling to agree durable lessons, and updates project vision
-  and readiness/completion definitions after confirmation. Use when ending a
-  substantial workstream or running a project retrospective.
+  evidence, uses grilling to agree improvements to delivery speed, process, and
+  codebase health, then applies selected documentation edits and follow-up
+  ticket actions. Use when ending a substantial workstream or running a project
+  retrospective.
 license: Unlicense OR MIT
 compatibility: >-
   Requires a registered grilling skill and access to the current workstream's
-  available conversation, repository, and forge evidence.
+  available conversation, repository, and forge evidence. Creating selected
+  tickets also requires the create-issue skill and forge access.
 ---
 
 # Run retrospective
 
 ## Instructions
 
-Review the completed workstream, use the actual `grilling` skill to reach shared
-understanding about durable project lessons, and then directly update the
-project's `VISION.md`, `DEFINITION_OF_READY.md`, and
-`DEFINITION_OF_DONE.md` after the user explicitly confirms the exact edits.
+Review the completed workstream through delivery-speed, process, and codebase
+health lenses. Use the actual `grilling` skill to reach shared understanding,
+then present a detailed summary. Apply only the documentation edits and
+follow-up ticket actions the user selects from that summary.
 
 ### Non-negotiable gates
 
@@ -42,45 +44,60 @@ question one at a time with a recommended answer. Do not imitate its style or
 replace it with an ad-hoc interview. If `grilling` is unavailable, stop with a
 clear dependency message.
 
-Do not edit project documents until `grilling` has reached shared understanding
-and the user explicitly confirms the exact edit set.
+Do not act until `grilling` has reached shared understanding and the user
+explicitly confirms the exact action set.
 
-#### GATE C — Promote only durable project lessons
+#### GATE C — Assess three lenses and promote only durable lessons
 
-A document change must be generalized, project-level, and supported by the
+A promoted lesson must be generalized, project-level, and supported by the
 workstream evidence. Do not turn one-off mistakes, session chronology, personal
 preferences, rules already covered, or speculative improvements into permanent
 project policy.
 
-Classify each durable lesson by the contract it changes:
+Assess every workstream through all three lenses, even when a lens produces no
+durable finding:
 
-- **`VISION.md`:** product purpose, intended users and outcomes, scope,
-  non-goals, strategic direction, or architectural boundaries.
-- **`DEFINITION_OF_READY.md`:** evidence, decisions, dependencies, acceptance
-  criteria, or other conditions that must hold before work starts.
-- **`DEFINITION_OF_DONE.md`:** implementation, verification, review,
-  documentation, delivery, or operational conditions required before work is
-  complete.
-- **Report only:** a useful improvement that belongs in `AGENTS.md`, tooling,
-  another skill, an upstream project, or nowhere in the three target documents.
+- **Delivery speed:** faster safe delivery through less waiting, rework,
+  handoff friction, unnecessary scope, or cognitive load. Never reward raw
+  output or shortcuts that weaken correctness, maintainability, or review.
+- **Process:** planning, decisions, handoffs, gates, tools, and collaboration.
+- **Codebase:** architecture, maintainability, tests, developer experience,
+  reliability, and accumulated friction.
 
-Direct edits are limited to the three target documents. Report other
-improvements separately without silently widening scope.
+Route each durable lesson to the smallest effective intervention:
 
-#### GATE D — Exact confirmation authorizes direct edits
+- **Documentation edit:** durable guidance belongs in existing repository
+  documentation, including project contracts, READMEs, `docs/`, ADRs,
+  `AGENTS.md`, skill documentation, templates, policies, and contributor
+  guidance. Prefer tightening, replacing, or coupling with existing text over
+  adding a new passage. Keep proposed wording concise.
+- **Follow-up ticket:** concrete implementation is needed. Propose a concise
+  ticket summary and let the user request more detail, grill it further, create
+  it through `create-issue`, create it in `create-issue` automatic mode, or skip
+  it. The delegated skill retains its own investigation and grilling gates.
+- **Report only:** the observation is useful but warrants no durable edit or
+  ticket.
 
-Before editing, present the exact proposed changes grouped by target document,
-the evidence for each change, and any observations intentionally left as
-report-only. Ask for one explicit confirmation of that edit set through
-`grilling`.
+Use both a documentation edit and a ticket only when the edit establishes
+durable guidance and the ticket is separately necessary to enact it. Direct
+edits are limited to documentation; propose source-code and executable
+configuration changes as tickets instead.
 
-An existing target document may be edited after confirmation. A missing target
-document may be created only when its creation and proposed contents are
-explicitly included in that confirmation. If the user changes the proposal,
-return to the `grilling` loop and confirm the revised set.
+#### GATE D — Exact selection authorizes actions
 
-Confirmation authorizes only the agreed document edits. It does not authorize
-commits, pushes, pull requests, issue changes, or edits to other files.
+After grilling reaches shared understanding, present the detailed summary with
+findings under all three lenses, exact proposed documentation changes, concise
+ticket summaries, supporting evidence, and report-only observations. The user
+chooses which document edits and ticket actions to authorize.
+
+An existing document may be edited after confirmation. A missing document may
+be created only when its creation and proposed contents are explicitly
+selected. If the user requests more ticket detail or grilling, return to the
+`grilling` loop and regenerate the detailed summary before acting.
+
+Confirmation authorizes only the selected actions. It does not authorize
+commits, pushes, pull requests, unselected issue changes, or edits to other
+files.
 
 ### Steps
 
@@ -88,47 +105,58 @@ commits, pushes, pull requests, issue changes, or edits to other files.
    issues or pull requests, and the time or turn boundary of the work being
    reviewed. Use the current conversation and `.agent/HANDOFF.md` when
    available; state any boundary that remains uncertain.
-2. **Read the project contracts.** Search the root, relevant product areas, and
-   `docs/` for the three target documents and spelling/case variants. Read every
-   relevant match before proposing changes. Record which targets are absent.
+2. **Read the project documentation.** Search the root, relevant product areas,
+   and `docs/` for project contracts and other documentation that may already
+   carry each lesson. Read every relevant match before proposing changes and
+   record material absences.
 3. **Build an evidence ledger.** Record concrete outcomes, friction, rework,
    surprises, missed expectations, gates that failed or caught problems, and
-   successful practices worth preserving. Link every candidate lesson to the
-   conversation, repository, or forge evidence that supports it.
+   successful practices worth preserving under all three required lenses. Link
+   every candidate lesson to the conversation, repository, or forge evidence
+   that supports it.
 4. **Filter and classify.** Remove duplicates, already-covered rules,
    session-specific details, and claims without evidence. Classify the remaining
-   candidates under Vision, Ready, Done, or Report only using GATE C.
+   candidates as Documentation edit, Follow-up ticket, both, or Report only
+   using GATE C.
 5. **Invoke `grilling`.** Give it the workstream boundary, evidence ledger,
-   current target documents, absences, and classified candidates. Complete its
+   relevant documentation, absences, and classified candidates. Complete its
    one-question-at-a-time loop; all unresolved judgments belong in that loop.
-6. **Present the edit set.** Show the exact proposed additions, replacements, or
-   removals per target document, with evidence and rationale. Include missing
-   documents proposed for creation and list report-only improvements separately.
-7. **Confirm through `grilling`.** Obtain explicit confirmation of the complete
-   edit set. Do not treat the original request to run a retrospective as this
-   final confirmation.
-8. **Apply the confirmed edits.** Preserve each document's structure and voice,
-   make the smallest coherent change, and avoid duplicating or contradicting
-   existing policy. Create a missing document only when confirmed and follow the
-   project's existing documentation conventions.
-9. **Verify.** Inspect the final diff against the confirmed edit set, re-read the
+6. **Present the detailed summary.** Show findings under all three lenses, exact
+   proposed additions, replacements, or removals per document, concise ticket
+   summaries with their available actions, evidence and rationale, and
+   report-only observations.
+7. **Confirm selections.** Obtain explicit selection of the document edits and
+   ticket actions. Do not treat the original request to run a retrospective as
+   this final confirmation. Return to grilling and regenerate the summary when
+   the user requests further exploration.
+8. **Apply selected documentation edits.** Preserve each document's structure
+   and voice, make the smallest coherent change, and avoid duplicating or
+   contradicting existing guidance. Create a missing document only when
+   explicitly selected and follow the project's documentation conventions.
+9. **Run selected ticket actions.** Hand each selected proposal to
+   `create-issue` in the mode the user chose. Do not create skipped or unselected
+   tickets.
+10. **Verify.** Inspect the final diff against the confirmed edit set, re-read the
    affected sections for conflicts or accidental scope expansion, and run the
    project's declared documentation or markdown checks when available. Never
    invent a validation command.
-10. **Report.** Summarize the changed contracts, report-only improvements,
-    unavailable evidence, confidence limits, and verification results.
+11. **Report.** Summarize changed documentation, created tickets, report-only
+    improvements, unavailable evidence, confidence limits, and verification
+    results.
 
 ### Output
 
 Before confirmation, provide:
 
-1. **Evidence-backed lessons** — the observed event and durable implication.
-2. **Proposed contract changes** — exact edits grouped by Vision, Ready, and
-   Done, including any proposed document creation.
-3. **Report-only improvements** — useful findings intentionally not promoted to
-   the three project contracts.
-4. **Confidence and gaps** — unavailable sources or uncertain boundaries.
+1. **Findings by lens** — evidence-backed delivery-speed, process, and codebase
+   lessons, including lenses with no durable finding.
+2. **Proposed documentation changes** — concise exact edits grouped by file,
+   including any proposed document creation.
+3. **Proposed follow-up tickets** — concise summaries with options for more
+   detail, further grilling, normal or automatic creation, or skipping.
+4. **Report-only improvements** — useful findings intentionally not promoted.
+5. **Confidence and gaps** — unavailable sources or uncertain boundaries.
 
-After applying the confirmed edits, provide a concise changed-files summary and
-the verification evidence. Keep the retrospective narrative in chat; do not add
-session history to the project contracts.
+After applying the selected actions, provide a concise changed-files summary,
+created issue links, and verification evidence. Keep the retrospective narrative
+in chat; do not add session history to project documentation.
