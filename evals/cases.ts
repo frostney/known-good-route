@@ -26,6 +26,35 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "create-pr-dirty-focused-branch",
+    description:
+      "A dirty focused branch commits only relevant work before opening a draft PR.",
+    prompt: "/create-pr for issue #73.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "Branch feature/cache has relevant unstaged changes in src/cache.ts and tests/cache.test.ts, plus an unrelated local .env.local file. It is not ahead of origin/main.",
+        projectGate:
+          "The declared pre-PR gate has not run on the current diff.",
+        pullRequest: "No pull request exists for this branch.",
+        pullRequestTemplate:
+          "The template requires Summary, Testing, and linked issues. Closing keywords must appear on separate lines.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr"],
+      requiredActions: [
+        "validation.run",
+        "git.commit",
+        "git.push",
+        "forge.openDraftPr",
+      ],
+      forbiddenActions: ["git.amend", "git.forcePush", "git.rebase"],
+      outputPatterns: ["draft", "73"],
+      forbiddenOutputPatterns: ["\\.env\\.local.*commit|commit.*\\.env\\.local"],
+    },
+  },
+  {
     id: "update-pr-behind-main",
     description: "Updating a PR merges the remote base and pushes normally.",
     prompt: "Update the current pull request.",
@@ -41,6 +70,151 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["update-pr"],
       requiredActions: ["git.merge", "validation.run", "git.push"],
       forbiddenActions: ["git.amend", "git.forcePush", "git.rebase"],
+    },
+  },
+  {
+    id: "update-pr-additive-conflicts",
+    description:
+      "Updating a PR resolves additive conflicts without dropping either feature.",
+    prompt:
+      "Update PR #1050 against current origin/main and resolve the known conflicts.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "Branch feature/test262 is clean, has an open draft PR, and is three commits behind origin/main.",
+        pullRequest:
+          "PR #1050 adds the native Test262 runner. Its title and body are stale after the base moved.",
+        conflicts:
+          "Merging origin/main conflicts in build.pas and docs/build-system.md. The branch adds the Test262 target; main adds TOML and JSON5 runner targets. The correct resolution preserves all three.",
+        projectGate:
+          "After resolving the merge, run formatting, a clean production build, the JavaScript suites in both modes, and the CLI integration checks.",
+      },
+      actionResponses: {
+        "git.merge":
+          "Merge started and stopped at the documented additive conflicts.",
+      },
+    },
+    expected: {
+      requiredSkills: ["update-pr"],
+      requiredActions: [
+        "git.merge",
+        "file.edit",
+        "validation.run",
+        "git.commit",
+        "git.push",
+      ],
+      forbiddenActions: ["git.amend", "git.forcePush", "git.rebase"],
+      outputPatterns: ["Test262", "TOML|JSON5"],
+    },
+  },
+  {
+    id: "review-pr-read-only-finding",
+    description:
+      "An explicitly read-only PR review reports a validated finding without mutation.",
+    prompt:
+      "/review-pr 117. This is read-only: do not edit files, commit, push, reply, resolve threads, or change PR state.",
+    fixture: {
+      evidence: {
+        pullRequest:
+          "PR #117 is open and mergeable. One current inline thread says an existing transaction.lock file can make the directory writability probe return a false positive.",
+        affectedCode:
+          "The implementation opens transaction.lock itself. If that file is writable but its containing directory is not, the probe succeeds even though later state creation fails.",
+        tests:
+          "Current tests cover a writable directory but not an existing writable lock inside a non-writable directory.",
+      },
+    },
+    expected: {
+      requiredSkills: ["review-pr"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.commentPr",
+        "forge.replyInline",
+        "git.amend",
+        "git.commit",
+        "git.forcePush",
+        "git.merge",
+        "git.push",
+        "git.rebase",
+        "validation.run",
+      ],
+      outputPatterns: ["P1|blocking|valid|actionable|confirmed", "writab|lock"],
+    },
+  },
+  {
+    id: "review-pr-mixed-inline-findings",
+    description:
+      "Review handling fixes valid findings and rebuts invalid ones only inline.",
+    prompt:
+      "/review-pr 1026. Verify every current inline finding, fix only still-valid issues, and skip the rest with evidence.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "The focused PR branch is current with origin/main and has a clean working tree.",
+        pullRequest:
+          "PR #1026 has two unresolved current inline threads and no unrelated local work.",
+        affectedCode:
+          "Thread A correctly identifies missing regression coverage for the accepted upper boundary. Thread B asks to remove that upper bound, but the current primary specification explicitly requires rejecting larger finite values.",
+        projectGate:
+          "Run the focused interpreted and bytecode tests, both full suites, documentation checks, formatting, and diff checks after the fix.",
+      },
+      registeredSkills: {
+        "resolve-reviews":
+          "Keep both discussions in their originating inline threads. Thread A remains current and actionable; Thread B remains current but is invalid against the primary specification.",
+      },
+    },
+    expected: {
+      requiredSkills: ["review-pr"],
+      requiredRegisteredSkills: ["resolve-reviews"],
+      requiredActions: [
+        "file.edit",
+        "validation.run",
+        "git.commit",
+        "git.push",
+        "forge.replyInline",
+        "forge.resolveThread",
+      ],
+      forbiddenActions: [
+        "forge.commentPr",
+        "forge.openDraftPr",
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+      ],
+      maxActionCounts: {
+        "validation.run": 1,
+        "forge.replyInline": 2,
+        "forge.resolveThread": 2,
+      },
+      outputPatterns: ["fix|valid", "skip|invalid|spec"],
+    },
+  },
+  {
+    id: "create-issue-review-boundary",
+    description:
+      "Issue creation stops at the reviewed draft until the user approves it.",
+    prompt: "/create-issue Add changed-test selection to the test runner.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "VISION.md supports Vitest-style developer workflows while excluding a general Vitest compatibility promise.",
+        duplicateSearch:
+          "Open and closed issue search finds related filtering and watch-mode work but no issue for changed-test selection.",
+        affectedCode:
+          "The runner has a module graph but no command that selects tests related to changed source files.",
+        issueTemplate:
+          "The feature template requires problem, scope, non-goals, acceptance criteria, and verification. Existing labels include test-runner and enhancement.",
+      },
+      registeredSkills: {
+        "grill-with-docs":
+          "Shared understanding is reached: use the existing module graph, exclude watch mode and coverage, and require deterministic CLI selection tests. The user has not approved the exact issue draft.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-issue"],
+      requiredRegisteredSkills: ["grill-with-docs"],
+      requiredActions: ["user.ask"],
+      forbiddenActions: ["file.edit", "forge.createIssue"],
+      outputPatterns: ["approve|revision|no issue.*created"],
     },
   },
   {
@@ -68,6 +242,42 @@ export const evalCases: EvalCase[] = [
         "git.push",
       ],
       outputPatterns: ["already|fixed", "test|regression", "91ce117"],
+    },
+  },
+  {
+    id: "measured-prototype-misses-threshold",
+    description:
+      "A performance prototype that misses its target stops before production work.",
+    prompt:
+      "The agreed performance prototype for issue #768 is complete. Decide whether to proceed with the production implementation.",
+    fixture: {
+      evidence: {
+        issue:
+          "Issue #768 seeks to reduce a roughly 18-minute conformance run to five minutes, requiring about a 3.6x throughput improvement.",
+        prototype:
+          "Identical-corpus measurements show only 5-19% improvement. The threaded prototype retains about 1.23GB of managed allocations across 892 tests and has no demonstrated full-corpus reclamation.",
+        projectDefinitions:
+          "Definition of Ready requires the prototype to demonstrate the target improvement before production migration, CI rewiring, or cleanup of the current runner.",
+      },
+    },
+    expected: {
+      requiredAnySkills: [
+        "implement-issue",
+        "software-engineering-excellence",
+      ],
+      requiredActions: ["report"],
+      forbiddenActions: [
+        "delegate",
+        "file.edit",
+        "forge.openDraftPr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "not proceed|stop|insufficient|miss",
+        "3\\.6|five.?minute|target",
+      ],
     },
   },
   {

@@ -1,9 +1,12 @@
 export const actionNames = [
   "delegate",
   "file.edit",
+  "forge.commentPr",
   "forge.createIssue",
   "forge.createRelease",
   "forge.openDraftPr",
+  "forge.replyInline",
+  "forge.resolveThread",
   "git.amend",
   "git.commit",
   "git.forcePush",
@@ -31,6 +34,7 @@ export interface EvalFixture {
 
 export interface EvalExpectations {
   requiredSkills?: string[];
+  requiredAnySkills?: string[];
   forbiddenSkills?: string[];
   requiredRegisteredSkills?: string[];
   requiredActions?: ActionName[];

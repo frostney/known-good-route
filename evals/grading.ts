@@ -30,6 +30,17 @@ export function gradeRun(
     });
   }
 
+  if (expected.requiredAnySkills) {
+    const used = expected.requiredAnySkills.filter((skill) =>
+      ledger.loadedSkills.includes(skill),
+    );
+    checks.push({
+      name: "required skill alternative",
+      passed: used.length > 0,
+      detail: `any=${expected.requiredAnySkills.join(",")} used=${used.join(",") || "none"}`,
+    });
+  }
+
   if (expected.forbiddenSkills) {
     const usedForbidden = expected.forbiddenSkills.filter((skill) =>
       ledger.loadedSkills.includes(skill),
@@ -133,6 +144,16 @@ export function validateCases(
     for (const skill of evalCase.expected.requiredSkills ?? []) {
       if (!availableSkills.has(skill)) {
         throw new Error(`${evalCase.id} requires missing skill ${skill}`);
+      }
+    }
+    for (const skill of evalCase.expected.requiredAnySkills ?? []) {
+      if (!availableSkills.has(skill)) {
+        throw new Error(`${evalCase.id} accepts missing skill ${skill}`);
+      }
+      if (evalCase.expected.forbiddenSkills?.includes(skill)) {
+        throw new Error(
+          `${evalCase.id} both accepts and forbids skill ${skill}`,
+        );
       }
     }
 

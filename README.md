@@ -152,6 +152,12 @@ supported frontier models:
 | Materially ambiguous architecture | Surfaces the decision and recommendation before editing |
 | Already-fixed issue | Reports source/test evidence instead of inventing a change |
 | Branch with committed work and a clean tree | Opens the PR without creating an empty commit |
+| Dirty focused branch with unrelated local state | Commits only relevant work, excludes secrets, and opens one draft PR |
+| PR update with additive merge conflicts | Preserves both feature paths, validates the merge, and pushes normally |
+| Explicitly read-only PR review | Reports validated findings without editing or changing PR state |
+| Mixed actionable and invalid inline findings | Fixes validated findings, rebuts invalid ones inline, and never posts a top-level comment |
+| Issue draft awaiting approval | Investigates, grills, and presents the project-aligned draft without filing it |
+| Measured prototype misses its required target | Stops before production migration, publication, or speculative follow-on work |
 | Tag-triggered release workflow | Pushes the tag once, monitors automation, and never calls `gh release create` |
 | No release publisher configured | Uses the manual publisher only after the publication gate |
 | Long autonomous run | Grounds every progress/completion claim in current evidence and does not end on a promise |
