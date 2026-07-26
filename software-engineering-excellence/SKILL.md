@@ -39,7 +39,8 @@ speculative architecture.
 
 For genuinely multi-layer work, establish a thin runnable path and deepen it in
 increments. Validate material performance changes against a relevant baseline.
-Use comments for why, not what.
+Follow the surrounding code's comment density and idiom; explain non-obvious
+decisions.
 
 ## Evidence and communication
 
@@ -58,9 +59,5 @@ scope, tooling, or framework churn.
   architecture, greenfield, and deciding the correct layer.
 - [references/investigation.md](references/investigation.md): defect diagnosis,
   design evaluation, and source comparisons.
-- [references/over-steer-guards.md](references/over-steer-guards.md): when a
-  principle risks becoming excess.
-- [references/worked-patterns.md](references/worked-patterns.md): concrete
-  stack-neutral examples.
 - [references/barometer.md](references/barometer.md): periodic direction check,
   not a score.

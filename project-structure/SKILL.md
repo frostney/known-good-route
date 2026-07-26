@@ -52,13 +52,10 @@ substitute.
 include plus genuine Claude-specific additions when symlinks are unavailable.
 Never maintain divergent copies.
 
-Keep the root `AGENTS.md` short and operational:
-
-1. Hard Constraints
-2. Runtime / Commands
-3. Code Organization
-4. Testing
-5. Safety / Boundaries
+Keep the root `AGENTS.md` lightweight: briefly identify the repository, then
+spend its context on non-obvious gotchas, exact commands, hard constraints, and
+safety boundaries. Do not restate a file tree or conventions evident from the
+repository.
 
 Add nested `<area>/AGENTS.md` only where rules differ; the root points to each
 area. Use `CONTRIBUTING.md` for authoritative human merge requirements and link

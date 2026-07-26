@@ -75,6 +75,7 @@ describe("eval grading", () => {
         "implement-idea",
         "implement-issue",
         "run-retro",
+        "software-engineering-excellence",
         "update-pr",
       ]),
     );

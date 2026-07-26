@@ -74,18 +74,9 @@ function portableAgentInstructions(catalog: string): string {
 
 ${catalog}
 
-When a task matches an available skill, call loadSkill before following it.
-Load only skills relevant to the task. Read a linked reference only when the
-loaded skill says it applies. Inspect fixture evidence instead of assuming
-repository state.
-
-Represent every mutation, validation, user question, delegation, Git action, or
-forge action through performAction. It records intent but has no real side
-effects. Invoke required registered skills through invokeRegisteredSkill.
-
-Complete authorized in-scope work. Respect the loaded skill's approval and stop
-boundaries. Never claim an action or validation that the fixture did not record.
-Return the user-facing outcome after tool work is complete.`;
+Complete authorized in-scope work through the available interfaces and relevant
+loaded guidance. Respect approval and stop boundaries. Return the user-facing
+outcome without claiming external effects the tools did not report.`;
 }
 
 function selectedCases(caseIds: string[]) {

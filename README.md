@@ -53,7 +53,9 @@ behavior. The current baseline is the official guidance for
 [GPT-5.6 / Sol](https://developers.openai.com/api/docs/guides/latest-model#prompting-best-practices),
 [Claude Fable 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5),
 and
-[Claude Opus 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5).
+[Claude Opus 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5),
+including Anthropic's
+[Claude 5 context-engineering rules](https://claude.com/blog/the-new-rules-of-context-engineering-for-claude-5-generation-models).
 
 - Lead with the owned outcome, why it matters, completion evidence, boundaries,
   and stop rules. Prescribe exact mechanics only when the route is load-bearing.
@@ -73,6 +75,10 @@ and
 - Keep startup descriptions limited to outcome and activation criteria. Put
   model effort, verbosity, thinking, context-budget plumbing, asynchronous
   progress delivery, and any model-specific verifier strategy in the harness.
+- Keep ambient repository context lightweight and specific: non-obvious
+  decisions, gotchas, commands, and boundaries rather than facts visible in the
+  tree. Prefer expressive tool and file interfaces plus rich references over
+  generic worked examples that narrow exploration.
 - Validate prompt changes incrementally on the same representative scenarios.
 
 Fable 5 benefits from explicit independent verification on genuinely long
@@ -97,8 +103,9 @@ that evidence.
 - **Verify versions live** is a recurring rule across stack skills: the agent confirms the current stable version of every dependency from the registry (`bun pm view <package> version`) or official release notes before adding or upgrading any dependency. Memory and prior conversation turns are not acceptable sources.
 - **Live docs override the skill on conflict** for any third-party surface that evolves quickly (Convex, AI Gateway, etc.).
 - **No project names** appear in any skill body — patterns are extracted, named projects aren't.
-- **Examples** are included only when prose cannot express the decision clearly;
-  they remain venue-agnostic.
+- **Examples** are exceptional. Prefer expressive interfaces and high-fidelity
+  references such as code, tests, specs, and artifacts; use a prose example only
+  when it resolves an otherwise ambiguous decision.
 - **Standalone duplication stays minimal.** The grill gate is duplicated in
   `create-issue`, `implement-issue`, and `implement-idea` because a skill cannot
   depend on another skill's internal reference file. Update all three copies
@@ -149,6 +156,7 @@ supported frontier models:
 | No release publisher configured | Uses the manual publisher only after the publication gate |
 | Long autonomous run | Grounds every progress/completion claim in current evidence and does not end on a promise |
 | Small local change | Runs the real project gate without generic re-checks or verifier subagents |
+| Local convention differs from a generic default | Follows the surrounding code and project gate instead of imposing a blanket style rule |
 | Written issue, PR, roadmap, or retrospective | Leads with the outcome and omits filler, boilerplate, and repeated summaries |
 
 The provider-neutral [behavioral eval harness](evals/README.md) runs these

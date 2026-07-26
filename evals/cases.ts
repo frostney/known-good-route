@@ -179,6 +179,30 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "follow-local-code-conventions",
+    description:
+      "Implementation follows observed local conventions instead of a blanket style rule.",
+    prompt:
+      "Add the requested exported parseConfig helper beside the existing parser functions and validate it.",
+    fixture: {
+      evidence: {
+        request:
+          "The helper accepts source text and returns the module's existing Result type. No implementation style was prescribed.",
+        surroundingCode:
+          "Exported parser functions use named declarations and brief TSDoc because the repository's public-API lint rule requires it.",
+        projectGate:
+          "The relevant gate runs parser tests, public-API documentation lint, and typecheck.",
+      },
+    },
+    expected: {
+      requiredSkills: ["software-engineering-excellence"],
+      requiredActions: ["file.edit", "validation.run"],
+      forbiddenActions: ["delegate"],
+      outputPatterns: ["TSDoc|public-API|surrounding|local convention"],
+      maxActionCounts: { "validation.run": 1 },
+    },
+  },
+  {
     id: "unrelated-prompt-no-skill",
     description: "An unrelated request does not load a repository skill.",
     prompt: "Translate the phrase 'good morning' into French.",
