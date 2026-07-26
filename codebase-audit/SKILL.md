@@ -1,0 +1,124 @@
+---
+name: codebase-audit
+description: >-
+  Audits the current repository for systemic correctness, architecture,
+  simplification, clarity, test value, and operational risks using current
+  source and reproducible probes. Use when the user runs /codebase-audit or asks
+  for an evidence-backed review of a whole codebase or scoped subsystem.
+license: Unlicense OR MIT
+compatibility: >-
+  Requires the project's declared build and test tools plus network access for
+  current third-party documentation and source verification.
+---
+
+# Codebase audit
+
+Assess the repository's current state rather than a branch diff. Produce a
+truthful coverage map, actionable findings, and coherent remediation batches.
+
+## Modes and boundaries
+
+The audit is non-remediating by default. It may run safe local tests, builds,
+servers, browser flows, disposable repros, isolated test data, and temporary
+artifacts, but it must not edit repository content or create persistent or
+externally visible side effects. Clean up disposable artifacts and report
+anything retained.
+
+There is no `fix-all` mode. After reporting, offer remediation batches. A fix
+follow-up begins only when the user selects a coherent batch or finding IDs. It
+authorizes focused local edits and validation on a focused branch, not commits,
+pushes, publication, issue creation, deployments, or shared-state mutation.
+
+## Map before judging
+
+1. Read applicable project instructions, vision and product documentation,
+   current source, tests, configuration, lockfiles, generated interfaces,
+   completion contracts, packaging, and deployment definitions.
+2. Map user-visible capabilities, entry points, modules, trust boundaries, data
+   and state flows, background work, external dependencies, tests, tooling, and
+   operational paths.
+3. Choose perspectives from the actual codebase:
+   - always cover behavior, correctness, architecture and consistency,
+     simplification, self-documentation, test value, and operations;
+   - add UI/UX and accessibility when interfaces exist;
+   - add security and adversarial-input analysis at trust boundaries;
+   - add persistence, migration, transaction, concurrency, and idempotency
+     analysis for stateful paths;
+   - add API, CLI, library, packaging, compatibility, deployment, rollback,
+     observability, and performance analysis only where those surfaces exist.
+4. For a shallow subsystem, trace its complete path and direct interactions. For
+   a layered codebase, partition work by capability and perspective so later
+   areas do not receive progressively thinner analysis. Delegate only genuinely
+   independent, sizeable areas with bounded fan-out.
+
+## Establish current evidence
+
+- Treat documentation, tests, issue text, prior audits, model memory, and
+  generic best practice as leads, not proof.
+- Exercise representative behavior through the real UI, API, CLI, library
+  entry point, job, migration, package, or deployment path. Cover success plus
+  the most consequential failure or boundary case.
+- Record setup, action or command, input, expected result, and observed result.
+  Mark anything not executed `static only`.
+- Verify test value: relevant wrong behavior should fail; assertions should
+  cover outcomes and meaningful failure paths without excessive mocks,
+  snapshots, or implementation coupling.
+- Verify third-party claims against the exact locked version and current
+  official documentation or source. Check whether a current supported version
+  removes custom code, workarounds, adapters, or configuration.
+- Compare documentation and declared operational flows with current
+  implementation. A passing unit suite does not validate a broken build,
+  migration, package, deployment, or rollback path.
+
+## Audit criteria
+
+- Trace boundary inputs, authorization, state changes, failures, partial
+  success, retries, concurrency, idempotency, deletions, and side effects where
+  relevant.
+- Check dependency direction, module cohesion, ownership, public interfaces, and
+  whether multiple patterns or representations compete for the same concept.
+- Search the live repository before proposing anything new. Prefer deletion,
+  reuse, direct control flow, consolidation, the standard platform, and existing
+  dependencies over new layers.
+- Report dead code, duplication, speculative abstractions, needless wrappers,
+  one-use indirection, stale compatibility paths, and dependencies that no
+  longer earn their cost.
+- Require names, types, boundaries, and interfaces to communicate intent. Match
+  the surrounding comment density; comments should preserve rationale and
+  constraints, not narrate syntax.
+- Suppress generic advice when repository evidence documents a deliberate
+  alternative. Every best-practice finding must cite current project and
+  authoritative-source evidence plus the concrete simplification or risk.
+
+## Report
+
+Search the complete mapped scope for evidence-backed candidates before
+filtering the report; do not stop after the first or highest-severity issue.
+
+Lead with the highest-value current conclusion. Include:
+
+- a coverage map of inspected, executed, sampled, static-only, and unreached
+  capabilities;
+- active and skipped perspectives with reasons;
+- exact probes and project gates with observed results;
+- actionable findings as
+  `[CA-N][BLOCKING|IMPORTANT|IMPROVEMENT] file:line — evidence, impact, smallest
+  remedy`;
+- grouped remediation batches ordered by risk reduction, dependency, and
+  reviewability;
+- limitations and retained probe artifacts.
+
+`BLOCKING` is a current exploitable, corrupting, or deployment-blocking defect.
+`IMPORTANT` has material correctness, security, operability, test-value,
+maintainability, simplification, or comprehension cost. `IMPROVEMENT` is a
+verified worthwhile simplification or current-practice alignment. Omit praise,
+inventory narration, style nits, and findings without concrete impact.
+
+## Fix follow-up
+
+After the user selects a batch or IDs, create or reuse a focused branch and
+implement the smallest complete remedies. Do not absorb unrelated findings.
+Promote useful probes into regression tests, remove disposable artifacts, run
+affected behavioral probes and project gates, and report fixed and unresolved
+IDs with observed evidence. Use the repository's separate git and PR workflows
+only when the user requests publication.

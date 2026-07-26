@@ -28,6 +28,7 @@ These are [Agent Skills](https://agentskills.io): any skills-compatible agent lo
 | [`create-pr`](create-pr/SKILL.md) | Commit relevant local changes, push a focused branch, and open a draft pull request using the project's PR template. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and push to the current PR, merge the baseline when behind, refresh PR title/body when stale. No amend, no force push. |
 | [`review-pr`](review-pr/SKILL.md) | Resolve review threads in-place — no top-level PR/issue comments, no force pushes — preferring `/resolve-reviews` when registered and using `/update-pr` for the commit/push step. |
+| [`code-review`](code-review/SKILL.md) | Review a PR, branch, or worktree against its claim and repository standards using reproducible UI or non-UI probes, current-source simplification checks, and an optional local fix phase. `fix-all` resolves the bounded change before PR creation. |
 | [`create-release`](create-release/SKILL.md) | Prepare a changelog-first release PR, then publish only when authorized and through exactly one evidence-backed path. Existing workflows own publication when configured; the agent never double-publishes with `gh release create`. |
 | [`roadmap-review`](roadmap-review/SKILL.md) | Review a project's roadmap from freshly-pulled data — assess current state and release cadence, measure delivery velocity from history, verify candidate work against the source, produce a parallelized throughput-anchored version plan, and (optionally, on confirmation) create milestones and issues. |
 
@@ -39,6 +40,7 @@ These are [Agent Skills](https://agentskills.io): any skills-compatible agent lo
 | [`react-stack`](react-stack/SKILL.md) | Default React-based stack across two profiles — web (Next.js App Router) and universal (Expo Router) — with a shared core (Bun-only, TypeScript, Tailwind 4, Biome, Knip, Fallow, `bun test` co-located, single `bun run check` aggregator, Vercel AI Gateway via `@ai-sdk/gateway`, Clerk, Convex, Plop, Lefthook, Atomic Design, source under `src/` by domain). |
 | [`native-nostalgia-stack`](native-nostalgia-stack/SKILL.md) | FreePascal toolchain — FPC in Delphi mode (compiler flags in a shared include), namespace-based unit naming (flat by default), code-style starting points, build / formatter / codebase-health contracts (implementation is the project's choice), Lefthook pre-commit, InstantFPC for one-off scripts. |
 | [`convex-conventions`](convex-conventions/SKILL.md) | Convex backend rules — shared validators, Clerk JWT bridge, `args` + `returns` on every public function, in-code filtering, `.take()` caps, rate-limited mutations, action/mutation split, schema with soft-delete and audit trails, single re-export module for client types. The live Convex docs override this skill on conflict. |
+| [`codebase-audit`](codebase-audit/SKILL.md) | Audit the repository's current state with a coverage map, conditionally selected technical perspectives, reproducible probes, and current-source checks for simplification, self-documenting design, and best-practice drift. Remediation requires a selected coherent batch. |
 | [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Ambient engineering-quality standard across the whole lifecycle — planning, orchestrating, developing, debugging, reviewing, refactoring, and substantial investigation: ground in reality (docs are leads, not proof), resist the pull to the quick fix and invest in the right structure, solve the full scope, reuse before creating, validate to the real bar, and use maintainability as the governor. |
 | [`bleeding-edge`](bleeding-edge/SKILL.md) | Ambient lens that tilts technology choices toward the newest viable option — latest stable (incl. just-released majors), newly-stable language/platform features, modern tooling, current AI models, and pre-release channels with a documented reason — while staying under `software-engineering-excellence`: verify live, pin, keep it reversible and gate-green, and never silently swap a decided choice. |
 
@@ -114,6 +116,9 @@ that evidence.
 ### Cross-skill references
 
 - `implement-issue` and `implement-idea` invoke `/create-pr` at handoff.
+- `implement-issue` and `implement-idea` invoke one bounded
+  `/code-review fix-all` before `/create-pr`; they stop for material new
+  decisions and do not proceed with unresolved Blocking or Important findings.
 - `review-pr` invokes `/update-pr` for the commit/push step (and `/resolve-reviews` when registered).
 - `create-release` invokes `/create-pr` to open the release PR, follows
   `git-workflow` for branching and push rules, and defers to `project-structure`

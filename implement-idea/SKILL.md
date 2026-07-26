@@ -30,8 +30,8 @@ current repository.
   neither exists, note that once and continue.
 - Present two to four genuinely distinct evidence-backed options, recommend one,
   and wait for the user's choice unless automatic mode applies.
-- For any code or test change, complete the project gate, one bounded code
-  review, and `/create-pr`.
+- For any code or test change, complete the project gate, one bounded
+  `/code-review fix-all`, and `/create-pr`.
 
 ### Project definitions
 
@@ -67,9 +67,11 @@ mode.
    consistency; attach the evidence to the PR.
 8. Run targeted checks while developing, then the applicable Definition of Done
    and repository gate. Fix failures rather than weakening the gate.
-9. Run one `/review` pass against the success criteria, Definition of Done,
-   project conventions, and branch diff. Fix validated in-scope findings and
-   rerun only affected checks. If `/review` is unavailable, perform that same
-   bounded diff review directly.
+9. Run one `/code-review fix-all` pass against the success criteria, Definition
+   of Done, project conventions, branch diff, and reproducible behavior.
+   Resolve every validated in-scope finding and rerun affected checks. Stop for
+   a material new decision; do not continue with unresolved Blocking or
+   Important findings. If `/code-review` is unavailable, perform that same
+   bounded review and fix pass directly.
 10. Use `/create-pr` and summarize the mini-spec, delivered outcome, and observed
     completion evidence in the PR.

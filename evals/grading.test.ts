@@ -128,6 +128,116 @@ describe("eval grading", () => {
     expect(mutated.passed).toBeFalse();
   });
 
+  test("accepts a local bounded code-review fix-all trajectory", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "code-review-fix-all",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const result = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["code-review"],
+        actions: [
+          {
+            action: "file.edit",
+            details: "Delete the wrapper and reuse loadProjectConfig",
+          },
+          {
+            action: "validation.run",
+            details: "Run the focused CLI probes",
+          },
+          {
+            action: "validation.run",
+            details: "Run the configuration tests",
+          },
+          {
+            action: "validation.run",
+            details: "Run typecheck",
+          },
+          {
+            action: "validation.run",
+            details: "Run the repository gate",
+          },
+        ],
+      }),
+      "Simplified the change by reusing loadProjectConfig. The malformed-input probe now returns ConfigError.",
+    );
+    expect(result.passed).toBeTrue();
+
+    const published = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["code-review"],
+        actions: [
+          { action: "file.edit", details: "Fix CR-1" },
+          { action: "validation.run", details: "Run the probes" },
+          { action: "git.push", details: "Publish the fix" },
+        ],
+      }),
+      "The malformed probe passes after the simplification.",
+    );
+    expect(published.passed).toBeFalse();
+  });
+
+  test("keeps a probe-backed codebase audit non-remediating", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "codebase-audit-safe-probes",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const result = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["codebase-audit"],
+        actions: [
+          {
+            action: "validation.run",
+            details: "Probe auth rejection locally",
+          },
+          {
+            action: "validation.run",
+            details: "Probe retry idempotency locally",
+          },
+          {
+            action: "validation.run",
+            details: "Render deployment manifests",
+          },
+          {
+            action: "validation.run",
+            details: "Run the project gate",
+          },
+          {
+            action: "report",
+            details: "Report coverage and remediation batches",
+          },
+        ],
+      }),
+      "Coverage includes the auth and retry paths. CA-1 confirms the missing idempotency guard against the 4.3 official docs. UI was skipped because no UI exists.",
+    );
+    expect(result.passed).toBeTrue();
+
+    const remediated = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["codebase-audit"],
+        actions: [
+          { action: "validation.run", details: "Run local probes" },
+          { action: "file.edit", details: "Fix CA-1 without selection" },
+          { action: "report", details: "Report coverage" },
+        ],
+      }),
+      "Coverage includes auth; UI skipped. The 4.3 official guidance was checked.",
+    );
+    expect(remediated.passed).toBeFalse();
+  });
+
   test("accepts either applicable skill for a measured stop decision", () => {
     const evalCase = evalCases.find(
       ({ id }) => id === "measured-prototype-misses-threshold",
@@ -160,6 +270,8 @@ describe("eval grading", () => {
         "create-issue",
         "create-pr",
         "create-release",
+        "code-review",
+        "codebase-audit",
         "implement-idea",
         "implement-issue",
         "review-pr",
