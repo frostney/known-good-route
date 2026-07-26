@@ -1,8 +1,9 @@
-import { mkdir } from "node:fs/promises";
+import { appendFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { ToolLoopAgent, stepCountIs } from "ai";
 import { evalCases } from "./cases.ts";
 import { gradeRun, validateCases } from "./grading.ts";
+import { renderSummary } from "./reporting.ts";
 import {
   formatSkillCatalog,
   loadSkills,
@@ -228,6 +229,13 @@ async function run(): Promise<void> {
       2,
     )}\n`,
   );
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    await appendFile(
+      process.env.GITHUB_STEP_SUMMARY,
+      renderSummary(records),
+      "utf8",
+    );
+  }
 
   const failed = records.filter((record) => !record.grade.passed);
   console.log(`Results: ${outputPath}`);

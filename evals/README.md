@@ -89,6 +89,28 @@ The initial release gate is:
 - manual review of disagreements and borderline prose;
 - repeat failures and variable rows before changing a skill.
 
+## CI results
+
+Normal pushes and pull requests run `bun run check` without model spend. The
+GitHub Actions machinery uses Node 24-based action releases to check out the
+repository and bootstrap Bun; the harness and its tests still run on Bun.
+
+Open the pull request's **Checks** tab and select **Test eval harness / test** to
+see the typecheck, Bun test, and 27-row dry-run output.
+
+Live evals require the `AI_GATEWAY_API_KEY` repository Actions secret:
+
+1. Before merge, add the `run-skill-evals` label to the pull request. This
+   explicitly starts the full 27-row matrix once.
+2. After the workflow is on the default branch, open **Actions → Run skill
+   evals → Run workflow** to select one model, one scenario, or the full matrix.
+3. Open the completed run's **Summary** for the pass/fail table and token counts.
+4. Download the `skill-eval-results-<run-id>` artifact for full outputs, tool
+   traces, checks, errors, and usage data.
+
+Removing and re-adding `run-skill-evals` starts another paid full-matrix run.
+Pushes and ordinary PR events never start live evals.
+
 ## Fidelity boundary
 
 This suite evaluates the skill text and portable discovery/loading contract
