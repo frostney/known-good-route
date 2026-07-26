@@ -46,34 +46,66 @@ These are [Agent Skills](https://agentskills.io): any skills-compatible agent lo
 
 Design decisions and conventions shared across every skill in this collection.
 
-### Model-neutral prompt contract
+### Frontier-model prompt contract
 
 The skills target current frontier models without relying on one model's default
-behavior:
+behavior. The current baseline is the official guidance for
+[GPT-5.6 / Sol](https://developers.openai.com/api/docs/guides/latest-model#prompting-best-practices),
+[Claude Fable 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5),
+and
+[Claude Opus 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5),
+including Anthropic's
+[Claude 5 context-engineering rules](https://claude.com/blog/the-new-rules-of-context-engineering-for-claude-5-generation-models).
 
-- Lead with the owned outcome, completion evidence, boundaries, and stop rules;
-  prescribe an exact procedure only when the route itself is load-bearing.
-- Use `must`, `never`, and `only` for genuine invariants. Use decision rules for
-  investigation depth, delegation, optional tools, and proportional validation.
-- State each runtime rule once and positively. Avoid model-specific warnings,
-  repeated forbidden-rationalization lists, and narrated compliance checklists.
+- Lead with the owned outcome, why it matters, completion evidence, boundaries,
+  and stop rules. Prescribe exact mechanics only when the route is load-bearing.
+- State each runtime rule once. Use `must`, `never`, and `only` for genuine
+  invariants; use decision rules for investigation depth, optional tools,
+  proportional validation, and when user input is truly required.
+- Preserve task-specific checks that define completion. Do not add generic
+  self-check, double-check, or verifier passes around them.
+- Delegate only genuinely independent, sizeable work with a bounded fan-out.
+  Do not use subagents merely to duplicate work or re-check a small task.
+- Ground progress and completion claims in current tool or source evidence.
+  Report sparse outcomes at material phase changes; finish authorized reversible
+  work instead of ending on a promise or a redundant permission question.
+- Lead final responses and written artifacts with the outcome. Keep complete,
+  readable sentences and decision-relevant evidence; omit filler, boilerplate,
+  repeated summaries, and internal-reasoning narration.
 - Keep startup descriptions limited to outcome and activation criteria. Put
-  model effort, verbosity, thinking, phase, and progress plumbing in the harness.
-- Report sparse, outcome-based progress at material phase changes rather than
-  narrating routine tool calls.
+  model effort, verbosity, thinking, context-budget plumbing, asynchronous
+  progress delivery, and any model-specific verifier strategy in the harness.
+- Keep ambient repository context lightweight and specific: non-obvious
+  decisions, gotchas, commands, and boundaries rather than facts visible in the
+  tree. Prefer expressive tool and file interfaces plus rich references over
+  generic worked examples that narrow exploration.
 - Validate prompt changes incrementally on the same representative scenarios.
+
+Fable 5 benefits from explicit independent verification on genuinely long
+autonomous runs, while Opus 5 can over-verify when given generic verification or
+verifier-subagent instructions. Skills therefore name the observable evidence
+and project gates that matter; model-specific scaffolding decides how to obtain
+that evidence.
 
 ### Conventions across all skills
 
-- Each skill is a single `SKILL.md` with YAML frontmatter (`name`, third-person `description` ending with "Use when…", `license`, and `compatibility` where the skill has real environment requirements) and a `## Instructions` body. The frontmatter conforms to the [Agent Skills specification](https://agentskills.io/specification). No `disable-model-invocation` — these are meant to be invoked from ambient context.
-- **Workflow skills** state their outcome, true gates, authorization boundaries,
-  and stop rules before `### Steps`; exact mechanics follow only where the route
-  itself is load-bearing.
-- **Setup / audit skills** open with the conventions and close with a `### Rules` section listing audit-checkable invariants.
+- Each skill has a concise `SKILL.md` with conforming frontmatter (`name`,
+  third-person `description` ending with "Use when…", `license`, and
+  `compatibility` only for real environment requirements). Situational detail
+  belongs in directly linked, one-level `references/`; the entry skill says
+  exactly when to read each file. No `disable-model-invocation`.
+- **Workflow skills** state the outcome, true gates, authorization boundaries,
+  and stop rules before exact mechanics. Preserve procedural detail only where
+  sequencing is load-bearing.
+- **Convention skills** keep durable decisions and audit-checkable completion
+  evidence in the entry skill; templates, profiles, and implementation contracts
+  load only when relevant.
 - **Verify versions live** is a recurring rule across stack skills: the agent confirms the current stable version of every dependency from the registry (`bun pm view <package> version`) or official release notes before adding or upgrading any dependency. Memory and prior conversation turns are not acceptable sources.
 - **Live docs override the skill on conflict** for any third-party surface that evolves quickly (Convex, AI Gateway, etc.).
 - **No project names** appear in any skill body — patterns are extracted, named projects aren't.
-- **Examples** are concrete and venue-agnostic — never tied to a specific repo I work on.
+- **Examples** are exceptional. Prefer expressive interfaces and high-fidelity
+  references such as code, tests, specs, and artifacts; use a prose example only
+  when it resolves an otherwise ambiguous decision.
 - **Standalone duplication stays minimal.** The grill gate is duplicated in
   `create-issue`, `implement-issue`, and `implement-idea` because a skill cannot
   depend on another skill's internal reference file. Update all three copies
@@ -95,7 +127,9 @@ behavior:
 - `run-retro` requires `grilling` for the retrospective interview and final
   confirmation, then applies only user-selected documentation edits and ticket
   actions.
-- `react-stack` and `native-nostalgia-stack` defer to `project-structure` for repo layout and to their respective domain skills (`convex-conventions`) for deeper specifics.
+- `react-stack` and `native-nostalgia-stack` defer to `project-structure` for
+  language-neutral repository policy; `react-stack` delegates Convex specifics
+  to `convex-conventions`.
 - `bleeding-edge` sits beneath `software-engineering-excellence` as a subordinate lens — it tilts the default technology choice toward the newest viable option while SEE remains the governor and maintainability stays the tiebreaker. It reuses the cross-skill "verify versions live" rule, and it applies its bias *within* the choices decided by the stack skills and `AGENTS.md` Hard Constraints rather than silently swapping them.
 
 ## Contributing
@@ -114,12 +148,29 @@ supported frontier models:
 
 | Scenario | Expected invariant |
 | --- | --- |
-| Clear implementation with one selected option | Completes without another permission prompt |
+| Clear implementation with one selected option | Completes without another permission prompt or unrelated cleanup |
 | Materially ambiguous architecture | Surfaces the decision and recommendation before editing |
 | Already-fixed issue | Reports source/test evidence instead of inventing a change |
 | Branch with committed work and a clean tree | Opens the PR without creating an empty commit |
+| Dirty focused branch with unrelated local state | Commits only relevant work, excludes secrets, and opens one draft PR |
+| PR update with additive merge conflicts | Preserves both feature paths, validates the merge, and pushes normally |
+| Explicitly read-only PR review | Reports validated findings without editing or changing PR state |
+| Mixed actionable and invalid inline findings | Fixes validated findings, rebuts invalid ones inline, and never posts a top-level comment |
+| Issue draft awaiting approval | Investigates, grills, and presents the project-aligned draft without filing it |
+| Measured prototype misses its required target | Stops before production migration, publication, or speculative follow-on work |
+| Stale audit with missing evidence | Separates confirmed gaps, corrected claims, and unsupported measurements before planning |
+| Rate-limited review bot | Reports the review as unavailable or incomplete, never passed |
 | Tag-triggered release workflow | Pushes the tag once, monitors automation, and never calls `gh release create` |
 | No release publisher configured | Uses the manual publisher only after the publication gate |
+| Long autonomous run | Grounds every progress/completion claim in current evidence and does not end on a promise |
+| Small local change | Runs the real project gate without generic re-checks or verifier subagents |
+| Local convention differs from a generic default | Follows the surrounding code and project gate instead of imposing a blanket style rule |
+| Written issue, PR, roadmap, or retrospective | Leads with the outcome and omits filler, boilerplate, and repeated summaries |
+
+The provider-neutral [behavioral eval harness](evals/README.md) runs these
+scenarios through Vercel AI SDK and AI Gateway. `bun run check` validates the
+harness without model spend; `bun run eval` runs the paid model matrix when
+`AI_GATEWAY_API_KEY` is present.
 
 **Validator freshness policy:** `skills-ref` is intentionally installed unpinned (`pip install --upgrade skills-ref`) so CI always validates against the latest published spec implementation rather than a frozen snapshot. The workflow caches `~/.cache/pip` to speed up installs; this is safe because pip still resolves the newest release from the index on every run and only reuses a cached wheel when that exact version was already downloaded, so caching never holds back the validator version. This "always latest" rule applies only to the validator package itself — the workflow's GitHub Actions (`checkout`, `setup-python`, `cache`) are pinned to full commit SHAs (with the version in a trailing comment) for supply-chain safety, which is the recommended hardening practice for third-party actions.
 

@@ -1,0 +1,21 @@
+{
+  "name": "known-good-route-evals",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "bun run typecheck && bun test && bun run eval:dry",
+    "eval": "bun run evals/run.ts",
+    "eval:dry": "bun run evals/run.ts --dry-run",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ai": "7.0.37",
+    "yaml": "2.9.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.14",
+    "typescript": "7.0.2"
+  }
+}
