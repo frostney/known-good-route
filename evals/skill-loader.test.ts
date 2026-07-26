@@ -13,7 +13,9 @@ describe("skill loader", () => {
   test("discovers every top-level skill", async () => {
     const skills = await loadSkills(repositoryRoot);
 
-    expect(skills.size).toBe(16);
+    expect(skills.size).toBe(18);
+    expect(skills.has("code-review")).toBeTrue();
+    expect(skills.has("codebase-audit")).toBeTrue();
     expect(skills.has("create-pr")).toBeTrue();
     expect(skills.has("run-retro")).toBeTrue();
     expect(formatSkillCatalog(skills)).toContain("<available_skills>");

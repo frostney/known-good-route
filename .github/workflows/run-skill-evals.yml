@@ -24,6 +24,8 @@ on:
         options:
           - all
           - create-pr-already-committed
+          - code-review-fix-all
+          - codebase-audit-safe-probes
           - update-pr-behind-main
           - issue-already-fixed
           - idea-materially-ambiguous

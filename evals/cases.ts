@@ -189,6 +189,87 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "code-review-fix-all",
+    description:
+      "A bounded fix-all review probes behavior, simplifies the change, and stays local.",
+    prompt: "/code-review fix-all on the current worktree.",
+    fixture: {
+      evidence: {
+        comparisonBoundary:
+          "Feature branch feature/config is two commits ahead of the merge-base with origin/main. The worktree also has a relevant unstaged test change and no unrelated files.",
+        claim:
+          "Issue #88 requires the CLI to load the existing project configuration and return the established invalid-configuration error for malformed input.",
+        changedCode:
+          "The branch adds a one-caller ConfigLoader wrapper with a vague load(data) method. It duplicates the repository's existing loadProjectConfig helper and bypasses its normalized error path.",
+        repositoryPatterns:
+          "All sibling CLI commands call loadProjectConfig directly and expose the resulting ConfigError without an adapter.",
+        behavioralQa:
+          "The happy-path CLI probe succeeds. A malformed configuration produces a raw parser stack trace instead of the required ConfigError.",
+        currentSources:
+          "The exact locked parser version's current official documentation confirms the existing helper's error-normalization API.",
+        projectGate:
+          "After remediation, run the focused CLI probes, configuration tests, typecheck, and the declared repository gate.",
+      },
+    },
+    expected: {
+      requiredSkills: ["code-review"],
+      requiredActions: ["file.edit", "validation.run"],
+      forbiddenActions: [
+        "delegate",
+        "forge.commentPr",
+        "forge.openDraftPr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "reuse|loadProjectConfig|simplif|delet",
+        "probe|malformed|ConfigError",
+      ],
+    },
+  },
+  {
+    id: "codebase-audit-safe-probes",
+    description:
+      "A codebase audit uses conditional perspectives and safe probes without remediation.",
+    prompt:
+      "/codebase-audit. Audit the current repository, but do not fix anything.",
+    fixture: {
+      evidence: {
+        repositoryMap:
+          "The repository is a server application with an HTTP API, authentication middleware, PostgreSQL persistence, a background retry job, and deployment manifests. It has no UI package or browser-facing route and makes no performance claim.",
+        currentCode:
+          "Two authenticated mutation routes bypass the shared authorizeMutation helper and duplicate partial role checks. The retry job uses the established transaction helper but has no idempotency key.",
+        tests:
+          "Unit tests cover successful mutations. No test or reproducible probe covers a rejected role or a retried job after a partial transaction failure.",
+        currentSources:
+          "The exact locked framework version is 4.3. Its current official documentation requires authorization before mutation and documents the existing idempotency facility.",
+        operations:
+          "The declared local integration environment can exercise the HTTP, database, retry, and deployment-render paths without shared or production state.",
+      },
+    },
+    expected: {
+      requiredSkills: ["codebase-audit"],
+      requiredActions: ["validation.run", "report"],
+      forbiddenActions: [
+        "delegate",
+        "file.edit",
+        "forge.createIssue",
+        "forge.openDraftPr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "coverage",
+        "auth|security",
+        "idempoten|retry",
+        "UI.*skip|skip.*UI|no UI",
+        "4\\.3|official",
+      ],
+    },
+  },
+  {
     id: "create-issue-review-boundary",
     description:
       "Issue creation stops at the reviewed draft until the user approves it.",
@@ -506,6 +587,8 @@ export const evalCases: EvalCase[] = [
         "create-release",
         "implement-idea",
         "implement-issue",
+        "code-review",
+        "codebase-audit",
         "review-pr",
         "roadmap-review",
         "run-retro",

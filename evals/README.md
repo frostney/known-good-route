@@ -5,8 +5,8 @@
 - One Bun/TypeScript harness uses Vercel AI SDK and AI Gateway for every model.
 - It exercises the portable Agent Skills contract without provider SDKs or
   native app servers.
-- Eighteen fixture scenarios grade skill loading, tool intent, approval boundaries,
-  and user-facing output.
+- Twenty fixture scenarios grade skill loading, tool intent, approval
+  boundaries, and user-facing output.
 - Dry runs and unit tests are free; live model runs require
   `AI_GATEWAY_API_KEY`.
 - Native Codex or Claude smoke tests remain optional checks of host integration,
@@ -43,7 +43,7 @@ bun install --frozen-lockfile
 bun run check
 ```
 
-Inspect the planned 54-run matrix:
+Inspect the planned 60-run matrix:
 
 ```bash
 bun run eval:dry
@@ -106,12 +106,12 @@ GitHub Actions machinery uses Node 24-based action releases to check out the
 repository and bootstrap Bun; the harness and its tests still run on Bun.
 
 Open the pull request's **Checks** tab and select **Test eval harness / test** to
-see the typecheck, Bun test, and 54-row dry-run output.
+see the typecheck, Bun test, and 60-row dry-run output.
 
 Live evals require the `AI_GATEWAY_API_KEY` repository Actions secret:
 
 1. Before merge, add the `run-skill-evals` label to the pull request. This
-   explicitly starts the full 54-row matrix once.
+   explicitly starts the full 60-row matrix once.
 2. After the workflow is on the default branch, open **Actions → Run skill
    evals → Run workflow** to select one model, one scenario, or the full matrix.
 3. Open the completed run's **Summary** for the pass/fail table and token counts.
