@@ -151,6 +151,11 @@ supported frontier models:
 | Small local change | Runs the real project gate without generic re-checks or verifier subagents |
 | Written issue, PR, roadmap, or retrospective | Leads with the outcome and omits filler, boilerplate, and repeated summaries |
 
+The provider-neutral [behavioral eval harness](evals/README.md) runs these
+scenarios through Vercel AI SDK and AI Gateway. `bun run check` validates the
+harness without model spend; `bun run eval` runs the paid model matrix when
+`AI_GATEWAY_API_KEY` is present.
+
 **Validator freshness policy:** `skills-ref` is intentionally installed unpinned (`pip install --upgrade skills-ref`) so CI always validates against the latest published spec implementation rather than a frozen snapshot. The workflow caches `~/.cache/pip` to speed up installs; this is safe because pip still resolves the newest release from the index on every run and only reuses a cached wheel when that exact version was already downloaded, so caching never holds back the validator version. This "always latest" rule applies only to the validator package itself — the workflow's GitHub Actions (`checkout`, `setup-python`, `cache`) are pinned to full commit SHAs (with the version in a trailing comment) for supply-chain safety, which is the recommended hardening practice for third-party actions.
 
 ## License

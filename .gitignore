@@ -1,1 +1,3 @@
 .agent/HANDOFF.md
+node_modules/
+.eval-results/
