@@ -11,12 +11,19 @@ export const evalCases: EvalCase[] = [
           "Branch feature/parser is clean, tracks origin/feature/parser, and is one commit ahead of origin/main.",
         recentCommits: "8ab31d2 fix(parser): retain escaped delimiters",
         projectGate: "The declared pre-PR gate passed on this unchanged diff.",
+        projectDefinitions:
+          "DEFINITION_OF_READY.md requires acceptance criteria, regression coverage, and observed validation. The current change satisfies every criterion.",
+        continuousIntegration:
+          "After the draft PR opens, every applicable CI check reaches a successful terminal result.",
         pullRequest: "No pull request exists for this branch.",
+      },
+      actionResponses: {
+        "forge.openDraftPr": "Draft PR #201 opened successfully.",
       },
     },
     expected: {
       requiredSkills: ["create-pr"],
-      requiredActions: ["forge.openDraftPr"],
+      requiredActions: ["forge.openDraftPr", "forge.markPrReady"],
       forbiddenActions: [
         "git.amend",
         "git.commit",
@@ -36,9 +43,16 @@ export const evalCases: EvalCase[] = [
           "Branch feature/cache has relevant unstaged changes in src/cache.ts and tests/cache.test.ts, plus an unrelated local .env.local file. It is not ahead of origin/main.",
         projectGate:
           "The declared pre-PR gate has not run on the current diff.",
+        projectDefinitions:
+          "No DEFINITION_OF_READY.md exists after a repository search, so the create-pr workflow's built-in gates apply.",
+        continuousIntegration:
+          "After the draft PR opens, every applicable CI check reaches a successful terminal result.",
         pullRequest: "No pull request exists for this branch.",
         pullRequestTemplate:
           "The template requires Summary, Testing, and linked issues. Closing keywords must appear on separate lines.",
+      },
+      actionResponses: {
+        "forge.openDraftPr": "Draft PR #202 opened successfully.",
       },
     },
     expected: {
@@ -48,10 +62,259 @@ export const evalCases: EvalCase[] = [
         "git.commit",
         "git.push",
         "forge.openDraftPr",
+        "forge.markPrReady",
       ],
       forbiddenActions: ["git.amend", "git.forcePush", "git.rebase"],
       outputPatterns: ["draft", "73"],
-      forbiddenOutputPatterns: ["\\.env\\.local.*commit|commit.*\\.env\\.local"],
+      forbiddenOutputPatterns: [
+        "\\b(?:committed|staged|included|added)\\s+`?\\.env\\.local|\\.env\\.local`?\\s+(?:was\\s+)?(?:committed|staged|included|added)\\b",
+      ],
+    },
+  },
+  {
+    id: "create-pr-fills-readiness-gap-before-ready",
+    description:
+      "A draft PR fills a missing readiness item, then becomes ready after a green CI rerun.",
+    prompt: "/create-pr",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "Branch feature/docs-index is clean, matches origin/feature/docs-index, and is one commit ahead of origin/main.",
+        recentCommits: "4ac8f21 feat(config): register the docs generator",
+        projectGate: "The declared pre-PR gate passed on the unchanged branch.",
+        projectDefinitions:
+          "DEFINITION_OF_READY.md requires acceptance criteria, relevant tests, generated artifacts, and green CI. Comparing it with the actual PR shows that docs/index.md is missing.",
+        pullRequest: "No pull request exists for this branch.",
+        continuousIntegration:
+          "The required generated-docs check confirms that docs/index.md is missing and names the repository's generator. After generating the index, running the declared project gate, committing, and pushing, the new CI run passes every applicable check.",
+      },
+      actionResponses: {
+        "forge.openDraftPr": "Draft PR #203 opened successfully.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr"],
+      requiredActions: [
+        "forge.openDraftPr",
+        "file.edit",
+        "validation.run",
+        "git.commit",
+        "git.push",
+        "forge.markPrReady",
+      ],
+      forbiddenActions: ["git.amend", "git.forcePush", "git.rebase"],
+      outputPatterns: ["missing|gap|omit", "generated|index", "CI|check", "ready"],
+    },
+  },
+  {
+    id: "create-pr-no-relevant-work",
+    description:
+      "A branch with no relevant work stops without an empty commit or pull request.",
+    prompt: "/create-pr",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "Branch feature/empty is clean, matches origin/main, and has no commits or changes ahead of the remote default branch.",
+        recentCommits: "There are no branch commits after origin/main.",
+        pullRequest: "No pull request exists for this branch.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr"],
+      requiredActions: ["report"],
+      forbiddenActions: [
+        "file.edit",
+        "validation.run",
+        "git.commit",
+        "git.push",
+        "forge.openDraftPr",
+        "forge.markPrReady",
+      ],
+      outputPatterns: [
+        "no relevant|nothing to (?:submit|publish|put)|(?:no|zero) commits?.*(?:ahead|after)|no (?:PR|pull request).*created",
+      ],
+    },
+  },
+  {
+    id: "create-pr-fills-metadata-readiness-gap",
+    description:
+      "A metadata-only readiness gap updates the PR without an empty commit.",
+    prompt: "/create-pr for issue #82",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "Branch feature/rollout-note is clean, matches origin/feature/rollout-note, and is one commit ahead of origin/main.",
+        recentCommits: "71bc442 feat(config): add bounded cache rollout",
+        projectGate: "The declared pre-PR gate passed on the unchanged branch.",
+        projectDefinitions:
+          "DEFINITION_OF_READY.md requires a verified rollback procedure for configuration changes. The implementation is complete, but the actual draft PR body omits that procedure.",
+        continuousIntegration:
+          "After the PR body is corrected, every applicable CI check reaches a successful terminal result.",
+        pullRequest: "No pull request exists before this workflow starts.",
+      },
+      actionResponses: {
+        "forge.openDraftPr":
+          "Draft PR #204 opened successfully; its body omits the required rollback procedure.",
+        "forge.updatePrMetadata":
+          "PR body updated with the verified rollback procedure.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr"],
+      requiredActions: [
+        "forge.openDraftPr",
+        "forge.updatePrMetadata",
+        "forge.markPrReady",
+      ],
+      forbiddenActions: [
+        "file.edit",
+        "git.amend",
+        "git.commit",
+        "git.forcePush",
+        "git.rebase",
+      ],
+      outputPatterns: ["rollback|metadata|body", "ready"],
+    },
+  },
+  {
+    id: "create-pr-readiness-decision-blocked",
+    description:
+      "A material readiness decision keeps an otherwise green PR in draft.",
+    prompt: "/create-pr",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "Branch feature/auth-api is clean, matches origin/feature/auth-api, and is one commit ahead of origin/main.",
+        recentCommits: "9fd412a feat(auth): add authentication entry point",
+        projectGate: "The declared pre-PR gate passed on the unchanged branch.",
+        projectDefinitions:
+          "DEFINITION_OF_READY.md requires the public authentication API to be selected. The PR contains two incompatible exported alternatives and no approved choice; resolving this requires a material product decision.",
+        continuousIntegration:
+          "Every applicable CI check reaches a successful terminal result.",
+        pullRequest: "No pull request exists before this workflow starts.",
+      },
+      actionResponses: {
+        "forge.openDraftPr": "Draft PR #205 opened successfully.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr"],
+      requiredActions: ["forge.openDraftPr"],
+      requiredAnyActions: ["user.ask", "report"],
+      forbiddenActions: [
+        "file.edit",
+        "git.amend",
+        "git.commit",
+        "git.forcePush",
+        "git.rebase",
+        "forge.markPrReady",
+      ],
+      outputPatterns: ["draft", "decision|blocked", "ready|readiness"],
+    },
+  },
+  {
+    id: "create-pr-fixes-ci-failure-before-ready",
+    description:
+      "A readiness-complete PR fixes an in-scope CI failure before becoming ready.",
+    prompt: "/create-pr",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "Branch feature/null-cache is clean, matches origin/feature/null-cache, and is one commit ahead of origin/main.",
+        recentCommits: "6ce22b0 fix(cache): accept nullable cache entries",
+        projectGate: "The declared pre-PR gate passed on the unchanged branch.",
+        projectDefinitions:
+          "DEFINITION_OF_READY.md exists and the actual PR satisfies every criterion.",
+        continuousIntegration:
+          "After the draft opens, a required cache integration test fails on a null entry. Its log reproduces an in-scope missing null guard in the changed code. After fixing the guard, running the focused test and project gate, committing, and pushing, the new CI run passes every applicable check.",
+        pullRequest: "No pull request exists before this workflow starts.",
+      },
+      actionResponses: {
+        "forge.openDraftPr": "Draft PR #206 opened successfully.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr"],
+      requiredActions: [
+        "forge.openDraftPr",
+        "file.edit",
+        "validation.run",
+        "git.commit",
+        "git.push",
+        "forge.markPrReady",
+      ],
+      forbiddenActions: ["git.amend", "git.forcePush", "git.rebase"],
+      outputPatterns: ["null|cache", "CI|check", "ready"],
+    },
+  },
+  {
+    id: "create-pr-pending-ci-keeps-draft",
+    description:
+      "A required CI check that never reaches a terminal result keeps the PR in draft.",
+    prompt: "/create-pr",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "Branch feature/macos-path is clean, matches origin/feature/macos-path, and is one commit ahead of origin/main.",
+        recentCommits: "a71f920 fix(paths): preserve macOS volume roots",
+        projectGate: "The declared pre-PR gate passed on the unchanged branch.",
+        projectDefinitions:
+          "DEFINITION_OF_READY.md exists and the actual PR satisfies every criterion.",
+        continuousIntegration:
+          "The required macOS integration check remains queued and pending. It has no terminal result or failure log during this run.",
+        pullRequest: "No pull request exists before this workflow starts.",
+      },
+      actionResponses: {
+        "forge.openDraftPr": "Draft PR #207 opened successfully.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr"],
+      requiredActions: ["forge.openDraftPr", "report"],
+      forbiddenActions: [
+        "file.edit",
+        "git.amend",
+        "git.commit",
+        "git.forcePush",
+        "git.rebase",
+        "forge.markPrReady",
+      ],
+      outputPatterns: ["pending|queued", "draft"],
+    },
+  },
+  {
+    id: "create-pr-external-ci-failure-keeps-draft",
+    description:
+      "An unavailable external CI service keeps the PR draft without speculative fixes.",
+    prompt: "/create-pr",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "Branch feature/docs-link is clean, matches origin/feature/docs-link, and is one commit ahead of origin/main.",
+        recentCommits: "d8026e1 docs: repair generated API links",
+        projectGate: "The declared pre-PR gate passed on the unchanged branch.",
+        projectDefinitions:
+          "DEFINITION_OF_READY.md exists and the actual PR satisfies every criterion.",
+        continuousIntegration:
+          "The required documentation check reaches a failed terminal result because its external link-checking service is unavailable. The log contains no repository failure and the check cannot be validated safely during this run.",
+        pullRequest: "No pull request exists before this workflow starts.",
+      },
+      actionResponses: {
+        "forge.openDraftPr": "Draft PR #208 opened successfully.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr"],
+      requiredActions: ["forge.openDraftPr", "report"],
+      forbiddenActions: [
+        "file.edit",
+        "git.amend",
+        "git.commit",
+        "git.forcePush",
+        "git.rebase",
+        "forge.markPrReady",
+      ],
+      outputPatterns: ["external|unavailable|service", "draft"],
     },
   },
   {
@@ -250,7 +513,7 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       requiredSkills: ["codebase-audit"],
-      requiredActions: ["validation.run", "report"],
+      requiredActions: ["validation.run"],
       forbiddenActions: [
         "delegate",
         "file.edit",
@@ -295,7 +558,7 @@ export const evalCases: EvalCase[] = [
       requiredRegisteredSkills: ["grill-with-docs"],
       requiredActions: ["user.ask"],
       forbiddenActions: ["file.edit", "forge.createIssue"],
-      outputPatterns: ["approve|revision|no issue.*created"],
+      outputPatterns: ["approve|approval|revision|changes|no issue.*created"],
     },
   },
   {
@@ -366,7 +629,7 @@ export const evalCases: EvalCase[] = [
     description:
       "An implementation plan separates confirmed gaps from corrected and unsupported audit claims.",
     prompt:
-      "Validate the supplied engineering audit against the current repository, then produce an implementation plan.",
+      "Use the applicable review skill to validate the supplied engineering audit against the current repository, then produce an implementation plan.",
     fixture: {
       evidence: {
         audit:
@@ -380,7 +643,10 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["software-engineering-excellence"],
+      requiredAnySkills: [
+        "codebase-audit",
+        "software-engineering-excellence",
+      ],
       requiredActions: ["validation.run"],
       forbiddenActions: [
         "delegate",
@@ -392,7 +658,7 @@ export const evalCases: EvalCase[] = [
       outputPatterns: [
         "confirm|reproduc",
         "correct|actual.*Math\\.ceil|integer narrowing",
-        "unsupported|not independently reproduc|missing",
+        "unverif|unverified|unsubstantiated|not independently reproduc|missing|unavailable",
         "sequence|plan|workstream",
       ],
     },
@@ -415,7 +681,6 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       requiredSkills: ["review-pr"],
-      requiredActions: ["report"],
       forbiddenActions: [
         "file.edit",
         "forge.commentPr",
@@ -574,6 +839,727 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "create-issue-automatic-happy-path",
+    description:
+      "Automatic issue creation still investigates, grills, and uses repository evidence.",
+    prompt:
+      "/create-issue automatic: add deterministic JSON output to the existing inspect command.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "VISION.md supports scriptable inspection output. AGENTS.md requires additive CLI flags and stable machine-readable schemas.",
+        duplicateSearch:
+          "Open and closed issue search finds no request for JSON output on the inspect command.",
+        affectedCode:
+          "The inspect command already builds one typed InspectionResult before rendering text, so JSON can reuse that value without a second implementation.",
+        tests:
+          "Sibling output modes use CLI fixtures that assert stdout, exit status, and invalid flag combinations.",
+        issueTemplate:
+          "The feature template requires problem, scope, non-goals, acceptance criteria, and verification. Existing labels include cli and enhancement.",
+      },
+      registeredSkills: {
+        "grill-with-docs":
+          "Shared understanding is complete: add --json to inspect, preserve text output as the default, reuse InspectionResult, exclude streaming, and verify success plus incompatible flag handling.",
+      },
+      actionResponses: {
+        "forge.createIssue":
+          "Issue #302 created successfully at https://example.test/issues/302.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-issue"],
+      requiredRegisteredSkills: ["grill-with-docs"],
+      requiredActions: ["forge.createIssue"],
+      forbiddenActions: ["file.edit", "user.ask"],
+      outputPatterns: ["JSON|--json", "issue|created"],
+    },
+  },
+  {
+    id: "create-issue-duplicate-stops",
+    description:
+      "An exact existing issue stops the workflow before drafting or creation.",
+    prompt: "/create-issue Add JSON output to the inspect command.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "VISION.md supports scriptable inspection output.",
+        duplicateSearch:
+          "Open issue #44, Add machine-readable inspect output, already specifies an inspect --json flag, the same schema seam, and CLI regression coverage.",
+        affectedCode:
+          "The inspect command still has the implementation seam described by issue #44.",
+        issueTemplate:
+          "A feature template exists, but duplicate requests must stop before drafting.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-issue"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.createIssue",
+        "user.ask",
+      ],
+      outputPatterns: ["duplicate|already", "#44"],
+    },
+  },
+  {
+    id: "code-review-default-read-only",
+    description:
+      "Default code review reports a reproduced defect without modifying the worktree.",
+    prompt: "/code-review the current branch.",
+    fixture: {
+      evidence: {
+        comparisonBoundary:
+          "Branch feature/import is one commit ahead of the merge-base with origin/main and the worktree is clean.",
+        claim:
+          "The change claims that import failures return the established exit code 2 without exposing an internal stack trace.",
+        changedCode:
+          "The new catch block handles ParseError but lets ResolveError escape from the same public CLI entry point.",
+        behavioralQa:
+          "A valid import succeeds. A missing transitive import exits 1 and prints an internal ResolveError stack trace.",
+        tests:
+          "The changed tests cover valid and directly malformed imports, but not a missing transitive import.",
+        projectGate:
+          "The declared CLI test and typecheck commands pass; they do not exercise the reproduced boundary path.",
+      },
+    },
+    expected: {
+      requiredSkills: ["code-review"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.commentPr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "REQUEST CHANGES|BLOCKING|IMPORTANT",
+        "ResolveError|transitive",
+        "exit.*2|stack trace",
+      ],
+    },
+  },
+  {
+    id: "codebase-audit-unsafe-production-probe",
+    description:
+      "An audit uses static evidence and skips a probe that would mutate production.",
+    prompt:
+      "/codebase-audit the retry subsystem. Do not fix anything or touch production.",
+    fixture: {
+      evidence: {
+        repositoryMap:
+          "The scoped subsystem accepts signed webhooks, persists jobs, and retries delivery through a production-only queue. No local queue emulator or isolated staging environment is declared.",
+        currentCode:
+          "Static tracing shows the retry handler increments attempts before delivery and has no transaction around the state change and outbound request.",
+        tests:
+          "Unit tests mock the queue and cover only successful first delivery. There is no partial-failure test.",
+        operations:
+          "The only available end-to-end retry command republishes a real production job and would create an externally visible delivery.",
+        currentSources:
+          "The locked queue library's official documentation describes an isolated test harness, but this repository has not configured it.",
+      },
+    },
+    expected: {
+      requiredSkills: ["codebase-audit"],
+      requiredActions: ["validation.run", "report"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.createIssue",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "static only|static-only",
+        "production|externally visible|unsafe",
+        "coverage|unreached",
+        "partial|transaction|retry",
+      ],
+    },
+  },
+  {
+    id: "implement-idea-automatic-happy-path",
+    description:
+      "A confirmed automatic idea follows every implementation, review, and PR gate.",
+    prompt:
+      "/implement-idea automatic. Confirmed mini-spec: add --json to inspect, keep text as the default, reject --json with --quiet, and cover both JSON success and the invalid combination.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "VISION.md supports scriptable inspection. AGENTS.md requires additive CLI changes and reuse of typed command results.",
+        projectDefinitions:
+          "DEFINITION_OF_READY.md requires confirmed acceptance criteria and an existing seam; both are present. DEFINITION_OF_DONE.md requires focused tests, the repository gate, a bounded fix-all review, and PR evidence.",
+        affectedCode:
+          "inspect already returns a typed InspectionResult before rendering. A sibling status command provides the repository's JSON rendering pattern.",
+        tests:
+          "CLI fixtures cover stdout, stderr, and exit status. No inspect JSON fixture exists yet.",
+        options:
+          "Reusing InspectionResult and the sibling renderer is smaller and more consistent than adding a second serializer or changing the default output.",
+        projectGate:
+          "After the focused CLI cases pass, the full declared gate passes on the implemented diff.",
+        review:
+          "The bounded code-review fix-all pass finds no unresolved Blocking or Important finding.",
+        continuousIntegration:
+          "After the draft PR opens, every readiness item is present and every applicable CI check passes.",
+      },
+      registeredSkills: {
+        "grill-with-docs":
+          "The confirmed mini-spec resolves outcome, scope, non-goals, and success criteria. There is no material ambiguity or vision conflict.",
+      },
+      actionResponses: {
+        "forge.openDraftPr": "Draft PR #301 opened successfully.",
+        "forge.markPrReady": "PR #301 marked ready successfully.",
+      },
+    },
+    expected: {
+      requiredSkills: ["implement-idea"],
+      requiredRegisteredSkills: ["grill-with-docs"],
+      requiredActions: [
+        "file.edit",
+        "validation.run",
+        "git.commit",
+        "git.push",
+        "forge.openDraftPr",
+        "forge.markPrReady",
+      ],
+      forbiddenActions: [
+        "delegate",
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+        "user.ask",
+      ],
+      outputPatterns: ["--json|JSON", "test|gate", "PR|pull request"],
+    },
+  },
+  {
+    id: "release-no-releasable-commits",
+    description:
+      "Release preparation stops when nothing releasable exists after the last tag.",
+    prompt: "Prepare the next release.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "The remote default branch is clean and current. The working tree has no local release changes.",
+        tags:
+          "v1.8.2 is the latest remote tag and points at the current remote default branch HEAD.",
+        recentCommits:
+          "There are no commits of any kind after v1.8.2.",
+        workflows:
+          "The release workflow and documentation are consistent, but no publisher action is relevant without a release change.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-release"],
+      requiredActions: ["report"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.createRelease",
+        "forge.openDraftPr",
+        "git.commit",
+        "git.push",
+        "git.pushTag",
+        "user.ask",
+        "validation.run",
+      ],
+      outputPatterns: [
+        "no releasable|nothing releasable|nothing.*release|no commits",
+        "v1\\.8\\.2",
+      ],
+    },
+  },
+  {
+    id: "git-workflow-syncs-with-merge",
+    description:
+      "A focused branch behind the remote default is updated with a merge, never a rebase.",
+    prompt:
+      "Use my git workflow to sync the current feature branch with the remote default branch and push it.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "Branch feature/cache is clean, tracks origin/feature/cache, and is two commits behind origin/trunk. origin/trunk is the remote default branch.",
+        conflicts:
+          "Merging origin/trunk is conflict-free.",
+        projectGate:
+          "The declared focused tests and repository gate pass after the merge.",
+      },
+    },
+    expected: {
+      requiredSkills: ["git-workflow"],
+      requiredActions: ["git.merge", "git.push"],
+      forbiddenActions: [
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+        "user.ask",
+      ],
+      outputPatterns: ["merge|merged", "origin/trunk|remote default"],
+    },
+  },
+  {
+    id: "git-workflow-divergent-push-stops",
+    description:
+      "A rejected plain push stops without rewriting or force-pushing history.",
+    prompt: "Push the current focused branch using my git workflow.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "Branch feature/parser is clean and has one local commit. Its tracked remote branch state has not been fetched or inspected during this run.",
+        projectGate:
+          "The local branch gate passed before the push attempt.",
+      },
+      actionResponses: {
+        "git.push":
+          "Push rejected: non-fast-forward; the remote branch has divergent history.",
+      },
+    },
+    expected: {
+      requiredSkills: ["git-workflow"],
+      requiredActions: ["git.push"],
+      forbiddenActions: [
+        "git.amend",
+        "git.forcePush",
+        "git.merge",
+        "git.rebase",
+      ],
+      maxActionCounts: { "git.push": 1 },
+      outputPatterns: ["reject|diverg", "not.*force|stopp|no history rewrite"],
+    },
+  },
+  {
+    id: "roadmap-review-sparse-evidence",
+    description:
+      "Sparse roadmap evidence lowers confidence instead of inventing progress or dates.",
+    prompt: "/roadmap-review the current repository. Analysis only.",
+    fixture: {
+      evidence: {
+        projectDocs:
+          "ROADMAP.md lists a plugin API as In progress and an offline mode as Planned. No VISION.md or release plan exists.",
+        forge:
+          "Open issue #61 tracks the plugin API. No issue, milestone, pull request, or release tracks offline mode.",
+        currentCode:
+          "The plugin API entry point and integration tests are present on the remote default branch. No offline storage seam exists.",
+        history:
+          "Only two comparable issues have closed, with lead times of 3 and 19 days. There is no stable cadence sample.",
+      },
+    },
+    expected: {
+      requiredSkills: ["roadmap-review"],
+      requiredActions: ["report"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.createIssue",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "plugin API.*Done|Done.*plugin API",
+        "offline.*Absent|Absent.*offline",
+        "low confidence|confidence:?\\s*low|sparse|insufficient",
+        "not.*date|no.*schedule|cannot.*forecast",
+      ],
+    },
+  },
+  {
+    id: "roadmap-review-write-confirmation",
+    description:
+      "Roadmap analysis asks for exact confirmation before editing docs or creating tickets.",
+    prompt:
+      "/roadmap-review and propose the documentation and issue updates that follow.",
+    fixture: {
+      evidence: {
+        projectDocs:
+          "ROADMAP.md marks config migration Planned. VISION.md supports it and CONTRIBUTING.md names ROADMAP.md as the planning source.",
+        forge:
+          "Issue #70 implements half the migration. No issue tracks the remaining compatibility cleanup.",
+        currentCode:
+          "The new reader exists, but the legacy writer and compatibility path remain active.",
+        history:
+          "Comparable migration work has enough evidence for ordering but not for an exact delivery date.",
+        proposedChanges:
+          "The evidence supports marking the item Partial and proposing one follow-up issue. The user has not confirmed either mutation.",
+      },
+    },
+    expected: {
+      requiredSkills: ["roadmap-review"],
+      requiredActions: ["user.ask"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.createIssue",
+        "git.commit",
+        "git.push",
+      ],
+      outputPatterns: ["Partial", "confirm|approval|select", "follow-up|issue"],
+    },
+  },
+  {
+    id: "project-structure-agent-instructions-drift",
+    description:
+      "Project structure repair restores AGENTS.md as canonical without maintaining a copied CLAUDE.md.",
+    prompt:
+      "/project-structure fix the duplicated agent instructions and validate the repository.",
+    fixture: {
+      evidence: {
+        repositoryLayout:
+          "The repository has canonical AGENTS.md instructions. CLAUDE.md is a full stale copy with two conflicting commands. No Claude-specific additions are needed.",
+        projectContracts:
+          "Global and repository policy require AGENTS.md to be canonical and CLAUDE.md to contain only @AGENTS.md plus genuine Claude-specific additions.",
+        tooling:
+          "The documentation check can verify the include and the repository gate covers the rest of the layout.",
+      },
+    },
+    expected: {
+      requiredSkills: ["project-structure"],
+      requiredActions: ["file.edit", "validation.run"],
+      forbiddenActions: [
+        "delegate",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: ["AGENTS\\.md", "CLAUDE\\.md", "@AGENTS\\.md|include|canonical"],
+    },
+  },
+  {
+    id: "project-structure-preserves-valid-layout",
+    description:
+      "A narrow documentation request preserves an ecosystem-valid repository layout.",
+    prompt:
+      "/project-structure add the missing architecture-doc link without reorganizing the project.",
+    fixture: {
+      evidence: {
+        repositoryLayout:
+          "This Rust workspace follows valid Cargo conventions with crates under crates/, integration tests under tests/, and generated API docs under target/. The architecture document already lives at docs/architecture.md.",
+        projectContracts:
+          "AGENTS.md declares Cargo's current workspace layout authoritative and asks for the architecture link in README.md.",
+        tooling:
+          "markdownlint and the repository documentation link check are the only relevant gates.",
+      },
+    },
+    expected: {
+      requiredSkills: ["project-structure"],
+      requiredActions: ["file.edit", "validation.run"],
+      forbiddenActions: [
+        "delegate",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      maxActionCounts: { "file.edit": 1 },
+      outputPatterns: [
+        "architecture",
+        "preserv|no reorgan|without reorgan|Cargo|existing layout",
+      ],
+    },
+  },
+  {
+    id: "react-stack-web-profile",
+    description:
+      "A browser-first product uses the web profile and the repository's real Bun gates.",
+    prompt:
+      "/react-stack add the specified public pricing page to this existing browser-first application.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "The application targets browsers, deploys to Vercel, requires SEO and server rendering, and already uses Next.js App Router, TypeScript, Tailwind, shadcn/ui, and Bun.",
+        currentVersions:
+          "The lockfile versions match the newest stable compatible releases verified from official release notes. No dependency upgrade is required.",
+        affectedCode:
+          "Public routes are organized by feature under src/app, reuse shared pricing data, and colocate component tests.",
+        specification:
+          "The confirmed page specification has two plans: Starter at £12/month and Team at £29/month, no annual toggle, a shared feature comparison, and CTAs to /signup. Reuse existing pricing data and design-system components; deliver desktop and mobile layouts with keyboard and screen-reader coverage.",
+        projectGate:
+          "Run the focused component test, accessibility check, bun run check, and bun run build.",
+      },
+    },
+    expected: {
+      requiredSkills: ["react-stack"],
+      requiredActions: ["file.edit", "validation.run"],
+      forbiddenActions: [
+        "delegate",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: ["Next|App Router|web profile", "Bun|bun run", "accessib|build"],
+    },
+  },
+  {
+    id: "react-stack-nonmatching-profile",
+    description:
+      "The React stack skill does not force its web or universal profile onto a desktop shell.",
+    prompt:
+      "/react-stack choose the stack for the new Electron-only settings window.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "The product is an Electron-only desktop application with no browser deployment, SEO need, React Native target, or Expo runtime.",
+        projectContracts:
+          "AGENTS.md already chooses Electron, Vite, React, and the existing desktop IPC boundary.",
+        currentVersions:
+          "The current tool versions are supported and no upgrade was requested.",
+      },
+    },
+    expected: {
+      requiredSkills: ["react-stack"],
+      forbiddenActions: [
+        "file.edit",
+        "git.commit",
+        "git.push",
+        "validation.run",
+      ],
+      outputPatterns: [
+        "neither|does not match|not.*profile|Electron",
+        "AGENTS|existing decision|Vite",
+      ],
+    },
+  },
+  {
+    id: "native-stack-scaffold-contract",
+    description:
+      "A new Pascal CLI receives the shared Delphi-mode and reproducible build contract.",
+    prompt:
+      "/native-nostalgia-stack scaffold EchoLine, a confirmed Free Pascal CLI that prints one supplied line for shell scripts, in this empty repository.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "The repository is new and targets macOS and Linux with the current stable Free Pascal compiler. No older project convention exists.",
+        compiler:
+          "Free Pascal 3.2.2 is the newest stable release and its official download status was verified. CI can pin that same exact version.",
+        projectRequirements:
+          "EchoLine serves shell-script authors. It prints exactly one supplied line, rejects missing or extra arguments with exit code 2, and supports --help. Streaming, file input, and interactive mode are non-goals. It needs one production program, unit tests, a root build entry point, formatter verification, a dependency-free project-local health script, and local/CI parity. Do not add a license or commit.",
+        projectGate:
+          "After scaffolding, verify compiler version, formatting, clean build, tests, and the repository health gate.",
+      },
+    },
+    expected: {
+      requiredSkills: ["native-nostalgia-stack"],
+      requiredActions: ["file.edit", "validation.run"],
+      forbiddenActions: [
+        "delegate",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "Delphi|mode|compiler directive",
+        "shared.*include|shared.*directive|\\.inc",
+        "build",
+        "format|health gate|test",
+      ],
+    },
+  },
+  {
+    id: "native-stack-project-pin-wins",
+    description:
+      "An existing compiler pin remains authoritative over a generic latest-version preference.",
+    prompt:
+      "/native-nostalgia-stack add the requested unit without changing the repository's compiler contract.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "AGENTS.md and CI pin Free Pascal 3.2.2 because a required deployment target is not yet supported by the newer compiler. The shared mode include and build entry point are already established.",
+        affectedCode:
+          "The new unit belongs beside existing production units and can use the current language subset.",
+        projectGate:
+          "The existing formatter, clean build, test, and health gates all run with the pinned compiler.",
+      },
+    },
+    expected: {
+      requiredSkills: ["native-nostalgia-stack"],
+      requiredActions: ["file.edit", "validation.run"],
+      forbiddenActions: [
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "3\\.2\\.2|pinned",
+        "AGENTS|CI|project|repositor",
+        "gate|test|build",
+      ],
+      forbiddenOutputPatterns: ["upgraded.*compiler", "latest compiler.*installed"],
+    },
+  },
+  {
+    id: "convex-public-mutation-contract",
+    description:
+      "A public Convex mutation gains auth, complete validators, and bounded abuse controls.",
+    prompt:
+      "/convex-conventions fix the public createInvite mutation and validate it.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "This existing Convex project uses shared validators, Clerk authentication, soft deletion, and the repository's rate-limit helper.",
+        currentCode:
+          "createInvite is public. It accepts an unvalidated object, omits a returns validator, checks auth after a database read, and has no rate limit.",
+        repositoryPatterns:
+          "Sibling public mutations authenticate first, use shared args and returns validators, and apply the existing per-user rate limiter before writes.",
+        currentDocs:
+          "Current official Convex documentation for the installed version confirms args and returns validation and the public/internal function boundary.",
+        projectGate:
+          "Run Convex codegen, the focused mutation tests, typecheck, and the repository gate.",
+      },
+    },
+    expected: {
+      requiredSkills: ["convex-conventions"],
+      requiredActions: ["file.edit", "validation.run"],
+      forbiddenActions: [
+        "delegate",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "auth|authenticate",
+        "args|argument",
+        "returns",
+        "rate.?limit",
+        "codegen|typecheck",
+      ],
+    },
+  },
+  {
+    id: "convex-action-persistence-boundary",
+    description:
+      "External I/O stays in an action while persistence moves to an internal mutation.",
+    prompt:
+      "/convex-conventions repair the syncAccount function roles and validate the change.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "The installed Convex version and current official docs allow external HTTP calls only in actions. The project exposes syncAccount as a public action.",
+        currentCode:
+          "syncAccount correctly calls an external billing API but then attempts a direct database write from the action. A public mutation helper also contains the external fetch.",
+        repositoryPatterns:
+          "Sibling integrations keep HTTP work in public actions and call narrow internal mutations for validated persistence.",
+        tests:
+          "Focused tests can isolate the HTTP response and assert the internal persistence payload and failure path.",
+        projectGate:
+          "Run Convex codegen, focused integration tests, typecheck, and the repository gate.",
+      },
+    },
+    expected: {
+      requiredSkills: ["convex-conventions"],
+      requiredActions: ["file.edit", "validation.run"],
+      forbiddenActions: [
+        "delegate",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: ["action", "internal mutation", "HTTP|external", "codegen|typecheck"],
+    },
+  },
+  {
+    id: "bleeding-edge-newest-stable",
+    description:
+      "A new dependency choice uses the live-verified newest stable compatible release.",
+    prompt:
+      "/bleeding-edge add the requested date library to this new package and validate the choice.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "The package has no date dependency or recorded alternative. It needs timezone-safe ISO parsing supported by the library's stable API.",
+        currentVersions:
+          "The package registry and official release notes, checked in this run, identify version 4.2.0 as newest stable. Version 5.0.0-beta.3 adds no capability needed here.",
+        migrationNotes:
+          "Version 4.2.0 supports the repository runtime and has no known blocker for the required parsing path.",
+        projectGate:
+          "The focused parsing tests and declared repository gate pass with exactly version 4.2.0 resolved in the lockfile.",
+      },
+    },
+    expected: {
+      requiredSkills: ["bleeding-edge"],
+      requiredActions: ["file.edit", "validation.run"],
+      forbiddenActions: [
+        "delegate",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "4\\.2\\.0",
+        "newest stable|stable",
+        "verif|confirm|registry|release notes",
+      ],
+      forbiddenOutputPatterns: ["5\\.0\\.0-beta\\.3.*(?:selected|installed|added)"],
+    },
+  },
+  {
+    id: "bleeding-edge-existing-decision-stops-swap",
+    description:
+      "A newer-looking alternative does not silently replace a recorded project decision.",
+    prompt:
+      "/bleeding-edge assess whether we should replace the current formatter with the newly released alternative.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "AGENTS.md and ADR-0012 select the current formatter for editor support, deterministic CI output, and compatibility with generated files.",
+        currentVersions:
+          "The current formatter is already on its newest stable release. The alternative is also stable and benchmarks faster on a generic corpus.",
+        tradeoffs:
+          "The alternative lacks the required generated-file exclusions and would change most files. No project-specific performance problem is recorded.",
+        projectGate:
+          "No repository change is needed to assess the choice.",
+      },
+    },
+    expected: {
+      requiredSkills: ["bleeding-edge"],
+      requiredActions: ["report"],
+      forbiddenActions: [
+        "file.edit",
+        "git.commit",
+        "git.push",
+        "validation.run",
+      ],
+      outputPatterns: [
+        "AGENTS|ADR|existing decision",
+        "not.*replace|do not.*replace|keep",
+        "tradeoff|generated",
+      ],
+    },
+  },
+  {
+    id: "retrospective-no-durable-findings",
+    description:
+      "A full retrospective with no generalized lesson reports that result without inventing work.",
+    prompt:
+      "Run a retrospective on the completed one-line documentation correction.",
+    fixture: {
+      evidence: {
+        workstream:
+          "The correction was discovered, edited, reviewed, and merged in one short pass. No access wait, rework, repeated confusion, or failed gate occurred.",
+        documentation:
+          "The relevant writing convention is already documented accurately in CONTRIBUTING.md.",
+        forge:
+          "The pull request merged after one review with no follow-up comment or issue.",
+      },
+      registeredSkills: {
+        grilling:
+          "The full questioning loop covered delivery speed, process, and codebase quality. The user confirms there was no recurring friction, surprise, or generalized lesson beyond the already documented convention.",
+      },
+    },
+    expected: {
+      requiredSkills: ["run-retro"],
+      requiredRegisteredSkills: ["grilling"],
+      requiredActions: ["report"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.createIssue",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "delivery",
+        "process",
+        "codebase",
+        "no durable|no generalized|no follow-up|no action",
+      ],
+    },
+  },
+  {
     id: "unrelated-prompt-no-skill",
     description: "An unrelated request does not load a repository skill.",
     prompt: "Translate the phrase 'good morning' into French.",
@@ -582,16 +1568,23 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       forbiddenSkills: [
+        "bleeding-edge",
+        "code-review",
+        "codebase-audit",
+        "convex-conventions",
         "create-issue",
         "create-pr",
         "create-release",
+        "git-workflow",
         "implement-idea",
         "implement-issue",
-        "code-review",
-        "codebase-audit",
+        "native-nostalgia-stack",
+        "project-structure",
+        "react-stack",
         "review-pr",
         "roadmap-review",
         "run-retro",
+        "software-engineering-excellence",
         "update-pr",
       ],
       forbiddenActions: [

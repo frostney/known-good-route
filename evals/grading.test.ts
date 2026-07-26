@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import { resolve } from "node:path";
 import { evalCases } from "./cases.ts";
 import { gradeRun, validateCases } from "./grading.ts";
+import { loadSkills } from "./skill-loader.ts";
 import type { RunLedger } from "./types.ts";
+
+const repositoryRoot = resolve(import.meta.dir, "..");
 
 function ledger(overrides: Partial<RunLedger> = {}): RunLedger {
   return {
@@ -33,6 +37,10 @@ describe("eval grading", () => {
             action: "forge.openDraftPr",
             details: "Open a draft PR from feature/parser into main",
           },
+          {
+            action: "forge.markPrReady",
+            details: "Mark the PR ready after readiness and CI pass",
+          },
         ],
       }),
       "Draft pull request opened.",
@@ -46,6 +54,190 @@ describe("eval grading", () => {
       "Publication stopped because ownership is ambiguous. No tag was pushed.",
     );
     expect(missingAction.passed).toBeFalse();
+  });
+
+  test("requires readiness-gap remediation before marking a PR ready", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "create-pr-fills-readiness-gap-before-ready",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const remediated = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["create-pr"],
+        actions: [
+          { action: "forge.openDraftPr", details: "Open the draft PR" },
+          {
+            action: "file.edit",
+            details: "Generate the missing docs index",
+          },
+          {
+            action: "validation.run",
+            details: "Run the declared project gate",
+          },
+          {
+            action: "git.commit",
+            details: "Commit the generated docs index",
+          },
+          { action: "git.push", details: "Push the readiness fix" },
+          {
+            action: "forge.markPrReady",
+            details: "Mark ready after the green CI rerun",
+          },
+        ],
+      }),
+      "Filled the missing generated index gap. CI is green and the PR is ready.",
+    );
+    expect(remediated.passed).toBeTrue();
+
+    const premature = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["create-pr"],
+        actions: [
+          { action: "forge.openDraftPr", details: "Open the draft PR" },
+          {
+            action: "forge.markPrReady",
+            details: "Mark ready without filling the gap",
+          },
+        ],
+      }),
+      "The PR is ready.",
+    );
+    expect(premature.passed).toBeFalse();
+  });
+
+  test("accepts a metadata-only readiness repair without a commit", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "create-pr-fills-metadata-readiness-gap",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const repaired = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["create-pr"],
+        actions: [
+          { action: "forge.openDraftPr", details: "Open the draft PR" },
+          {
+            action: "forge.updatePrMetadata",
+            details: "Add the required rollback procedure",
+          },
+          {
+            action: "forge.markPrReady",
+            details: "Mark ready after CI passes",
+          },
+        ],
+      }),
+      "Added the missing rollback procedure to the PR body; it is now ready.",
+    );
+    expect(repaired.passed).toBeTrue();
+
+    const emptyCommit = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["create-pr"],
+        actions: [
+          { action: "forge.openDraftPr", details: "Open the draft PR" },
+          { action: "git.commit", details: "Create an empty metadata commit" },
+          {
+            action: "forge.updatePrMetadata",
+            details: "Add the required rollback procedure",
+          },
+          {
+            action: "forge.markPrReady",
+            details: "Mark ready after CI passes",
+          },
+        ],
+      }),
+      "Added the rollback procedure and marked the PR ready.",
+    );
+    expect(emptyCommit.passed).toBeFalse();
+  });
+
+  test("keeps blocked or pending create-pr cases unpublished", () => {
+    const blockedCases: Array<{
+      id: string;
+      actions: RunLedger["actions"];
+      output: string;
+    }> = [
+      {
+        id: "create-pr-no-relevant-work",
+        actions: [{ action: "report", details: "Nothing relevant to publish" }],
+        output: "No relevant changes or commits are ahead of main.",
+      },
+      {
+        id: "create-pr-readiness-decision-blocked",
+        actions: [
+          { action: "forge.openDraftPr", details: "Open the draft PR" },
+          {
+            action: "report",
+            details: "Report the unresolved product decision",
+          },
+        ],
+        output: "The readiness decision is blocked, so the PR remains draft.",
+      },
+      {
+        id: "create-pr-pending-ci-keeps-draft",
+        actions: [
+          { action: "forge.openDraftPr", details: "Open the draft PR" },
+          { action: "report", details: "Report the pending macOS check" },
+        ],
+        output: "The macOS check is pending, so the PR remains draft.",
+      },
+      {
+        id: "create-pr-external-ci-failure-keeps-draft",
+        actions: [
+          { action: "forge.openDraftPr", details: "Open the draft PR" },
+          {
+            action: "report",
+            details: "Report the unavailable external CI service",
+          },
+        ],
+        output: "The external service is unavailable, so the PR remains draft.",
+      },
+    ];
+
+    for (const blockedCase of blockedCases) {
+      const evalCase = evalCases.find(({ id }) => id === blockedCase.id);
+      expect(evalCase).toBeDefined();
+      if (!evalCase) {
+        continue;
+      }
+
+      const stopped = gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: ["create-pr"],
+          actions: blockedCase.actions,
+        }),
+        blockedCase.output,
+      );
+      expect(stopped.passed).toBeTrue();
+
+      const published = gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: ["create-pr"],
+          actions: [
+            ...blockedCase.actions,
+            {
+              action: "forge.markPrReady",
+              details: "Mark ready despite the blocker",
+            },
+          ],
+        }),
+        blockedCase.output,
+      );
+      expect(published.passed).toBeFalse();
+    }
   });
 
   test("rejects forbidden and repeated release actions", () => {
@@ -263,22 +455,22 @@ describe("eval grading", () => {
     expect(result.passed).toBeTrue();
   });
 
-  test("validates the committed case set", () => {
-    validateCases(
-      evalCases,
-      new Set([
-        "create-issue",
-        "create-pr",
-        "create-release",
-        "code-review",
-        "codebase-audit",
-        "implement-idea",
-        "implement-issue",
-        "review-pr",
-        "run-retro",
-        "software-engineering-excellence",
-        "update-pr",
-      ]),
-    );
+  test("validates the committed case set", async () => {
+    const skills = await loadSkills(repositoryRoot);
+    validateCases(evalCases, new Set(skills.keys()));
+  });
+
+  test("covers every shipped skill with multiple scenarios", async () => {
+    const skills = await loadSkills(repositoryRoot);
+
+    for (const skill of skills.keys()) {
+      const routedCases = evalCases.filter(
+        ({ expected }) =>
+          expected.requiredSkills?.includes(skill) ||
+          expected.requiredAnySkills?.includes(skill),
+      );
+
+      expect(routedCases.length).toBeGreaterThanOrEqual(2);
+    }
   });
 });

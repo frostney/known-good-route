@@ -81,8 +81,10 @@ function portableAgentInstructions(catalog: string): string {
 ${catalog}
 
 Complete authorized in-scope work through the available interfaces and relevant
-loaded guidance. Respect approval and stop boundaries. Return the user-facing
-outcome without claiming external effects the tools did not report.`;
+loaded guidance. Load a skill only when the request matches its catalog
+description; when none applies, answer directly without loading one. Respect
+approval and stop boundaries. Return the user-facing outcome without claiming
+external effects the tools did not report.`;
 }
 
 function selectedCases(caseIds: string[]) {

@@ -28,6 +28,8 @@ evidence that no implementation is needed.
   neither exists, note that once and continue.
 - Present two to four genuinely distinct evidence-backed options, recommend one,
   and wait for the user's choice unless automatic mode applies.
+- When current evidence conclusively fails a required prototype or readiness
+  threshold, report that stop without asking whether to bypass the gate.
 - For any code or test change, complete the project gate, one bounded
   `/code-review fix-all`, and `/create-pr`.
 
