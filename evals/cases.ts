@@ -125,11 +125,15 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       requiredSkills: ["create-release"],
-      requiredActions: ["user.ask"],
+      requiredAnyActions: ["user.ask", "report"],
       forbiddenActions: [
         "forge.createRelease",
         "git.forcePush",
         "git.pushTag",
+      ],
+      outputPatterns: [
+        "ambiguous|conflict|disagree",
+        "not publish|no tag|stopp",
       ],
     },
   },

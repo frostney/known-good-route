@@ -63,6 +63,17 @@ export function gradeRun(
     });
   }
 
+  if (expected.requiredAnyActions) {
+    const performed = expected.requiredAnyActions.filter(
+      (action) => actionCount(ledger, action) > 0,
+    );
+    checks.push({
+      name: "required action alternative",
+      passed: performed.length > 0,
+      detail: `any=${expected.requiredAnyActions.join(",")} performed=${performed.join(",") || "none"}`,
+    });
+  }
+
   if (expected.forbiddenActions) {
     const performed = expected.forbiddenActions.filter(
       (action) => actionCount(ledger, action) > 0,
@@ -141,6 +152,13 @@ export function validateCases(
       if (forbiddenActions.has(action)) {
         throw new Error(
           `${evalCase.id} both requires and forbids action ${action}`,
+        );
+      }
+    }
+    for (const action of evalCase.expected.requiredAnyActions ?? []) {
+      if (forbiddenActions.has(action)) {
+        throw new Error(
+          `${evalCase.id} both accepts and forbids action ${action}`,
         );
       }
     }

@@ -39,6 +39,13 @@ describe("eval grading", () => {
     );
 
     expect(result.passed).toBeTrue();
+
+    const missingAction = gradeRun(
+      evalCase,
+      ledger({ loadedSkills: ["create-release"] }),
+      "Publication stopped because ownership is ambiguous. No tag was pushed.",
+    );
+    expect(missingAction.passed).toBeFalse();
   });
 
   test("rejects forbidden and repeated release actions", () => {
@@ -64,6 +71,32 @@ describe("eval grading", () => {
     );
 
     expect(result.passed).toBeFalse();
+  });
+
+  test("accepts a safe report for ambiguous release ownership", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "release-ownership-ambiguous",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const result = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["create-release"],
+        actions: [
+          {
+            action: "report",
+            details: "Stopped because publisher ownership is ambiguous",
+          },
+        ],
+      }),
+      "Publication stopped because ownership is ambiguous. No tag was pushed.",
+    );
+
+    expect(result.passed).toBeTrue();
   });
 
   test("validates the committed case set", () => {

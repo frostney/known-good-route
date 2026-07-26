@@ -34,6 +34,7 @@ export interface EvalExpectations {
   forbiddenSkills?: string[];
   requiredRegisteredSkills?: string[];
   requiredActions?: ActionName[];
+  requiredAnyActions?: ActionName[];
   forbiddenActions?: ActionName[];
   maxActionCounts?: Partial<Record<ActionName, number>>;
   outputPatterns?: string[];
