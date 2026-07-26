@@ -63,6 +63,16 @@ Run the full matrix once:
 AI_GATEWAY_API_KEY=<key> bun run eval
 ```
 
+Set request-level Zero Data Retention explicitly:
+
+```bash
+AI_GATEWAY_API_KEY=<key> bun run eval -- --zdr enabled
+AI_GATEWAY_API_KEY=<key> bun run eval -- --zdr disabled
+```
+
+Team-wide ZDR still applies when request-level ZDR is disabled. Models without a
+ZDR-eligible provider fail when either setting requires ZDR.
+
 Repeat every row three times:
 
 ```bash

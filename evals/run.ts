@@ -24,6 +24,7 @@ interface CliOptions {
   models: string[];
   caseIds: string[];
   repeat: number;
+  zdr: "enabled" | "disabled" | undefined;
   output: string | undefined;
 }
 
@@ -48,6 +49,10 @@ function parseCli(args: string[]): CliOptions {
   if (!Number.isInteger(repeat) || repeat < 1) {
     throw new Error("--repeat must be a positive integer");
   }
+  const zdr = readSingleValue(args, "--zdr");
+  if (zdr !== undefined && zdr !== "enabled" && zdr !== "disabled") {
+    throw new Error("--zdr must be enabled or disabled");
+  }
 
   return {
     dryRun: args.includes("--dry-run"),
@@ -55,6 +60,7 @@ function parseCli(args: string[]): CliOptions {
     models: readValues(args, "--model"),
     caseIds: readValues(args, "--case"),
     repeat,
+    zdr,
     output: readSingleValue(args, "--output"),
   };
 }
@@ -128,6 +134,7 @@ async function run(): Promise<void> {
           models,
           cases: cases.map(({ id, description }) => ({ id, description })),
           repeat: options.repeat,
+          zdr: options.zdr ?? "team-default",
           paidRuns: runCount,
         },
         null,
@@ -156,6 +163,15 @@ async function run(): Promise<void> {
           instructions: portableAgentInstructions(catalog),
           tools,
           stopWhen: stepCountIs(24),
+          ...(options.zdr === undefined
+            ? {}
+            : {
+                providerOptions: {
+                  gateway: {
+                    zeroDataRetention: options.zdr === "enabled",
+                  },
+                },
+              }),
         });
 
         try {
@@ -214,6 +230,7 @@ async function run(): Promise<void> {
         skillsRoot: options.skillsRoot,
         models,
         repeat: options.repeat,
+        zdr: options.zdr ?? "team-default",
         records,
       },
       null,
