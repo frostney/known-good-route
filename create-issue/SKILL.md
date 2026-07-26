@@ -26,7 +26,9 @@ repository, then create it after the required review boundary.
   user-question loop before drafting. Prefer `grill-with-docs`. If neither is
   available, note that once and continue.
 - Stop before drafting when the request conflicts with project vision, is a
-  duplicate, or needs material facts that cannot be established.
+  duplicate, or needs material facts that cannot be established. For a
+  duplicate, return the existing issue and stop without asking whether to file
+  the same request anyway or mutate the existing issue.
 
 ### Automatic mode
 

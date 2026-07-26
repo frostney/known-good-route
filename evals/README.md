@@ -5,8 +5,9 @@
 - One Bun/TypeScript harness uses Vercel AI SDK and AI Gateway for every model.
 - It exercises the portable Agent Skills contract without provider SDKs or
   native app servers.
-- Twenty fixture scenarios grade skill loading, tool intent, approval
-  boundaries, and user-facing output.
+- Forty-eight fixture scenarios grade skill loading, tool intent, approval
+  boundaries, edge conditions, and user-facing output. Every shipped skill has
+  at least two routed scenarios.
 - Dry runs and unit tests are free; live model runs require
   `AI_GATEWAY_API_KEY`.
 - Native Codex or Claude smoke tests remain optional checks of host integration,
@@ -43,7 +44,7 @@ bun install --frozen-lockfile
 bun run check
 ```
 
-Inspect the planned 60-run matrix:
+Inspect the planned 144-run matrix:
 
 ```bash
 bun run eval:dry
@@ -106,20 +107,12 @@ GitHub Actions machinery uses Node 24-based action releases to check out the
 repository and bootstrap Bun; the harness and its tests still run on Bun.
 
 Open the pull request's **Checks** tab and select **Test eval harness / test** to
-see the typecheck, Bun test, and 60-row dry-run output.
+see the typecheck, Bun tests, and 144-row dry-run output. CI never makes live
+model calls.
 
-Live evals require the `AI_GATEWAY_API_KEY` repository Actions secret:
-
-1. Before merge, add the `run-skill-evals` label to the pull request. This
-   explicitly starts the full 60-row matrix once.
-2. After the workflow is on the default branch, open **Actions → Run skill
-   evals → Run workflow** to select one model, one scenario, or the full matrix.
-3. Open the completed run's **Summary** for the pass/fail table and token counts.
-4. Download the `skill-eval-results-<run-id>` artifact for full outputs, tool
-   traces, checks, errors, and usage data.
-
-Removing and re-adding `run-skill-evals` starts another paid full-matrix run.
-Pushes and ordinary PR events never start live evals.
+Live evals run only through an explicit local `bun run eval` command with a
+locally supplied `AI_GATEWAY_API_KEY`. No pull-request label, GitHub Actions
+event, or workflow dispatch can start a paid run.
 
 ## Fidelity boundary
 

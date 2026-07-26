@@ -41,7 +41,8 @@ evidence areas; otherwise work directly. Synthesize before planning.
 2. Assess release cadence, merged-but-unreleased work, milestone-versus-commit
    drift, vision, scope, and non-goals.
 3. Apply measured rates to the counted backlog, with basis and confidence. Never
-   pad the timeline.
+   pad the timeline. When evidence cannot support calendar dates, report ranges
+   and dependencies without a dated Gantt or placeholder dates.
 4. Verify every candidate against source and remove work already delivered.
 5. Plan themed releases across independent tracks, marking dependencies and the
    longest pole. Surface genuine human decisions with a recommendation.

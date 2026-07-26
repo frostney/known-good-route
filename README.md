@@ -25,7 +25,7 @@ These are [Agent Skills](https://agentskills.io): any skills-compatible agent lo
 | [`implement-issue`](implement-issue/SKILL.md) | Validate an issue against the codebase, read the nearest `AGENTS.md`/`CLAUDE.md` and `VISION.md` when present, present implementation options, implement the chosen one, run UI/UX checks plus the project's full verification gate, and hand off via `/create-pr`. Supports `automatic` mode for project-context option selection. |
 | [`implement-idea`](implement-idea/SKILL.md) | Like `implement-issue` but with no GitHub issue: formulate the idea via follow-up questions (scope, outcome, success criteria) into a confirmed mini-spec, then run the same investigate → grill → options → implement → verify → review → `/create-pr` flow. Supports `automatic` mode for project-context option selection. |
 | [`run-retro`](run-retro/SKILL.md) | Review a completed workstream through delivery-speed, process, and codebase-health lenses; use `grilling` to agree durable lessons; then apply selected documentation edits and propose follow-up tickets. |
-| [`create-pr`](create-pr/SKILL.md) | Commit relevant local changes, push a focused branch, and open a draft pull request using the project's PR template. |
+| [`create-pr`](create-pr/SKILL.md) | Commit relevant local changes, open a templated draft PR, fill anything it is missing against the project's Definition of Ready, fix CI failures, and mark it ready. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and push to the current PR, merge the baseline when behind, refresh PR title/body when stale. No amend, no force push. |
 | [`review-pr`](review-pr/SKILL.md) | Resolve review threads in-place — no top-level PR/issue comments, no force pushes — preferring `/resolve-reviews` when registered and using `/update-pr` for the commit/push step. |
 | [`code-review`](code-review/SKILL.md) | Review a PR, branch, or worktree against its claim and repository standards using reproducible UI or non-UI probes, current-source simplification checks, and an optional local fix phase. `fix-all` resolves the bounded change before PR creation. |
@@ -156,17 +156,32 @@ supported frontier models:
 | Clear implementation with one selected option | Completes without another permission prompt or unrelated cleanup |
 | Materially ambiguous architecture | Surfaces the decision and recommendation before editing |
 | Already-fixed issue | Reports source/test evidence instead of inventing a change |
-| Branch with committed work and a clean tree | Opens the PR without creating an empty commit |
-| Dirty focused branch with unrelated local state | Commits only relevant work, excludes secrets, and opens one draft PR |
+| Branch with committed work and a clean tree | Opens the PR without creating an empty commit, verifies readiness and green CI, then marks it ready |
+| Dirty focused branch with unrelated local state | Commits only relevant work, excludes secrets, fixes CI, and marks the PR ready only after all gates pass |
+| Draft PR missing a Definition of Ready item | Fills the in-scope gap, validates and pushes a new commit, and waits for green CI before marking ready |
+| Draft PR missing only required metadata | Corrects the PR body or links without creating an empty commit |
+| Definition of Ready requires a material decision | Keeps the PR draft and reports the exact unresolved decision |
+| Fixable, pending, or external CI failure | Fixes validated in-scope failures, but keeps pending or externally blocked PRs draft |
 | PR update with additive merge conflicts | Preserves both feature paths, validates the merge, and pushes normally |
 | Explicitly read-only PR review | Reports validated findings without editing or changing PR state |
 | Mixed actionable and invalid inline findings | Fixes validated findings, rebuts invalid ones inline, and never posts a top-level comment |
 | Issue draft awaiting approval | Investigates, grills, and presents the project-aligned draft without filing it |
+| Automatic issue creation and exact duplicate | Completes every investigation/grill gate before filing, but stops immediately for the existing issue |
+| Default code review and repository-wide audit | Reproduces safe boundary behavior and reports evidence without remediating in read-only mode |
+| Audit probe requires production mutation | Marks the path static-only and unreached instead of creating an external side effect |
 | Measured prototype misses its required target | Stops before production migration, publication, or speculative follow-on work |
 | Stale audit with missing evidence | Separates confirmed gaps, corrected claims, and unsupported measurements before planning |
 | Rate-limited review bot | Reports the review as unavailable or incomplete, never passed |
+| Confirmed automatic idea | Implements, validates, performs the bounded review, and completes the PR handoff without dropping a gate |
 | Tag-triggered release workflow | Pushes the tag once, monitors automation, and never calls `gh release create` |
-| No release publisher configured | Uses the manual publisher only after the publication gate |
+| No releasable commits or ambiguous publisher | Stops without manufacturing a version change, tag, or release |
+| Git sync and divergent push | Merges the remote default without rebasing; a rejected plain push stops without force |
+| Sparse or mutation-ready roadmap review | Lowers confidence when evidence is thin and asks before document or forge changes |
+| Project structure and stack conventions | Repairs real drift while preserving valid ecosystem layouts and recorded toolchain pins |
+| React profile mismatch | Uses the applicable web profile, but does not force web or universal defaults onto an Electron-only project |
+| Convex function boundaries | Enforces public validation/auth/rate limits and keeps external I/O in actions with persistence in internal mutations |
+| Stable dependency and competing tool choice | Selects the live-verified newest stable version but preserves an authoritative recorded tool decision |
+| Retrospective with no durable lesson | Completes all three lenses and reports no action instead of inventing documentation or tickets |
 | Long autonomous run | Grounds every progress/completion claim in current evidence and does not end on a promise |
 | Small local change | Runs the real project gate without generic re-checks or verifier subagents |
 | Local convention differs from a generic default | Follows the surrounding code and project gate instead of imposing a blanket style rule |
@@ -175,7 +190,8 @@ supported frontier models:
 The provider-neutral [behavioral eval harness](evals/README.md) runs these
 scenarios through Vercel AI SDK and AI Gateway. `bun run check` validates the
 harness without model spend; `bun run eval` runs the paid model matrix when
-`AI_GATEWAY_API_KEY` is present.
+`AI_GATEWAY_API_KEY` is present. Paid evals are local-only and require an
+explicit command; labels and GitHub Actions never trigger them.
 
 **Validator freshness policy:** `skills-ref` is intentionally installed unpinned (`pip install --upgrade skills-ref`) so CI always validates against the latest published spec implementation rather than a frozen snapshot. The workflow caches `~/.cache/pip` to speed up installs; this is safe because pip still resolves the newest release from the index on every run and only reuses a cached wheel when that exact version was already downloaded, so caching never holds back the validator version. This "always latest" rule applies only to the validator package itself — the workflow's GitHub Actions (`checkout`, `setup-python`, `cache`) are pinned to full commit SHAs (with the version in a trailing comment) for supply-chain safety, which is the recommended hardening practice for third-party actions.
 
