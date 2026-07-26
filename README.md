@@ -158,6 +158,8 @@ supported frontier models:
 | Mixed actionable and invalid inline findings | Fixes validated findings, rebuts invalid ones inline, and never posts a top-level comment |
 | Issue draft awaiting approval | Investigates, grills, and presents the project-aligned draft without filing it |
 | Measured prototype misses its required target | Stops before production migration, publication, or speculative follow-on work |
+| Stale audit with missing evidence | Separates confirmed gaps, corrected claims, and unsupported measurements before planning |
+| Rate-limited review bot | Reports the review as unavailable or incomplete, never passed |
 | Tag-triggered release workflow | Pushes the tag once, monitors automation, and never calls `gh release create` |
 | No release publisher configured | Uses the manual publisher only after the publication gate |
 | Long autonomous run | Grounds every progress/completion claim in current evidence and does not end on a promise |
