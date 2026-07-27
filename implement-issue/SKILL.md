@@ -13,12 +13,10 @@ compatibility: >-
 
 # Implement issue
 
-## Instructions
-
 Resolve the issue end to end against the current repository, or establish with
 evidence that no implementation is needed.
 
-### Gates
+## Gates
 
 - Read the issue, project instructions, vision, contribution guidance,
   Definition of Ready, Definition of Done, relevant domain skills, real project
@@ -33,21 +31,21 @@ evidence that no implementation is needed.
 - For any code or test change, complete the project gate, one bounded
   `/code-review fix-all`, and `/create-pr`.
 
-### Project definitions
+## Project definitions
 
 Treat the nearest applicable `DEFINITION_OF_READY.md` and
 `DEFINITION_OF_DONE.md` as canonical. If either is absent after a real search,
 state that once, carry the gap into the plan and PR, and use only the workflow's
 built-in checks plus commands the repository actually declares.
 
-### Automatic mode
+## Automatic mode
 
 Automatic mode applies only when the original prompt says `automatic` or
 explicitly requests it. Complete every gate, present the options, select the
 evidence-backed recommendation, and continue. Material ambiguity, risk, or a
 vision conflict disables automatic mode.
 
-### Workflow
+## Workflow
 
 1. Fetch the issue, including comments and labels; verify it is open,
    implementation-ready, and not a PR, duplicate, blocked, or rejected item.

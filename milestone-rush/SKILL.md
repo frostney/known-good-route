@@ -14,12 +14,10 @@ compatibility: >-
 
 # Milestone rush
 
-## Instructions
-
 Finish the named milestone from its actual current state. The run owns execution,
 not release publication.
 
-### Authority and gates
+## Authority and gates
 
 - Require an exact repository and milestone. An explicit invocation authorizes
   scoped issue comments and replacement issues, branches and worktrees,
@@ -38,7 +36,7 @@ not release publication.
   protection, review policy, and the remote default branch. Never amend,
   rebase, force-push, bypass a gate, or overwrite unrelated work.
 
-### Reconcile and plan
+## Reconcile and plan
 
 1. Pull fresh milestone, issue, pull-request, review, check, default-branch,
    branch, worktree, and relevant local working-tree state. Read current project
@@ -60,7 +58,7 @@ not release publication.
    worktrees, issue-to-PR state, blockers, and observed validation. Never stage
    or commit the checkpoint; reconcile it with live state when resuming.
 
-### Execute and integrate
+## Execute and integrate
 
 1. Give each worker one bounded node and its dependencies. Use
    `/implement-issue automatic` for an issue or `/implement-idea automatic` for
@@ -87,7 +85,7 @@ not release publication.
    the required repair. Treat unrelated or materially ambiguous failures as
    blockers.
 
-### Blockers and completion
+## Blockers and completion
 
 - Quarantine a blocked node and its dependents, then continue every independent
   runnable node. Pause only when no further safe progress remains. Never close
@@ -102,7 +100,7 @@ not release publication.
   merged worktrees created by this run; preserve and report every other
   worktree.
 
-### Report
+## Report
 
 Return one audit-style summary covering:
 

@@ -2,9 +2,9 @@
 name: code-review
 description: >-
   Reviews a pull request, branch, or worktree against its claim, repository
-  standards, and reproducible behavior, then optionally fixes selected findings
-  or all in-scope findings. Use when the user runs /code-review or asks for an
-  evidence-backed review of a bounded code change.
+  standards, reproducible behavior, and churn-backed architectural risks, then
+  optionally fixes selected findings or all in-scope findings. Use when the user
+  runs /code-review or asks for an evidence-backed review of a bounded change.
 license: Unlicense OR MIT
 compatibility: >-
   Requires git, the project's declared build and test tools, and network access
@@ -32,6 +32,11 @@ repros, isolated test data, browser interaction, and temporary artifacts. Clean
 up disposable artifacts and report retained ones. Ask before any persistent or
 externally visible side effect.
 
+A request to save JSON authorizes only the named findings artifact in default
+mode; it does not authorize remediation. Read
+[references/findings-json.md](references/findings-json.md) only when JSON output
+is requested.
+
 ## Establish the review
 
 1. Read applicable project instructions, current source, tests, configuration,
@@ -51,6 +56,12 @@ externally visible side effect.
    value, and operational behavior. Add UI/accessibility, trust boundaries,
    persistence/migrations, concurrency, compatibility, deployment/rollback,
    observability, or performance only when the change touches those surfaces.
+6. Measure churn for every changed file and, where history can identify it
+   reliably, each changed function, method, class, or module. Follow renames,
+   state the history window, and record touch count and line churn. Use the
+   repository's declared churn window or 90 days when none exists. Prefer its
+   code-health tool; otherwise use Git file history and `git log -L` for stable
+   symbols. Label file-level fallback when symbol history is unavailable.
 
 ## Generate evidence
 
@@ -90,6 +101,12 @@ Cite the originating requirement or identify the claim as inferred.
 - Require names, types, boundaries, and interfaces to reveal intent. Match the
   surrounding comment density; comments should explain rationale, constraints,
   or non-obvious behavior rather than translate the code.
+- Treat repeated changes to the same symbol or file as an architectural-risk
+  signal, not a defect by itself. Raise an `ARCHITECTURE_RISK` finding when the
+  measured churn coincides with mixed responsibilities, recurring fixes or
+  reverts, competing representations, broad blast radius, unstable interfaces,
+  or weak regression coverage. Cite the window, touch count, granularity, and
+  co-signal.
 - Treat generic best practice and remembered library behavior as leads only.
   Verify findings against the checked-out code, exact installed version, and
   current official documentation or source. Repository decisions override
@@ -107,10 +124,11 @@ Include:
 
 - the claim, comparison boundary, commits and dirty state reviewed;
 - active and skipped perspectives, with the reason for each skip;
+- the churn window, symbol/file coverage, and architectural-risk hotspots;
 - exact probes and checks with observed results;
 - actionable findings as
-  `[CR-N][BLOCKING|IMPORTANT|IMPROVEMENT][CLAIM|QUALITY] file:line — evidence,
-  impact, smallest remedy`;
+  `[CR-N][BLOCKING|IMPORTANT|IMPROVEMENT][CLAIM|QUALITY|ARCHITECTURE_RISK]
+  file:line — evidence, impact, smallest remedy`;
 - verified claims, static-only or unreached areas, and retained probe artifacts.
 
 `BLOCKING` prevents safe shipment. `IMPORTANT` has material correctness,

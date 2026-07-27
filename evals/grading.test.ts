@@ -430,6 +430,73 @@ describe("eval grading", () => {
     expect(remediated.passed).toBeFalse();
   });
 
+  test("allows exactly one requested JSON findings artifact", () => {
+    const cases = [
+      {
+        id: "code-review-churn-json-report",
+        skill: "code-review",
+        output:
+          "CR-1 is an ARCHITECTURE_RISK: dispatchRequest changed 11 times in the 90-day window. Saved schemaVersion 1 JSON to artifacts/review-findings.json.",
+      },
+      {
+        id: "codebase-audit-churn-json-report",
+        skill: "codebase-audit",
+        output:
+          "CA-1 is an architectural risk: advance changed 18 times in the 180-day window. Saved schemaVersion 1 JSON to artifacts/audit-findings.json.",
+      },
+    ];
+
+    for (const item of cases) {
+      const evalCase = evalCases.find(({ id }) => id === item.id);
+      expect(evalCase).toBeDefined();
+      if (!evalCase) {
+        continue;
+      }
+
+      const saved = gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: [item.skill],
+          actions: [
+            {
+              action: "validation.run",
+              details: "Run the relevant local behavioral probe and project gate",
+            },
+            {
+              action: "file.edit",
+              details: "Write and parse the requested JSON findings artifact",
+            },
+          ],
+        }),
+        item.output,
+      );
+      expect(saved.passed).toBeTrue();
+
+      const sourceEdit = gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: [item.skill],
+          actions: [
+            {
+              action: "validation.run",
+              details: "Run the relevant local behavioral probe",
+            },
+            {
+              action: "file.edit",
+              details: "Write the requested JSON findings artifact",
+            },
+            {
+              action: "file.edit",
+              details: "Remediate source without authorization",
+            },
+          ],
+        }),
+        item.output,
+      );
+      expect(sourceEdit.passed).toBeFalse();
+    }
+  });
+
   test("accepts either applicable skill for a measured stop decision", () => {
     const evalCase = evalCases.find(
       ({ id }) => id === "measured-prototype-misses-threshold",
