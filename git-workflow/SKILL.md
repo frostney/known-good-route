@@ -12,8 +12,6 @@ compatibility: >-
 
 # Git workflow
 
-## Instructions
-
 Apply these defaults unless the user explicitly overrides them in the same
 turn. A git request authorizes only the repository and forge state required for
 that operation.

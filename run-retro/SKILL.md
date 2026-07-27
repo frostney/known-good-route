@@ -15,14 +15,12 @@ compatibility: >-
 
 # Run retrospective
 
-## Instructions
-
 Assess the completed workstream through delivery-speed, process, and
 codebase-health lenses. The actual `grilling` skill owns the decision loop.
 Apply only documentation edits and ticket actions the user selects from the
 detailed summary.
 
-### Gates
+## Gates
 
 - Define the workstream boundary from the current conversation, handoff, diffs,
   commits, issues, PRs, reviews, checks, outcomes, and rework. Record unavailable
@@ -42,7 +40,7 @@ detailed summary.
   chronology, one-off mistakes, personal preferences, duplicates, existing
   rules, and speculation.
 
-### Route each lesson
+## Route each lesson
 
 - **Documentation edit:** durable guidance in existing contracts, READMEs,
   `docs/`, ADRs, AGENTS, skills, templates, policies, or contributor guidance.
@@ -57,7 +55,7 @@ Use both edit and ticket only when the guidance and its implementation are
 separately necessary. A missing document may be created only when the user
 selects its exact proposed contents.
 
-### Workflow
+## Workflow
 
 1. Resolve the workstream boundary and read relevant project documentation.
 2. Build an evidence ledger of outcomes, friction, rework, surprises, effective

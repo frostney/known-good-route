@@ -2,9 +2,9 @@
 name: codebase-audit
 description: >-
   Audits the current repository for systemic correctness, architecture,
-  simplification, clarity, test value, and operational risks using current
-  source and reproducible probes. Use when the user runs /codebase-audit or asks
-  for an evidence-backed review of a whole codebase or scoped subsystem.
+  churn, simplification, clarity, test value, and operational risks using
+  current source and reproducible probes. Use when the user runs
+  /codebase-audit or asks for an evidence-backed repository or subsystem audit.
 license: Unlicense OR MIT
 compatibility: >-
   Requires the project's declared build and test tools plus network access for
@@ -23,6 +23,11 @@ servers, browser flows, disposable repros, isolated test data, and temporary
 artifacts, but it must not edit repository content or create persistent or
 externally visible side effects. Clean up disposable artifacts and report
 anything retained.
+
+A request to save JSON authorizes only the named findings artifact; it does not
+authorize remediation. Read
+[references/findings-json.md](references/findings-json.md) only when JSON output
+is requested.
 
 There is no `fix-all` mode. After reporting, offer remediation batches. A fix
 follow-up begins only when the user selects a coherent batch or finding IDs. It
@@ -50,6 +55,12 @@ pushes, publication, issue creation, deployments, or shared-state mutation.
    a layered codebase, partition work by capability and perspective so later
    areas do not receive progressively thinner analysis. Delegate only genuinely
    independent, sizeable areas with bounded fan-out.
+5. Build a bounded churn map from repository history. Rank frequently changed
+   files, then inspect function, method, class, or module history where symbols
+   are reliable. Use the repository's declared churn window or 90 days when none
+   exists. Prefer its code-health tool; otherwise use Git file history and
+   `git log -L` for stable symbols. Follow renames; state the window, touch
+   count, and line churn, and label file-level fallback.
 
 ## Establish current evidence
 
@@ -86,6 +97,12 @@ pushes, publication, issue creation, deployments, or shared-state mutation.
 - Require names, types, boundaries, and interfaces to communicate intent. Match
   the surrounding comment density; comments should preserve rationale and
   constraints, not narrate syntax.
+- Treat repeated changes to the same symbol or file as an architectural-risk
+  signal, not a defect by itself. Raise an `ARCHITECTURE_RISK` finding when the
+  measured churn coincides with mixed responsibilities, recurring fixes or
+  reverts, competing representations, broad blast radius, unstable interfaces,
+  or weak regression coverage. Cite the window, touch count, granularity, and
+  co-signal.
 - Suppress generic advice when repository evidence documents a deliberate
   alternative. Every best-practice finding must cite current project and
   authoritative-source evidence plus the concrete simplification or risk.
@@ -100,10 +117,11 @@ Lead with the highest-value current conclusion. Include:
 - a coverage map of inspected, executed, sampled, static-only, and unreached
   capabilities;
 - active and skipped perspectives with reasons;
+- the churn window, symbol/file coverage, and architectural-risk hotspots;
 - exact probes and project gates with observed results;
 - actionable findings as
-  `[CA-N][BLOCKING|IMPORTANT|IMPROVEMENT] file:line — evidence, impact, smallest
-  remedy`;
+  `[CA-N][BLOCKING|IMPORTANT|IMPROVEMENT][BEHAVIOR|QUALITY|ARCHITECTURE_RISK|
+  OPERATIONS] file:line — evidence, impact, smallest remedy`;
 - grouped remediation batches ordered by risk reduction, dependency, and
   reviewability;
 - limitations and retained probe artifacts.

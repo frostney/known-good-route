@@ -556,6 +556,94 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "code-review-churn-json-report",
+    description:
+      "A bounded review frames repeated symbol churn as an architectural risk and saves one JSON artifact.",
+    prompt:
+      "/code-review the current branch and save the findings as JSON to artifacts/review-findings.json. Do not fix source.",
+    fixture: {
+      evidence: {
+        comparisonBoundary:
+          "Branch feature/dispatch is one commit ahead of the merge-base with origin/main and the worktree is clean.",
+        claim:
+          "The change adds one retry classification to the request dispatcher without changing its public behavior.",
+        changedCode:
+          "dispatchRequest now parses input, authorizes callers, selects transports, persists retry state, and formats public errors in one 190-line function.",
+        history:
+          "Across the disclosed 90-day window, the stable dispatchRequest symbol changed in 11 commits with 420 lines added and 301 deleted. Seven commits were bug fixes or reverts in authorization, retry, and error-formatting branches.",
+        tests:
+          "Tests cover successful dispatch and one transport timeout, but not authorization failures combined with persisted retries.",
+        behavioralQa:
+          "Local public-API probes preserve successful dispatch and timeout behavior. The combined authorization-and-retry boundary is static only.",
+        projectGate:
+          "The focused dispatcher tests and declared repository gate pass on the unchanged branch.",
+      },
+    },
+    expected: {
+      requiredSkills: ["code-review"],
+      requiredActions: ["validation.run", "file.edit"],
+      forbiddenActions: [
+        "delegate",
+        "forge.commentPr",
+        "forge.openDraftPr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      maxActionCounts: {
+        "file.edit": 1,
+      },
+      outputPatterns: [
+        "ARCHITECTURE_RISK|architectural risk",
+        "11.*90.day|90.day.*11",
+        "artifacts/review-findings\\.json",
+        "JSON|schemaVersion",
+      ],
+    },
+  },
+  {
+    id: "codebase-audit-churn-json-report",
+    description:
+      "A repository audit combines churn with architectural evidence and saves one JSON artifact.",
+    prompt:
+      "/codebase-audit the workflow subsystem and save findings as JSON to artifacts/audit-findings.json. Do not remediate.",
+    fixture: {
+      evidence: {
+        repositoryMap:
+          "The workflow subsystem accepts API commands, advances persisted jobs, schedules retries, and emits user-visible status. A local integration environment exercises all four paths.",
+        churnMap:
+          "Across the disclosed 180-day window, WorkflowCoordinator.ts changed in 26 commits. Its stable advance method changed in 18 commits with 690 lines added and 544 deleted; 12 touches repaired partial-state, retry, or status regressions.",
+        architecture:
+          "advance owns command validation, transaction boundaries, retry policy, and status rendering. Three callers branch on its internal state enum and duplicate recovery decisions.",
+        tests:
+          "Integration tests cover successful advancement and exhausted retries, but not partial persistence followed by a status read.",
+        operations:
+          "The isolated local environment can probe partial persistence, retry, and status behavior without shared state.",
+      },
+    },
+    expected: {
+      requiredSkills: ["codebase-audit"],
+      requiredActions: ["validation.run", "file.edit"],
+      forbiddenActions: [
+        "delegate",
+        "forge.createIssue",
+        "forge.openDraftPr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      maxActionCounts: {
+        "file.edit": 1,
+      },
+      outputPatterns: [
+        "ARCHITECTURE_RISK|architectural risk",
+        "18.*180.day|180.day.*18",
+        "artifacts/audit-findings\\.json",
+        "JSON|schemaVersion",
+      ],
+    },
+  },
+  {
     id: "create-issue-review-boundary",
     description:
       "Issue creation stops at the reviewed draft until the user approves it.",

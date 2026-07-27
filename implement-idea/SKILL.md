@@ -13,12 +13,10 @@ compatibility: >-
 
 # Implement idea
 
-## Instructions
-
 Turn the idea into a confirmed mini-spec, then deliver it end to end in the
 current repository.
 
-### Gates
+## Gates
 
 - Confirm a mini-spec covering the user-visible outcome, scope/non-goals, and
   verifiable success criteria before implementation.
@@ -33,14 +31,14 @@ current repository.
 - For any code or test change, complete the project gate, one bounded
   `/code-review fix-all`, and `/create-pr`.
 
-### Project definitions
+## Project definitions
 
 Treat the nearest applicable `DEFINITION_OF_READY.md` and
 `DEFINITION_OF_DONE.md` as canonical. If either is absent after a real search,
 state that once, carry the gap into the plan and PR, and use only the workflow's
 built-in checks plus commands the repository actually declares.
 
-### Automatic mode
+## Automatic mode
 
 Automatic mode applies only when the original prompt says `automatic` or
 explicitly requests it. It does not waive mini-spec confirmation or any other
@@ -48,7 +46,7 @@ gate. After presenting options, select the evidence-backed recommendation and
 continue. Material ambiguity, risk, or a vision conflict disables automatic
 mode.
 
-### Workflow
+## Workflow
 
 1. Formulate and confirm the mini-spec with the user. Keep it proportional to the
    idea.

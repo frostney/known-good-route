@@ -28,7 +28,7 @@ These are [Agent Skills](https://agentskills.io): any skills-compatible agent lo
 | [`create-pr`](create-pr/SKILL.md) | Commit relevant local changes, open a templated draft PR, fill anything it is missing against the project's Definition of Ready, fix CI failures, and mark it ready. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and push to the current PR, merge the baseline when behind, refresh PR title/body when stale. No amend, no force push. |
 | [`review-pr`](review-pr/SKILL.md) | Resolve inline and summary review findings in place, including active review-tool nitpicks and incomplete states. The explicit `automatic-merge` mode watches, retriggers, fixes, and squash-merges once the current head is fully green. |
-| [`code-review`](code-review/SKILL.md) | Review a PR, branch, or worktree against its claim and repository standards using reproducible UI or non-UI probes, current-source simplification checks, and an optional local fix phase. `fix-all` resolves the bounded change before PR creation. |
+| [`code-review`](code-review/SKILL.md) | Review a PR, branch, or worktree against its claim and repository standards using reproducible UI or non-UI probes, churn-backed architectural-risk checks, and an optional local fix phase. Findings can be saved as stable JSON; `fix-all` resolves the bounded change before PR creation. |
 | [`create-release`](create-release/SKILL.md) | Prepare a changelog-first release PR, then publish only when authorized and through exactly one evidence-backed path. Existing workflows own publication when configured; the agent never double-publishes with `gh release create`. |
 | [`roadmap-review`](roadmap-review/SKILL.md) | Review a project's roadmap from freshly-pulled data — assess current state and release cadence, measure delivery velocity from history, verify candidate work against the source, produce a parallelized throughput-anchored version plan, and (optionally, on confirmation) create milestones and issues. |
 | [`milestone-rush`](milestone-rush/SKILL.md) | Complete a confirmed milestone from its actual merged, PR, branch, worktree, and issue state; parallelize independent implementation; continuously review and squash-merge; verify integrated completion; and offer an explicitly approved retrospective. |
@@ -41,13 +41,19 @@ These are [Agent Skills](https://agentskills.io): any skills-compatible agent lo
 | [`react-stack`](react-stack/SKILL.md) | Default React-based stack across two profiles — web (Next.js App Router) and universal (Expo Router) — with a shared core (Bun-only, TypeScript, Tailwind 4, Biome, Knip, Fallow, `bun test` co-located, single `bun run check` aggregator, Vercel AI Gateway via `@ai-sdk/gateway`, Clerk, Convex, Plop, Lefthook, Atomic Design, source under `src/` by domain). |
 | [`native-nostalgia-stack`](native-nostalgia-stack/SKILL.md) | FreePascal toolchain — FPC in Delphi mode (compiler flags in a shared include), namespace-based unit naming (flat by default), code-style starting points, build / formatter / codebase-health contracts (implementation is the project's choice), Lefthook pre-commit, InstantFPC for one-off scripts. |
 | [`convex-conventions`](convex-conventions/SKILL.md) | Convex backend rules — shared validators, Clerk JWT bridge, `args` + `returns` on every public function, in-code filtering, `.take()` caps, rate-limited mutations, action/mutation split, schema with soft-delete and audit trails, single re-export module for client types. The live Convex docs override this skill on conflict. |
-| [`codebase-audit`](codebase-audit/SKILL.md) | Audit the repository's current state with a coverage map, conditionally selected technical perspectives, reproducible probes, and current-source checks for simplification, self-documenting design, and best-practice drift. Remediation requires a selected coherent batch. |
+| [`codebase-audit`](codebase-audit/SKILL.md) | Audit the repository's current state with a coverage map, conditional technical perspectives, reproducible probes, and symbol/file churn framed as evidence-backed architectural risk. Findings can be saved as stable JSON; remediation requires a selected coherent batch. |
 | [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Ambient engineering-quality standard across the whole lifecycle — planning, orchestrating, developing, debugging, reviewing, refactoring, and substantial investigation: ground in reality (docs are leads, not proof), resist the pull to the quick fix and invest in the right structure, solve the full scope, reuse before creating, validate to the real bar, and use maintainability as the governor. |
 | [`bleeding-edge`](bleeding-edge/SKILL.md) | Ambient lens that tilts technology choices toward the newest viable option — latest stable (incl. just-released majors), newly-stable language/platform features, modern tooling, current AI models, and pre-release channels with a documented reason — while staying under `software-engineering-excellence`: verify live, pin, keep it reversible and gate-green, and never silently swap a decided choice. |
 
 ## Background
 
 Design decisions and conventions shared across every skill in this collection.
+
+The suite is also audited against
+[Writing Great Skills](https://github.com/mattpocock/skills/tree/main/skills/productivity/writing-great-skills):
+keep the process predictable, completion criteria checkable, each rule in one
+authoritative place, branch-specific detail behind direct context pointers, and
+no-op prose pruned.
 
 ### Frontier-model prompt contract
 
@@ -178,6 +184,7 @@ supported frontier models:
 | Issue draft awaiting approval | Investigates, grills, and presents the project-aligned draft without filing it |
 | Automatic issue creation and exact duplicate | Completes every investigation/grill gate before filing, but stops immediately for the existing issue |
 | Default code review and repository-wide audit | Reproduces safe boundary behavior and reports evidence without remediating in read-only mode |
+| Churn-backed review with JSON output | Measures symbol/file history, requires a concrete architectural co-signal, and writes only the requested machine-readable findings artifact |
 | Audit probe requires production mutation | Marks the path static-only and unreached instead of creating an external side effect |
 | Measured prototype misses its required target | Stops before production migration, publication, or speculative follow-on work |
 | Stale audit with missing evidence | Separates confirmed gaps, corrected claims, and unsupported measurements before planning |
