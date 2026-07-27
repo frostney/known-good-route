@@ -57,6 +57,10 @@ evidence areas; otherwise work directly. Synthesize before planning.
 8. Create or modify milestones, issues, due dates, or labels only after explicit
    confirmation of the finalized plan. Create each issue through `/create-issue`
    and report exactly what changed.
+9. After the confirmed milestone and its tracked scope exist, offer
+   `/milestone-rush <milestone>` as an explicit next action. Never start the
+   rush automatically; selecting it grants that skill's scoped implementation
+   and merge authority.
 
 Keep the report decision-relevant and snapshot-dated. Re-pull before acting on
 an old report.

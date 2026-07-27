@@ -455,6 +455,122 @@ describe("eval grading", () => {
     expect(result.passed).toBeTrue();
   });
 
+  test("requires reviewer convergence before automatic merge", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "review-pr-automatic-merge-retries-active-reviewer",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const output =
+      "The rate-limited reviewer was retriggered. Its cancellation guard nitpick was fixed, checks and review completed on current head b19d302, and the PR was squash-merged.";
+    const converged = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["review-pr"],
+        actions: [
+          {
+            action: "forge.commentPr",
+            details: "Post the documented reviewer retrigger",
+          },
+          { action: "file.edit", details: "Restore the cancellation guard" },
+          { action: "validation.run", details: "Run the project gate" },
+          { action: "git.commit", details: "Commit the review fix" },
+          { action: "git.push", details: "Push the current head" },
+          {
+            action: "forge.mergePr",
+            details: "Squash-merge the fully reviewed current head",
+          },
+        ],
+      }),
+      output,
+    );
+    expect(converged.passed).toBeTrue();
+
+    const premature = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["review-pr"],
+        actions: [
+          {
+            action: "forge.mergePr",
+            details: "Merge while the review is rate-limited",
+          },
+        ],
+      }),
+      output,
+    );
+    expect(premature.passed).toBeFalse();
+  });
+
+  test("keeps a partially blocked milestone open", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "milestone-rush-continues-around-blocker",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const output =
+      "Summary: commented on #70 and created linked replacement #74; merged independent #71; quarantined #72 and #73 on a material decision. The milestone remains open with the blocker and remaining work.";
+    const partial = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["milestone-rush"],
+        actions: [
+          { action: "delegate", details: "Run independent ready work" },
+          {
+            action: "forge.commentIssue",
+            details: "Link #70 to its replacement",
+          },
+          {
+            action: "forge.createIssue",
+            details: "Create replacement #74 in the milestone",
+          },
+          {
+            action: "forge.mergePr",
+            details: "Squash-merge the independent #71 PR",
+          },
+          { action: "report", details: "Report the blocked final state" },
+        ],
+      }),
+      output,
+    );
+    expect(partial.passed).toBeTrue();
+
+    const prematurelyClosed = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["milestone-rush"],
+        actions: [
+          { action: "delegate", details: "Run independent ready work" },
+          {
+            action: "forge.commentIssue",
+            details: "Link #70 to its replacement",
+          },
+          {
+            action: "forge.createIssue",
+            details: "Create replacement #74 in the milestone",
+          },
+          {
+            action: "forge.mergePr",
+            details: "Squash-merge the independent #71 PR",
+          },
+          {
+            action: "forge.closeMilestone",
+            details: "Close with blocked work remaining",
+          },
+          { action: "report", details: "Report the blocked final state" },
+        ],
+      }),
+      output,
+    );
+    expect(prematurelyClosed.passed).toBeFalse();
+  });
+
   test("validates the committed case set", async () => {
     const skills = await loadSkills(repositoryRoot);
     validateCases(evalCases, new Set(skills.keys()));

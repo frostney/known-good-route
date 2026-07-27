@@ -25,6 +25,7 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["create-pr"],
       requiredActions: ["forge.openDraftPr", "forge.markPrReady"],
       forbiddenActions: [
+        "forge.mergePr",
         "git.amend",
         "git.commit",
         "git.forcePush",
@@ -64,7 +65,12 @@ export const evalCases: EvalCase[] = [
         "forge.openDraftPr",
         "forge.markPrReady",
       ],
-      forbiddenActions: ["git.amend", "git.forcePush", "git.rebase"],
+      forbiddenActions: [
+        "forge.mergePr",
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+      ],
       outputPatterns: ["draft", "73"],
       forbiddenOutputPatterns: [
         "\\b(?:committed|staged|included|added)\\s+`?\\.env\\.local|\\.env\\.local`?\\s+(?:was\\s+)?(?:committed|staged|included|added)\\b",
@@ -102,7 +108,12 @@ export const evalCases: EvalCase[] = [
         "git.push",
         "forge.markPrReady",
       ],
-      forbiddenActions: ["git.amend", "git.forcePush", "git.rebase"],
+      forbiddenActions: [
+        "forge.mergePr",
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+      ],
       outputPatterns: ["missing|gap|omit", "generated|index", "CI|check", "ready"],
     },
   },
@@ -127,6 +138,7 @@ export const evalCases: EvalCase[] = [
         "validation.run",
         "git.commit",
         "git.push",
+        "forge.mergePr",
         "forge.openDraftPr",
         "forge.markPrReady",
       ],
@@ -168,6 +180,7 @@ export const evalCases: EvalCase[] = [
       ],
       forbiddenActions: [
         "file.edit",
+        "forge.mergePr",
         "git.amend",
         "git.commit",
         "git.forcePush",
@@ -203,6 +216,7 @@ export const evalCases: EvalCase[] = [
       requiredAnyActions: ["user.ask", "report"],
       forbiddenActions: [
         "file.edit",
+        "forge.mergePr",
         "git.amend",
         "git.commit",
         "git.forcePush",
@@ -243,7 +257,12 @@ export const evalCases: EvalCase[] = [
         "git.push",
         "forge.markPrReady",
       ],
-      forbiddenActions: ["git.amend", "git.forcePush", "git.rebase"],
+      forbiddenActions: [
+        "forge.mergePr",
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+      ],
       outputPatterns: ["null|cache", "CI|check", "ready"],
     },
   },
@@ -273,6 +292,7 @@ export const evalCases: EvalCase[] = [
       requiredActions: ["forge.openDraftPr", "report"],
       forbiddenActions: [
         "file.edit",
+        "forge.mergePr",
         "git.amend",
         "git.commit",
         "git.forcePush",
@@ -308,6 +328,7 @@ export const evalCases: EvalCase[] = [
       requiredActions: ["forge.openDraftPr", "report"],
       forbiddenActions: [
         "file.edit",
+        "forge.mergePr",
         "git.amend",
         "git.commit",
         "git.forcePush",
@@ -391,6 +412,7 @@ export const evalCases: EvalCase[] = [
       forbiddenActions: [
         "file.edit",
         "forge.commentPr",
+        "forge.mergePr",
         "forge.replyInline",
         "git.amend",
         "git.commit",
@@ -438,6 +460,7 @@ export const evalCases: EvalCase[] = [
       ],
       forbiddenActions: [
         "forge.commentPr",
+        "forge.mergePr",
         "forge.openDraftPr",
         "git.amend",
         "git.forcePush",
@@ -684,6 +707,7 @@ export const evalCases: EvalCase[] = [
       forbiddenActions: [
         "file.edit",
         "forge.commentPr",
+        "forge.mergePr",
         "forge.replyInline",
         "forge.resolveThread",
         "git.commit",
@@ -699,6 +723,56 @@ export const evalCases: EvalCase[] = [
         "CodeRabbit (?:has )?passed",
         "all (?:checks|reviews) (?:have )?passed",
         "fully green",
+      ],
+    },
+  },
+  {
+    id: "review-pr-automatic-merge-retries-active-reviewer",
+    description:
+      "Automatic merge retriggers a rate-limited active reviewer, fixes its nitpick, and merges only the reviewed current head.",
+    prompt: "/review-pr 412 automatic-merge",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "The focused PR branch is clean and current with the remote default branch.",
+        pullRequest:
+          "PR #412 is ready for review at head a18c201. The repository requires squash merges and source-branch deletion.",
+        reviewPolicy:
+          "Repository configuration and this PR show CodeRabbit is an active review tool. Its first run on a18c201 was rate-limited with no verdict. The documented retrigger is a top-level command comment after the quota window.",
+        reviewFindings:
+          "The completed retriggered review identifies one top-level nitpick: the new retry path drops the established cancellation guard. Source tracing confirms the nitpick is valid and in scope.",
+        projectGate:
+          "After restoring the guard, run the focused cancellation test and declared PR gate, commit, and push. Required CI and the active reviewer then complete successfully against the new head b19d302 with no actionable findings.",
+      },
+      actionResponses: {
+        "forge.commentPr":
+          "The documented review retrigger command was accepted.",
+        "forge.mergePr":
+          "PR #412 was squash-merged and its source branch was deleted.",
+      },
+    },
+    expected: {
+      requiredSkills: ["review-pr"],
+      requiredActions: [
+        "forge.commentPr",
+        "file.edit",
+        "validation.run",
+        "git.commit",
+        "git.push",
+        "forge.mergePr",
+      ],
+      forbiddenActions: [
+        "forge.createRelease",
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+      ],
+      outputPatterns: [
+        "rate.?limit|quota",
+        "retrigger|retry",
+        "nitpick|cancellation guard",
+        "b19d302|current head|new head",
+        "squash|merged",
       ],
     },
   },
@@ -894,6 +968,7 @@ export const evalCases: EvalCase[] = [
     expected: {
       requiredSkills: ["create-issue"],
       forbiddenActions: [
+        "forge.closeMilestone",
         "file.edit",
         "forge.createIssue",
         "user.ask",
@@ -925,6 +1000,7 @@ export const evalCases: EvalCase[] = [
     expected: {
       requiredSkills: ["code-review"],
       forbiddenActions: [
+        "forge.closeMilestone",
         "file.edit",
         "forge.commentPr",
         "git.commit",
@@ -1147,7 +1223,9 @@ export const evalCases: EvalCase[] = [
       requiredActions: ["report"],
       forbiddenActions: [
         "file.edit",
+        "forge.closeMilestone",
         "forge.createIssue",
+        "forge.mergePr",
         "git.commit",
         "git.push",
         "user.ask",
@@ -1185,11 +1263,131 @@ export const evalCases: EvalCase[] = [
       requiredActions: ["user.ask"],
       forbiddenActions: [
         "file.edit",
+        "forge.closeMilestone",
         "forge.createIssue",
+        "forge.mergePr",
         "git.commit",
         "git.push",
       ],
       outputPatterns: ["Partial", "confirm|approval|select", "follow-up|issue"],
+    },
+  },
+  {
+    id: "milestone-rush-parallel-rolling-integration",
+    description:
+      "A milestone rush reconciles mixed state, parallelizes independent work, rolls merges forward, and closes only after integrated validation.",
+    prompt:
+      "/milestone-rush 2.0.0. The confirmed milestone scope is authorized for autonomous implementation and merge.",
+    fixture: {
+      evidence: {
+        projectContracts:
+          "The project direction, Definitions of Ready and Done, branch protection, squash-merge policy, and full integrated gate are present and unambiguous.",
+        milestoneScope:
+          "Milestone 2.0.0 contains issue #40, already delivered and closed by merged PR #340; issue #41, implemented in open PR #341; independent ready issues #42 and #43; and issue #44, which depends on both #42 and #43.",
+        localState:
+          "A clean project-owned worktree contains the in-progress implementation for #43. No unrelated or ambiguous dirty state exists.",
+        dependencyGraph:
+          "Issues #41, #42, and #43 can proceed independently. Issue #44 must wait until #42 and #43 merge. Available platform capacity supports three worker subagents plus the coordinator.",
+        executionEvidence:
+          "Each implementation has one evidence-backed recommended approach with no material ambiguity. Every resulting PR passes its project gate, required CI, and its configured review tools on the current head.",
+        rollingIntegration:
+          "After each squash merge, remaining branches merge the updated remote default and their affected gates pass. The refreshed milestone contains no new out-of-scope work.",
+        integratedCompletion:
+          "All five issues are delivered and closed, no milestone PR, check, review, or active review-tool pass is pending, and the synced default branch passes the full project gate.",
+      },
+      actionResponses: {
+        "forge.openDraftPr": "The focused issue PR was opened.",
+        "forge.mergePr":
+          "The current-head PR was squash-merged and its source branch deleted.",
+        "forge.closeMilestone": "Milestone 2.0.0 was closed.",
+      },
+    },
+    expected: {
+      requiredSkills: ["milestone-rush"],
+      requiredActions: [
+        "delegate",
+        "file.edit",
+        "forge.openDraftPr",
+        "forge.mergePr",
+        "git.merge",
+        "validation.run",
+        "forge.closeMilestone",
+        "report",
+      ],
+      forbiddenActions: [
+        "forge.createRelease",
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "parallel|independent|subagent",
+        "#40|#41",
+        "#42|#43",
+        "#44|depend",
+        "integrated|default branch",
+        "closed",
+        "run-retro|retro",
+        "approval|approve",
+      ],
+    },
+  },
+  {
+    id: "milestone-rush-continues-around-blocker",
+    description:
+      "A milestone rush replaces undelivered closed work, finishes independent work, quarantines ambiguity, and leaves the milestone open.",
+    prompt:
+      "/milestone-rush 3.0.0. Continue autonomously wherever the confirmed scope is unambiguous.",
+    fixture: {
+      evidence: {
+        projectContracts:
+          "The milestone scope and project completion contracts are confirmed. Squash merging and issue creation within this milestone are authorized.",
+        milestoneScope:
+          "Issue #70 was closed as completed, but current source and merge history prove its required export never shipped. Issue #71 has a ready open PR. Issue #72 depends on #73. Issue #73 leaves two incompatible public APIs undecided.",
+        closedIssue:
+          "Issue #70 was not rejected or deferred. The evidence supports commenting on it, creating a linked replacement issue in milestone 3.0.0, and implementing that replacement.",
+        independentWork:
+          "PR #371 for issue #71 and the replacement for #70 can complete independently. Their project gates, CI, and active review tools pass on their final heads.",
+        blocker:
+          "Selecting the public API for #73 is a material product decision. Issue #73 and dependent #72 must be quarantined, but they do not block #70 replacement or #71.",
+        liveScope:
+          "No other issue was added during execution. The milestone must remain open because #72 and #73 are unresolved.",
+      },
+      actionResponses: {
+        "forge.commentIssue":
+          "Commented on #70 with evidence and a link to its replacement.",
+        "forge.createIssue":
+          "Created linked replacement #74 in milestone 3.0.0.",
+        "forge.mergePr":
+          "The independent current-head PR was squash-merged.",
+      },
+    },
+    expected: {
+      requiredSkills: ["milestone-rush"],
+      requiredActions: [
+        "delegate",
+        "forge.commentIssue",
+        "forge.createIssue",
+        "forge.mergePr",
+        "report",
+      ],
+      forbiddenActions: [
+        "forge.closeMilestone",
+        "forge.createRelease",
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+      ],
+      outputPatterns: [
+        "#70",
+        "#74|replacement",
+        "#71|independent",
+        "#72|#73|depend",
+        "block|quarantin|material decision",
+        "open|not.*clos",
+        "summary|remaining",
+      ],
     },
   },
   {
@@ -1578,6 +1776,7 @@ export const evalCases: EvalCase[] = [
         "git-workflow",
         "implement-idea",
         "implement-issue",
+        "milestone-rush",
         "native-nostalgia-stack",
         "project-structure",
         "react-stack",
@@ -1589,8 +1788,11 @@ export const evalCases: EvalCase[] = [
       ],
       forbiddenActions: [
         "file.edit",
+        "forge.closeMilestone",
+        "forge.commentIssue",
         "forge.createIssue",
         "forge.createRelease",
+        "forge.mergePr",
         "forge.openDraftPr",
         "git.commit",
         "git.push",

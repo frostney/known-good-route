@@ -1,10 +1,13 @@
 export const actionNames = [
   "delegate",
   "file.edit",
+  "forge.closeMilestone",
+  "forge.commentIssue",
   "forge.commentPr",
   "forge.createIssue",
   "forge.createRelease",
   "forge.markPrReady",
+  "forge.mergePr",
   "forge.openDraftPr",
   "forge.replyInline",
   "forge.resolveThread",

@@ -27,10 +27,11 @@ These are [Agent Skills](https://agentskills.io): any skills-compatible agent lo
 | [`run-retro`](run-retro/SKILL.md) | Review a completed workstream through delivery-speed, process, and codebase-health lenses; use `grilling` to agree durable lessons; then apply selected documentation edits and propose follow-up tickets. |
 | [`create-pr`](create-pr/SKILL.md) | Commit relevant local changes, open a templated draft PR, fill anything it is missing against the project's Definition of Ready, fix CI failures, and mark it ready. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and push to the current PR, merge the baseline when behind, refresh PR title/body when stale. No amend, no force push. |
-| [`review-pr`](review-pr/SKILL.md) | Resolve review threads in-place — no top-level PR/issue comments, no force pushes — preferring `/resolve-reviews` when registered and using `/update-pr` for the commit/push step. |
+| [`review-pr`](review-pr/SKILL.md) | Resolve inline and summary review findings in place, including active review-tool nitpicks and incomplete states. The explicit `automatic-merge` mode watches, retriggers, fixes, and squash-merges once the current head is fully green. |
 | [`code-review`](code-review/SKILL.md) | Review a PR, branch, or worktree against its claim and repository standards using reproducible UI or non-UI probes, current-source simplification checks, and an optional local fix phase. `fix-all` resolves the bounded change before PR creation. |
 | [`create-release`](create-release/SKILL.md) | Prepare a changelog-first release PR, then publish only when authorized and through exactly one evidence-backed path. Existing workflows own publication when configured; the agent never double-publishes with `gh release create`. |
 | [`roadmap-review`](roadmap-review/SKILL.md) | Review a project's roadmap from freshly-pulled data — assess current state and release cadence, measure delivery velocity from history, verify candidate work against the source, produce a parallelized throughput-anchored version plan, and (optionally, on confirmation) create milestones and issues. |
+| [`milestone-rush`](milestone-rush/SKILL.md) | Complete a confirmed milestone from its actual merged, PR, branch, worktree, and issue state; parallelize independent implementation; continuously review and squash-merge; verify integrated completion; and offer an explicitly approved retrospective. |
 
 ### One-off project setup, guidance, and audit skills
 
@@ -120,11 +121,20 @@ that evidence.
   `/code-review fix-all` before `/create-pr`; they stop for material new
   decisions and do not proceed with unresolved Blocking or Important findings.
 - `review-pr` invokes `/update-pr` for the commit/push step (and `/resolve-reviews` when registered).
+- `review-pr automatic-merge` discovers active review tools, treats incomplete
+  verdicts as pending, and owns the fix-watch-squash-merge loop.
 - `create-release` invokes `/create-pr` to open the release PR, follows
   `git-workflow` for branching and push rules, and defers to `project-structure`
   for changelog tooling. Its publication gate re-reads merged workflows and
   chooses exactly one tag/release publisher before acting.
 - `roadmap-review` defers to `software-engineering-excellence` for the general engineering bar, to `project-structure` for `VISION.md` / docs and milestone conventions, recommends (but never performs) release cuts via `/create-release`, and delegates issue creation in the Execute phase to `/create-issue`.
+- `roadmap-review` offers `/milestone-rush` only after the user confirms the
+  milestone and tracked scope; it never starts the execution engine
+  automatically.
+- `milestone-rush` parallelizes independent nodes through `/implement-issue
+  automatic` or confirmed `/implement-idea automatic`, then uses `/review-pr
+  automatic-merge` for rolling integration. It never creates a release and
+  invokes `/run-retro` only after explicit approval.
 - `create-issue`, `implement-issue`, and `implement-idea` invoke `/grill-with-docs` (preferred) or `/grill-me` for thoroughness when registered.
 - `create-issue`, `implement-issue`, and `implement-idea` read `VISION.md` when present and stop for clarification when the request conflicts with it.
 - `create-issue`, `implement-issue`, and `implement-idea` support an explicit `automatic` prompt mode where the agent auto-selects the project-context recommendation after completing the required investigation/gates.
@@ -172,11 +182,14 @@ supported frontier models:
 | Measured prototype misses its required target | Stops before production migration, publication, or speculative follow-on work |
 | Stale audit with missing evidence | Separates confirmed gaps, corrected claims, and unsupported measurements before planning |
 | Rate-limited review bot | Reports the review as unavailable or incomplete, never passed |
+| Automatic merge with active review tooling | Retriggers incomplete reviews, evaluates inline and summary findings, and merges only the fully reviewed current head |
 | Confirmed automatic idea | Implements, validates, performs the bounded review, and completes the PR handoff without dropping a gate |
 | Tag-triggered release workflow | Pushes the tag once, monitors automation, and never calls `gh release create` |
 | No releasable commits or ambiguous publisher | Stops without manufacturing a version change, tag, or release |
 | Git sync and divergent push | Merges the remote default without rebasing; a rejected plain push stops without force |
 | Sparse or mutation-ready roadmap review | Lowers confidence when evidence is thin and asks before document or forge changes |
+| Parallel milestone rush with mixed existing state | Reuses delivered, PR, branch, worktree, and issue state; rolls independent merges forward; and closes only after integrated validation |
+| Milestone rush with a blocked dependency chain | Completes independent work, records replacement and deferred scope, and leaves the blocked milestone open |
 | Project structure and stack conventions | Repairs real drift while preserving valid ecosystem layouts and recorded toolchain pins |
 | React profile mismatch | Uses the applicable web profile, but does not force web or universal defaults onto an Electron-only project |
 | Convex function boundaries | Enforces public validation/auth/rate limits and keeps external I/O in actions with persistence in internal mutations |
