@@ -16,6 +16,89 @@ Installs into your skills-compatible agent(s) — Cursor, Claude Code, Codex, Gi
 
 These are [Agent Skills](https://agentskills.io): any skills-compatible agent loads each skill's `name` and `description` at startup and reads the full `SKILL.md` when a task matches. Several are invoked directly as slash commands (e.g. `/create-pr`, `/implement-issue`); the rest activate from ambient context. The skills split into recurring workflow skills and one-off setup, guidance, and audit skills.
 
+### Operating loop
+
+Establish each repository's **Scaffold** once, keep its **Ambient** guidance
+active throughout, and run the outer loop from fresh project and forge evidence.
+Enter at the state the work is actually in; never replay earlier stages merely
+for ceremony.
+
+```mermaid
+flowchart TB
+    subgraph Layers["Per-project layers (outside the loop)"]
+        direction LR
+        Scaffold["Scaffold<br/>project-structure + applicable stack<br/>+ convex-conventions when relevant"]
+        Ambient["Ambient<br/>software-engineering-excellence<br/>+ bleeding-edge when adopted"]
+    end
+
+    subgraph Outer["Outer loop"]
+        Roadmap["/roadmap-review"]
+        Rush["/milestone-rush"]
+        Retro["/run-retro"]
+        ReleaseDecision{"Release now?"}
+        Release["/create-release"]
+        Next["Next cycle<br/>from fresh evidence"]
+
+        Roadmap -->|"confirm milestone and tracked scope"| Rush
+        Rush -->|"approve retrospective"| Retro
+        Retro --> ReleaseDecision
+        ReleaseDecision -->|"yes: invoke manually"| Release
+        ReleaseDecision -->|"no"| Next
+        Release --> Next
+    end
+
+    subgraph Delivery["Delivery loop (owned by /milestone-rush during a rush)"]
+        Track["Idea to track<br/>/create-issue"]
+        Ready["Ready issue"]
+        Issue["/implement-issue"]
+        Idea["Unfiled idea<br/>/implement-idea"]
+        Branch["Completed branch"]
+        CreatePR["/create-pr"]
+        ExistingPR["Existing PR"]
+        ReviewPR["/review-pr"]
+        Integrated["Integrated change"]
+
+        Track --> Issue
+        Ready --> Issue
+        Issue --> CreatePR
+        Idea --> CreatePR
+        Branch --> CreatePR
+        CreatePR --> ReviewPR
+        ExistingPR --> ReviewPR
+        ReviewPR --> Integrated
+    end
+
+    Audit["Optional diagnostic side path<br/>/codebase-audit when evidence justifies it"]
+
+    Scaffold -. "establishes the project" .-> Roadmap
+    Ambient -. "governs every stage" .-> Roadmap
+    Rush -. "orchestrates with automatic modes" .-> Issue
+    Audit -. "informs planning when warranted" .-> Roadmap
+```
+
+- **Scaffold** is the repository's structural and stack foundation:
+  `project-structure`, the applicable stack skill, and `convex-conventions` when
+  Convex is in scope. It is not another step in every delivery cycle.
+- **Ambient** guidance governs every stage:
+  `software-engineering-excellence`, plus `bleeding-edge` when the project has
+  adopted it.
+- Every outer-loop transition is human-controlled. `/roadmap-review` proposes
+  the milestone, `/milestone-rush` offers the retrospective after integrated
+  completion, and `/create-release` is an optional manual step after
+  `/run-retro`; none starts the next stage automatically.
+- While `/milestone-rush` is active, let it own the nested delivery loop. It
+  delegates implementation through the automatic modes, PR handoff, continuous
+  review, and merge instead of asking the user to invoke those child commands.
+- For ad-hoc or already-started work, enter the delivery loop at the matching
+  state: record an idea with `/create-issue`, implement a ready issue or unfiled
+  idea, hand off a completed branch with `/create-pr`, or continue an existing
+  PR with `/review-pr`.
+- `/codebase-audit` is a diagnostic side path when repository evidence warrants
+  a whole-codebase assessment, not a mandatory checkpoint.
+- Supporting mechanics stay underneath the loop: `git-workflow` governs git
+  operations, `/code-review fix-all` is the bounded pre-PR review, and
+  `/update-pr` handles review-driven commits and pushes.
+
 ### Recurring workflow skills
 
 | Skill | What it does |
