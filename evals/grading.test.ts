@@ -497,6 +497,118 @@ describe("eval grading", () => {
     }
   });
 
+  test("keeps additive code-review scopes bounded", () => {
+    const fileScope = evalCases.find(
+      ({ id }) => id === "code-review-exact-file-scope",
+    );
+    const revalidation = evalCases.find(
+      ({ id }) => id === "code-review-prior-audit-revalidation",
+    );
+    expect(fileScope).toBeDefined();
+    expect(revalidation).toBeDefined();
+    if (!fileScope || !revalidation) {
+      return;
+    }
+
+    const scoped = gradeRun(
+      fileScope,
+      ledger({
+        loadedSkills: ["code-review"],
+        actions: [
+          {
+            action: "validation.run",
+            details: "Probe the public decoder entry point",
+          },
+        ],
+      }),
+      "Finding scope: src/decoder.ts and tests/decoder.test.ts. Supporting context: src/frame.ts. CR-1 IMPORTANT src/decoder.ts:62 allocates 512 MiB before enforcing the 1 MiB limit.",
+    );
+    expect(scoped.passed).toBeTrue();
+
+    const leakedFinding = gradeRun(
+      fileScope,
+      ledger({
+        loadedSkills: ["code-review"],
+        actions: [
+          {
+            action: "validation.run",
+            details: "Probe the public decoder entry point",
+          },
+        ],
+      }),
+      "Finding scope: src/decoder.ts and tests/decoder.test.ts. Supporting context: src/frame.ts. CR-1 IMPORTANT src/decoder.ts:62 allocates 512 MiB before enforcing the 1 MiB limit. CR-2 IMPORTANT src/registry.ts:20 duplicates registration.",
+    );
+    expect(leakedFinding.passed).toBeFalse();
+
+    const revalidated = gradeRun(
+      revalidation,
+      ledger({
+        loadedSkills: ["code-review"],
+        actions: [
+          {
+            action: "validation.run",
+            details: "Run the isolated retry rollback probe",
+          },
+          {
+            action: "file.edit",
+            details:
+              "Write and parse distinct code-review-revalidation JSON without mutating its source",
+          },
+        ],
+      }),
+      "ALL_RESOLVED at baseline a11d170: CA-7 resolved. CA-8 is skippedOutOfScope. Wrote distinct code-review-revalidation JSON to artifacts/revalidation.json; the source is unchanged.",
+    );
+    expect(revalidated.passed).toBeTrue();
+
+    const sourceMutated = gradeRun(
+      revalidation,
+      ledger({
+        loadedSkills: ["code-review"],
+        actions: [
+          {
+            action: "validation.run",
+            details: "Run the isolated retry rollback probe",
+          },
+          {
+            action: "file.edit",
+            details: "Rewrite the source audit findings",
+          },
+          {
+            action: "file.edit",
+            details: "Write revalidation JSON",
+          },
+        ],
+      }),
+      "ALL_RESOLVED: CA-7 resolved; CA-8 skippedOutOfScope. The source was mutated before writing revalidation.json at baseline a11d170.",
+    );
+    expect(sourceMutated.passed).toBeFalse();
+  });
+
+  test("falls back without inventing prior-review attribution", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "code-review-prior-review-unavailable-baseline",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const result = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["code-review"],
+        actions: [
+          {
+            action: "validation.run",
+            details: "Run the missing-transitive-import probe",
+          },
+        ],
+      }),
+      "FINDINGS_REMAIN at current HEAD c33f392: CR-2 is still_present. Baseline 91ad00d is unavailable, so current-state evidence cannot attribute the finding to a particular change.",
+    );
+    expect(result.passed).toBeTrue();
+  });
+
   test("accepts either applicable skill for a measured stop decision", () => {
     const evalCase = evalCases.find(
       ({ id }) => id === "measured-prototype-misses-threshold",

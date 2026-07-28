@@ -602,6 +602,135 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "code-review-exact-file-scope",
+    description:
+      "An exact file list restricts finding locations while allowing disclosed supporting context.",
+    prompt:
+      "/code-review only src/decoder.ts and tests/decoder.test.ts on the current branch.",
+    fixture: {
+      evidence: {
+        comparisonBoundary:
+          "Branch feature/decode is two commits ahead of the merge-base with origin/main and the worktree is clean.",
+        claim:
+          "The change adds bounded frame decoding while preserving the established malformed-frame error.",
+        requestedFiles:
+          "The exact requested finding scope is src/decoder.ts and tests/decoder.test.ts.",
+        scopedCode:
+          "src/decoder.ts checks the declared frame length after allocating that length. tests/decoder.test.ts covers valid and malformed headers but not an oversized declared length.",
+        supportingContext:
+          "The reviewer reads src/frame.ts to confirm the shared 1 MiB limit and runs the public decoder entry point. src/registry.ts is also changed and has an unrelated duplicate-registration defect, but it is outside the exact finding scope.",
+        behavioralQa:
+          "A frame declaring 512 MiB reaches the allocation before returning the malformed-frame error. The 1 MiB boundary succeeds.",
+        projectGate:
+          "The focused decoder tests and declared repository gate pass on the unchanged branch.",
+      },
+    },
+    expected: {
+      requiredSkills: ["code-review"],
+      requiredActions: ["validation.run"],
+      forbiddenActions: [
+        "delegate",
+        "file.edit",
+        "forge.commentPr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "finding scope|scoped files?",
+        "src/decoder\\.ts",
+        "tests/decoder\\.test\\.ts",
+        "supporting context|src/frame\\.ts",
+        "CR-\\d+.*src/decoder\\.ts",
+        "512 MiB|allocation|1 MiB",
+      ],
+      forbiddenOutputPatterns: ["CR-\\d+.*src/registry\\.ts"],
+    },
+  },
+  {
+    id: "code-review-prior-audit-revalidation",
+    description:
+      "Prior audit findings and an exact file list produce a separate targeted revalidation artifact.",
+    prompt:
+      "/code-review revalidate artifacts/audit-findings.json against the latest changes, limited to src/retry.ts, and save JSON to artifacts/revalidation.json.",
+    fixture: {
+      evidence: {
+        priorArtifact:
+          "artifacts/audit-findings.json is valid schemaVersion 1 codebase-audit JSON. Recorded revision a11d170 is locally available. CA-7 is open at src/retry.ts:84 for persisting attempts before delivery without a transaction. CA-8 is deferred at src/status.ts:41 for a stale status projection. CA-9 is fixed and must not be selected.",
+        comparisonBoundary:
+          "Current HEAD is b22e281. The worktree has a relevant unstaged regression-test change. The diff from a11d170 moves the attempt update and delivery record into the existing transaction.",
+        requestedFiles:
+          "The exact file list contains only src/retry.ts, so CA-7 is selected and CA-8 is skippedOutOfScope.",
+        behavioralQa:
+          "The isolated retry probe forces delivery failure after the state update. The transaction rolls back the attempt and delivery record together, and the new regression test fails against a11d170 but passes on current state.",
+        sourceArtifact:
+          "The source audit artifact remains unchanged. The requested output is the distinct artifacts/revalidation.json file.",
+      },
+    },
+    expected: {
+      requiredSkills: ["code-review"],
+      requiredActions: ["validation.run", "file.edit"],
+      forbiddenActions: [
+        "delegate",
+        "forge.commentPr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      maxActionCounts: {
+        "file.edit": 1,
+      },
+      outputPatterns: [
+        "ALL_RESOLVED",
+        "CA-7.*resolved|resolved.*CA-7",
+        "CA-8.*skippedOutOfScope|skippedOutOfScope.*CA-8",
+        "code-review-revalidation|revalidation\\.json",
+        "a11d170|baseline",
+        "source.*unchanged|not.*mutat|distinct",
+      ],
+    },
+  },
+  {
+    id: "code-review-prior-review-unavailable-baseline",
+    description:
+      "Prior review findings fall back to current-state validation when their recorded head is unavailable.",
+    prompt:
+      "/code-review revalidate artifacts/review-findings.json against the latest changes. Do not perform a fresh review or fix anything.",
+    fixture: {
+      evidence: {
+        priorArtifact:
+          "artifacts/review-findings.json is valid schemaVersion 1 code-review JSON. CR-2 is open at src/import.ts:73 for leaking ResolveError from the public CLI. CR-3 is fixed and must not be selected. The recorded scope.head 91ad00d is not available in the local repository.",
+        comparisonBoundary:
+          "Current HEAD is c33f392 and the worktree is clean. Because 91ad00d is unavailable, no diff or resolving commit can be attributed.",
+        currentCode:
+          "Current static tracing still lets ResolveError escape from the public CLI entry point with the original impact and remedy.",
+        behavioralQa:
+          "A local missing-transitive-import probe exits 1 and prints the internal ResolveError stack. The established public behavior requires exit 2 without a stack trace.",
+        projectGate:
+          "The focused CLI tests and declared repository gate pass on the unchanged current state but do not cover the reproduced boundary.",
+      },
+    },
+    expected: {
+      requiredSkills: ["code-review"],
+      requiredActions: ["validation.run"],
+      forbiddenActions: [
+        "delegate",
+        "file.edit",
+        "forge.commentPr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "FINDINGS_REMAIN",
+        "CR-2.*still_present|still_present.*CR-2",
+        "baseline.*unavailable|91ad00d.*unavailable",
+        "current.state|current HEAD|c33f392",
+        "cannot.*attribut|no.*attribut",
+      ],
+    },
+  },
+  {
     id: "codebase-audit-churn-json-report",
     description:
       "A repository audit combines churn with architectural evidence and saves one JSON artifact.",
