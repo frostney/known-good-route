@@ -556,6 +556,100 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "code-review-subagents-perspective-lanes",
+    description:
+      "An explicit subagents review delegates bounded perspective lanes while the coordinator owns findings and fixes.",
+    prompt:
+      "/code-review subagents fix-all on the current worktree.",
+    fixture: {
+      evidence: {
+        comparisonBoundary:
+          "Branch feature/import is one commit ahead of the merge-base with origin/main. The worktree is clean.",
+        claim:
+          "The change adds a public import command that must preserve the established normalized error contract.",
+        laneMap:
+          "The coordinator activates claim-and-correctness, simplification-and-self-documentation, and test-value-and-operations lanes across the complete bounded change. Platform capacity supports two workers, so the third lane queues until a slot frees.",
+        workerResults:
+          "All three evidence-only workers return the required lane ID, scope, inspected context, probes, candidate findings, verified claims, limitations, and complete status. They do not edit, delegate, assign severity, or issue a verdict.",
+        candidateEvidence:
+          "The claim-and-correctness lane reproduces a leaked internal ResolveError. The simplification lane finds that the new adapter duplicates normalizeImportError. The test-value lane confirms the changed test passes even when the public error contract is wrong.",
+        coordinatorValidation:
+          "Current-checkout validation confirms that the three candidates have one shared cause. Reusing normalizeImportError is the smallest fix and makes the regression test fail against the wrong implementation.",
+        projectGate:
+          "After the coordinator-owned fix, rerun the public CLI failure probe, focused import tests, typecheck, and the declared repository gate once.",
+      },
+    },
+    expected: {
+      requiredSkills: ["code-review"],
+      requiredActions: ["delegate", "file.edit", "validation.run"],
+      forbiddenActions: [
+        "forge.commentPr",
+        "forge.openDraftPr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "perspective.*lane|lane.*perspective",
+        "claim.*correctness",
+        "simplification|self-documentation",
+        "test.value|operations",
+        "coordinator",
+        "ResolveError|normalizeImportError",
+        "complete",
+      ],
+      forbiddenOutputPatterns: [
+        "worker (?:edited|fixed|committed)|worker-owned (?:edit|fix|commit)",
+        "redispatch(?:ed)?.*all|all.*redispatch",
+      ],
+    },
+  },
+  {
+    id: "codebase-audit-subagents-fallback",
+    description:
+      "An explicit subagents audit uses capability-perspective lanes and reports coordinator fallback for unavailable workers.",
+    prompt:
+      "/codebase-audit subagents the current repository. Do not remediate.",
+    fixture: {
+      evidence: {
+        repositoryMap:
+          "The repository has an authenticated HTTP mutation capability, PostgreSQL persistence, and a background retry capability. It has no UI.",
+        laneMap:
+          "The bounded map contains API-authentication-and-correctness, persistence-transaction-and-idempotency, and retry-operations-and-test-value lanes.",
+        workerAvailability:
+          "The API lane worker returns complete evidence. The persistence worker remains unavailable after bounded retry. The retry lane queues while the only worker slot is occupied, then completes when it frees.",
+        workerEvidence:
+          "The API worker reproduces a role-bypass candidate without editing or assigning severity. The retry worker verifies the existing idempotency guard and reports no candidate finding.",
+        fallbackEvidence:
+          "The coordinator completes the unavailable persistence lane directly and reproduces partial state after a transaction failure.",
+        projectGate:
+          "The coordinator runs the isolated API, persistence, and retry probes plus the declared repository gate without changing repository content.",
+      },
+    },
+    expected: {
+      requiredSkills: ["codebase-audit"],
+      requiredActions: ["delegate", "validation.run"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.createIssue",
+        "forge.openDraftPr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "capability.*perspective|perspective.*capability",
+        "API.*lane|lane.*API",
+        "persistence.*lane|lane.*persistence",
+        "retry.*lane|lane.*retry",
+        "fallback|single-agent",
+        "unavailable",
+        "coordinator",
+        "UI.*skip|skip.*UI|no UI",
+      ],
+    },
+  },
+  {
     id: "code-review-churn-json-report",
     description:
       "A bounded review frames repeated symbol churn as an architectural risk and saves one JSON artifact.",
@@ -727,6 +821,50 @@ export const evalCases: EvalCase[] = [
         "baseline.*unavailable|91ad00d.*unavailable",
         "current.state|current HEAD|c33f392",
         "cannot.*attribut|no.*attribut",
+      ],
+    },
+  },
+  {
+    id: "code-review-subagents-finding-lanes",
+    description:
+      "Subagents revalidation delegates selected prior findings as bounded finding lanes without starting a fresh review.",
+    prompt:
+      "/code-review subagents revalidate artifacts/review-findings.json against the latest changes. Do not perform a fresh review or fix anything.",
+    fixture: {
+      evidence: {
+        priorArtifact:
+          "artifacts/review-findings.json is valid schemaVersion 1 code-review JSON. CR-4 and CR-5 are open, CR-6 is fixed, and all paths are repository-contained.",
+        comparisonBoundary:
+          "The recorded head d14ab20 and current HEAD e25bc31 are both available. The worktree is clean.",
+        laneMap:
+          "CR-4 and CR-5 share the same import-error boundary, so the coordinator groups them into one tightly coupled finding lane. CR-6 is not selected.",
+        workerResult:
+          "The evidence-only worker returns a complete finding-lane result. Its probe shows CR-4 resolved and suggests that CR-5 remains at a new symbol with a materially narrower remedy.",
+        coordinatorValidation:
+          "Current-checkout validation confirms CR-4 resolved and classifies CR-5 as changed. No unrelated new findings are searched for or reported.",
+      },
+    },
+    expected: {
+      requiredSkills: ["code-review"],
+      requiredActions: ["delegate", "validation.run"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.commentPr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "FINDINGS_REMAIN",
+        "finding.*lane|lane.*finding",
+        "CR-4.*resolved|resolved.*CR-4",
+        "CR-5.*changed|changed.*CR-5",
+        "CR-6.*(?:not selected|excluded)|(?:not selected|excluded).*CR-6",
+        "coordinator",
+      ],
+      forbiddenOutputPatterns: [
+        "APPROVE|REQUEST CHANGES",
+        "unrelated new finding|CR-7",
       ],
     },
   },
@@ -1506,7 +1644,9 @@ export const evalCases: EvalCase[] = [
         dependencyGraph:
           "Issues #41, #42, and #43 can proceed independently. Issue #44 must wait until #42 and #43 merge. Available platform capacity supports three worker subagents plus the coordinator.",
         executionEvidence:
-          "Each implementation has one evidence-backed recommended approach with no material ambiguity. Every resulting PR passes its project gate, required CI, and its configured review tools on the current head.",
+          "Each implementation has one evidence-backed recommended approach with no material ambiguity. Its required pre-PR pass is /code-review subagents fix-all. Review lanes queue when all platform slots are temporarily occupied, then run as capacity frees. Every resulting PR passes its project gate, required CI, and its configured review tools on the current head.",
+        reviewDelegation:
+          "Each PR records its perspective-to-lane map and completed evidence-only workers. PR #343 cannot obtain one operations worker after bounded retry, so its implementation worker completes that lane directly and reports the single-agent fallback.",
         rollingIntegration:
           "After each squash merge, remaining branches merge the updated remote default and their affected gates pass. The refreshed milestone contains no new out-of-scope work.",
         integratedCompletion:
@@ -1540,6 +1680,9 @@ export const evalCases: EvalCase[] = [
       ],
       outputPatterns: [
         "parallel|independent|subagent",
+        "code-review.*subagents.*fix-all|subagents.*fix-all.*code-review",
+        "perspective.*lane|lane.*perspective",
+        "fallback|single-agent",
         "#40|#41",
         "#42|#43",
         "#44|depend",

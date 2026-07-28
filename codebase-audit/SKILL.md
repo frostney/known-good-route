@@ -3,7 +3,8 @@ name: codebase-audit
 description: >-
   Audits the current repository for systemic correctness, architecture,
   churn, simplification, clarity, test value, and operational risks using
-  current source and reproducible probes. Use when the user runs
+  current source and reproducible probes. It can delegate evidence gathering
+  across bounded capability and perspective lanes. Use when the user runs
   /codebase-audit or asks for an evidence-backed repository or subsystem audit.
 license: Unlicense OR MIT
 compatibility: >-
@@ -23,6 +24,9 @@ servers, browser flows, disposable repros, isolated test data, and temporary
 artifacts, but it must not edit repository content or create persistent or
 externally visible side effects. Clean up disposable artifacts and report
 anything retained.
+
+`subagents` is an additive execution input. Without it, do not delegate any part
+of the audit.
 
 A request to save JSON authorizes only the named findings artifact; it does not
 authorize remediation. Read
@@ -53,14 +57,43 @@ pushes, publication, issue creation, deployments, or shared-state mutation.
      observability, and performance analysis only where those surfaces exist.
 4. For a shallow subsystem, trace its complete path and direct interactions. For
    a layered codebase, partition work by capability and perspective so later
-   areas do not receive progressively thinner analysis. Delegate only genuinely
-   independent, sizeable areas with bounded fan-out.
+   areas do not receive progressively thinner analysis.
 5. Build a bounded churn map from repository history. Rank frequently changed
    files, then inspect function, method, class, or module history where symbols
    are reliable. Use the repository's declared churn window or 90 days when none
    exists. Prefer its code-health tool; otherwise use Git file history and
    `git log -L` for stable symbols. Follow renames; state the window, touch
    count, and line churn, and label file-level fallback.
+
+## Sub-agent lanes
+
+When the user supplies `subagents`, the coordinating agent still owns the audit
+scope, coverage map, capability map, active and skipped perspectives, validation,
+final findings, remediation batches, and report.
+
+1. Publish a bounded lane map before delegation. Form lanes from capability and
+   perspective intersections so no worker receives an unbounded whole-repository
+   perspective. Give each lane one worker; tightly coupled or individually small
+   perspectives may share a lane. Queue excess lanes when platform capacity is
+   temporarily full.
+2. Give each worker its lane ID, assigned capability and perspectives, bounded
+   scope, relevant project instructions, and known evidence. A worker may inspect
+   and run the safe probes allowed by this skill, but it must not edit, create
+   persistent or external side effects, delegate further, assign final finding
+   IDs or severities, propose final remediation batches, or issue an overall
+   conclusion.
+3. Require each worker to return its lane ID, assigned capability and
+   perspectives, bounded scope, inspected supporting context, exact probes and
+   observed results, candidate findings with evidence, impact, and smallest
+   remedy, verified claims, limitations, and `complete` or `incomplete` status.
+4. Validate every candidate against the current checkout, deduplicate and
+   reconcile conflicts across lanes, then assign final IDs, severities,
+   categories, remediation batches, and conclusions. Do not repeat a completed
+   lane wholesale.
+5. If sub-agents are unsupported, unavailable after any applicable bounded
+   retry, or leave a lane incomplete, complete that lane directly. Report the
+   affected lane and reason as a single-agent fallback. Temporary capacity
+   exhaustion queues work rather than triggering immediate fallback.
 
 ## Establish current evidence
 
@@ -117,6 +150,9 @@ Lead with the highest-value current conclusion. Include:
 - a coverage map of inspected, executed, sampled, static-only, and unreached
   capabilities;
 - active and skipped perspectives with reasons;
+- when `subagents` was supplied, the capability-and-perspective lane map,
+  completed and incomplete lanes, and every coordinator-completed fallback with
+  its reason;
 - the churn window, symbol/file coverage, and architectural-risk hotspots;
 - exact probes and project gates with observed results;
 - actionable findings as
@@ -138,5 +174,7 @@ After the user selects a batch or IDs, create or reuse a focused branch and
 implement the smallest complete remedies. Do not absorb unrelated findings.
 Promote useful probes into regression tests, remove disposable artifacts, run
 affected behavioral probes and project gates, and report fixed and unresolved
-IDs with observed evidence. Use the repository's separate git and PR workflows
-only when the user requests publication.
+IDs with observed evidence. The coordinator makes every edit. Do not redispatch
+completed lanes after fixes; re-engage a worker only to resolve incomplete or
+contradictory evidence. Use the repository's separate git and PR workflows only
+when the user requests publication.

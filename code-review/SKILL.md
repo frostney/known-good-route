@@ -3,9 +3,10 @@ name: code-review
 description: >-
   Reviews a pull request, branch, or worktree against its claim, repository
   standards, reproducible behavior, and churn-backed architectural risks. It
-  can limit findings to exact files, revalidate prior review or audit JSON, and
-  optionally fix selected findings or all in-scope findings. Use when the user
-  runs /code-review or asks for an evidence-backed review of a bounded change.
+  can delegate evidence gathering by perspective, limit findings to exact
+  files, revalidate prior review or audit JSON, and optionally fix selected
+  findings or all in-scope findings. Use when the user runs /code-review or asks
+  for an evidence-backed review of a bounded change.
 license: Unlicense OR MIT
 compatibility: >-
   Requires git, the project's declared build and test tools, and network access
@@ -23,6 +24,8 @@ mode.
 
 - Exact file lists and prior-findings JSON are additive inputs. They do not
   change unscoped review behavior unless the user supplies them.
+- `subagents` is an additive execution input. Without it, do not delegate any
+  part of the review.
 - Default mode is non-remediating. Inspect and run safe local probes, but do not
   edit source, tests, configuration, or documentation.
 - `fix <finding IDs>` fixes only the selected findings.
@@ -45,6 +48,37 @@ is requested. For targeted revalidation, read
 prior findings are supplied, whether or not JSON output is requested.
 
 ## Additive inputs
+
+### Sub-agent lanes
+
+When the user supplies `subagents`, the coordinating agent still owns the
+comparison boundary, claim, finding scope, active and skipped perspectives,
+validation, verdict, and report.
+
+1. Publish a bounded perspective-to-lane map before delegation. For a fresh
+   review, map every active perspective across the complete finding scope. Give
+   each lane one worker; tightly coupled or individually small perspectives may
+   share a lane. Queue excess lanes when platform capacity is temporarily full.
+2. For targeted revalidation alone, map selected findings to bounded finding
+   lanes instead. Group only tightly coupled findings. Exact-file and
+   prior-findings inputs retain their normal intersection rules.
+3. Give each worker its lane ID, assigned perspectives or finding IDs, exact
+   scope, claim or source finding, comparison boundary or baseline, relevant
+   project instructions, and known evidence. A worker may inspect and run the
+   safe probes allowed by this skill, but it must not edit, create persistent or
+   external side effects, delegate further, assign final finding IDs or
+   severities, or issue a verdict.
+4. Require each worker to return its lane ID, assigned perspectives or findings,
+   bounded scope, inspected supporting context, exact probes and observed
+   results, candidate findings with evidence, impact, and smallest remedy,
+   verified claims, limitations, and `complete` or `incomplete` status.
+5. Validate every candidate against the current checkout, deduplicate and
+   reconcile conflicts across lanes, then assign final IDs, severities,
+   categories, and verdict. Do not repeat a completed lane wholesale.
+6. If sub-agents are unsupported, unavailable after any applicable bounded
+   retry, or leave a lane incomplete, complete that lane directly. Report the
+   affected lane and reason as a single-agent fallback. Temporary capacity
+   exhaustion queues work rather than triggering immediate fallback.
 
 ### Exact file scope
 
@@ -197,6 +231,8 @@ Include:
 
 - the claim, comparison boundary, commits and dirty state reviewed;
 - active and skipped perspectives, with the reason for each skip;
+- when `subagents` was supplied, the perspective-to-lane map, completed and
+  incomplete lanes, and every coordinator-completed fallback with its reason;
 - the churn window, symbol/file coverage, and architectural-risk hotspots;
 - exact probes and checks with observed results;
 - actionable findings as
@@ -217,6 +253,8 @@ For prior-findings mode, report:
 - the source path, kind, recorded revision, baseline availability, current
   `HEAD`, and dirty state;
 - the exact selected IDs and any `skippedOutOfScope` IDs;
+- when `subagents` was supplied, the finding-to-lane map, completed and
+  incomplete lanes, and every coordinator-completed fallback with its reason;
 - supporting context inspected and exact probes with observed results;
 - each selected source ID, its source location, current location when known,
   outcome, current evidence, explanation, and remaining remedy when applicable;
@@ -239,7 +277,9 @@ In a fix mode, implement the smallest remedies without expanding the agreed
 change. Promote a useful repro into a regression test; otherwise remove it.
 Rerun affected behavioral probes and project checks once after the fixes, then
 report fixed and unresolved IDs plus observed results. Do not start an
-unbounded review-fix-review loop.
+unbounded review-fix-review loop. The coordinator makes every edit. Do not
+redispatch completed lanes after fixes; re-engage a worker only to resolve
+incomplete or contradictory evidence.
 
 For prior-findings input, default to read-only revalidation. An explicit
 `fix <finding IDs>` may remediate only matching selected findings classified
