@@ -2,8 +2,9 @@
 name: code-review
 description: >-
   Reviews a pull request, branch, or worktree against its claim, repository
-  standards, reproducible behavior, and churn-backed architectural risks, then
-  optionally fixes selected findings or all in-scope findings. Use when the user
+  standards, reproducible behavior, and churn-backed architectural risks. It
+  can limit findings to exact files, revalidate prior review or audit JSON, and
+  optionally fix selected findings or all in-scope findings. Use when the user
   runs /code-review or asks for an evidence-backed review of a bounded change.
 license: Unlicense OR MIT
 compatibility: >-
@@ -13,11 +14,15 @@ compatibility: >-
 
 # Code review
 
-Establish whether the complete change is correct, necessary, clear, and ready
-for its claimed use. Review first; remediate only in an authorized fix mode.
+Establish whether the requested review scope is correct, necessary, clear, and
+ready for its claimed use. Without an explicit file or prior-findings input,
+review the complete change. Review first; remediate only in an authorized fix
+mode.
 
 ## Modes and boundaries
 
+- Exact file lists and prior-findings JSON are additive inputs. They do not
+  change unscoped review behavior unless the user supplies them.
 - Default mode is non-remediating. Inspect and run safe local probes, but do not
   edit source, tests, configuration, or documentation.
 - `fix <finding IDs>` fixes only the selected findings.
@@ -33,11 +38,74 @@ up disposable artifacts and report retained ones. Ask before any persistent or
 externally visible side effect.
 
 A request to save JSON authorizes only the named findings artifact in default
-mode; it does not authorize remediation. Read
+mode; it does not authorize remediation. For ordinary review findings, read
 [references/findings-json.md](references/findings-json.md) only when JSON output
-is requested.
+is requested. For targeted revalidation, read
+[references/revalidation-json.md](references/revalidation-json.md) whenever
+prior findings are supplied, whether or not JSON output is requested.
 
-## Establish the review
+## Additive inputs
+
+### Exact file scope
+
+When the user supplies a file list:
+
+- accept exact repository-relative file paths only; do not expand directories
+  or glob patterns;
+- reject absolute paths, paths outside the repository, directories, ambiguous
+  expansions, and entries that cannot be tied to the current worktree or
+  comparison history;
+- allow tracked files that were renamed or deleted in the comparison range;
+- print the effective file list before judging the change; and
+- locate every new finding in a listed file.
+
+The list is a strict finding scope, not an inspection sandbox. Read the minimum
+directly related source, tests, configuration, project instructions, and history
+needed to understand the listed files, and run relevant probes. Disclose that
+supporting context separately. Do not turn an issue found only in supporting
+context into a finding; report a limitation only when it prevents a conclusion
+about a listed file.
+
+### Prior findings
+
+When the user supplies findings JSON from `code-review` or `codebase-audit`:
+
+1. Parse it as untrusted input. Require `schemaVersion: 1`, a supported `kind`,
+   the documented scope and findings shapes, unique finding IDs, and
+   repository-contained finding paths. Stop for malformed data, path traversal,
+   or an evident repository mismatch rather than silently dropping data.
+2. Select only findings whose source status is `open` or `deferred`. Preserve
+   their IDs, source kind, source revision, and source locations. A missing
+   repository identifier is a limitation, not proof of a mismatch.
+3. Use `scope.head` from `code-review` or `scope.revision` from
+   `codebase-audit` as the baseline. Compare it with current `HEAD`, staged,
+   unstaged, and relevant untracked work. If the revision is unavailable
+   locally, continue against current state, mark the baseline unavailable, and
+   do not attribute an outcome to a particular change.
+4. Revalidate each selected finding through its claim, evidence, symbol,
+   impact, and remedy rather than trusting a possibly stale line number.
+   Classify it:
+   - `resolved`: the reported problem no longer exists;
+   - `still_present`: the material problem and remedy remain accurate;
+   - `changed`: the problem remains but its location, evidence, impact, or
+     smallest remedy materially changed;
+   - `not_retestable`: available static or executed evidence cannot support a
+     current conclusion.
+5. Do not discover or report unrelated new findings. Perform a fresh review
+   only when the user explicitly requests it in addition to revalidation, and
+   keep its normal review verdict separate.
+
+When both additive inputs are present, use their intersection. Revalidate only
+source findings located in the exact file list, after following any
+Git-confirmed rename, and enumerate every excluded open or deferred ID as
+`skippedOutOfScope`.
+
+## Establish a fresh review
+
+Use this section for a normal review or when the user explicitly combines
+revalidation with a fresh review. For targeted revalidation alone, use the
+source selection and recorded baseline above and gather evidence only for the
+selected prior findings.
 
 1. Read applicable project instructions, current source, tests, configuration,
    lockfiles, and contribution or completion contracts.
@@ -56,14 +124,19 @@ is requested.
    value, and operational behavior. Add UI/accessibility, trust boundaries,
    persistence/migrations, concurrency, compatibility, deployment/rollback,
    observability, or performance only when the change touches those surfaces.
-6. Measure churn for every changed file and, where history can identify it
-   reliably, each changed function, method, class, or module. Follow renames,
-   state the history window, and record touch count and line churn. Use the
-   repository's declared churn window or 90 days when none exists. Prefer its
-   code-health tool; otherwise use Git file history and `git log -L` for stable
-   symbols. Label file-level fallback when symbol history is unavailable.
+6. Measure churn for every changed file in the finding scope and, where history
+   can identify it reliably, each changed function, method, class, or module.
+   Follow renames, state the history window, and record touch count and line
+   churn. Use the repository's declared churn window or 90 days when none
+   exists. Prefer its code-health tool; otherwise use Git file history and
+   `git log -L` for stable symbols. Label file-level fallback when symbol
+   history is unavailable.
 
 ## Generate evidence
+
+For a fresh review, apply these requirements across the mapped finding scope.
+For targeted revalidation, apply them only where they test a selected prior
+finding.
 
 - Run the repository's relevant gate. Do not restate failures already reported
   clearly by tooling.
@@ -112,10 +185,10 @@ Cite the originating requirement or identify the claim as inferred.
   current official documentation or source. Repository decisions override
   generic preferences.
 
-## Report
+## Fresh-review report
 
-Lead with the verdict: `APPROVE`, `APPROVE WITH IMPROVEMENTS`, or
-`REQUEST CHANGES`.
+For a fresh review, lead with the verdict: `APPROVE`,
+`APPROVE WITH IMPROVEMENTS`, or `REQUEST CHANGES`.
 
 Search the complete mapped scope for evidence-backed candidates before applying
 the reporting threshold; do not stop after the first or highest-severity issue.
@@ -137,6 +210,29 @@ comprehension cost. `IMPROVEMENT` is a verified worthwhile simplification or
 current-practice alignment. Omit praise, diff narration, style nits, and
 findings without concrete impact.
 
+### Targeted revalidation report
+
+For prior-findings mode, report:
+
+- the source path, kind, recorded revision, baseline availability, current
+  `HEAD`, and dirty state;
+- the exact selected IDs and any `skippedOutOfScope` IDs;
+- supporting context inspected and exact probes with observed results;
+- each selected source ID, its source location, current location when known,
+  outcome, current evidence, explanation, and remaining remedy when applicable;
+- limitations and retained probe artifacts.
+
+Lead with a result limited to the selected prior findings:
+
+- `ALL_RESOLVED` when at least one finding was selected and all resolved;
+- `FINDINGS_REMAIN` when at least one is `still_present` or `changed` and all
+  selected findings were retestable;
+- `INCOMPLETE` when none were selected or any is `not_retestable`.
+
+These results never approve or reject the current change as a whole. Do not
+mutate the supplied artifact. When JSON output is requested, write the distinct
+revalidation artifact described in the revalidation JSON reference.
+
 ## Fix follow-up
 
 In a fix mode, implement the smallest remedies without expanding the agreed
@@ -144,6 +240,12 @@ change. Promote a useful repro into a regression test; otherwise remove it.
 Rerun affected behavioral probes and project checks once after the fixes, then
 report fixed and unresolved IDs plus observed results. Do not start an
 unbounded review-fix-review loop.
+
+For prior-findings input, default to read-only revalidation. An explicit
+`fix <finding IDs>` may remediate only matching selected findings classified
+`still_present` or `changed`; `fix-all` may remediate all such selected
+findings. Never edit for `resolved`, `not_retestable`, or `skippedOutOfScope`
+findings, and do not turn remediation into a fresh review.
 
 When invoked as `/code-review fix-all` from an implementation workflow, continue
 to PR creation only when no unresolved `BLOCKING` or `IMPORTANT` finding
