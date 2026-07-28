@@ -62,9 +62,11 @@ not release publication.
 
 1. Give each worker one bounded node and its dependencies. Use
    `/implement-issue automatic` for an issue or `/implement-idea automatic` for
-   a confirmed unfiled roadmap item. Automatic mode selects the evidence-backed
-   recommendation but never resolves material ambiguity, risk, or vision
-   conflict on the user's behalf.
+   a confirmed unfiled roadmap item. In either workflow, replace its required
+   pre-PR review with `/code-review subagents fix-all`; this is a milestone-rush
+   default, not a change to standalone implementation workflows. Automatic mode
+   selects the evidence-backed recommendation but never resolves material
+   ambiguity, risk, or vision conflict on the user's behalf.
 2. Adopt an existing PR when it satisfies the issue and project gates. Adopt
    relevant local state only when its ownership and scope are clear; preserve
    ambiguous, dirty, pre-existing, or unrelated state and report it.
@@ -84,6 +86,14 @@ not release publication.
 7. When a milestone merge causes an integrated regression, create and implement
    the required repair. Treat unrelated or materially ambiguous failures as
    blockers.
+
+Manage implementation and review workers within the host's shared capacity.
+Keep implementation nodes running while useful work remains, and queue review
+perspective lanes until slots free up; temporary slot exhaustion is not
+sub-agent unavailability. If review sub-agents are unsupported, remain
+unavailable after bounded retry, or return incomplete evidence, the
+implementation worker completes those lanes directly and records the fallback
+for the milestone report.
 
 ## Blockers and completion
 
@@ -106,6 +116,8 @@ Return one audit-style summary covering:
 
 - initial and final scope, including scope drift;
 - issue, worker/worktree, PR, and squash-merge mapping;
+- each PR's review perspective-to-lane map, completed or incomplete lanes, and
+  every single-agent fallback with its reason;
 - reused local or PR state;
 - validation and reviewer evidence for final PR heads and integrated default;
 - required additions, deferred follow-ups, blockers, and remaining work;

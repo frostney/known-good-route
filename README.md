@@ -88,7 +88,8 @@ flowchart TB
   `/run-retro`; none starts the next stage automatically.
 - While `/milestone-rush` is active, let it own the nested delivery loop. It
   delegates implementation through the automatic modes, PR handoff, continuous
-  review, and merge instead of asking the user to invoke those child commands.
+  perspective-lane code review, and merge instead of asking the user to invoke
+  those child commands.
 - For ad-hoc or already-started work, enter the delivery loop at the matching
   state: record an idea with `/create-issue`, implement a ready issue or unfiled
   idea, hand off a completed branch with `/create-pr`, or continue an existing
@@ -96,8 +97,9 @@ flowchart TB
 - `/codebase-audit` is a diagnostic side path when repository evidence warrants
   a whole-codebase assessment, not a mandatory checkpoint.
 - Supporting mechanics stay underneath the loop: `git-workflow` governs git
-  operations, `/code-review fix-all` is the bounded pre-PR review, and
-  `/update-pr` handles review-driven commits and pushes.
+  operations, `/code-review fix-all` is the ordinary bounded pre-PR review,
+  milestone rush uses `/code-review subagents fix-all`, and `/update-pr` handles
+  review-driven commits and pushes.
 
 ### Recurring workflow skills
 
@@ -111,10 +113,10 @@ flowchart TB
 | [`create-pr`](create-pr/SKILL.md) | Commit relevant local changes, open a templated draft PR, fill anything it is missing against the project's Definition of Ready, fix CI failures, and mark it ready. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and push to the current PR, merge the baseline when behind, refresh PR title/body when stale. No amend, no force push. |
 | [`review-pr`](review-pr/SKILL.md) | Resolve inline and summary review findings in place, including active review-tool nitpicks and incomplete states. The explicit `automatic-merge` mode watches, retriggers, fixes, and squash-merges once the current head is fully green. |
-| [`code-review`](code-review/SKILL.md) | Review a PR, branch, or worktree against its claim and repository standards using reproducible UI or non-UI probes, churn-backed architectural-risk checks, and an optional local fix phase. Additive inputs can restrict findings to exact files or revalidate prior code-review/codebase-audit JSON against the latest local state. Findings and revalidation results use separate stable JSON artifacts; `fix-all` resolves only the bounded in-scope change before PR creation. |
+| [`code-review`](code-review/SKILL.md) | Review a PR, branch, or worktree against its claim and repository standards using reproducible UI or non-UI probes, churn-backed architectural-risk checks, and an optional local fix phase. Additive inputs can delegate evidence gathering through perspective lanes, restrict findings to exact files, or revalidate prior code-review/codebase-audit JSON against the latest local state. Findings and revalidation results use separate stable JSON artifacts; `fix-all` resolves only the bounded in-scope change before PR creation. |
 | [`create-release`](create-release/SKILL.md) | Prepare a changelog-first release PR, then publish only when authorized and through exactly one evidence-backed path. Existing workflows own publication when configured; the agent never double-publishes with `gh release create`. |
 | [`roadmap-review`](roadmap-review/SKILL.md) | Review a project's roadmap from freshly-pulled data — assess current state and release cadence, measure delivery velocity from history, verify candidate work against the source, produce a parallelized throughput-anchored version plan, and (optionally, on confirmation) create milestones and issues. |
-| [`milestone-rush`](milestone-rush/SKILL.md) | Complete a confirmed milestone from its actual merged, PR, branch, worktree, and issue state; parallelize independent implementation; continuously review and squash-merge; verify integrated completion; and offer an explicitly approved retrospective. |
+| [`milestone-rush`](milestone-rush/SKILL.md) | Complete a confirmed milestone from its actual merged, PR, branch, worktree, and issue state; parallelize independent implementation; use perspective-lane sub-agents for bounded code review by default; continuously review and squash-merge; verify integrated completion; and offer an explicitly approved retrospective. |
 
 ### One-off project setup, guidance, and audit skills
 
@@ -124,7 +126,7 @@ flowchart TB
 | [`react-stack`](react-stack/SKILL.md) | Default React-based stack across two profiles — web (Next.js App Router) and universal (Expo Router) — with a shared core (Bun-only, TypeScript, Tailwind 4, Biome, Knip, Fallow, `bun test` co-located, single `bun run check` aggregator, Vercel AI Gateway via `@ai-sdk/gateway`, Clerk, Convex, Plop, Lefthook, Atomic Design, source under `src/` by domain). |
 | [`native-nostalgia-stack`](native-nostalgia-stack/SKILL.md) | FreePascal toolchain — FPC in Delphi mode (compiler flags in a shared include), namespace-based unit naming (flat by default), code-style starting points, build / formatter / codebase-health contracts (implementation is the project's choice), Lefthook pre-commit, InstantFPC for one-off scripts. |
 | [`convex-conventions`](convex-conventions/SKILL.md) | Convex backend rules — shared validators, Clerk JWT bridge, `args` + `returns` on every public function, in-code filtering, `.take()` caps, rate-limited mutations, action/mutation split, schema with soft-delete and audit trails, single re-export module for client types. The live Convex docs override this skill on conflict. |
-| [`codebase-audit`](codebase-audit/SKILL.md) | Audit the repository's current state with a coverage map, conditional technical perspectives, reproducible probes, and symbol/file churn framed as evidence-backed architectural risk. Findings can be saved as stable JSON; remediation requires a selected coherent batch. |
+| [`codebase-audit`](codebase-audit/SKILL.md) | Audit the repository's current state with a coverage map, conditional technical perspectives, reproducible probes, and symbol/file churn framed as evidence-backed architectural risk. The additive `subagents` input delegates evidence gathering through bounded capability-and-perspective lanes. Findings can be saved as stable JSON; remediation requires a selected coherent batch. |
 | [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Ambient engineering-quality standard across the whole lifecycle — planning, orchestrating, developing, debugging, reviewing, refactoring, and substantial investigation: ground in reality (docs are leads, not proof), resist the pull to the quick fix and invest in the right structure, solve the full scope, reuse before creating, validate to the real bar, and use maintainability as the governor. |
 | [`bleeding-edge`](bleeding-edge/SKILL.md) | Ambient lens that tilts technology choices toward the newest viable option — latest stable (incl. just-released majors), newly-stable language/platform features, modern tooling, current AI models, and pre-release channels with a documented reason — while staying under `software-engineering-excellence`: verify live, pin, keep it reversible and gate-green, and never silently swap a decided choice. |
 
@@ -209,6 +211,9 @@ that evidence.
 - `implement-issue` and `implement-idea` invoke one bounded
   `/code-review fix-all` before `/create-pr`; they stop for material new
   decisions and do not proceed with unresolved Blocking or Important findings.
+- `code-review` and `codebase-audit` delegate only when the caller supplies the
+  additive `subagents` input. Workers own bounded evidence lanes; the
+  coordinator owns findings, verdicts, edits, and reported fallbacks.
 - `review-pr` invokes `/update-pr` for the commit/push step (and `/resolve-reviews` when registered).
 - `review-pr automatic-merge` discovers active review tools, treats incomplete
   verdicts as pending, and owns the fix-watch-squash-merge loop.
@@ -222,7 +227,9 @@ that evidence.
   automatically.
 - `milestone-rush` parallelizes independent nodes through `/implement-issue
   automatic` or confirmed `/implement-idea automatic`, then uses `/review-pr
-  automatic-merge` for rolling integration. It never creates a release and
+  automatic-merge` for rolling integration. Each implementation's bounded
+  pre-PR pass uses `/code-review subagents fix-all` by default, while ordinary
+  standalone implementations remain unchanged. It never creates a release and
   invokes `/run-retro` only after explicit approval.
 - `create-issue`, `implement-issue`, and `implement-idea` invoke `/grill-with-docs` (preferred) or `/grill-me` for thoroughness when registered.
 - `create-issue`, `implement-issue`, and `implement-idea` read `VISION.md` when present and stop for clarification when the request conflicts with it.
@@ -281,6 +288,7 @@ supported frontier models:
 | Git sync and divergent push | Merges the remote default without rebasing; a rejected plain push stops without force |
 | Sparse or mutation-ready roadmap review | Lowers confidence when evidence is thin and asks before document or forge changes |
 | Parallel milestone rush with mixed existing state | Reuses delivered, PR, branch, worktree, and issue state; rolls independent merges forward; and closes only after integrated validation |
+| Explicit sub-agent review or audit | Maps bounded evidence lanes, keeps verdicts and edits with the coordinator, and reports any single-agent fallback |
 | Milestone rush with a blocked dependency chain | Completes independent work, records replacement and deferred scope, and leaves the blocked milestone open |
 | Project structure and stack conventions | Repairs real drift while preserving valid ecosystem layouts and recorded toolchain pins |
 | React profile mismatch | Uses the applicable web profile, but does not force web or universal defaults onto an Electron-only project |

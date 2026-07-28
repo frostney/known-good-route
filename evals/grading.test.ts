@@ -430,6 +430,110 @@ describe("eval grading", () => {
     expect(remediated.passed).toBeFalse();
   });
 
+  test("requires explicit subagent lanes and coordinator ownership", () => {
+    const review = evalCases.find(
+      ({ id }) => id === "code-review-subagents-perspective-lanes",
+    );
+    const audit = evalCases.find(
+      ({ id }) => id === "codebase-audit-subagents-fallback",
+    );
+    expect(review).toBeDefined();
+    expect(audit).toBeDefined();
+    if (!review || !audit) {
+      return;
+    }
+
+    const reviewed = gradeRun(
+      review,
+      ledger({
+        loadedSkills: ["code-review"],
+        actions: [
+          {
+            action: "delegate",
+            details: "Run the bounded perspective lanes",
+          },
+          {
+            action: "file.edit",
+            details: "Coordinator reuses normalizeImportError",
+          },
+          {
+            action: "validation.run",
+            details: "Coordinator runs the affected probes and project gate",
+          },
+        ],
+      }),
+      "Perspective lane map: claim and correctness, simplification and self-documentation, and test-value and operations. Every lane returned complete evidence. The coordinator validated the shared ResolveError cause and reused normalizeImportError.",
+    );
+    expect(reviewed.passed).toBeTrue();
+
+    const undelegated = gradeRun(
+      review,
+      ledger({
+        loadedSkills: ["code-review"],
+        actions: [
+          {
+            action: "file.edit",
+            details: "Coordinator reuses normalizeImportError",
+          },
+          {
+            action: "validation.run",
+            details: "Run the affected probes and project gate",
+          },
+        ],
+      }),
+      "Perspective lane map: claim and correctness, simplification and self-documentation, and test-value and operations. Every lane returned complete evidence. The coordinator validated ResolveError and reused normalizeImportError.",
+    );
+    expect(undelegated.passed).toBeFalse();
+
+    const audited = gradeRun(
+      audit,
+      ledger({
+        loadedSkills: ["codebase-audit"],
+        actions: [
+          {
+            action: "delegate",
+            details: "Run available capability-perspective lanes",
+          },
+          {
+            action: "validation.run",
+            details: "Coordinator completes the persistence fallback and gates",
+          },
+        ],
+      }),
+      "Capability and perspective lane map: API lane, persistence lane, and retry lane. The persistence worker was unavailable, so the coordinator reported a single-agent fallback. The API and retry lanes completed. UI was skipped because no UI exists.",
+    );
+    expect(audited.passed).toBeTrue();
+  });
+
+  test("uses finding lanes for delegated targeted revalidation", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "code-review-subagents-finding-lanes",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const result = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["code-review"],
+        actions: [
+          {
+            action: "delegate",
+            details: "Run the tightly coupled CR-4 and CR-5 finding lane",
+          },
+          {
+            action: "validation.run",
+            details: "Coordinator validates both outcomes",
+          },
+        ],
+      }),
+      "FINDINGS_REMAIN. Finding lane CR-4 and CR-5 was complete; CR-6 was not selected. The coordinator confirmed CR-4 resolved and CR-5 changed.",
+    );
+    expect(result.passed).toBeTrue();
+  });
+
   test("allows exactly one requested JSON findings artifact", () => {
     const cases = [
       {
@@ -748,6 +852,46 @@ describe("eval grading", () => {
       output,
     );
     expect(prematurelyClosed.passed).toBeFalse();
+  });
+
+  test("makes delegated code review the milestone-rush default", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "milestone-rush-parallel-rolling-integration",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const actions: RunLedger["actions"] = [
+      { action: "delegate", details: "Run independent implementation nodes" },
+      { action: "file.edit", details: "Implement the ready milestone work" },
+      { action: "forge.openDraftPr", details: "Open the focused PRs" },
+      { action: "forge.mergePr", details: "Squash-merge current reviewed heads" },
+      { action: "git.merge", details: "Merge updated default into open work" },
+      {
+        action: "validation.run",
+        details: "Run PR and integrated default-branch gates",
+      },
+      { action: "forge.closeMilestone", details: "Close milestone 2.0.0" },
+      { action: "report", details: "Report integrated completion" },
+    ];
+    const output =
+      "Milestone 2.0.0 closed after parallel subagent work. #40 and #41 were reused; #42 and #43 completed before dependent #44. Each PR used /code-review subagents fix-all with a perspective lane map; PR #343 reported one single-agent fallback. The integrated default branch passed. Run /run-retro only with approval.";
+
+    const completed = gradeRun(
+      evalCase,
+      ledger({ loadedSkills: ["milestone-rush"], actions }),
+      output,
+    );
+    expect(completed.passed).toBeTrue();
+
+    const omittedDefault = gradeRun(
+      evalCase,
+      ledger({ loadedSkills: ["milestone-rush"], actions }),
+      "Milestone 2.0.0 closed after parallel subagent work. #40 and #41 were reused; #42 and #43 completed before dependent #44. The integrated default branch passed. Run /run-retro only with approval.",
+    );
+    expect(omittedDefault.passed).toBeFalse();
   });
 
   test("validates the committed case set", async () => {
