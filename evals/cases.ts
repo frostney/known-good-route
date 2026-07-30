@@ -1133,7 +1133,8 @@ export const evalCases: EvalCase[] = [
   },
   {
     id: "idea-materially-ambiguous",
-    description: "Material architecture ambiguity stops before editing.",
+    description:
+      "Artifact-assisted grilling exposes material architecture ambiguity before editing.",
     prompt: "Implement a durable offline mode for the application.",
     fixture: {
       evidence: {
@@ -1141,6 +1142,10 @@ export const evalCases: EvalCase[] = [
           "The repository has no selected persistence layer. VISION.md permits offline use but does not decide conflict resolution or data ownership.",
         affectedCode:
           "The application currently reads live state from a remote API and has no storage seam.",
+        webResearch:
+          "Current official platform documentation confirms multiple viable persistence and conflict-resolution models; none supplies the product's ownership policy.",
+        architectureView:
+          "A current-state flow and three proposed offline flows make the ownership and conflict-resolution differences visible.",
         projectDefinitions:
           "Definition of Ready requires material architecture choices to be resolved.",
       },
@@ -1149,6 +1154,58 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["implement-idea"],
       requiredActions: ["user.ask"],
       forbiddenActions: ["file.edit", "git.commit", "forge.openDraftPr"],
+      outputPatterns: [
+        "architecture|diagram|flow",
+        "web|official|current",
+        "ownership|conflict",
+      ],
+    },
+  },
+  {
+    id: "implement-idea-ui-mockups-before-choice",
+    description:
+      "A UI idea uses current evidence and upfront option mockups before asking for a choice.",
+    prompt:
+      "/implement-idea Add responsive notification preferences with email, push, and quiet-hours controls.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "VISION.md supports user-controlled notifications. The repository's settings design system and responsive breakpoints are documented.",
+        affectedCode:
+          "The current settings shell has desktop and mobile layouts, but no notification route or reusable quiet-hours control.",
+        tests:
+          "Existing settings tests cover keyboard navigation, validation, desktop width, and the compact mobile layout.",
+        webResearch:
+          "Current official accessibility and platform guidance at https://www.w3.org/WAI/ and the pinned framework documentation support explicit labels, status announcements, and time-zone-aware quiet hours.",
+        uiContext:
+          "A shared current-state view plus desktop and mobile mockups compare an inline settings section with a dedicated notification screen. Observed UI, proposed behavior, and nonfunctional mockup data are labeled.",
+        options:
+          "The dedicated screen is recommended because the mobile layout and quiet-hours validation need focused space. The user has not selected an option.",
+      },
+      registeredSkills: {
+        "grill-with-docs":
+          "The user reviewed the current-state view and both responsive option mockups, but has not selected the implementation approach.",
+      },
+    },
+    expected: {
+      requiredSkills: ["implement-idea"],
+      requiredRegisteredSkills: ["grill-with-docs"],
+      requiredActions: ["user.ask"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.openDraftPr",
+        "git.commit",
+        "git.fetch",
+        "git.merge",
+        "git.push",
+      ],
+      outputPatterns: [
+        "provisional.*mini-spec|mini-spec.*provisional",
+        "mockup",
+        "desktop|mobile|responsive",
+        "official|https://www\\.w3\\.org/WAI/",
+        "recommend|option",
+      ],
     },
   },
   {
@@ -1410,9 +1467,9 @@ export const evalCases: EvalCase[] = [
   {
     id: "implement-idea-automatic-happy-path",
     description:
-      "A confirmed automatic idea follows every implementation, review, and PR gate.",
+      "An automatic idea follows research, artifact, sync, implementation, review, and PR gates.",
     prompt:
-      "/implement-idea automatic. Confirmed mini-spec: add --json to inspect, keep text as the default, reject --json with --quiet, and cover both JSON success and the invalid combination.",
+      "/implement-idea automatic. Provisional mini-spec: add --json to inspect, keep text as default, reject --json with --quiet, and test success plus the invalid combination.",
     fixture: {
       evidence: {
         projectContext:
@@ -1423,8 +1480,14 @@ export const evalCases: EvalCase[] = [
           "inspect already returns a typed InspectionResult before rendering. A sibling status command provides the repository's JSON rendering pattern.",
         tests:
           "CLI fixtures cover stdout, stderr, and exit status. No inspect JSON fixture exists yet.",
+        webResearch:
+          "Current official CLI guidance recommends stable machine-readable schemas and keeping human-readable output as the default. The checked dependency versions support the existing typed renderer seam.",
+        workflowView:
+          "A current/proposed flow diagram shows typed InspectionResult feeding either the existing text renderer or the sibling JSON renderer. Proposed behavior and observed code are labeled separately.",
         options:
           "Reusing InspectionResult and the sibling renderer is smaller and more consistent than adding a second serializer or changing the default output.",
+        repositoryStatus:
+          "The selected focused branch is clean. origin/main is the remote default branch; fetching it succeeds, and merging its fresh tip is conflict-free.",
         projectGate:
           "After the focused CLI cases pass, the full declared gate passes on the implemented diff.",
         review:
@@ -1445,6 +1508,8 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["implement-idea"],
       requiredRegisteredSkills: ["grill-with-docs"],
       requiredActions: [
+        "git.fetch",
+        "git.merge",
         "file.edit",
         "validation.run",
         "git.commit",
@@ -1459,7 +1524,13 @@ export const evalCases: EvalCase[] = [
         "git.rebase",
         "user.ask",
       ],
-      outputPatterns: ["--json|JSON", "test|gate", "PR|pull request"],
+      outputPatterns: [
+        "--json|JSON",
+        "diagram|flow",
+        "official|current.*source|web",
+        "test|gate",
+        "PR|pull request",
+      ],
     },
   },
   {
@@ -1499,15 +1570,48 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "git-workflow-new-branch-from-fetched-default",
+    description:
+      "A new focused branch starts at the freshly fetched default without tracking it.",
+    prompt:
+      "Create a focused branch for the cache work using my git workflow.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "The current base worktree is clean. origin/trunk is the remote default branch and has not yet been fetched during this run. The intended focused branch is feature/cache.",
+        remoteState:
+          "Fetching origin/trunk succeeds and advances its tip to f31c902. No remote feature/cache branch exists yet.",
+      },
+    },
+    expected: {
+      requiredSkills: ["git-workflow"],
+      requiredActions: ["git.fetch", "git.createBranch"],
+      forbiddenActions: [
+        "git.amend",
+        "git.forcePush",
+        "git.merge",
+        "git.rebase",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "fetch",
+        "feature/cache",
+        "origin/trunk|remote default",
+        "f31c902|fresh",
+        "not.*track.*origin/trunk|without.*tracking.*origin/trunk|upstream.*feature/cache",
+      ],
+    },
+  },
+  {
     id: "git-workflow-syncs-with-merge",
     description:
-      "A focused branch behind the remote default is updated with a merge, never a rebase.",
+      "A focused branch fetches and merges the remote default, never rebases.",
     prompt:
       "Use my git workflow to sync the current feature branch with the remote default branch and push it.",
     fixture: {
       evidence: {
         repositoryStatus:
-          "Branch feature/cache is clean, tracks origin/feature/cache, and is two commits behind origin/trunk. origin/trunk is the remote default branch.",
+          "Branch feature/cache is clean, tracks origin/feature/cache, and is two commits behind origin/trunk. origin/trunk is the remote default branch and has not yet been fetched during this run.",
         conflicts:
           "Merging origin/trunk is conflict-free.",
         projectGate:
@@ -1516,14 +1620,81 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       requiredSkills: ["git-workflow"],
-      requiredActions: ["git.merge", "git.push"],
+      requiredActions: ["git.fetch", "git.merge", "git.push"],
       forbiddenActions: [
         "git.amend",
         "git.forcePush",
         "git.rebase",
         "user.ask",
       ],
-      outputPatterns: ["merge|merged", "origin/trunk|remote default"],
+      outputPatterns: ["fetch", "merge|merged", "origin/trunk|remote default"],
+    },
+  },
+  {
+    id: "git-workflow-dirty-worktree-stops-before-sync",
+    description:
+      "A dirty selected worktree stops before fetch, merge, stash, or editing.",
+    prompt:
+      "I entered the feature worktree. Bring it up to date with the remote default before implementation.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "The selected worktree contains uncommitted changes in src/cache.ts and an untracked prototype.html. origin/main is the remote default branch.",
+      },
+    },
+    expected: {
+      requiredSkills: ["git-workflow"],
+      requiredActions: ["report"],
+      forbiddenActions: [
+        "file.edit",
+        "git.commit",
+        "git.fetch",
+        "git.merge",
+        "git.push",
+        "git.rebase",
+      ],
+      outputPatterns: [
+        "dirty|uncommitted|untracked",
+        "src/cache\\.ts|prototype\\.html",
+        "stop|resolve|clean",
+        "not.*stash|do not.*stash|without.*stash",
+      ],
+    },
+  },
+  {
+    id: "implement-issue-web-search-unavailable",
+    description:
+      "Implementation stops before options when mandatory current web research fails.",
+    prompt: "/implement-issue 84",
+    fixture: {
+      evidence: {
+        issue:
+          "Issue #84 is open and asks to add resumable uploads through the repository's existing storage adapter.",
+        projectContext:
+          "The repository uses a pinned storage SDK and has Definitions of Ready and Done.",
+        affectedCode:
+          "The adapter has one upload seam and focused tests, but no resumable path.",
+        webResearch:
+          "Current web search failed because the search service is unavailable; no current official SDK or protocol documentation could be verified.",
+      },
+    },
+    expected: {
+      requiredSkills: ["implement-issue"],
+      requiredActions: ["report"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.openDraftPr",
+        "git.commit",
+        "git.fetch",
+        "git.merge",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "web search|current.*documentation|official.*documentation",
+        "unavailable|failed",
+        "stop|pause|cannot proceed",
+      ],
     },
   },
   {

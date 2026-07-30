@@ -14,6 +14,8 @@ export const actionNames = [
   "forge.updatePrMetadata",
   "git.amend",
   "git.commit",
+  "git.createBranch",
+  "git.fetch",
   "git.forcePush",
   "git.merge",
   "git.push",

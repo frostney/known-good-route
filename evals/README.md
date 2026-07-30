@@ -5,7 +5,7 @@
 - One Bun/TypeScript harness uses Vercel AI SDK and AI Gateway for every model.
 - It exercises the portable Agent Skills contract without provider SDKs or
   native app servers.
-- Fifty-three fixture scenarios grade skill loading, tool intent, approval
+- Sixty-three fixture scenarios grade skill loading, tool intent, approval
   boundaries, edge conditions, and user-facing output. Every shipped skill has
   at least two routed scenarios.
 - Dry runs and unit tests are free; live model runs require
