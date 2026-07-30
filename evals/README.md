@@ -5,7 +5,7 @@
 - One Bun/TypeScript harness uses Vercel AI SDK and AI Gateway for every model.
 - It exercises the portable Agent Skills contract without provider SDKs or
   native app servers.
-- Sixty-three fixture scenarios grade skill loading, tool intent, approval
+- Sixty-five fixture scenarios grade skill loading, tool intent, approval
   boundaries, edge conditions, and user-facing output. Every shipped skill has
   at least two routed scenarios.
 - Dry runs and unit tests are free; live model runs require
@@ -44,7 +44,7 @@ bun install --frozen-lockfile
 bun run check
 ```
 
-Inspect the planned 159-run matrix:
+Inspect the planned 195-run matrix:
 
 ```bash
 bun run eval:dry
@@ -107,7 +107,7 @@ GitHub Actions machinery uses Node 24-based action releases to check out the
 repository and bootstrap Bun; the harness and its tests still run on Bun.
 
 Open the pull request's **Checks** tab and select **Test eval harness / test** to
-see the typecheck, Bun tests, and 159-row dry-run output. CI never makes live
+see the typecheck, Bun tests, and 195-row dry-run output. CI never makes live
 model calls.
 
 Live evals run only through an explicit local `bun run eval` command with a

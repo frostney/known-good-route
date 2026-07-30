@@ -106,6 +106,7 @@ flowchart TB
 | Skill | What it does |
 | --- | --- |
 | [`git-workflow`](git-workflow/SKILL.md) | Default git workflow: require a clean worktree and freshly fetch the remote default before work, create feature branches from that tip, merge (never rebase) for baseline updates, use plain pushes and always-new commits, and squash-merge PRs. |
+| [`status-report`](status-report/SKILL.md) | Build a live, read-only Kanban of every open PR and all local worktrees, using current-head CI and review gates, short semantic local-change summaries, and rich, Mermaid, or Markdown rendering according to host capability. |
 | [`create-issue`](create-issue/SKILL.md) | File a well-structured GitHub issue from a tagline using the project's issue template and `VISION.md` when present, capturing UI/UX context, and grilling the user for thoroughness when a grill skill is registered. Supports `automatic` mode for project-context template/label/body selection. |
 | [`implement-issue`](implement-issue/SKILL.md) | Validate an issue against current code, project contracts, and web evidence; enrich grilling with surface-appropriate mockups, diagrams, or disposable prototypes; present implementation options; synchronize with the remote default; implement, verify, review, and hand off via `/create-pr`. Supports `automatic` mode for project-context option selection. |
 | [`implement-idea`](implement-idea/SKILL.md) | Like `implement-issue` but with no GitHub issue: start from a provisional mini-spec of at most 400 characters, investigate and enrich the grill with current web evidence plus surface-appropriate artifacts, confirm the final mini-spec, synchronize with the remote default, then implement → verify → review → `/create-pr`. Supports `automatic` mode for project-context option selection. |
@@ -220,6 +221,9 @@ that evidence.
 - `review-pr` invokes `/update-pr` for the commit/push step (and `/resolve-reviews` when registered).
 - `review-pr automatic-merge` discovers active review tools, treats incomplete
   verdicts as pending, and owns the fix-watch-squash-merge loop.
+- `status-report` reuses the current-head CI and reviewer-readiness semantics of
+  `review-pr` and `milestone-rush`, but remains strictly read-only and never
+  invokes either workflow.
 - `create-release` invokes `/create-pr` to open the release PR, follows
   `git-workflow` for branching and push rules, and defers to `project-structure`
   for changelog tooling. Its publication gate re-reads merged workflows and

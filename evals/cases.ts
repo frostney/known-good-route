@@ -1132,6 +1132,142 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "status-report-reconciles-prs-and-worktrees",
+    description:
+      "A status report reconciles every open PR and worktree into one read-only current-head board.",
+    prompt:
+      "/status-report for this repository and all of its worktrees. Keep it read-only.",
+    fixture: {
+      evidence: {
+        repositoryPolicy:
+          "The remote default is main. All visible PR checks are applicable unless explicitly advisory. Requested humans and intentionally invoked review tools are review gates. Squash merge is required.",
+        pullRequests:
+          "At 2026-07-31T09:15:00Z the repository has five open PRs across multiple authors and base branches. #501 is draft and has one failed check. #502 is non-draft with six green checks and one current-head Windows check in progress. #503 is non-draft with a current-head test failure and another check still running. #504 is non-draft with terminal green CI. #505 is non-draft, mergeable, and has terminal green CI.",
+        reviewEvidence:
+          "CodeRabbit is intentionally active for #504 and #505. On current head 44aa504, #504 is rate-limited with no terminal verdict and has one unresolved top-level nitpick. On current head 55bb505, #505 has a completed verdict, no unresolved inline threads or top-level nitpicks, and its requested human approved under current-head policy.",
+        worktrees:
+          "The clean default checkout has no divergent work. A dirty worktree on the #504 head has two unstaged files and is one commit ahead of its upstream; attach it to #504. A PR-less worktree on branch issue-44 is dirty and two commits ahead. Its commits and diff show it wires manifest compiler selection. No other worktree has meaningful local work.",
+        localEvidence:
+          "The issue-44 branch, matching handoff, commit subjects, and diff all support the semantic summary: Wire compiler selection through the manifest.",
+      },
+    },
+    expected: {
+      requiredSkills: ["status-report"],
+      requiredActions: ["report"],
+      forbiddenActions: [
+        "delegate",
+        "file.edit",
+        "forge.closeMilestone",
+        "forge.commentIssue",
+        "forge.commentPr",
+        "forge.createIssue",
+        "forge.createRelease",
+        "forge.markPrReady",
+        "forge.mergePr",
+        "forge.openDraftPr",
+        "forge.replyInline",
+        "forge.resolveThread",
+        "forge.updatePrMetadata",
+        "git.amend",
+        "git.commit",
+        "git.createBranch",
+        "git.fetch",
+        "git.forcePush",
+        "git.merge",
+        "git.push",
+        "git.pushTag",
+        "git.rebase",
+        "user.ask",
+        "validation.run",
+      ],
+      outputPatterns: [
+        "Local work",
+        "Draft",
+        "CI running",
+        "CI failed",
+        "Active review",
+        "Ready",
+        "#501",
+        "#502",
+        "#503",
+        "#504",
+        "#505",
+        "manifest.*compiler|compiler.*manifest",
+        "rate.?limit|quota",
+        "nitpick",
+        "next",
+        "2026-07-31|observed|snapshot",
+      ],
+      forbiddenOutputPatterns: [
+        "#504 (?:is )?(?:fully )?ready",
+        "all (?:checks|reviews) (?:have )?passed",
+      ],
+    },
+  },
+  {
+    id: "status-report-missing-review-evidence-is-pending",
+    description:
+      "A status report keeps a green-CI PR out of Ready when live review evidence is unavailable.",
+    prompt:
+      "/status-report. Show the board from current evidence only; do not mutate anything.",
+    fixture: {
+      evidence: {
+        repositoryPolicy:
+          "CodeRabbit is configured and intentionally invoked for non-draft PRs. Its current-head verdict and unresolved findings are merge gates.",
+        pullRequests:
+          "At 2026-07-31T10:00:00Z PR #610 is open, non-draft, mergeable, and every applicable check is terminal green on head 610ca11.",
+        reviewEvidence:
+          "The connector and authenticated gh fallback both returned 403 Resource not accessible by integration; no other read interface is available. The visible CodeRabbit walkthrough is for an older head and no current-head terminal verdict is available.",
+        worktrees:
+          "One clean worktree is linked to #610. The default checkout is clean. There is no PR-less local work.",
+      },
+    },
+    expected: {
+      requiredSkills: ["status-report"],
+      requiredActions: ["report"],
+      forbiddenActions: [
+        "delegate",
+        "file.edit",
+        "forge.closeMilestone",
+        "forge.commentIssue",
+        "forge.commentPr",
+        "forge.createIssue",
+        "forge.createRelease",
+        "forge.markPrReady",
+        "forge.mergePr",
+        "forge.openDraftPr",
+        "forge.replyInline",
+        "forge.resolveThread",
+        "forge.updatePrMetadata",
+        "git.amend",
+        "git.commit",
+        "git.createBranch",
+        "git.fetch",
+        "git.forcePush",
+        "git.merge",
+        "git.push",
+        "git.pushTag",
+        "git.rebase",
+        "user.ask",
+        "validation.run",
+      ],
+      outputPatterns: [
+        "Active review",
+        "#610",
+        "403|permission|unavailable|missing",
+        "current head|current-head|610ca11",
+        "pending|not ready|cannot.*ready",
+        "next",
+        "2026-07-31|observed|snapshot",
+      ],
+      forbiddenOutputPatterns: [
+        "fully green",
+        "ready to merge",
+        "#610 (?:is )?(?:fully )?ready",
+      ],
+    },
+  },
+  {
     id: "idea-materially-ambiguous",
     description:
       "Artifact-assisted grilling exposes material architecture ambiguity before editing.",
@@ -2315,6 +2451,7 @@ export const evalCases: EvalCase[] = [
         "roadmap-review",
         "run-retro",
         "software-engineering-excellence",
+        "status-report",
         "update-pr",
       ],
       forbiddenActions: [
