@@ -894,6 +894,55 @@ describe("eval grading", () => {
     expect(omittedDefault.passed).toBeFalse();
   });
 
+  test("keeps status reporting read-only and incomplete review evidence pending", () => {
+    const mixedCase = evalCases.find(
+      ({ id }) => id === "status-report-reconciles-prs-and-worktrees",
+    );
+    const missingCase = evalCases.find(
+      ({ id }) => id === "status-report-missing-review-evidence-is-pending",
+    );
+    expect(mixedCase).toBeDefined();
+    expect(missingCase).toBeDefined();
+    if (!mixedCase || !missingCase) {
+      return;
+    }
+
+    const mixedOutput =
+      "Observed 2026-07-31. Local work: issue-44 wires manifest compiler selection; Next: publish the branch. Draft: #501. CI running: #502. CI failed: #503. Active review: #504 is rate-limited with one unresolved nitpick; Next: wait for a verdict. Ready: #505.";
+    const mixed = gradeRun(
+      mixedCase,
+      ledger({
+        loadedSkills: ["status-report"],
+        actions: [{ action: "report", details: "Render the status board" }],
+      }),
+      mixedOutput,
+    );
+    expect(mixed.passed).toBeTrue();
+
+    const mutated = gradeRun(
+      mixedCase,
+      ledger({
+        loadedSkills: ["status-report"],
+        actions: [
+          { action: "git.fetch", details: "Refresh remote-tracking refs" },
+          { action: "report", details: "Render the status board" },
+        ],
+      }),
+      mixedOutput,
+    );
+    expect(mutated.passed).toBeFalse();
+
+    const missing = gradeRun(
+      missingCase,
+      ledger({
+        loadedSkills: ["status-report"],
+        actions: [{ action: "report", details: "Render the degraded board" }],
+      }),
+      "Snapshot observed 2026-07-31. Active review: #610 at current-head 610ca11 is not ready because review evidence returned 403 and the verdict is unavailable. It remains pending. Next: restore review-thread access.",
+    );
+    expect(missing.passed).toBeTrue();
+  });
+
   test("validates the committed case set", async () => {
     const skills = await loadSkills(repositoryRoot);
     validateCases(evalCases, new Set(skills.keys()));
