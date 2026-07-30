@@ -105,10 +105,10 @@ flowchart TB
 
 | Skill | What it does |
 | --- | --- |
-| [`git-workflow`](git-workflow/SKILL.md) | Default git workflow: feature branches off the remote default, merge (never rebase) for baseline updates, plain pushes, always-new commits, squash-merge for PRs. |
+| [`git-workflow`](git-workflow/SKILL.md) | Default git workflow: require a clean worktree and freshly fetch the remote default before work, create feature branches from that tip, merge (never rebase) for baseline updates, use plain pushes and always-new commits, and squash-merge PRs. |
 | [`create-issue`](create-issue/SKILL.md) | File a well-structured GitHub issue from a tagline using the project's issue template and `VISION.md` when present, capturing UI/UX context, and grilling the user for thoroughness when a grill skill is registered. Supports `automatic` mode for project-context template/label/body selection. |
-| [`implement-issue`](implement-issue/SKILL.md) | Validate an issue against the codebase, read the nearest `AGENTS.md`/`CLAUDE.md` and `VISION.md` when present, present implementation options, implement the chosen one, run UI/UX checks plus the project's full verification gate, and hand off via `/create-pr`. Supports `automatic` mode for project-context option selection. |
-| [`implement-idea`](implement-idea/SKILL.md) | Like `implement-issue` but with no GitHub issue: formulate the idea via follow-up questions (scope, outcome, success criteria) into a confirmed mini-spec, then run the same investigate → grill → options → implement → verify → review → `/create-pr` flow. Supports `automatic` mode for project-context option selection. |
+| [`implement-issue`](implement-issue/SKILL.md) | Validate an issue against current code, project contracts, and web evidence; enrich grilling with surface-appropriate mockups, diagrams, or disposable prototypes; present implementation options; synchronize with the remote default; implement, verify, review, and hand off via `/create-pr`. Supports `automatic` mode for project-context option selection. |
+| [`implement-idea`](implement-idea/SKILL.md) | Like `implement-issue` but with no GitHub issue: start from a provisional mini-spec of at most 400 characters, investigate and enrich the grill with current web evidence plus surface-appropriate artifacts, confirm the final mini-spec, synchronize with the remote default, then implement → verify → review → `/create-pr`. Supports `automatic` mode for project-context option selection. |
 | [`run-retro`](run-retro/SKILL.md) | Review a completed workstream through delivery-speed, process, and codebase-health lenses; use `grilling` to agree durable lessons; then apply selected documentation edits and propose follow-up tickets. |
 | [`create-pr`](create-pr/SKILL.md) | Commit relevant local changes, open a templated draft PR, fill anything it is missing against the project's Definition of Ready, fix CI failures, and mark it ready. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and push to the current PR, merge the baseline when behind, refresh PR title/body when stale. No amend, no force push. |
@@ -208,6 +208,9 @@ that evidence.
 ### Cross-skill references
 
 - `implement-issue` and `implement-idea` invoke `/create-pr` at handoff.
+- `implement-issue` and `implement-idea` apply `git-workflow`'s clean-worktree
+  and freshly fetched remote-default synchronization gate after selecting a
+  branch/worktree and before editing.
 - `implement-issue` and `implement-idea` invoke one bounded
   `/code-review fix-all` before `/create-pr`; they stop for material new
   decisions and do not proceed with unresolved Blocking or Important findings.
@@ -232,6 +235,9 @@ that evidence.
   standalone implementations remain unchanged. It never creates a release and
   invokes `/run-retro` only after explicit approval.
 - `create-issue`, `implement-issue`, and `implement-idea` invoke `/grill-with-docs` (preferred) or `/grill-me` for thoroughness when registered.
+- `implement-issue` and `implement-idea` always add current web evidence and
+  surface-appropriate visual or dynamic artifacts to the grill; failed web
+  research stops before implementation options.
 - `create-issue`, `implement-issue`, and `implement-idea` read `VISION.md` when present and stop for clarification when the request conflicts with it.
 - `create-issue`, `implement-issue`, and `implement-idea` support an explicit `automatic` prompt mode where the agent auto-selects the project-context recommendation after completing the required investigation/gates.
 - `implement-idea` borrows `/create-issue`'s good-issue components when formulating the idea.
@@ -273,6 +279,8 @@ supported frontier models:
 | Mixed actionable and invalid inline findings | Fixes validated findings, rebuts invalid ones inline, and never posts a top-level comment |
 | Issue draft awaiting approval | Investigates, grills, and presents the project-aligned draft without filing it |
 | Automatic issue creation and exact duplicate | Completes every investigation/grill gate before filing, but stops immediately for the existing issue |
+| Artifact-assisted implementation grill | Uses current web and repository evidence, then shows surface-appropriate mockups, diagrams, or disposable prototypes before option selection |
+| Required current web research unavailable | Stops before presenting implementation options or editing |
 | Default code review and repository-wide audit | Reproduces safe boundary behavior and reports evidence without remediating in read-only mode |
 | File-scoped code review | Reports findings only in the exact requested files while disclosing any supporting context needed to validate them |
 | Prior-findings revalidation | Rechecks selected review or audit findings against current committed and dirty state without silently performing a fresh review |
@@ -282,10 +290,10 @@ supported frontier models:
 | Stale audit with missing evidence | Separates confirmed gaps, corrected claims, and unsupported measurements before planning |
 | Rate-limited review bot | Reports the review as unavailable or incomplete, never passed |
 | Automatic merge with active review tooling | Retriggers incomplete reviews, evaluates inline and summary findings, and merges only the fully reviewed current head |
-| Confirmed automatic idea | Implements, validates, performs the bounded review, and completes the PR handoff without dropping a gate |
+| Automatic idea with a provisional mini-spec | Researches, adds the appropriate artifact, confirms the final mini-spec, implements, validates, reviews, and completes the PR handoff |
 | Tag-triggered release workflow | Pushes the tag once, monitors automation, and never calls `gh release create` |
 | No releasable commits or ambiguous publisher | Stops without manufacturing a version change, tag, or release |
-| Git sync and divergent push | Merges the remote default without rebasing; a rejected plain push stops without force |
+| New branch, Git sync, dirty worktree, and divergent push | Starts focused work at the fetched remote-default tip without tracking it, merges updates without rebasing, stops before syncing dirty work, and never forces a rejected push |
 | Sparse or mutation-ready roadmap review | Lowers confidence when evidence is thin and asks before document or forge changes |
 | Parallel milestone rush with mixed existing state | Reuses delivered, PR, branch, worktree, and issue state; rolls independent merges forward; and closes only after integrated validation |
 | Explicit sub-agent review or audit | Maps bounded evidence lanes, keeps verdicts and edits with the coordinator, and reports any single-agent fallback |
