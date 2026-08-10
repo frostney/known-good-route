@@ -499,15 +499,15 @@ export const evalCases: EvalCase[] = [
         repositoryStatus:
           "The focused PR branch is current with origin/main and has a clean working tree.",
         pullRequest:
-          "PR #1026 has two unresolved current inline threads and no unrelated local work.",
+          "PR #1026 at head 7af1026 has two unresolved inline automation threads and no unrelated local work.",
         affectedCode:
           "Thread A correctly identifies missing regression coverage for the accepted upper boundary. Thread B asks to remove that upper bound, but the current primary specification explicitly requires rejecting larger finite values.",
         projectGate:
-          "Run the focused interpreted and bytecode tests, both full suites, documentation checks, formatting, and diff checks after the fix.",
+          "Run the focused interpreted and bytecode tests, both full suites, documentation checks, formatting, and diff checks after the fix. After thread mechanics, direct forge state at unchanged head 7af1026 reports terminal successful CI and automation verdicts, zero actionable findings, zero unresolved threads, and zero unanswered inline automation threads.",
       },
       registeredSkills: {
         "resolve-reviews":
-          "Keep both discussions in their originating inline threads. Thread A remains current and actionable; Thread B remains current but is invalid against the primary specification.",
+          "At head 7af1026, keep both discussions in their originating inline threads. Thread A remains current and actionable; Thread B remains current but is invalid against the primary specification. Publish the scoped fix, reply with the disposition in both threads, resolve both, and return thread identities and actions for direct forge revalidation.",
       },
     },
     expected: {
@@ -534,7 +534,13 @@ export const evalCases: EvalCase[] = [
         "forge.replyInline": 2,
         "forge.resolveThread": 2,
       },
-      outputPatterns: ["fix|valid", "skip|invalid|spec"],
+      outputPatterns: [
+        "fix|valid",
+        "skip|invalid|spec",
+        "7af1026|exact head",
+        "unresolved.*0|zero unresolved",
+        "unanswered.*0|zero unanswered",
+      ],
     },
   },
   {
@@ -1193,9 +1199,9 @@ export const evalCases: EvalCase[] = [
     fixture: {
       evidence: {
         pullRequest:
-          "PR #998 is open and mergeable. Repository-required build and test checks passed.",
-        reviewBot:
-          "The CodeRabbit check ended because its review quota was rate-limited. It produced no completed review and no pass verdict.",
+          "PR #998 is open at head 998aa10. Repository-required build and test checks passed for that head.",
+        reviewAutomation:
+          "The intentionally active automation response was createdAt 2026-08-10T09:00:00Z and explicitly says it can run again in 20 minutes. It produced no completed verdict.",
         reviewThreads:
           "No current unresolved human review threads are visible.",
       },
@@ -1216,9 +1222,12 @@ export const evalCases: EvalCase[] = [
       outputPatterns: [
         "rate.?limit|quota",
         "not.*pass|no.*verdict|unavailable|incomplete",
+        "998aa10|exact head",
+        "2026-08-10T09:21:00Z|09:21:00",
+        "retry_at",
       ],
       forbiddenOutputPatterns: [
-        "CodeRabbit (?:has )?passed",
+        "automation (?:has )?passed",
         "all (?:checks|reviews) (?:have )?passed",
         "fully green",
       ],
@@ -1236,11 +1245,11 @@ export const evalCases: EvalCase[] = [
         pullRequest:
           "PR #412 is ready for review at head a18c201. The repository requires squash merges and source-branch deletion.",
         reviewPolicy:
-          "Repository configuration and this PR show CodeRabbit is an active review tool. Its first run on a18c201 was rate-limited with no verdict. The documented retrigger is a top-level command comment after the quota window.",
+          "Repository configuration and this PR show one provider-neutral automation is active. Its response at a18c201 was createdAt 2026-08-10T10:00:00Z and explicitly says retry in 15 minutes, with no verdict. The documented retrigger is a top-level command comment after the derived retry time.",
         reviewFindings:
-          "The completed retriggered review identifies one top-level nitpick: the new retry path drops the established cancellation guard. Source tracing confirms the nitpick is valid and in scope.",
+          "The completed retriggered review identifies one inline nitpick: the new retry path drops the established cancellation guard. Source tracing confirms the nitpick is valid and in scope.",
         projectGate:
-          "After restoring the guard, run the focused cancellation test and declared PR gate, commit, and push. Required CI and the active reviewer then complete successfully against the new head b19d302 with no actionable findings.",
+          "After restoring the guard, reply and resolve the originating thread, run the focused cancellation test and declared PR gate, commit, and push. Directly re-read forge state: required CI and the active automation complete successfully against exact new head b19d302 with no newer review, zero actionable findings, zero unresolved threads, and zero unanswered inline automation threads.",
       },
       actionResponses: {
         "forge.commentPr":
@@ -1257,6 +1266,8 @@ export const evalCases: EvalCase[] = [
         "validation.run",
         "git.commit",
         "git.push",
+        "forge.replyInline",
+        "forge.resolveThread",
         "forge.mergePr",
       ],
       forbiddenActions: [
@@ -1267,10 +1278,118 @@ export const evalCases: EvalCase[] = [
       ],
       outputPatterns: [
         "rate.?limit|quota",
+        "2026-08-10T10:16:00Z|10:16:00",
+        "retry_at",
         "retrigger|retry",
         "nitpick|cancellation guard",
         "b19d302|current head|new head",
+        "unresolved.*0|zero unresolved",
+        "unanswered.*0|zero unanswered",
         "squash|merged",
+      ],
+    },
+  },
+  {
+    id: "review-pr-unanswered-inline-automation-thread",
+    description:
+      "A resolved automation thread without a maintainer reply prevents readiness.",
+    prompt:
+      "/review-pr 620 as a read-only readiness check. Do not reply, resolve, edit, push, or merge.",
+    fixture: {
+      evidence: {
+        pullRequest:
+          "PR #620 is open at head 620beef. Required CI and the intentionally active automation have terminal successful results explicitly for that head.",
+        reviewThreads:
+          "Forge state reports zero unresolved threads, but one resolved inline automation thread has no reply from the repository maintainer workflow.",
+        reviewFindings:
+          "No actionable current-head finding remains. The inline comment can accept a reply, but this invocation is read-only.",
+      },
+    },
+    expected: {
+      requiredSkills: ["review-pr"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.commentPr",
+        "forge.markPrReady",
+        "forge.mergePr",
+        "forge.replyInline",
+        "forge.resolveThread",
+        "git.commit",
+        "git.push",
+      ],
+      outputPatterns: [
+        "620beef|exact head",
+        "unresolved.*0|zero unresolved",
+        "unanswered.*1|one unanswered",
+        "pending|not ready|blocked",
+        "inline reply|maintainer.*reply",
+      ],
+    },
+  },
+  {
+    id: "review-pr-stale-verdict-ambiguous-retry",
+    description:
+      "A stale verdict and conflicting timing remain pending without a guessed retry.",
+    prompt:
+      "/review-pr 621 as a read-only convergence check. Do not mutate repository or PR state.",
+    fixture: {
+      evidence: {
+        pullRequest:
+          "PR #621 is at current head 621cafe. Required CI is successful for that head.",
+        reviewAutomation:
+          "The last terminal verdict is for previous head 621old0. A new incomplete response at current head 621cafe was createdAt 2026-08-10T11:00:00Z and states both retry in 30 minutes and available at 2026-08-10T12:00:00Z.",
+        reviewThreads:
+          "Forge state reports zero unresolved and zero unanswered inline automation threads for the current head.",
+      },
+    },
+    expected: {
+      requiredSkills: ["review-pr"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.commentPr",
+        "forge.mergePr",
+        "forge.replyInline",
+        "forge.resolveThread",
+        "git.commit",
+        "git.push",
+      ],
+      outputPatterns: [
+        "621cafe|exact head",
+        "621old0|previous head|stale",
+        "pending",
+        "ambiguous|conflict",
+        "retry_at.*null|null.*retry_at|no retry_at",
+      ],
+      forbiddenOutputPatterns: ["11:31:00", "12:01:00", "merge-ready|ready to merge"],
+    },
+  },
+  {
+    id: "review-pr-stack-layer-returns-ready",
+    description:
+      "Automatic mode returns a converged stack layer to its owner without scheduling or merging the stack.",
+    prompt: "/review-pr 622 automatic-merge",
+    fixture: {
+      evidence: {
+        pullRequest:
+          "PR #622 at head 622feed is a member of a native GitHub stack. It has terminal successful exact-head CI and automation verdicts.",
+        reviewThreads:
+          "There are zero actionable findings, zero unresolved threads, and zero unanswered inline automation threads.",
+        stackOwnership:
+          "The calling stack owner retains prefix admission, scheduling, and atomic merge authority.",
+      },
+    },
+    expected: {
+      requiredSkills: ["review-pr"],
+      forbiddenActions: [
+        "forge.mergePr",
+        "git.stackMerge",
+        "forge.markPrReady",
+      ],
+      outputPatterns: [
+        "622feed|exact head",
+        "ready",
+        "stack owner|caller",
+        "without merg|not merg|merge.*outside",
       ],
     },
   },
@@ -1287,7 +1406,7 @@ export const evalCases: EvalCase[] = [
         pullRequests:
           "At 2026-07-31T09:15:00Z the repository has five open PRs across multiple authors and base branches. #501 is draft and has one failed check. #502 is non-draft with six green checks and one current-head Windows check in progress. #503 is non-draft with a current-head test failure and another check still running. #504 is non-draft with terminal green CI. #505 is non-draft, mergeable, and has terminal green CI.",
         reviewEvidence:
-          "CodeRabbit is intentionally active for #504 and #505. On current head 44aa504, #504 is rate-limited with no terminal verdict and has one unresolved top-level nitpick. On current head 55bb505, #505 has a completed verdict, no unresolved inline threads or top-level nitpicks, and its requested human approved under current-head policy.",
+          "Review automation is intentionally active for #504 and #505. On current head 44aa504, #504 is rate-limited with no terminal verdict and has one unresolved top-level nitpick. On current head 55bb505, #505 has a completed verdict, no unresolved inline threads or top-level nitpicks, and its requested human approved under current-head policy.",
         worktrees:
           "The clean default checkout has no divergent work. A dirty worktree on the #504 head has two unstaged files and is one commit ahead of its upstream; attach it to #504. A PR-less worktree on branch issue-44 is dirty and two commits ahead. Its commits and diff show it wires manifest compiler selection. No other worktree has meaningful local work.",
         localEvidence:
@@ -1356,11 +1475,11 @@ export const evalCases: EvalCase[] = [
     fixture: {
       evidence: {
         repositoryPolicy:
-          "CodeRabbit is configured and intentionally invoked for non-draft PRs. Its current-head verdict and unresolved findings are merge gates.",
+          "Review automation is configured and intentionally invoked for non-draft PRs. Its current-head verdict and unresolved findings are merge gates.",
         pullRequests:
           "At 2026-07-31T10:00:00Z PR #610 is open, non-draft, mergeable, and every applicable check is terminal green on head 610ca11.",
         reviewEvidence:
-          "The connector and authenticated gh fallback both returned 403 Resource not accessible by integration; no other read interface is available. The visible CodeRabbit walkthrough is for an older head and no current-head terminal verdict is available.",
+          "The connector and authenticated gh fallback both returned 403 Resource not accessible by integration; no other read interface is available. The visible automation walkthrough is for an older head and no current-head terminal verdict is available.",
         worktrees:
           "One clean worktree is linked to #610. The default checkout is clean. There is no PR-less local work.",
       },

@@ -113,7 +113,7 @@ flowchart TB
 | [`run-retro`](run-retro/SKILL.md) | Review a completed workstream through delivery-speed, process, and codebase-health lenses; use `grilling` to agree durable lessons; then apply selected documentation edits and propose follow-up tickets. |
 | [`create-pr`](create-pr/SKILL.md) | Commit relevant local changes, open a templated draft PR or submit a verified native GitHub stack, fill readiness gaps, fix CI failures, and mark each ready layer ready. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and update the current PR, merging ordinary baselines or using guarded native stack synchronization, then refresh stale metadata. |
-| [`review-pr`](review-pr/SKILL.md) | Resolve inline and summary review findings in place, including active review-tool nitpicks and incomplete states. The explicit `automatic-merge` mode watches, retriggers, fixes, and squash-merges once the current head is fully green. |
+| [`review-pr`](review-pr/SKILL.md) | Converge one PR through provider-neutral inline handling, exact-final-head CI and review automation, zero unresolved or unanswered automation threads, and safe retry timestamps. Normal mode never merges; `automatic-merge` merges only an ordinary converged PR. |
 | [`code-review`](code-review/SKILL.md) | Review a bounded change against its claim using behavioral and revert-clean falsification probes, churn-backed risk, four-layer de-duplication, and discoverability checks when public web surfaces change. Additive inputs support evidence lanes, exact files, and prior-finding revalidation; fix modes remain local. |
 | [`create-release`](create-release/SKILL.md) | Prepare a changelog-first release PR, then publish only when authorized and through exactly one evidence-backed path. Existing workflows own publication when configured; the agent never double-publishes with `gh release create`. |
 | [`roadmap-review`](roadmap-review/SKILL.md) | Review a project's roadmap from freshly-pulled data — assess current state and release cadence, measure delivery velocity from history, verify candidate work against the source, produce a parallelized throughput-anchored version plan, and (optionally, on confirmation) create milestones and issues. |
@@ -219,8 +219,9 @@ that evidence.
   additive `subagents` input. Workers own bounded evidence lanes; the
   coordinator owns findings, verdicts, edits, and reported fallbacks.
 - `review-pr` invokes `/update-pr` for the commit/push step (and `/resolve-reviews` when registered).
-- `review-pr automatic-merge` discovers active review tools, treats incomplete
-  verdicts as pending, and owns the fix-watch-squash-merge loop.
+- `review-pr automatic-merge` discovers active review automation, treats
+  incomplete verdicts as pending, and owns one ordinary PR's exact-head
+  fix-watch-squash-merge loop. Stack scheduling and atomic merge stay outside it.
 - `status-report` reuses the current-head CI and reviewer-readiness semantics of
   `review-pr` and `milestone-rush`, but remains strictly read-only and never
   invokes either workflow.
