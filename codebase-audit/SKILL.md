@@ -20,10 +20,12 @@ truthful coverage map, actionable findings, and coherent remediation batches.
 ## Modes and boundaries
 
 The audit is non-remediating by default. It may run safe local tests, builds,
-servers, browser flows, disposable repros, isolated test data, and temporary
-artifacts, but it must not edit repository content or create persistent or
-externally visible side effects. Clean up disposable artifacts and report
-anything retained.
+servers, browser flows, disposable repros, isolated test data, temporary
+artifacts, and revert-clean falsification probes — temporary source mutations
+that prove a gate can fail, each reverted before the report — but it must not
+leave any edit to repository content or create persistent or externally
+visible side effects. Clean up disposable artifacts, revert every probe
+mutation and confirm the tree is clean, and report anything retained.
 
 `subagents` is an additive execution input. Without it, do not delegate any part
 of the audit.
