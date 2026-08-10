@@ -976,7 +976,7 @@ describe("eval grading", () => {
     }
 
     const output =
-      "Summary: commented on #70 and created linked replacement #74; merged independent #71; quarantined #72 and #73 on a material decision. The milestone remains open with the blocker and remaining work.";
+      "Summary under the provider-neutral orchestration fallback: commented on #70 and created linked replacement #74; merged independent #71; quarantined #72 and #73 on material decision DEC-73-API. The event ledger records telemetry and unavailable fields. The milestone remains open with the blocker and remaining work.";
     const partial = gradeRun(
       evalCase,
       ledger({
@@ -994,6 +994,14 @@ describe("eval grading", () => {
           {
             action: "forge.mergePr",
             details: "Squash-merge the independent #71 PR",
+          },
+          {
+            action: "monitor.wait",
+            details: "Wait for changed or terminal forge state without inference",
+          },
+          {
+            action: "telemetry.append",
+            details: "Append lifecycle and DEC-73-API decision events",
           },
           { action: "report", details: "Report the blocked final state" },
         ],
@@ -1019,6 +1027,14 @@ describe("eval grading", () => {
           {
             action: "forge.mergePr",
             details: "Squash-merge the independent #71 PR",
+          },
+          {
+            action: "monitor.wait",
+            details: "Wait for changed or terminal forge state without inference",
+          },
+          {
+            action: "telemetry.append",
+            details: "Append lifecycle and DEC-73-API decision events",
           },
           {
             action: "forge.closeMilestone",
@@ -1051,11 +1067,19 @@ describe("eval grading", () => {
         action: "validation.run",
         details: "Run PR and integrated default-branch gates",
       },
+      {
+        action: "monitor.wait",
+        details: "Use the host watcher for CI and review changes",
+      },
+      {
+        action: "telemetry.append",
+        details: "Append structured milestone lifecycle and usage events",
+      },
       { action: "forge.closeMilestone", details: "Close milestone 2.0.0" },
       { action: "report", details: "Report integrated completion" },
     ];
     const output =
-      "Milestone 2.0.0 closed after parallel subagent work. #40 and #41 were reused; #42 and #43 completed before dependent #44. Each PR used /code-review subagents fix-all with a perspective lane map; PR #343 reported one single-agent fallback. The integrated default branch passed. Run /run-retro only with approval.";
+      "Milestone 2.0.0 closed under the valid ORCHESTRATION policy after parallel isolated subagent work with no inherited history. The provider-neutral delivery recommendation used current ordinary CI. #40 and #41 were reused; #42 and #43 completed before dependent #44. Each PR used /code-review subagents fix-all with a perspective lane map; PR #343 reported one single-agent fallback. The integrated default branch passed and the event ledger is .agent/milestone-rush-events.jsonl. Run /run-retro only with approval.";
 
     const completed = gradeRun(
       evalCase,
@@ -1070,6 +1094,69 @@ describe("eval grading", () => {
       "Milestone 2.0.0 closed after parallel subagent work. #40 and #41 were reused; #42 and #43 completed before dependent #44. The integrated default branch passed. Run /run-retro only with approval.",
     );
     expect(omittedDefault.passed).toBeFalse();
+  });
+
+  test("enforces repository-owned orchestration gates and interventions", () => {
+    const invalid = evalCases.find(
+      ({ id }) => id === "milestone-rush-invalid-orchestration-policy",
+    );
+    const missingCapability = evalCases.find(
+      ({ id }) => id === "milestone-rush-missing-required-delivery-capability",
+    );
+    const checkpoint = evalCases.find(
+      ({ id }) => id === "milestone-rush-token-checkpoint-intervention",
+    );
+    expect(invalid).toBeDefined();
+    expect(missingCapability).toBeDefined();
+    expect(checkpoint).toBeDefined();
+    if (!invalid || !missingCapability || !checkpoint) {
+      return;
+    }
+
+    expect(
+      gradeRun(
+        invalid,
+        ledger({
+          loadedSkills: ["milestone-rush"],
+          actions: [{ action: "report", details: "Stop before spawning" }],
+        }),
+        "Stopped before spawning any worker: ORCHESTRATION.md is contradictory and requires an unsupported watcher host capability.",
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        missingCapability,
+        ledger({
+          loadedSkills: ["milestone-rush"],
+          actions: [
+            {
+              action: "forge.createIssue",
+              details: "Record the repository-owned prerequisite",
+            },
+            { action: "report", details: "Report the blocked plan" },
+          ],
+        }),
+        "Created a repository-owned prerequisite for stack-prefix full CI. The recommendation does not implement or mutate the missing infrastructure, and there is no safe fallback.",
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        checkpoint,
+        ledger({
+          loadedSkills: ["milestone-rush"],
+          actions: [
+            { action: "delegate", details: "Run the isolated worker" },
+            {
+              action: "telemetry.append",
+              details: "Record checkpoint and unavailable reasoning tokens",
+            },
+          ],
+        }),
+        "At the checkpoint, DEC-6-SPLIT applies: split the packet without capability downgrade. Reasoning tokens are unavailable and remain null.",
+      ).passed,
+    ).toBeTrue();
   });
 
   test("keeps status reporting read-only and incomplete review evidence pending", () => {
