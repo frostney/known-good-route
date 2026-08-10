@@ -31,6 +31,10 @@ PR and merge it.
   an integration that is disabled, historical, or merely installed.
 - Treat review, approval, and CI evidence as valid only for the current PR head.
   A new commit or baseline merge resets every affected gate.
+- When the PR belongs to a native GitHub stack, read
+  [../git-workflow/references/github-stacks.md](../git-workflow/references/github-stacks.md),
+  preserve its native topology, and evaluate the current layer against its own
+  claim and exact head.
 
 ## Automatic merge
 
@@ -76,6 +80,8 @@ than passed; apply equivalent evidence-based semantics to other tools.
    unresolved required finding. Report the exact blocker.
 10. Once the current head is ready, every required check is green, every active
     review tool has a completed verdict, and no actionable finding remains,
-    squash-merge and delete the source branch through `git-workflow`. Sync the
-    local default branch, remove only clean worktrees owned by this run, and
-    report the merged PR, final head, validation, reviews, and cleanup.
+    squash-merge an ordinary PR through `git-workflow`. For a native stack,
+    revalidate every PR in the selected prefix and use GitHub's atomic
+    `gh stack merge --squash`; do not merge a middle layer independently. Sync
+    the local default branch, remove only clean worktrees owned by this run, and
+    report the merged PR or prefix, final heads, validation, reviews, and cleanup.

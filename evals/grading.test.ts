@@ -162,6 +162,74 @@ describe("eval grading", () => {
     expect(emptyCommit.passed).toBeFalse();
   });
 
+  test("routes native GitHub stacks through guarded official actions", () => {
+    const createCase = evalCases.find(
+      ({ id }) => id === "create-pr-native-github-stack",
+    );
+    const updateCase = evalCases.find(
+      ({ id }) => id === "update-pr-native-github-stack",
+    );
+    expect(createCase).toBeDefined();
+    expect(updateCase).toBeDefined();
+    if (!createCase || !updateCase) {
+      return;
+    }
+
+    expect(
+      gradeRun(
+        createCase,
+        ledger({
+          loadedSkills: ["create-pr"],
+          actions: [
+            {
+              action: "git.stackSubmit",
+              details: "Submit the verified three-layer native stack",
+            },
+            {
+              action: "forge.markPrReady",
+              details: "Mark each exact-head green layer ready",
+            },
+          ],
+        }),
+        "Submitted bottom-to-top stack for #90; every exact head is green.",
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        updateCase,
+        ledger({
+          loadedSkills: ["update-pr"],
+          actions: [
+            {
+              action: "git.stackSync",
+              details: "Sync after recording every remote head and lease",
+            },
+            {
+              action: "validation.run",
+              details: "Validate every rewritten stack layer",
+            },
+          ],
+        }),
+        "Recorded each remote head and lease, then synchronized the rewritten stack.",
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        updateCase,
+        ledger({
+          loadedSkills: ["update-pr"],
+          actions: [
+            { action: "git.rebase", details: "Rebase the branches manually" },
+            { action: "validation.run", details: "Run checks" },
+          ],
+        }),
+        "Rebased the stack manually.",
+      ).passed,
+    ).toBeFalse();
+  });
+
   test("keeps blocked or pending create-pr cases unpublished", () => {
     const blockedCases: Array<{
       id: string;

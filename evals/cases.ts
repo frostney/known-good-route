@@ -339,6 +339,41 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "create-pr-native-github-stack",
+    description:
+      "A confirmed logical decomposition is submitted through GitHub's native stack workflow.",
+    prompt:
+      "/create-pr for this confirmed three-layer split of issue #90. The current branch is the top layer.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "The clean current branch is the top of a locally tracked gh stack. All three branches descend from the freshly fetched remote-default head and contain one focused commit each.",
+        stackTopology:
+          "gh stack view --json and GitHub PullRequest.stack agree on bottom-to-top order: parser-contract, parser-implementation, parser-cli. Remote heads were recorded and there is no divergence.",
+        projectGate:
+          "The declared gate passed independently for each unchanged layer.",
+        projectDefinitions:
+          "Each layer has a bounded claim, tests, and acceptance subset. Only parser-cli completes issue #90.",
+        continuousIntegration:
+          "After stack submission, every layer's exact-head checks reach a successful terminal result.",
+        pullRequest:
+          "No pull requests exist yet for the three tracked branches.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr"],
+      requiredActions: ["git.stackSubmit", "forge.markPrReady"],
+      forbiddenActions: [
+        "forge.mergePr",
+        "git.forcePush",
+        "git.merge",
+        "git.push",
+        "git.rebase",
+      ],
+      outputPatterns: ["stack|bottom|top", "90", "exact.head|exact head"],
+    },
+  },
+  {
     id: "update-pr-behind-main",
     description: "Updating a PR merges the remote base and pushes normally.",
     prompt: "Update the current pull request.",
@@ -354,6 +389,34 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["update-pr"],
       requiredActions: ["git.merge", "validation.run", "git.push"],
       forbiddenActions: ["git.amend", "git.forcePush", "git.rebase"],
+    },
+  },
+  {
+    id: "update-pr-native-github-stack",
+    description:
+      "Updating a verified native stack uses the guarded official synchronization path.",
+    prompt: "Update the current PR and its native GitHub stack.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "The clean current branch is the middle layer of a three-branch gh stack whose trunk is behind origin/main.",
+        pullRequest:
+          "GitHub PullRequest.stack and stackEntry match gh stack view --json. Every affected remote head was recorded and the leases are unchanged.",
+        projectGate:
+          "After synchronization, validate every rewritten layer from the first changed head upward.",
+      },
+    },
+    expected: {
+      requiredSkills: ["update-pr"],
+      requiredActions: ["git.stackSync", "validation.run"],
+      forbiddenActions: [
+        "git.amend",
+        "git.forcePush",
+        "git.merge",
+        "git.push",
+        "git.rebase",
+      ],
+      outputPatterns: ["stack", "remote head|lease", "rewrit|rebas"],
     },
   },
   {

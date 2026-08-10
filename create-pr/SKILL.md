@@ -13,8 +13,14 @@ compatibility: >-
 # Create PR
 
 The request authorizes the repository's declared gates, relevant fixes and
-commits, plain pushes, PR metadata updates, one draft pull request, and its
-transition to ready for review. It does not authorize unrelated changes.
+commits, PR metadata updates, one ordinary draft pull request or the confirmed
+native stack layers owned by the change, and their transitions to ready for
+review. It does not authorize unrelated changes.
+
+When the branch belongs to a native GitHub stack, read
+[../git-workflow/references/github-stacks.md](../git-workflow/references/github-stacks.md).
+The request then authorizes submission and metadata reconciliation for the
+confirmed stack layers owned by the current change, not unrelated branches.
 
 1. Inspect the working tree, staged diff, recent commits, and remote default
    branch.
@@ -27,11 +33,17 @@ transition to ready for review. It does not authorize unrelated changes.
 5. Stage only relevant files, excluding secrets and unrelated local work.
 6. Commit uncommitted work with a concise Conventional Commit subject. Never
    amend and never skip hooks.
-7. Push normally, setting upstream when needed. Never force-push.
-8. Fill the matching PR template, preserving its structure. If none exists, use
+7. For an ordinary branch, push normally and set its upstream when needed. For
+   a verified native stack, use `gh stack submit`; only its guarded official
+   stack operations may rebase or push with force-with-lease.
+8. Fill the matching PR template for each submitted layer, preserving its
+   structure. If none exists, use
    Summary, Testing, and Linked issues. Keep the body proportional to the change.
-   Put each closing keyword on its own line: `Closes #N`.
-9. Open one draft PR against the remote default branch.
+   Put each closing keyword on its own line: `Closes #N`, and only on the layer
+   that completes that issue.
+9. Open one draft PR against the remote default for an ordinary branch. For a
+   stack, preserve bottom-to-top native topology and keep each new layer draft
+   until that layer satisfies the remaining gates.
 10. Find the nearest applicable `DEFINITION_OF_READY.md`. If it exists, compare
     every criterion with the actual PR diff, tests, documentation, linked work,
     metadata, and validation evidence to identify anything the PR is missing. If
@@ -51,6 +63,7 @@ transition to ready for review. It does not authorize unrelated changes.
     blocker when satisfying it requires a material product decision, unrelated
     work, unavailable external service, or a change that cannot be validated
     safely.
-14. Once the PR is missing nothing required by the Definition of Ready and all
-    applicable CI is observed green, mark it ready for review. Return its URL,
-    final state, fixes made, and observed readiness and CI evidence.
+14. Once a PR is missing nothing required by the Definition of Ready and all
+    applicable CI is observed green for its exact head, mark that PR ready for
+    review. Return every affected URL, native stack order when applicable,
+    final states, fixes made, and observed readiness and CI evidence.
