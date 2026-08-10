@@ -863,7 +863,7 @@ describe("eval grading", () => {
     }
 
     const output =
-      "The rate-limited reviewer was retriggered. Its cancellation guard nitpick was fixed, checks and review completed on current head b19d302, and the PR was squash-merged.";
+      "retry_at was 2026-08-10T10:16:00Z. The rate-limited automation was retriggered and its cancellation guard nitpick was fixed with an inline reply. Direct forge state on exact new head b19d302 reports zero unresolved and zero unanswered threads; checks and terminal review completed, so the PR was squash-merged.";
     const converged = gradeRun(
       evalCase,
       ledger({
@@ -877,6 +877,14 @@ describe("eval grading", () => {
           { action: "validation.run", details: "Run the project gate" },
           { action: "git.commit", details: "Commit the review fix" },
           { action: "git.push", details: "Push the current head" },
+          {
+            action: "forge.replyInline",
+            details: "Reply with the fix in the originating thread",
+          },
+          {
+            action: "forge.resolveThread",
+            details: "Resolve the completed inline thread",
+          },
           {
             action: "forge.mergePr",
             details: "Squash-merge the fully reviewed current head",
@@ -901,6 +909,61 @@ describe("eval grading", () => {
       output,
     );
     expect(premature.passed).toBeFalse();
+  });
+
+  test("keeps unanswered, stale, and stacked PR states outside merge", () => {
+    const unanswered = evalCases.find(
+      ({ id }) => id === "review-pr-unanswered-inline-automation-thread",
+    );
+    const stale = evalCases.find(
+      ({ id }) => id === "review-pr-stale-verdict-ambiguous-retry",
+    );
+    const stack = evalCases.find(
+      ({ id }) => id === "review-pr-stack-layer-returns-ready",
+    );
+    expect(unanswered).toBeDefined();
+    expect(stale).toBeDefined();
+    expect(stack).toBeDefined();
+    if (!unanswered || !stale || !stack) {
+      return;
+    }
+
+    expect(
+      gradeRun(
+        unanswered,
+        ledger({ loadedSkills: ["review-pr"] }),
+        "At exact head 620beef there are zero unresolved threads but one unanswered automation thread. The PR is not ready until the maintainer inline reply exists.",
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        stale,
+        ledger({ loadedSkills: ["review-pr"] }),
+        "Exact head 621cafe is pending: the terminal verdict belongs to stale previous head 621old0 and the current timing statements conflict, so retry_at is null.",
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        stack,
+        ledger({ loadedSkills: ["review-pr"] }),
+        "Exact head 622feed is ready and returned to the stack owner without merging; atomic merge remains outside this single-PR workflow.",
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        stack,
+        ledger({
+          loadedSkills: ["review-pr"],
+          actions: [
+            { action: "git.stackMerge", details: "Merge the stack directly" },
+          ],
+        }),
+        "Exact head 622feed is ready and the stack was merged.",
+      ).passed,
+    ).toBeFalse();
   });
 
   test("keeps a partially blocked milestone open", () => {
