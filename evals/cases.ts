@@ -2206,6 +2206,10 @@ export const evalCases: EvalCase[] = [
       evidence: {
         projectContracts:
           "The project direction, Definitions of Ready and Done, branch protection, squash-merge policy, and full integrated gate are present and unambiguous.",
+        orchestrationPolicy:
+          "Repository-root ORCHESTRATION.md is valid and consistent with higher-authority instructions. It defines host-neutral implementation and review capability classes, isolated context envelopes, soft token checkpoints, event-driven monitoring, and split-or-escalate interventions.",
+        deliverySurface:
+          "The repository uses ordinary exact-head required checks and provider-neutral review automation. It has no managed admission controller and this dependency graph does not require one. The plan recommends exact-head CI-ready, review-ready, and merge-ready evidence plus stale-event refusal, and documents current ordinary delivery as the safe implementation without changing repository infrastructure.",
         milestoneScope:
           "Milestone 2.0.0 contains issue #40, already delivered and closed by merged PR #340; issue #41, implemented in open PR #341; independent ready issues #42 and #43; and issue #44, which depends on both #42 and #43.",
         localState:
@@ -2220,6 +2224,10 @@ export const evalCases: EvalCase[] = [
           "After each squash merge, remaining branches merge the updated remote default and their affected gates pass. The refreshed milestone contains no new out-of-scope work.",
         integratedCompletion:
           "All five issues are delivered and closed, no milestone PR, check, review, or active review-tool pass is pending, and the synced default branch passes the full project gate.",
+        monitoring:
+          "The host supports non-LLM forge watchers and exact timestamp wake-ups. Workers receive compact packets with no inherited conversation history and only applicable decision IDs.",
+        telemetry:
+          "The ignored JSONL ledger records stable spans, dependencies, decision events, lifecycle transitions, available token usage, unavailable-field markers, and separate elapsed and aggregate resource values.",
       },
       actionResponses: {
         "forge.openDraftPr": "The focused issue PR was opened.",
@@ -2237,6 +2245,8 @@ export const evalCases: EvalCase[] = [
         "forge.mergePr",
         "git.merge",
         "validation.run",
+        "monitor.wait",
+        "telemetry.append",
         "forge.closeMilestone",
         "report",
       ],
@@ -2259,6 +2269,10 @@ export const evalCases: EvalCase[] = [
         "closed",
         "run-retro|retro",
         "approval|approve",
+        "ORCHESTRATION|orchestration policy",
+        "isolated|no inherited",
+        "CI.*recommend|delivery.*recommend",
+        "milestone-rush-events\.jsonl|event ledger",
       ],
     },
   },
@@ -2272,6 +2286,8 @@ export const evalCases: EvalCase[] = [
       evidence: {
         projectContracts:
           "The milestone scope and project completion contracts are confirmed. Squash merging and issue creation within this milestone are authorized.",
+        orchestrationPolicy:
+          "No repository-root ORCHESTRATION.md exists. The provider-neutral conservative fallback uses compact isolated task packets, host-default limits, explicit escalation, and supported non-LLM waits; the run must report this fallback.",
         milestoneScope:
           "Issue #70 was closed as completed, but current source and merge history prove its required export never shipped. Issue #71 has a ready open PR. Issue #72 depends on #73. Issue #73 leaves two incompatible public APIs undecided.",
         closedIssue:
@@ -2282,6 +2298,10 @@ export const evalCases: EvalCase[] = [
           "Selecting the public API for #73 is a material product decision. Issue #73 and dependent #72 must be quarantined, but they do not block #70 replacement or #71.",
         liveScope:
           "No other issue was added during execution. The milestone must remain open because #72 and #73 are unresolved.",
+        monitoring:
+          "The host watcher reports only changed or terminal forge state. The decision request for #73 and its unresolved outcome are recorded under stable decision ID DEC-73-API.",
+        telemetry:
+          "The ignored event ledger records lifecycle and decision events; cached-token and reasoning-token fields are unavailable and marked rather than estimated.",
       },
       actionResponses: {
         "forge.commentIssue":
@@ -2299,6 +2319,8 @@ export const evalCases: EvalCase[] = [
         "forge.commentIssue",
         "forge.createIssue",
         "forge.mergePr",
+        "monitor.wait",
+        "telemetry.append",
         "report",
       ],
       forbiddenActions: [
@@ -2316,6 +2338,111 @@ export const evalCases: EvalCase[] = [
         "block|quarantin|material decision",
         "open|not.*clos",
         "summary|remaining",
+        "fallback",
+        "DEC-73-API|decision",
+        "event ledger|jsonl|telemetry",
+      ],
+    },
+  },
+  {
+    id: "milestone-rush-invalid-orchestration-policy",
+    description:
+      "Invalid repository orchestration policy stops the rush before worker admission.",
+    prompt: "/milestone-rush 4.0.0.",
+    fixture: {
+      evidence: {
+        projectContracts:
+          "The milestone is otherwise confirmed and ready for execution.",
+        orchestrationPolicy:
+          "Repository-root ORCHESTRATION.md assigns the same task class to two contradictory routes and requires a watcher capability the host does not support.",
+        milestoneScope:
+          "Three independent ready issues exist, but no worker has been spawned.",
+      },
+    },
+    expected: {
+      requiredSkills: ["milestone-rush"],
+      requiredActions: ["report"],
+      forbiddenActions: [
+        "delegate",
+        "file.edit",
+        "forge.createIssue",
+        "forge.mergePr",
+        "git.commit",
+        "git.push",
+        "monitor.wait",
+      ],
+      outputPatterns: [
+        "ORCHESTRATION\.md",
+        "contradict|invalid",
+        "unsupported.*watch|watch.*unsupported|host capability",
+        "before.*spawn|no worker|stop",
+      ],
+    },
+  },
+  {
+    id: "milestone-rush-missing-required-delivery-capability",
+    description:
+      "A required delivery capability becomes a repository-owned prerequisite, not invented infrastructure.",
+    prompt:
+      "/milestone-rush 5.0.0. The confirmed plan uses a cumulative native stack.",
+    fixture: {
+      evidence: {
+        projectContracts:
+          "The milestone and logical stack split are confirmed. Generic orchestration may create a prerequisite issue but may not change delivery infrastructure.",
+        orchestrationPolicy:
+          "ORCHESTRATION.md is valid and requires cumulative stack-prefix full-CI admission before implementation workers may begin.",
+        deliverySurface:
+          "The repository has per-PR checks but no stack-prefix full-CI controller, no equivalent required check, and no safe fallback that satisfies the policy. Workflow files, labels, rulesets, apps, and credentials are repository-owned.",
+        recommendation:
+          "The plan can specify exact-head invalidation, prefix evidence, terminal review, thread and reply gates, stale-event refusal, cancellation, fork security, and orphan recovery, but cannot implement them here.",
+      },
+    },
+    expected: {
+      requiredSkills: ["milestone-rush"],
+      requiredActions: ["forge.createIssue", "report"],
+      forbiddenActions: [
+        "delegate",
+        "file.edit",
+        "forge.mergePr",
+        "git.commit",
+        "git.push",
+      ],
+      outputPatterns: [
+        "prerequisite",
+        "stack.*prefix|prefix.*CI",
+        "repository.*own|consuming repository",
+        "recommend",
+        "not.*implement|without.*mutat|no safe fallback",
+      ],
+    },
+  },
+  {
+    id: "milestone-rush-token-checkpoint-intervention",
+    description:
+      "A repository-owned soft token limit creates a durable checkpoint and declared intervention.",
+    prompt: "/milestone-rush 6.0.0.",
+    fixture: {
+      evidence: {
+        projectContracts:
+          "The milestone has one ready issue and no material product ambiguity.",
+        orchestrationPolicy:
+          "Valid ORCHESTRATION.md defines capability classes and a repository-owned soft input-token checkpoint. Crossing it requires checkpoint, then split the remaining task packet; capability downgrade is forbidden.",
+        workerState:
+          "The isolated worker reaches the soft checkpoint after completing investigation but before implementation. Host telemetry exposes input and cached-input tokens but not reasoning tokens.",
+        decisionRegistry:
+          "Decision DEC-6-SPLIT already selects the split boundary. Current evidence does not contradict it, so the coordinator must not ask again.",
+      },
+    },
+    expected: {
+      requiredSkills: ["milestone-rush"],
+      requiredActions: ["delegate", "telemetry.append"],
+      forbiddenActions: ["user.ask"],
+      outputPatterns: [
+        "checkpoint",
+        "split",
+        "DEC-6-SPLIT",
+        "reasoning.*unavailable|unavailable.*reasoning|null",
+        "not.*downgrade|without.*downgrad|no.*downgrad",
       ],
     },
   },
