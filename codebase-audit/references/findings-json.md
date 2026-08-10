@@ -45,7 +45,7 @@ Each finding contains:
 {
   "id": "CA-N",
   "severity": "BLOCKING | IMPORTANT | IMPROVEMENT",
-  "category": "BEHAVIOR | QUALITY | ARCHITECTURE_RISK | OPERATIONS",
+  "category": "BEHAVIOR | QUALITY | ARCHITECTURE_RISK | OPERATIONS | DISCOVERABILITY",
   "title": "string",
   "location": {"path": "string", "line": 1, "symbol": "string or null"},
   "evidence": ["string"],
