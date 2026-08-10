@@ -110,7 +110,7 @@ flowchart TB
 | [`create-issue`](create-issue/SKILL.md) | File a well-structured GitHub issue from a tagline using the project's issue template and `VISION.md` when present, capturing UI/UX context, and grilling the user for thoroughness when a grill skill is registered. Supports `automatic` mode for project-context template/label/body selection. |
 | [`implement-issue`](implement-issue/SKILL.md) | Validate an issue against current code, project contracts, and web evidence; enrich grilling with surface-appropriate mockups, diagrams, or disposable prototypes; present implementation options; synchronize with the remote default; implement, verify, review, and hand off via `/create-pr`. Supports `automatic` mode for project-context option selection. |
 | [`implement-idea`](implement-idea/SKILL.md) | Like `implement-issue` but with no GitHub issue: start from a provisional mini-spec of at most 400 characters, investigate and enrich the grill with current web evidence plus surface-appropriate artifacts, confirm the final mini-spec, synchronize with the remote default, then implement → verify → review → `/create-pr`. Supports `automatic` mode for project-context option selection. |
-| [`run-retro`](run-retro/SKILL.md) | Review a completed workstream through delivery-speed, process, and codebase-health lenses; use `grilling` to agree durable lessons; then apply selected documentation edits and propose follow-up tickets. |
+| [`run-retro`](run-retro/SKILL.md) | Review a completed workstream through delivery-speed, process, and codebase-health lenses; map lifecycle and surface-specific timings, exclusive critical path, masked work, resource usage, and duplicated effort; use `grilling` to agree durable lessons and selected follow-ups. |
 | [`create-pr`](create-pr/SKILL.md) | Commit relevant local changes, open a templated draft PR or submit a verified native GitHub stack, fill readiness gaps, fix CI failures, and mark each ready layer ready. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and update the current PR, merging ordinary baselines or using guarded native stack synchronization, then refresh stale metadata. |
 | [`review-pr`](review-pr/SKILL.md) | Converge one PR through provider-neutral inline handling, exact-final-head CI and review automation, zero unresolved or unanswered automation threads, and safe retry timestamps. Normal mode never merges; `automatic-merge` merges only an ordinary converged PR. |
@@ -243,6 +243,9 @@ that evidence.
   pre-PR pass uses `/code-review subagents fix-all` by default, while ordinary
   standalone implementations remain unchanged. It never creates a release and
   invokes `/run-retro` only after explicit approval.
+- `run-retro` consumes Milestone Rush's ignored JSONL event ledger when present,
+  reconciles it with forge and repository evidence, and keeps exclusive elapsed
+  bottlenecks separate from overlapping and aggregate resource consumption.
 - `create-issue`, `implement-issue`, and `implement-idea` invoke `/grill-with-docs` (preferred) or `/grill-me` for thoroughness when registered.
 - `implement-issue` and `implement-idea` always add current web evidence and
   surface-appropriate visual or dynamic artifacts to the grill; failed web
