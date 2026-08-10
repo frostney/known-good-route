@@ -498,6 +498,53 @@ describe("eval grading", () => {
     expect(remediated.passed).toBeFalse();
   });
 
+  test("requires revert-clean probes and four-layer de-duplication", () => {
+    const reviewCase = evalCases.find(
+      ({ id }) => id === "code-review-revert-clean-deduplication",
+    );
+    const auditCase = evalCases.find(
+      ({ id }) => id === "codebase-audit-delivery-dedup-discoverability",
+    );
+    expect(reviewCase).toBeDefined();
+    expect(auditCase).toBeDefined();
+    if (!reviewCase || !auditCase) {
+      return;
+    }
+
+    expect(
+      gradeRun(
+        reviewCase,
+        ledger({
+          loadedSkills: ["code-review"],
+          actions: [
+            {
+              action: "validation.run",
+              details:
+                "Invert expiry in a disposable worktree, observe the expected assertion failure, restore every byte, and confirm the clean tree",
+            },
+          ],
+        }),
+        "The falsification mutation failed for the expected assertion and the tree was restored byte-for-byte. CI, the local runner, and issue #31 are coalesced into one finding with retained source provenance.",
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        auditCase,
+        ledger({
+          loadedSkills: ["codebase-audit"],
+          actions: [
+            {
+              action: "validation.run",
+              details: "Build and crawl the rendered public website locally",
+            },
+          ],
+        }),
+        "Implementation, work, evidence, and output de-duplication coalesced the canonical JSON-LD defect into one finding. Current search and publisher guidance covers AI-assisted discovery without inventing AEO markup.",
+      ).passed,
+    ).toBeTrue();
+  });
+
   test("requires explicit subagent lanes and coordinator ownership", () => {
     const review = evalCases.find(
       ({ id }) => id === "code-review-subagents-perspective-lanes",

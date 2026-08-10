@@ -21,11 +21,15 @@ truthful coverage map, actionable findings, and coherent remediation batches.
 
 The audit is non-remediating by default. It may run safe local tests, builds,
 servers, browser flows, disposable repros, isolated test data, temporary
-artifacts, and revert-clean falsification probes — temporary source mutations
-that prove a gate can fail, each reverted before the report — but it must not
-leave any edit to repository content or create persistent or externally
-visible side effects. Clean up disposable artifacts, revert every probe
-mutation and confirm the tree is clean, and report anything retained.
+artifacts, and revert-clean falsification probes. A falsification probe
+temporarily introduces one targeted wrong behavior to prove the relevant test
+or gate fails for the right reason. Record the initial tree state, prefer a
+disposable worktree or copy, restore the mutation immediately, compare the
+final tree byte-for-byte with the recorded state, and report the mutation and
+observed failure. Skip the probe and mark the evidence static-only when exact
+restoration is not safe. The audit must not leave any edit to repository content
+or create persistent or externally visible side effects. Clean up disposable
+artifacts and report anything retained.
 
 `subagents` is an additive execution input. Without it, do not delegate any part
 of the audit.
@@ -43,8 +47,9 @@ pushes, publication, issue creation, deployments, or shared-state mutation.
 ## Map before judging
 
 1. Read applicable project instructions, vision and product documentation,
-   current source, tests, configuration, lockfiles, generated interfaces,
-   completion contracts, packaging, and deployment definitions.
+   current source, tests, fixtures, configuration, lockfiles, generated
+   interfaces, schemas, public APIs, examples, templates, completion contracts,
+   packaging, CI, scripts, release, deployment, and operational definitions.
 2. Map user-visible capabilities, entry points, modules, trust boundaries, data
    and state flows, background work, external dependencies, tests, tooling, and
    operational paths.
@@ -56,7 +61,8 @@ pushes, publication, issue creation, deployments, or shared-state mutation.
    - add persistence, migration, transaction, concurrency, and idempotency
      analysis for stateful paths;
    - add API, CLI, library, packaging, compatibility, deployment, rollback,
-     observability, and performance analysis only where those surfaces exist.
+     observability, performance, and discoverability analysis only where those
+     surfaces exist; activate discoverability for a public web surface.
 4. For a shallow subsystem, trace its complete path and direct interactions. For
    a layered codebase, partition work by capability and perspective so later
    areas do not receive progressively thinner analysis.
@@ -88,10 +94,10 @@ final findings, remediation batches, and report.
    perspectives, bounded scope, inspected supporting context, exact probes and
    observed results, candidate findings with evidence, impact, and smallest
    remedy, verified claims, limitations, and `complete` or `incomplete` status.
-4. Validate every candidate against the current checkout, deduplicate and
-   reconcile conflicts across lanes, then assign final IDs, severities,
-   categories, remediation batches, and conclusions. Do not repeat a completed
-   lane wholesale.
+4. Validate every candidate against the current checkout, apply the
+   de-duplication model below, reconcile conflicts across lanes, then assign
+   final IDs, severities, categories, remediation batches, and conclusions. Do
+   not repeat a completed lane wholesale.
 5. If sub-agents are unsupported, unavailable after any applicable bounded
    retry, or leave a lane incomplete, complete that lane directly. Report the
    affected lane and reason as a single-agent fallback. Temporary capacity
@@ -118,6 +124,29 @@ final findings, remediation batches, and report.
 
 ## Audit criteria
 
+### De-duplication
+
+Apply four separate checks across the repository and its delivery surface:
+
+- **Implementation:** find repeated code, logic, tests, fixtures, generated
+  forms, schemas, APIs, configuration, workflows, documentation, examples,
+  templates, release or deployment paths, operational scripts, dependencies,
+  custom tooling, and competing representations of one concept.
+- **Work:** find repeated investigations, questions, decisions, findings,
+  tickets, remediation, reruns, and recurring repair patterns across current
+  forge history and decision records. Reuse and revalidate existing work.
+- **Evidence:** coalesce the same event reported by multiple checks, logs,
+  ledgers, or tools so it is counted once while retaining every source.
+- **Output:** combine candidates with the same cause, impact, and remedy into one
+  finding, preserve provenance, and explicitly reconcile contradictory evidence.
+
+The default scope may inspect direct consumers and sibling components to test a
+public contract or competing representation. Report a cross-repository finding
+only when the user included that scope or current public-contract evidence makes
+the external impact part of the repository finding.
+
+### Technical criteria
+
 - Trace boundary inputs, authorization, state changes, failures, partial
   success, retries, concurrency, idempotency, deletions, and side effects where
   relevant.
@@ -142,6 +171,16 @@ final findings, remediation batches, and report.
   alternative. Every best-practice finding must cite current project and
   authoritative-source evidence plus the concrete simplification or risk.
 
+### Discoverability
+
+For a public web surface, verify crawl and index controls, canonical and
+descriptive metadata, internal discovery paths, structured data that matches
+visible content, semantic content structure, rendering, and material web
+performance. Assess conventional search and AI-assisted discovery together,
+while keeping crawler access, search inclusion, and model-training controls
+distinct. Use current official search-engine and publisher guidance; do not
+invent special AEO markup, keywords, or guarantees.
+
 ## Report
 
 Search the complete mapped scope for evidence-backed candidates before
@@ -157,9 +196,11 @@ Lead with the highest-value current conclusion. Include:
   its reason;
 - the churn window, symbol/file coverage, and architectural-risk hotspots;
 - exact probes and project gates with observed results;
+- de-duplication coverage across implementation, work, evidence, and output,
+  including coalesced sources and reconciled conflicts;
 - actionable findings as
   `[CA-N][BLOCKING|IMPORTANT|IMPROVEMENT][BEHAVIOR|QUALITY|ARCHITECTURE_RISK|
-  OPERATIONS] file:line — evidence, impact, smallest remedy`;
+  OPERATIONS|DISCOVERABILITY] file:line — evidence, impact, smallest remedy`;
 - grouped remediation batches ordered by risk reduction, dependency, and
   reviewability;
 - limitations and retained probe artifacts.

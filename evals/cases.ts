@@ -619,6 +619,86 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "code-review-revert-clean-deduplication",
+    description:
+      "A bounded review proves test value with a revert-clean mutation and coalesces duplicate evidence.",
+    prompt: "/code-review the current branch without fixing it.",
+    fixture: {
+      evidence: {
+        comparisonBoundary:
+          "The clean branch changes src/session.ts and tests/session.test.ts relative to origin/main.",
+        claim:
+          "Expired sessions must be rejected through the public API and the regression test must protect that behavior.",
+        changedCode:
+          "The handler and test use the existing expiry helper. Two check summaries and one prior issue describe the same previously missing expiry assertion.",
+        falsificationProbe:
+          "A disposable worktree can invert the expiry condition. The focused regression then fails for the expected expired-session assertion; restoring the mutation returns every tracked and untracked byte to the recorded initial tree state.",
+        priorEvidence:
+          "Issue #31 already records the investigation and accepted expiry rule. CI and the local runner expose the same underlying test event with different identifiers.",
+      },
+    },
+    expected: {
+      requiredSkills: ["code-review"],
+      requiredActions: ["validation.run"],
+      forbiddenActions: [
+        "delegate",
+        "file.edit",
+        "forge.commentPr",
+        "git.commit",
+        "git.push",
+      ],
+      outputPatterns: [
+        "falsif|mutation|wrong behavior",
+        "fail.*expected|expected.*fail",
+        "restore|byte.for.byte|clean tree",
+        "coalesc|deduplic|one finding|single finding",
+        "provenance|issue #31|source",
+      ],
+    },
+  },
+  {
+    id: "codebase-audit-delivery-dedup-discoverability",
+    description:
+      "A public-web audit covers the wider delivery surface and separates duplicate implementation, work, evidence, and output.",
+    prompt: "/codebase-audit the public website and its delivery surface.",
+    fixture: {
+      evidence: {
+        repositoryMap:
+          "The repository contains a public server-rendered website, route metadata, sitemap and robots generation, JSON-LD, content templates, browser tests, preview deployment, release scripts, and linked forge history.",
+        implementationDuplication:
+          "Application code and the release script independently build canonical URLs; docs and a content template also maintain competing route lists.",
+        workDuplication:
+          "Three issues repeat the same canonical-URL investigation and two recent PRs separately remediate it without referencing the recorded decision.",
+        evidenceDuplication:
+          "Preview deploy, browser tests, and CI summaries all ingest one build event under different run identifiers. Two audit lanes report the same canonical-URL cause and remedy.",
+        discoverability:
+          "The sitemap uses the public origin, but article JSON-LD points at the preview origin while visible canonical metadata points at production. Current official search and publisher guidance is available.",
+        operations:
+          "A local production build and rendered-page crawl can validate metadata, structured data, links, and web performance without external mutation.",
+      },
+    },
+    expected: {
+      requiredSkills: ["codebase-audit"],
+      requiredActions: ["validation.run"],
+      forbiddenActions: [
+        "delegate",
+        "file.edit",
+        "forge.createIssue",
+        "git.commit",
+        "git.push",
+      ],
+      outputPatterns: [
+        "implementation",
+        "work",
+        "evidence",
+        "output",
+        "canonical|structured data|JSON.LD",
+        "AI.assisted|AEO|publisher|search",
+        "coalesc|deduplic|one finding|single finding",
+      ],
+    },
+  },
+  {
     id: "code-review-subagents-perspective-lanes",
     description:
       "An explicit subagents review delegates bounded perspective lanes while the coordinator owns findings and fixes.",
