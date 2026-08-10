@@ -1666,6 +1666,10 @@ export const evalCases: EvalCase[] = [
           "VISION.md and Definitions of Ready and Done exist. docs/tooling.md owns fixture-access guidance.",
         forge:
           "PR #51 merged after two review rounds. No follow-up issues exist.",
+        timings:
+          "Log and forge evidence maps 40 minutes of discovery and design, 3 hours of implementation, 25 minutes of local build and test commands, the two-day fixture decision wait, 35 minutes of CI, 50 minutes of review, 20 minutes of remediation, and 15 minutes of integrated validation. Implementation masked 30 minutes of the fixture wait. Exact command-level data names a 17-minute fixture build and an 8-minute regression suite.",
+        duplicateEvidence:
+          "The CI summary and forge check are two views of the same 35-minute run. The issue and review thread repeat one token-logic investigation and proposed action.",
       },
       registeredSkills: {
         grilling:
@@ -1677,7 +1681,136 @@ export const evalCases: EvalCase[] = [
       requiredRegisteredSkills: ["grilling"],
       requiredActions: ["user.ask"],
       forbiddenActions: ["file.edit", "forge.createIssue"],
-      outputPatterns: ["delivery", "process", "codebase"],
+      outputPatterns: [
+        "delivery",
+        "process",
+        "codebase",
+        "critical|exclusive",
+        "masked|overlap",
+        "17.minute|fixture build",
+        "8.minute|regression suite",
+        "coalesc|deduplic|same.*run",
+      ],
+    },
+  },
+  {
+    id: "retrospective-milestone-critical-path-ledger",
+    description:
+      "A Milestone Rush retro ranks exclusive critical-path time without summing overlapping resource time.",
+    prompt: "Run a retrospective on the completed 7.0.0 Milestone Rush.",
+    fixture: {
+      evidence: {
+        workstream:
+          "The milestone shipped through two independent worker lanes and one dependent integration lane.",
+        eventLedger:
+          "The JSONL ledger is complete and valid. Elapsed wall time is 120 minutes. Worker A ran 70 minutes and worker B ran 65 minutes with 55 minutes overlap. CI spanned 45 minutes, of which 30 were masked by worker B. Review cooldown spanned 20 minutes, fully masked by remediation on another lane. A decision_requested/decision_resolved pair records 10 exclusive minutes. Integration took 15 exclusive minutes. Aggregate agent time is 150 minutes and aggregate runner time is 80 minutes.",
+        forge:
+          "Forge heads, checks, review transitions, and merge timestamps reconcile with the ledger. One CI event appears in both sources under the same head and timestamps.",
+        documentation:
+          "No current project document discusses the measured integration bottleneck.",
+      },
+      registeredSkills: {
+        grilling:
+          "Shared understanding is reached. The user selects report-only analysis and no documentation or ticket action.",
+      },
+    },
+    expected: {
+      requiredSkills: ["run-retro"],
+      requiredRegisteredSkills: ["grilling"],
+      requiredActions: ["report"],
+      forbiddenActions: ["file.edit", "forge.createIssue", "user.ask"],
+      outputPatterns: [
+        "120.*minute|elapsed.*120",
+        "10.*decision|decision.*10",
+        "15.*CI|CI.*15",
+        "masked",
+        "150.*agent|agent.*150",
+        "80.*runner|runner.*80",
+        "aggregate|resource",
+        "coalesc|one CI event|count.*once",
+      ],
+      forbiddenOutputPatterns: ["230.*elapsed|elapsed.*230", "150.*lead time"],
+    },
+  },
+  {
+    id: "retrospective-web-timing-profiles",
+    description:
+      "A web retro separates delivery, browser automation, and product runtime timings.",
+    prompt: "Run a retrospective on the completed public web release.",
+    fixture: {
+      evidence: {
+        workstream:
+          "A server-rendered public web release shipped with metadata, structured data, a preview deployment, and browser coverage.",
+        deliveryTimings:
+          "Install and cache took 12 seconds, typecheck 18, lint 9, bundle/build 74, static generation 21, artifact upload 16, and preview readiness 38.",
+        browserTimings:
+          "Server readiness took 8 seconds, browser launch 2, navigation 3, fixtures 5, test steps 22, one retry 9, and teardown 2.",
+        runtimeTimings:
+          "Navigation Timing and Server Timing are captured. LCP is 2.1 seconds, INP 140 milliseconds, and CLS 0.03; these product metrics are not delivery duration.",
+        discoverability:
+          "The shipped structured-data and canonical checks passed. No new discoverability audit is requested.",
+        documentation:
+          "The current web runbook already records all commands; no durable documentation change is supported.",
+      },
+      registeredSkills: {
+        grilling:
+          "Shared understanding is reached. The user selects report-only analysis and no follow-up action.",
+      },
+    },
+    expected: {
+      requiredSkills: ["run-retro"],
+      requiredRegisteredSkills: ["grilling"],
+      requiredActions: ["report"],
+      forbiddenActions: ["file.edit", "forge.createIssue", "user.ask"],
+      outputPatterns: [
+        "delivery",
+        "browser|automated interaction",
+        "product runtime",
+        "build.*74|74.*build",
+        "retry.*9|9.*retry",
+        "LCP.*2\.1|2\.1.*LCP",
+        "INP.*140|140.*INP",
+        "CLS.*0\.03|0\.03.*CLS",
+        "separate|not.*delivery",
+      ],
+    },
+  },
+  {
+    id: "retrospective-partial-cli-telemetry",
+    description:
+      "A CLI retro uses available command spans and lowers confidence for missing token and wait attribution.",
+    prompt: "Run a retrospective on the completed CLI tooling workstream.",
+    fixture: {
+      evidence: {
+        workstream:
+          "The CLI feature shipped after implementation, command tests, packaging, review, and merge.",
+        eventLedger:
+          "The ledger records compile 14 seconds, process startup 120 milliseconds, parsing 8 milliseconds, command execution 2.4 seconds, subprocess work 1.9 seconds, end-to-end tests 31 seconds, and packaging 11 seconds. Parent links for one review wait are missing; all token and compaction fields are explicitly unavailable.",
+        forge:
+          "Forge confirms the PR head and merge but cannot reconstruct the missing review-wait parent relationship.",
+        documentation:
+          "No generalized project-level change is supported by the available sample.",
+      },
+      registeredSkills: {
+        grilling:
+          "Shared understanding is reached. The user selects report-only analysis with no follow-up.",
+      },
+    },
+    expected: {
+      requiredSkills: ["run-retro"],
+      requiredRegisteredSkills: ["grilling"],
+      requiredActions: ["report"],
+      forbiddenActions: ["file.edit", "forge.createIssue", "user.ask"],
+      outputPatterns: [
+        "CLI|tooling",
+        "compile.*14|14.*compile",
+        "startup.*120|120.*startup",
+        "subprocess.*1\.9|1\.9.*subprocess",
+        "31.*test|test.*31",
+        "confidence|limitation|partial",
+        "token.*unavailable|unavailable.*token",
+        "review.*attribution|attribution.*review",
+      ],
     },
   },
   {

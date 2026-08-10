@@ -853,6 +853,60 @@ describe("eval grading", () => {
     expect(result.passed).toBeTrue();
   });
 
+  test("separates critical-path timing from profiles and resource totals", () => {
+    const critical = evalCases.find(
+      ({ id }) => id === "retrospective-milestone-critical-path-ledger",
+    );
+    const web = evalCases.find(
+      ({ id }) => id === "retrospective-web-timing-profiles",
+    );
+    const partial = evalCases.find(
+      ({ id }) => id === "retrospective-partial-cli-telemetry",
+    );
+    expect(critical).toBeDefined();
+    expect(web).toBeDefined();
+    expect(partial).toBeDefined();
+    if (!critical || !web || !partial) {
+      return;
+    }
+
+    expect(
+      gradeRun(
+        critical,
+        ledger({
+          loadedSkills: ["run-retro"],
+          registeredSkillCalls: ["grilling"],
+          actions: [{ action: "report", details: "Report timing analysis" }],
+        }),
+        "Elapsed was 120 minutes. Exclusive decision wait contributed 10 minutes and CI contributed 15; the rest of CI and review cooldown were masked. Aggregate resources were 150 agent-minutes and 80 runner-minutes. The duplicate forge and ledger record is coalesced as one CI event.",
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        web,
+        ledger({
+          loadedSkills: ["run-retro"],
+          registeredSkillCalls: ["grilling"],
+          actions: [{ action: "report", details: "Report web timing planes" }],
+        }),
+        "Delivery build took 74 seconds. Browser automated interaction included a 9-second retry. Product runtime remains separate, with LCP 2.1 seconds, INP 140 ms, and CLS 0.03 rather than delivery duration.",
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        partial,
+        ledger({
+          loadedSkills: ["run-retro"],
+          registeredSkillCalls: ["grilling"],
+          actions: [{ action: "report", details: "Report CLI timings" }],
+        }),
+        "CLI tooling timings: compile 14 seconds, startup 120 ms, subprocess 1.9 seconds, and tests 31 seconds. Confidence is partial because review attribution is missing and token fields are unavailable.",
+      ).passed,
+    ).toBeTrue();
+  });
+
   test("requires reviewer convergence before automatic merge", () => {
     const evalCase = evalCases.find(
       ({ id }) => id === "review-pr-automatic-merge-retries-active-reviewer",
