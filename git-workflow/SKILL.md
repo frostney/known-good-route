@@ -34,6 +34,13 @@ that operation.
 - Use concise Conventional Commit subjects in imperative mood.
 - Let hooks run unless the user explicitly asks otherwise.
 - Squash-merge pull requests and delete the source branch afterward.
+- Because the merge is a squash, the pull request **title** becomes the commit
+  subject on the base branch — the branch's own commit subjects do not survive.
+  Give the title a Conventional Commit subject describing the change as a whole,
+  and pick its type from the net effect rather than from the most frequent
+  commit under it. Where a project generates its changelog or version bump from
+  commit history, a non-conforming title merges cleanly and is then silently
+  absent from it.
 
 ## Native GitHub stacks
 

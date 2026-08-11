@@ -36,8 +36,10 @@ confirmed stack layers owned by the current change, not unrelated branches.
 7. For an ordinary branch, push normally and set its upstream when needed. For
    a verified native stack, use `gh stack submit`; only its guarded official
    stack operations may rebase or push with force-with-lease.
-8. Fill the matching PR template for each submitted layer, preserving its
-   structure. If none exists, use
+8. Title each pull request with a Conventional Commit subject covering the whole
+   change, since the squash merge makes that title the commit subject on the
+   base branch. Fill the matching PR template for each submitted layer,
+   preserving its structure. If none exists, use
    Summary, Testing, and Linked issues. Keep the body proportional to the change.
    Put each closing keyword on its own line: `Closes #N`, and only on the layer
    that completes that issue.

@@ -34,7 +34,9 @@ When the current PR belongs to a native GitHub stack, read
 6. Push an ordinary branch normally, setting upstream when needed. Push a
    verified stack only through the guarded official stack workflow.
 7. Reconcile the PR title and body with the current commits, scope, linked
-   issues, and observed verification. Preserve the project template or existing
+   issues, and observed verification. Keep the title a Conventional Commit
+   subject for the whole change; the squash merge makes it the commit subject on
+   the base branch, so widened scope may also change its type. Preserve the project template or existing
    body structure and omit filler or repeated summaries.
 8. Report the commit, branch, PR URL, native stack position when applicable,
    metadata changes, rewritten stack branches if any, and observed validation.
