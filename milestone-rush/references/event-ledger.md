@@ -47,6 +47,8 @@ Every event contains:
     "runnerMilliseconds": null,
     "agentMilliseconds": null,
     "toolCalls": null,
+    "commandMilliseconds": null,
+    "effectiveWorkers": null,
     "unavailableFields": []
   }
 }
@@ -70,3 +72,23 @@ usage. Keep elapsed wall time separate from aggregate runner time, concurrent
 agent time, tool calls, inferences, and tokens. Overlapping spans may make
 aggregate consumption exceed elapsed time and must never be summed as delivery
 lead time.
+
+## Closure validation
+
+Before milestone closure, validate every event for the current `runId`:
+
+- stable event IDs are unique and every required envelope field is present;
+- every started span has exactly one terminal finish with matching identity;
+- run, lane, command/local-gate, CI, review, wait/watcher, remediation, merge,
+  and decision transitions that occurred are represented;
+- command spans record elapsed milliseconds and effective worker capacity when
+  exposed by the command; CI spans name workflow/run/job IDs and runner time
+  when the forge exposes them;
+- usage and resource values exposed by the host are recorded, while every null
+  value is named in the matching `unavailableFields` array; and
+- superseded local or CI work ends as `cancelled` or has an explicit blocker
+  explaining why safe cancellation was unavailable.
+
+Missing transitions, unclosed spans, duplicate IDs, and silent nulls are invalid
+ledger evidence and block milestone closure. Zero is a measured value; it is
+never a substitute for unavailable.

@@ -2580,6 +2580,62 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "milestone-rush-enforces-lean-terminal-gates",
+    description:
+      "A rush admits a safe worktree, uses focused remediation, promotes one converged full gate, hands unchanged waits to a watcher, and refuses incomplete telemetry.",
+    prompt:
+      "/milestone-rush 7.0.0. The confirmed milestone is authorized; keep the run lean and measurable.",
+    fixture: {
+      evidence: {
+        projectContracts:
+          "The repository policy declares a 220-character compiler path budget and a focused-test command. The first candidate worktree is 241 characters; a short project-owned worktree is available.",
+        orchestrationPolicy:
+          "ORCHESTRATION.md is valid, requires lane-admission preflights, permits at most three unchanged model polls, and exposes a non-LLM watcher.",
+        remediation:
+          "A focused test reproduces and verifies the implementation fix. Bounded review then converges without another source edit. The complete local gate has not run yet.",
+        deliverySurface:
+          "Required PR CI and the active review tool are terminal on the current base and head. The change requires heavyweight full CI. No earlier full run exists for this converged head.",
+        supersededWork:
+          "One earlier diagnostic job targets an obsolete head and can be cancelled safely.",
+        telemetry:
+          "The host exposes command elapsed time, effective workers, tool calls, inference/token/cache/compaction usage, and CI run/job timing. A draft ledger omitted effectiveWorkers and left outputTokens null without listing it as unavailable.",
+        completion:
+          "After correcting the ledger, one final complete local gate and one full CI pass. The watcher reports terminal state; integrated default passes and every milestone item is delivered.",
+      },
+      actionResponses: {
+        "forge.closeMilestone": "Milestone 7.0.0 closed after ledger validation.",
+      },
+    },
+    expected: {
+      requiredSkills: ["milestone-rush"],
+      requiredActions: [
+        "delegate",
+        "validation.run",
+        "monitor.wait",
+        "telemetry.append",
+        "forge.closeMilestone",
+        "report",
+      ],
+      maxActionCounts: {
+        "validation.run": 2,
+      },
+      forbiddenActions: ["user.ask"],
+      outputPatterns: [
+        "path.*budget|budget.*path|preflight",
+        "relocat|short.*worktree|reject.*worktree",
+        "focused",
+        "review.*converg|converg.*review",
+        "one.*complete|complete.*once|single.*full",
+        "terminal.*full CI|full CI.*terminal|promotion",
+        "superseded|cancel",
+        "non-LLM watcher|watcher",
+        "effective.*worker|worker.*capacity",
+        "unavailableFields|unavailable fields|silent null",
+        "ledger.*valid|valid.*ledger",
+      ],
+    },
+  },
+  {
     id: "project-structure-agent-instructions-drift",
     description:
       "Project structure repair restores AGENTS.md as canonical without maintaining a copied CLAUDE.md.",
