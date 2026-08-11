@@ -22,6 +22,19 @@ win.
   `replace`, or `escalate` intervention after a durable checkpoint. Never
   silently downgrade capability or stop solely because a threshold was crossed.
 
+## Lane-admission preflights
+
+Before a worktree is adopted or created, execute any preflight the repository
+declares for path budgets, filesystem placement, toolchain availability,
+resource ceilings, credentials, or other environmental constraints. A generic
+skill consumes named constraints or commands from repository policy; it never
+hardcodes one language, compiler, project layout, or host path.
+
+Preflights are admission checks, not diagnostic hints. An unsafe candidate is
+relocated or rejected before implementation and before a complete local gate.
+Record the candidate, observed value, declared limit, and disposition in the
+event ledger.
+
 ## Stable decisions and worker packets
 
 Maintain a canonical `Decisions` section in ignored `.agent/HANDOFF.md`. Each
@@ -68,4 +81,7 @@ Use a host non-LLM watcher or equivalent external-state wait primitive for CI,
 review, forge, and retry state. Wake the coordinator only on changed, terminal,
 or exceptional state. Use an exact known retry timestamp rather than repeated
 polling. If the repository policy requires unsupported monitoring, stop before
-spawning; otherwise disclose any coordinator-driven fallback and its cost.
+spawning; otherwise disclose any coordinator-driven fallback and its cost. A
+coordinator may observe unchanged state through at most three model inferences;
+before a fourth it must hand the wait to a non-LLM watcher or report the host
+capability as unsupported.

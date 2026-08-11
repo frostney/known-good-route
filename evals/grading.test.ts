@@ -1213,6 +1213,55 @@ describe("eval grading", () => {
     ).toBeTrue();
   });
 
+  test("enforces lean terminal gates and complete runtime telemetry", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "milestone-rush-enforces-lean-terminal-gates",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const actions: RunLedger["actions"] = [
+      { action: "delegate", details: "Use the relocated short worktree" },
+      {
+        action: "validation.run",
+        details: "Run focused remediation then one converged complete gate",
+      },
+      {
+        action: "monitor.wait",
+        details: "Use the non-LLM watcher for terminal full CI",
+      },
+      {
+        action: "telemetry.append",
+        details: "Correct silent nulls and record effective workers",
+      },
+      {
+        action: "forge.closeMilestone",
+        details: "Close after ledger validation",
+      },
+      { action: "report", details: "Report the lean completed run" },
+    ];
+    const output =
+      "The path-budget preflight rejected the long worktree and relocated the lane to a short worktree. Focused remediation passed before review convergence, then one complete local gate and terminal full CI promotion ran. Superseded diagnostics were cancelled. A non-LLM watcher observed completion. Ledger validation recorded effective worker capacity and corrected the silent null through unavailableFields before closure.";
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({ loadedSkills: ["milestone-rush"], actions }),
+        output,
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({ loadedSkills: ["milestone-rush"], actions }),
+        "The milestone closed after tests and CI passed.",
+      ).passed,
+    ).toBeFalse();
+  });
+
   test("keeps status reporting read-only and incomplete review evidence pending", () => {
     const mixedCase = evalCases.find(
       ({ id }) => id === "status-report-reconciles-prs-and-worktrees",

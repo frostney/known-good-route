@@ -48,27 +48,32 @@ not release publication.
    branch, worktree, and relevant local working-tree state. Read current project
    direction, completion contracts, and the validated orchestration policy or
    reported provider-neutral fallback.
-2. Classify every milestone item and related local change as delivered, open PR,
+2. Run every repository-declared lane-admission preflight before adopting or
+   creating a worktree. This includes path/toolchain/resource constraints when
+   the repository declares them. Relocate or reject an unsafe worktree before
+   implementation or a complete local gate; never learn a known environmental
+   limit by burning the full suite.
+3. Classify every milestone item and related local change as delivered, open PR,
    active implementation, ready, blocked, or invalid. Reuse valid work instead
    of restarting it.
-3. Verify closed items against source and merge evidence. When required work was
+4. Verify closed items against source and merge evidence. When required work was
    closed without delivery, comment with the evidence, create a linked
    replacement through `/create-issue automatic`, add it to the milestone, and
    implement the replacement. Stop when the closure records a material rejected
    or deferred product decision.
-4. Inspect the current delivery surface and include the provider-neutral CI
+5. Inspect the current delivery surface and include the provider-neutral CI
    integration recommendation required by the orchestration reference. This is
    a plan artifact, not authority to change workflows, labels, rulesets,
    controllers, credentials, or provider configuration. Make a required missing
    capability an explicit repository-owned prerequisite; otherwise document the
    safe current-CI fallback and its cost.
-5. Build a dependency and likely-conflict graph. A native stack may represent a
+6. Build a dependency and likely-conflict graph. A native stack may represent a
    true dependency chain or a confirmed logical decomposition of one large
    issue, provided each layer is independently reviewable. Prioritize the
    longest pole and early risk reduction, then dispatch every independent ready
    node to isolated subagents and worktrees up to current platform capacity. Do
    not impose a separate issue, wave, review-round, or retry limit.
-6. Maintain a resumable checkpoint in the ignored `.agent/HANDOFF.md` after each
+7. Maintain a resumable checkpoint in the ignored `.agent/HANDOFF.md` after each
    issue or PR transition. Record the milestone identity, graph, active
    worktrees, issue-to-PR state, blockers, observed validation, and the stable
    decision registry. Never stage or commit the checkpoint; reconcile it with
@@ -95,18 +100,29 @@ not release publication.
    automatic-merge`. For a native stack, collect each layer's `review-pr`
    exact-head `ready` result, then let the stack owner recheck and atomically
    merge the selected ready prefix through `git-workflow`.
-5. Integrate continuously rather than waiting for a batch. After every squash
+5. Keep remediation validation focused on the changed behavior. Run the
+   repository's complete local gate once only after implementation and bounded
+   review fixes converge on the intended head, unless a new material source
+   change invalidates it. Do not repeatedly use a complete suite as the
+   diagnostic loop.
+6. Treat heavyweight full CI as terminal promotion evidence, never as a remote
+   debugger. Dispatch it only after the current base, required PR checks, and
+   every active review tool have converged on the candidate head. Cancel
+   superseded runs when the forge supports safe cancellation; record otherwise
+   unavoidable waste. A later head, base, topology, or review change invalidates
+   the proof.
+7. Integrate continuously rather than waiting for a batch. After every squash
    merge, refresh milestone and default-branch state; merge the updated remote
    default into every affected remaining branch and rerun its applicable gates.
    Review and CI evidence is valid only for the current PR head.
-6. Add newly discovered work to the milestone only when evidence shows it is
+8. Add newly discovered work to the milestone only when evidence shows it is
    required by an existing acceptance criterion, dependency, regression, or
    Definition of Done. Keep tightly coupled fixes in the current PR; create an
    issue for independently trackable required work. Record desirable follow-ups
    without expanding the milestone.
-7. Re-pull scope after every merge. Absorb externally added issues only when
+9. Re-pull scope after every merge. Absorb externally added issues only when
    they clearly fit the confirmed plan; stop for material scope expansion.
-8. When a milestone merge causes an integrated regression, create and implement
+10. When a milestone merge causes an integrated regression, create and implement
    the required repair. Treat unrelated or materially ambiguous failures as
    blockers.
 
@@ -123,7 +139,9 @@ integration transition to `.agent/milestone-rush-events.jsonl`. Use host
 non-LLM external-state watchers and exact timestamp wake-ups; notify the
 coordinator only on changed, terminal, or exceptional state. Unsupported
 monitoring required by repository policy blocks spawning. Record any fallback
-that required coordinator-driven waiting.
+that required coordinator-driven waiting. After at most three model inferences
+without external state change, move the wait to a non-LLM watcher or stop with
+an explicit unsupported-capability blocker.
 
 ## Blockers and completion
 
@@ -137,6 +155,10 @@ that required coordinator-driven waiting.
   delivered and closed with evidence; no milestone PR, required check, review
   thread, or active review-tool pass remains pending; and the synced default
   branch passes the applicable full project gate. A failure resumes execution.
+- Validate the current run's event ledger against the event-ledger reference
+  before closure. Missing required event classes, unclosed spans, silent null
+  usage/resource fields, or absent command/CI identities block closure until
+  corrected or explicitly marked unavailable under the schema.
 - Close the milestone only after that integrated gate passes. Remove only clean,
   merged worktrees created by this run; preserve and report every other
   worktree.
