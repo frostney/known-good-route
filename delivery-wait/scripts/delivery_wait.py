@@ -33,8 +33,8 @@ query($owner:String!,$name:String!,$number:Int!){
     pullRequest(number:$number){
       headRefOid merged mergedAt mergeCommit{oid}
       commits(last:1){nodes{commit{statusCheckRollup{contexts(first:100){nodes{
-        __typename ... on CheckRun{name status conclusion detailsUrl}
-        ... on StatusContext{context state targetUrl}
+        __typename ... on CheckRun{name status conclusion detailsUrl startedAt completedAt}
+        ... on StatusContext{context state targetUrl createdAt}
       } pageInfo{hasNextPage}}}}}}
     }
   }
@@ -77,9 +77,9 @@ def pr_snapshot(gh: Gh, repo: str, number: int) -> dict[str, Any]:
         checks = []
         for node in nodes or []:
             if node.get("__typename") == "CheckRun":
-                checks.append({"name": node.get("name"), "status": node.get("status"), "conclusion": node.get("conclusion")})
+                checks.append({"name": node.get("name"), "status": node.get("status"), "conclusion": node.get("conclusion"), "observedAt": node.get("startedAt") or node.get("completedAt")})
             else:
-                checks.append({"name": node.get("context"), "status": "COMPLETED", "conclusion": node.get("state")})
+                checks.append({"name": node.get("context"), "status": "COMPLETED", "conclusion": node.get("state"), "observedAt": node.get("createdAt")})
         return {"head": pull.get("headRefOid"), "merged": bool(pull.get("merged")), "mergedAt": pull.get("mergedAt"), "mergeCommit": (pull.get("mergeCommit") or {}).get("oid"), "checks": sorted(checks, key=lambda item: str(item["name"]))}
     except RateLimited:
         gh.metrics.rate_limit_fallbacks += 1
@@ -93,10 +93,10 @@ def pr_snapshot(gh: Gh, repo: str, number: int) -> dict[str, Any]:
         runs = [run for page in run_pages for run in page.get("check_runs", [])]
         statuses = [status for page in status_pages for status in page]
         checks = [
-            {"name": run.get("name"), "status": str(run.get("status", "")).upper(), "conclusion": str(run.get("conclusion") or "").upper()}
+            {"name": run.get("name"), "status": str(run.get("status", "")).upper(), "conclusion": str(run.get("conclusion") or "").upper(), "observedAt": run.get("started_at") or run.get("completed_at")}
             for run in runs
         ] + [
-            {"name": item.get("context"), "status": "COMPLETED", "conclusion": str(item.get("state", "")).upper()}
+            {"name": item.get("context"), "status": "COMPLETED", "conclusion": str(item.get("state", "")).upper(), "observedAt": item.get("created_at")}
             for item in statuses
         ]
         return {"head": pull["head"]["sha"], "merged": bool(pull.get("merged")), "mergedAt": pull.get("merged_at"), "mergeCommit": pull.get("merge_commit_sha"), "checks": sorted(checks, key=lambda item: str(item["name"]))}
@@ -112,7 +112,14 @@ def classify_pr(
         return "invalidated", f"expected head {expected_head}, observed {observation.get('head')}"
     if kind == "pr-merged":
         return ("satisfied", "pull request merged") if observation.get("merged") else ("waiting", "pull request remains open")
-    observed = {str(check.get("name")): check for check in observation.get("checks", [])}
+    observed: dict[str, dict[str, Any]] = {}
+    for check in observation.get("checks", []):
+        name = str(check.get("name"))
+        current = observed.get(name)
+        if current is None or str(check.get("observedAt") or "") >= str(
+            current.get("observedAt") or ""
+        ):
+            observed[name] = check
     missing = expected_checks - set(observed)
     if missing:
         return "waiting", f"expected checks have not appeared: {', '.join(sorted(missing))}"

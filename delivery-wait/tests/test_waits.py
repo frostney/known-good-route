@@ -68,13 +68,20 @@ sys.exit(3)
 '''
 
 
-def check(name: str, status: str, conclusion: str | None) -> dict:
+def check(
+    name: str,
+    status: str,
+    conclusion: str | None,
+    started_at: str = "2026-08-12T08:00:00Z",
+) -> dict:
     return {
         "__typename": "CheckRun",
         "name": name,
         "status": status,
         "conclusion": conclusion,
         "detailsUrl": "https://example.invalid/check",
+        "startedAt": started_at,
+        "completedAt": started_at if status == "COMPLETED" else None,
         "checkSuite": {"app": {"slug": "macroscopeapp"}},
     }
 
@@ -167,6 +174,22 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertEqual(output["state"], "satisfied")
         self.assertEqual(output["metrics"]["observations"], 1)
+
+    def test_latest_duplicate_check_context_controls_the_gate(self) -> None:
+        self.write_scenario(
+            pull=pull(
+                "head-1",
+                [
+                    check("CI", "COMPLETED", "SUCCESS", "2026-08-12T08:00:00Z"),
+                    check("CI", "IN_PROGRESS", None, "2026-08-12T08:01:00Z"),
+                ],
+            )
+        )
+        _, output = self.run_json(
+            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
+            "--pr", "7", "--head", "head-1", "--check", "CI",
+        )
+        self.assertEqual(output["state"], "waiting")
 
     def test_wait_rejects_a_deadline_without_timezone(self) -> None:
         self.write_scenario()
