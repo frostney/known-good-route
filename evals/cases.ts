@@ -539,6 +539,45 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "review-pr-terminal-check-does-not-hide-finding",
+    description:
+      "A terminal neutral automation check cannot substitute for inspecting its exact-head finding surfaces.",
+    prompt:
+      "/review-pr 118 as a read-only readiness check. Do not mutate repository or pull-request state.",
+    fixture: {
+      evidence: {
+        reviewInspection:
+          "The bundled inspect result is bound to head 118cafe. Required CI passed and the active provider-neutral review automation has a terminal neutral check. findingSurfaceCount is 1: its exact-head COMMENTED review body says `Critical: the transition marks delivery complete before the durable state write succeeds.` The inline-thread counts are zero.",
+      },
+    },
+    expected: {
+      requiredSkills: ["review-pr"],
+      requiredInspections: ["reviewInspection"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.commentPr",
+        "forge.markPrReady",
+        "forge.mergePr",
+        "forge.replyInline",
+        "forge.resolveThread",
+        "git.commit",
+        "git.push",
+        "validation.run",
+      ],
+      outputPatterns: [
+        "118cafe|exact head",
+        "critical|durable state write",
+        "not ready|blocked|judgment|required|actionable",
+      ],
+      forbiddenOutputPatterns: [
+        "no issues",
+        "review (?:has )?passed",
+        "ready to merge",
+        "fully green",
+      ],
+    },
+  },
+  {
     id: "code-review-fix-all",
     description:
       "A bounded fix-all review probes behavior, simplifies the change, and stays local.",

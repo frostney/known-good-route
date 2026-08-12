@@ -49,6 +49,7 @@ export interface EvalExpectations {
   requiredAnySkills?: string[];
   forbiddenSkills?: string[];
   requiredRegisteredSkills?: string[];
+  requiredInspections?: string[];
   requiredActions?: ActionName[];
   requiredAnyActions?: ActionName[];
   forbiddenActions?: ActionName[];

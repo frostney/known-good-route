@@ -63,6 +63,14 @@ export function gradeRun(
     });
   }
 
+  if (expected.requiredInspections) {
+    checks.push({
+      name: "required inspections",
+      passed: includesEvery(ledger.inspections, expected.requiredInspections),
+      detail: `required=${expected.requiredInspections.join(",")} actual=${ledger.inspections.join(",")}`,
+    });
+  }
+
   if (expected.requiredActions) {
     const missing = expected.requiredActions.filter(
       (action) => actionCount(ledger, action) === 0,
@@ -173,6 +181,14 @@ export function validateCases(
       if (!evalCase.fixture.registeredSkills?.[registeredSkill]) {
         throw new Error(
           `${evalCase.id} requires unregistered skill ${registeredSkill}`,
+        );
+      }
+    }
+
+    for (const inspection of evalCase.expected.requiredInspections ?? []) {
+      if (evalCase.fixture.evidence[inspection] === undefined) {
+        throw new Error(
+          `${evalCase.id} requires unavailable inspection ${inspection}`,
         );
       }
     }

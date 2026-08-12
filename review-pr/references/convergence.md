@@ -34,6 +34,14 @@ through the helper after each mutation and verify the final head, unresolved
 count, unanswered automation-thread count, findings, checks, and automation
 states.
 
+The helper flattens unhandled inline threads, non-empty exact-head automation
+reviews, and non-empty automation top-level comments into `findingSurfaces`.
+When automation is terminal and that collection is non-empty, the helper returns
+`judgment-required`, even when its check conclusion is success or neutral. Read
+and classify the bodies; do not translate check completion into "no findings."
+Review bodies are exact-head bound, while thread state and pull-request comments
+carry their explicit weaker bindings for the workflow to validate.
+
 The helper is a transition source for this workflow loop, not another
 orchestrator. Its foreground wait stays silent while unchanged and returns only
 when review converges, evidence changes materially, the expected head is
@@ -66,6 +74,7 @@ Return:
 - `state`: `ready`, `pending`, `blocked`, or `merged`;
 - required-CI terminal state;
 - each active automation and its exact-head terminal state;
+- raw finding-surface count and the disposition of every inspected surface;
 - actionable current-head finding count;
 - unresolved review-thread count;
 - unanswered inline-automation-thread count;
