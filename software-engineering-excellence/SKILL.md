@@ -3,8 +3,9 @@ name: software-engineering-excellence
 description: >-
   Applies the user's ambient engineering bar: current evidence, complete
   in-scope solutions, reuse, real validation, right-sized value, and
-  maintainability. Use for planning, implementing, debugging, reviewing,
-  refactoring, architecture, or substantial technical investigation.
+  maintainability. Use for planning, orchestrating, implementing, debugging,
+  reviewing, refactoring, architecture, release delivery, or substantial
+  technical investigation.
 license: Unlicense OR MIT
 ---
 
@@ -48,6 +49,33 @@ For genuinely multi-layer work, establish a thin runnable path and deepen it in
 increments. Validate material performance changes against a relevant baseline.
 Follow the surrounding code's comment density and idiom; explain non-obvious
 decisions.
+
+## Context boundaries
+
+When one conversation coordinates a chain of two or more substantial
+deliverables, keep that conversation thin. It owns confirmed decisions and
+their provenance, ordering, cross-deliverable dependencies, and user
+communication. Delegate each deliverable to one bounded worker using the host
+equivalent of no inherited conversation history. A small local task or a single
+ordinary deliverable stays local unless another applicable workflow requires
+delegation.
+
+Give a worker only the applicable selected decisions and contracts, repository
+and issue or pull-request identity, exact starting state, owned scope,
+dependencies, acceptance criteria, and gates. Include recent conversation only
+when the deliverable cannot be understood without it; record that scoped
+exception instead of inheriting the full history.
+
+Require one terminal summary per worker: outcome, changed repository or forge
+state, exact validation evidence, blockers or contradictory evidence, and facts
+needed by a dependent deliverable. Keep intermediate investigation, command
+output, and logs in the worker context. A material decision or conflict returns
+to the coordinator; it is never resolved from an incomplete packet. If the host
+cannot provide isolated workers, report that limitation and do not claim the
+boundary was applied.
+
+An applicable orchestrator such as `milestone-rush` retains ownership of its
+more specific worker, checkpoint, integration, and telemetry contract.
 
 ## Evidence and communication
 

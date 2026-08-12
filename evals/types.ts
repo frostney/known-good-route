@@ -52,6 +52,7 @@ export interface EvalExpectations {
   requiredActions?: ActionName[];
   requiredAnyActions?: ActionName[];
   forbiddenActions?: ActionName[];
+  minActionCounts?: Partial<Record<ActionName, number>>;
   maxActionCounts?: Partial<Record<ActionName, number>>;
   outputPatterns?: string[];
   forbiddenOutputPatterns?: string[];

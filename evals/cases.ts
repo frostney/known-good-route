@@ -1809,6 +1809,55 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "chained-deliverables-isolate-worker-context",
+    description:
+      "A conversation coordinating consecutive substantial deliverables keeps decisions while isolated workers return terminal summaries.",
+    prompt:
+      "Execute the two selected retrospective actions now: prepare and publish release 1.4.0, then diagnose and repair the delivery controller. Keep this conversation as the coordinator.",
+    fixture: {
+      evidence: {
+        decisions:
+          "The retrospective already selected both independent workstreams, their order, scope, non-goals, and success criteria. No material decision remains open.",
+        release:
+          "A bounded release worker can use the repository release workflow from the fetched default branch and return the issue or PR, exact head, published tag and assets, and observed gates.",
+        deliveryRepair:
+          "A separate bounded repair worker can start after the release terminal summary, use the repository diagnosis and implementation workflows, and return the issue or PR, exact head, root cause, changed state, and observed gates.",
+        hostCapability:
+          "The host supports one context-isolated worker per deliverable with no inherited conversation history. The coordinator can pass compact packets and receive terminal summaries.",
+        contextRisk:
+          "Investigation notes, command output, test logs, CI logs, and remediation detail are not needed by the coordinator or the sibling worker.",
+      },
+      actionResponses: {
+        delegate:
+          "The bounded worker completed and returned its terminal summary without raw intermediate output.",
+      },
+    },
+    expected: {
+      requiredSkills: ["software-engineering-excellence"],
+      requiredActions: ["delegate", "report"],
+      minActionCounts: { delegate: 2 },
+      forbiddenActions: [
+        "file.edit",
+        "forge.createRelease",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "one.*worker.*deliverable|worker.*per deliverable|two.*workers",
+        "context.isolat|no inherited",
+        "decision|provenance",
+        "release",
+        "delivery.*repair|repair.*delivery",
+        "terminal summar|outcome.*validation|validation.*outcome",
+      ],
+      forbiddenOutputPatterns: [
+        "BEGIN RAW WORKER LOG",
+        "FULL CONVERSATION ATTACHED",
+      ],
+    },
+  },
+  {
     id: "small-change-no-verifier",
     description: "A small local change does not spawn a verifier or repeat gates.",
     prompt:

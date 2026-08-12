@@ -96,6 +96,17 @@ export function gradeRun(
     });
   }
 
+  if (expected.minActionCounts) {
+    for (const [action, minimum] of Object.entries(expected.minActionCounts)) {
+      const count = actionCount(ledger, action as ActionName);
+      checks.push({
+        name: `minimum ${action}`,
+        passed: count >= minimum,
+        detail: `minimum=${minimum} actual=${count}`,
+      });
+    }
+  }
+
   if (expected.maxActionCounts) {
     for (const [action, maximum] of Object.entries(expected.maxActionCounts)) {
       const count = actionCount(ledger, action as ActionName);
