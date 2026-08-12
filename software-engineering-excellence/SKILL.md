@@ -31,13 +31,11 @@ solution rather than merely select details within it.
 4. **Validate the real bar.** Observe every claimed pass, number, behavior, and
    action in the current run. Reproduce defects when possible, add meaningful
    regression coverage, and run the repository's relevant gate. Never weaken a
-   gate to obtain green output. When a gate fails, diagnose the failure before
-   rerunning it; use the registered `diagnosing-bugs` skill when available, and
-   rerun only as a deliberate reproduction within that diagnosis. Report the
-   diagnosis and evidence before changing code. If the failure blocks the
-   requested result or belongs to its authorized scope, fix it and verify the
-   fix; otherwise report it to the user without absorbing it into the current
-   change. A passing diagnostic rerun establishes intermittency, not irrelevance.
+   gate to obtain green output. When a gate fails, diagnose the failure, using
+   the registered `diagnosing-bugs` skill when available. Report the diagnosis
+   and evidence before changing code. If the failure blocks the requested result
+   or belongs to its authorized scope, fix it and verify the fix; otherwise
+   report it to the user without absorbing it into the current change.
 5. **Make every surface earn its cost.** Add only code, tests, fallbacks,
    abstractions, or tools with a real caller, requirement, or failure mode.
    Remove unused surfaces.
