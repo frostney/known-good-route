@@ -24,18 +24,20 @@ an inline reply, return `blocked` with that thread identity. Any new head
 invalidates the complete gate snapshot; never patch old and new evidence
 together.
 
-## Inline delegation contract
+## Deterministic review mechanism
 
-When `resolve-reviews` is registered, give it the repository, PR identity, and
-head. It owns inline mechanics: fetch and classify every current inline finding,
-publish scoped fixes through the repository workflow, reply in the originating
-thread, resolve completed threads, and detect follow-ups. Require it to return
-thread identities, classifications, actions, observed head, and limitations.
+The bundled review helper owns GitHub mechanics: inspect current findings and
+thread state, wait while unchanged, publish an explicitly supplied inline reply,
+and resolve an explicitly selected thread. `review-pr` owns every judgment,
+source edit, validation choice, and convergence decision. Re-read the forge
+through the helper after each mutation and verify the final head, unresolved
+count, unanswered automation-thread count, findings, checks, and automation
+states.
 
-`review-pr` retains convergence ownership. Re-read the forge directly and
-verify the final head, unresolved count, unanswered automation-thread count,
-findings, checks, and automation states. When the registered skill is absent,
-perform the same mechanics and preserve the same result contract.
+The helper is a transition source for this workflow loop, not another
+orchestrator. Its foreground wait stays silent while unchanged and returns only
+when review converges, evidence changes materially, the expected head is
+invalidated, the deadline arrives, or an operational failure needs attention.
 
 ## Provider-neutral retry time
 

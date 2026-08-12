@@ -7,9 +7,10 @@ description: >-
   /milestone-rush for an exact milestone or selects it after /roadmap-review.
 license: Unlicense OR MIT
 compatibility: >-
-  Requires authenticated forge access, git worktrees, and a host that supports
-  subagents; implementation, review, and validation use the project's installed
-  workflow skills and declared gates.
+  Requires authenticated forge access, git worktrees, the internal
+  `delivery-wait` skill, and a host that supports subagents and passive
+  foreground-process waiting; implementation, review, and validation use the
+  project's installed workflow skills and declared gates.
 ---
 
 # Milestone rush
@@ -73,7 +74,8 @@ not release publication.
    longest pole and early risk reduction, then dispatch every independent ready
    node to isolated subagents and worktrees up to current platform capacity. Do
    not impose a separate issue, wave, review-round, or retry limit.
-7. Maintain a resumable checkpoint in the ignored `.agent/HANDOFF.md` after each
+7. Maintain the outer workflow's resumable state in the ignored
+   `.agent/HANDOFF.md` after each
    issue or PR transition. Record the milestone identity, graph, active
    worktrees, issue-to-PR state, blockers, observed validation, and the stable
    decision registry. Never stage or commit the checkpoint; reconcile it with
@@ -135,13 +137,12 @@ implementation worker completes those lanes directly and records the fallback
 for the milestone report.
 
 Append every material lifecycle, decision, wait, gate, usage, retry, rework, and
-integration transition to `.agent/milestone-rush-events.jsonl`. Use host
-non-LLM external-state watchers and exact timestamp wake-ups; notify the
-coordinator only on changed, terminal, or exceptional state. Unsupported
-monitoring required by repository policy blocks spawning. Record any fallback
-that required coordinator-driven waiting. After at most three model inferences
-without external state change, move the wait to a non-LLM watcher or stop with
-an explicit unsupported-capability blocker.
+integration transition to `.agent/milestone-rush-events.jsonl`. Inner delivery
+and review loops launch the bundled deterministic foreground waits; the outer
+milestone loop passively awaits worker or command completion and reconciles its
+checkpoint after each returned transition. Notify the coordinator only on
+changed, terminal, or exceptional state. Unsupported passive waiting required
+by repository policy blocks spawning; never substitute model heartbeats.
 
 ## Blockers and completion
 
