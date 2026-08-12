@@ -81,7 +81,10 @@ flowchart TB
   Convex is in scope. It is not another step in every delivery cycle.
 - **Ambient** guidance governs every stage:
   `software-engineering-excellence`, plus `bleeding-edge` when the project has
-  adopted it.
+  adopted it. When one conversation coordinates two or more substantial
+  deliverables outside an active orchestrator, it retains decisions and
+  provenance while one context-isolated bounded worker owns each deliverable
+  and returns a terminal summary.
 - Every outer-loop transition is human-controlled. `/roadmap-review` proposes
   the milestone, `/milestone-rush` offers the retrospective after integrated
   completion, and `/create-release` is an optional manual step after
@@ -319,6 +322,7 @@ supported frontier models:
 | Stable dependency and competing tool choice | Selects the live-verified newest stable version but preserves an authoritative recorded tool decision |
 | Retrospective with no durable lesson | Completes all three lenses and reports no action instead of inventing documentation or tickets |
 | Long autonomous run | Grounds every progress/completion claim in current evidence and does not end on a promise |
+| Chained substantial deliverables | Keeps decisions and provenance in a thin coordinator, delegates one context-isolated bounded worker per deliverable, and consumes terminal summaries instead of raw work traces |
 | Small local change | Runs the real project gate without generic re-checks or verifier subagents |
 | Local convention differs from a generic default | Follows the surrounding code and project gate instead of imposing a blanket style rule |
 | Written issue, PR, roadmap, or retrospective | Leads with the outcome and omits filler, boilerplate, and repeated summaries |

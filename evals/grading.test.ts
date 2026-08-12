@@ -853,6 +853,43 @@ describe("eval grading", () => {
     expect(result.passed).toBeTrue();
   });
 
+  test("requires isolated delegation for chained substantial deliverables", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "chained-deliverables-isolate-worker-context",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const isolated = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["software-engineering-excellence"],
+        actions: [
+          { action: "delegate", details: "Run the bounded release worker" },
+          { action: "delegate", details: "Run the bounded repair worker" },
+          { action: "report", details: "Consolidate terminal summaries" },
+        ],
+      }),
+      "One context-isolated worker per deliverable retained decisions and provenance in the coordinator. The release and delivery repair terminal summaries each include outcome and validation.",
+    );
+    expect(isolated.passed).toBeTrue();
+
+    const replayed = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["software-engineering-excellence"],
+        actions: [
+          { action: "file.edit", details: "Repair from the coordinator" },
+          { action: "report", details: "Replay worker output" },
+        ],
+      }),
+      "FULL CONVERSATION ATTACHED. BEGIN RAW WORKER LOG. The coordinator performed the release and delivery repair directly.",
+    );
+    expect(replayed.passed).toBeFalse();
+  });
+
   test("separates critical-path timing from profiles and resource totals", () => {
     const critical = evalCases.find(
       ({ id }) => id === "retrospective-milestone-critical-path-ledger",
