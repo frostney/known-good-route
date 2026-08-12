@@ -1002,6 +1002,37 @@ describe("eval grading", () => {
     expect(premature.passed).toBeFalse();
   });
 
+  test("requires the finding snapshot before accepting a review conclusion", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "review-pr-terminal-check-does-not-hide-finding",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const output =
+      "Exact head 118cafe is not ready: the inspected review body reports a critical durable state write ordering finding that still requires judgment.";
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: ["review-pr"],
+          inspections: ["reviewInspection"],
+        }),
+        output,
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({ loadedSkills: ["review-pr"] }),
+        output,
+      ).passed,
+    ).toBeFalse();
+  });
+
   test("keeps unanswered, stale, and stacked PR states outside merge", () => {
     const unanswered = evalCases.find(
       ({ id }) => id === "review-pr-unanswered-inline-automation-thread",

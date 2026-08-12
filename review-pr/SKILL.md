@@ -31,6 +31,10 @@ same exact-head convergence contract passes.
 - Discover active review tools from current repository configuration, branch
   protection, checks, and PR activity. Do not hardcode one provider or require
   an integration that is disabled, historical, or merely installed.
+- Treat a terminal automation check as completion evidence only. Success and
+  neutral conclusions never establish that the automation reported no findings;
+  consume and classify the helper's exact-head `findingSurfaces` before any
+  readiness or merge conclusion.
 - Treat review, approval, thread-readiness, finding, and CI evidence as valid
   only for the exact current PR head. A new commit or baseline update resets
   every affected gate.
@@ -71,9 +75,12 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    must perform any stack-wide synchronization before asking this skill to
    re-evaluate the affected layer.
 3. Run the review helper's `inspect` operation for the exact PR head. It returns
-   active automation evidence, inline and top-level findings, replies, and
-   authoritative thread state. Validate and classify findings in this workflow;
-   the helper supplies facts and exact mutations, never judgment.
+   active automation evidence, one explicit `findingSurfaces` collection across
+   inline threads, exact-head reviews, and automation top-level comments,
+   replies, and authoritative thread state. Inspect every returned body and
+   classify each surface in this workflow. `judgment-required` means automation
+   completed but its content still needs that classification; it is never a
+   pass. The helper supplies facts and exact mutations, never judgment.
 4. Evaluate every current finding. Fix validated in-scope findings; reply inline
    to every automation thread through the helper's idempotent `reply` operation;
    resolve completed threads through its explicit `resolve` operation. Dismiss invalid,
