@@ -31,7 +31,11 @@ solution rather than merely select details within it.
 4. **Validate the real bar.** Observe every claimed pass, number, behavior, and
    action in the current run. Reproduce defects when possible, add meaningful
    regression coverage, and run the repository's relevant gate. Never weaken a
-   gate to obtain green output.
+   gate to obtain green output. Treat a failed gate as a defect report until it
+   is assessed: a passing rerun establishes intermittency, not irrelevance. Use
+   the registered `diagnosing-bugs` skill when available, then fix the failure
+   in the current change only when it blocks the requested result or belongs to
+   its authorized scope; otherwise report it separately with the evidence.
 5. **Make every surface earn its cost.** Add only code, tests, fallbacks,
    abstractions, or tools with a real caller, requirement, or failure mode.
    Remove unused surfaces.
