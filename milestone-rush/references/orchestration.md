@@ -77,11 +77,10 @@ safe CI contract and report the limitation and extra cost.
 
 ## Event-driven waits
 
-Use a host non-LLM watcher or equivalent external-state wait primitive for CI,
-review, forge, and retry state. Wake the coordinator only on changed, terminal,
-or exceptional state. Use an exact known retry timestamp rather than repeated
-polling. If the repository policy requires unsupported monitoring, stop before
-spawning; otherwise disclose any coordinator-driven fallback and its cost. A
-coordinator may observe unchanged state through at most three model inferences;
-before a fourth it must hand the wait to a non-LLM watcher or report the host
-capability as unsupported.
+Use the installed deterministic review and delivery transition commands for
+GitHub state and the host's passive wait primitive for worker completion. These
+are transition sources for the inner and outer workflow loops, not separate
+orchestrators. Wake the coordinator only on changed, terminal, or exceptional
+state; use an exact known timestamp for time-based wakes. If the host cannot
+passively await the foreground command, report the capability as unsupported.
+Never substitute repeated model inferences for waiting.

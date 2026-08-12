@@ -499,20 +499,15 @@ export const evalCases: EvalCase[] = [
         repositoryStatus:
           "The focused PR branch is current with origin/main and has a clean working tree.",
         pullRequest:
-          "PR #1026 at head 7af1026 has two unresolved inline automation threads and no unrelated local work.",
+          "PR #1026 at head 7af1026 has two unresolved inline automation threads and no unrelated local work. The bundled review inspect command returns both current thread identities and bodies from the repository policy; after the fixes its foreground wait returns only when the unchanged exact head has terminal automation evidence and zero unresolved or unanswered automation threads.",
         affectedCode:
           "Thread A correctly identifies missing regression coverage for the accepted upper boundary. Thread B asks to remove that upper bound, but the current primary specification explicitly requires rejecting larger finite values.",
         projectGate:
           "Run the focused interpreted and bytecode tests, both full suites, documentation checks, formatting, and diff checks after the fix. After thread mechanics, direct forge state at unchanged head 7af1026 reports terminal successful CI and automation verdicts, zero actionable findings, zero unresolved threads, and zero unanswered inline automation threads.",
       },
-      registeredSkills: {
-        "resolve-reviews":
-          "At head 7af1026, keep both discussions in their originating inline threads. Thread A remains current and actionable; Thread B remains current but is invalid against the primary specification. Publish the scoped fix, reply with the disposition in both threads, resolve both, and return thread identities and actions for direct forge revalidation.",
-      },
     },
     expected: {
       requiredSkills: ["review-pr"],
-      requiredRegisteredSkills: ["resolve-reviews"],
       requiredActions: [
         "file.edit",
         "validation.run",
@@ -3003,6 +2998,57 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "delivery-wait-exact-head-ci",
+    description:
+      "A delivery workflow waits deterministically for exact-head checks without model heartbeats.",
+    prompt:
+      "Use the internal delivery wait for PR #81 at expected head abc81 until its checks become terminal.",
+    fixture: {
+      evidence: {
+        deliveryState:
+          "The repository is owner/repo, PR #81 still has exact head abc81, and its required checks are pending. The host can passively await a foreground Python command. The command later returns one JSON result: satisfied, exact head abc81, all observed checks terminal, with duration and API-request telemetry.",
+      },
+    },
+    expected: {
+      requiredSkills: ["delivery-wait"],
+      requiredActions: ["monitor.wait", "report"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.mergePr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      maxActionCounts: { "monitor.wait": 1 },
+      outputPatterns: ["abc81|exact head", "terminal|satisfied", "JSON|telemetry"],
+      forbiddenOutputPatterns: ["heartbeat|still waiting"],
+    },
+  },
+  {
+    id: "delivery-wait-release-assets",
+    description:
+      "Release delivery waits retain tag identity and required asset evidence.",
+    prompt:
+      "Wait for tag 1.4.0 to target def140 and for the declared checksum and archive assets to appear.",
+    fixture: {
+      evidence: {
+        releaseState:
+          "The repository is owner/repo. GraphQL is temporarily rate-limited, so the helper uses authenticated gh REST fallback for equivalent tag-target and release-asset facts. The foreground command returns satisfied only after tag 1.4.0 targets def140 and both lwpt-1.4.0.zip and checksums.txt exist.",
+      },
+    },
+    expected: {
+      requiredSkills: ["delivery-wait"],
+      requiredActions: ["monitor.wait", "report"],
+      forbiddenActions: [
+        "forge.createRelease",
+        "git.pushTag",
+        "user.ask",
+      ],
+      maxActionCounts: { "monitor.wait": 1 },
+      outputPatterns: ["1\.4\.0", "def140", "asset|checksum", "rate|REST|fallback"],
+    },
+  },
+  {
     id: "unrelated-prompt-no-skill",
     description: "An unrelated request does not load a repository skill.",
     prompt: "Translate the phrase 'good morning' into French.",
@@ -3018,6 +3064,7 @@ export const evalCases: EvalCase[] = [
         "create-issue",
         "create-pr",
         "create-release",
+        "delivery-wait",
         "git-workflow",
         "implement-idea",
         "implement-issue",

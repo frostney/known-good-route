@@ -6,8 +6,8 @@ description: >-
   Use when the user runs /create-pr.
 license: Unlicense OR MIT
 compatibility: >-
-  Requires git and the GitHub CLI (gh) authenticated to the target repository,
-  plus network access.
+  Requires git, Python 3.11 or newer, the GitHub CLI (gh) authenticated to the
+  target repository, the internal `delivery-wait` skill, and network access.
 ---
 
 # Create PR
@@ -55,10 +55,13 @@ confirmed stack layers owned by the current change, not unrelated branches.
     repository changes, validate, create a new commit, and push normally;
     metadata-only fixes require no commit. Never mark a criterion satisfied
     without observed evidence.
-12. Monitor every applicable CI check to a terminal result. While a check is not
-    green, inspect its logs, fix the in-scope root cause without weakening the
+12. Invoke `delivery-wait`'s foreground `wait checks-terminal` operation with the
+    repository, exact head, checkpoint, absolute deadline, and `--json`; the
+    harness passively awaits it without model heartbeats. When it returns, inspect
+    any unsuccessful logs, fix the in-scope root cause without weakening the
     gate, run the relevant local checks, create a new commit, push normally, and
-    monitor the new run.
+    wait on the new exact head. If the host cannot passively await a subprocess,
+    report the unsupported capability instead of polling through model turns.
 13. Keep the PR in draft while any readiness criterion or CI check is pending or
     failing. Continue monitoring pending checks; if they cannot reach a terminal
     result during the run, report their current state. Stop and report the exact

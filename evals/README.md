@@ -107,7 +107,7 @@ GitHub Actions machinery uses Node 24-based action releases to check out the
 repository and bootstrap Bun; the harness and its tests still run on Bun.
 
 Open the pull request's **Checks** tab and select **Test eval harness / test** to
-see the typecheck, Bun tests, and 195-row dry-run output. CI never makes live
+see the typecheck, Bun tests, and current dry-run output. CI never makes live
 model calls.
 
 Live evals run only through an explicit local `bun run eval` command with a

@@ -1,4 +1,5 @@
 .agent/HANDOFF.md
+.agent/waits/
 node_modules/
 .eval-results/
 .env.local

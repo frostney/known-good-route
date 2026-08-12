@@ -6,8 +6,8 @@ description: >-
   when the user runs /review-pr or /review-pr automatic-merge.
 license: Unlicense OR MIT
 compatibility: >-
-  Requires the GitHub CLI (gh) authenticated to the target repository and
-  network access.
+  Requires Python 3.11 or newer, the GitHub CLI (gh) authenticated to the target
+  repository, the internal `delivery-wait` skill, and network access.
 ---
 
 # Review PR
@@ -41,6 +41,13 @@ same exact-head convergence contract passes.
 Read [references/convergence.md](references/convergence.md) before deciding that
 a PR is ready, pending, blocked, or merged.
 
+Use `scripts/review_wait.py` for review inspection, deterministic waiting,
+inline replies, and thread resolution. Invoke it with `--json`; the harness must
+passively await a running command rather than wake a model to report unchanged
+state. The repository policy defaults to
+`.github/delivery/review-automations.json` and may be overridden explicitly.
+Use a caller-owned checkpoint below gitignored `.agent/waits/`.
+
 ## Automatic merge
 
 The exact `automatic-merge` qualifier authorizes relevant fixes, validation,
@@ -63,13 +70,13 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
 2. If an ordinary branch needs a baseline update, use `/update-pr`. A stack owner
    must perform any stack-wide synchronization before asking this skill to
    re-evaluate the affected layer.
-3. If `resolve-reviews` is registered, delegate fetching and classifying inline
-   findings, publishing scoped fixes, replying in originating threads, resolving
-   completed threads, and detecting follow-ups. Otherwise perform equivalent
-   mechanics directly. In either case, this skill re-reads forge state itself
-   before deciding convergence.
+3. Run the review helper's `inspect` operation for the exact PR head. It returns
+   active automation evidence, inline and top-level findings, replies, and
+   authoritative thread state. Validate and classify findings in this workflow;
+   the helper supplies facts and exact mutations, never judgment.
 4. Evaluate every current finding. Fix validated in-scope findings; reply inline
-   to every automation thread; resolve completed threads. Dismiss invalid,
+   to every automation thread through the helper's idempotent `reply` operation;
+   resolve completed threads through its explicit `resolve` operation. Dismiss invalid,
    obsolete, duplicate, or out-of-scope findings only with evidence. Never
    silently ignore a nitpick, and never substitute a top-level comment when an
    inline comment cannot accept a reply.
@@ -82,11 +89,15 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    threads. Apply the convergence and `retry_at` rules in the reference. A new
    head restarts this step with no inherited gate evidence.
 8. In normal mode, return the result contract without merging. In
-   `automatic-merge` mode, use a safely derived `retry_at` for the next wake-up
-   when the host supports it, or return the pending state to the caller. Use a
+   `automatic-merge` mode, launch the helper's foreground `wait` operation with
+   the exact head, repository policy, checkpoint, and safely derived deadline.
+   Resume this workflow only when the command returns a meaningful transition.
+   Use a
    documented retrigger only when current evidence permits it; its required
    command may use the narrow top-level exception. Never guess a timer, quota,
-   provider policy, or retry count.
+   provider policy, or retry count. If the host cannot passively await a
+   subprocess, return `pending` with that unsupported capability instead of
+   using model heartbeats.
 9. Stop without merging for a material product decision, unrelated failure,
    unsafe or divergent PR, unavailable terminal external dependency, or
    unresolved required finding. Report the exact blocker.

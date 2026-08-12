@@ -113,7 +113,8 @@ flowchart TB
 | [`run-retro`](run-retro/SKILL.md) | Review a completed workstream through delivery-speed, process, and codebase-health lenses; map lifecycle and surface-specific timings, exclusive critical path, masked work, resource usage, and duplicated effort; use `grilling` to agree durable lessons and selected follow-ups. |
 | [`create-pr`](create-pr/SKILL.md) | Commit relevant local changes, open a templated draft PR or submit a verified native GitHub stack, fill readiness gaps, fix CI failures, and mark each ready layer ready. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and update the current PR, merging ordinary baselines or using guarded native stack synchronization, then refresh stale metadata. |
-| [`review-pr`](review-pr/SKILL.md) | Converge one PR through provider-neutral inline handling, exact-final-head CI and review automation, zero unresolved or unanswered automation threads, and safe retry timestamps. Normal mode never merges; `automatic-merge` merges only an ordinary converged PR. |
+| [`review-pr`](review-pr/SKILL.md) | Converge one PR through provider-neutral inline handling, exact-final-head CI and review automation, zero unresolved or unanswered automation threads, and deterministic waiting without model heartbeats. Normal mode never merges; `automatic-merge` merges only an ordinary converged PR. |
+| [`delivery-wait`](delivery-wait/SKILL.md) | Internal deterministic GitHub transition waits for exact-head checks, workflows, merges, tags, release assets, and time-based wakes. |
 | [`code-review`](code-review/SKILL.md) | Review a bounded change against its claim using behavioral and revert-clean falsification probes, churn-backed risk, four-layer de-duplication, and discoverability checks when public web surfaces change. Additive inputs support evidence lanes, exact files, and prior-finding revalidation; fix modes remain local. |
 | [`create-release`](create-release/SKILL.md) | Prepare a changelog-first release PR, then publish only when authorized and through exactly one evidence-backed path. Existing workflows own publication when configured; the agent never double-publishes with `gh release create`. |
 | [`roadmap-review`](roadmap-review/SKILL.md) | Review a project's roadmap from freshly-pulled data — assess current state and release cadence, measure delivery velocity from history, verify candidate work against the source, produce a parallelized throughput-anchored version plan, and (optionally, on confirmation) create milestones and issues. |
@@ -128,7 +129,7 @@ flowchart TB
 | [`native-nostalgia-stack`](native-nostalgia-stack/SKILL.md) | FreePascal toolchain — FPC in Delphi mode (compiler flags in a shared include), namespace-based unit naming (flat by default), code-style starting points, build / formatter / codebase-health contracts (implementation is the project's choice), Lefthook pre-commit, InstantFPC for one-off scripts. |
 | [`convex-conventions`](convex-conventions/SKILL.md) | Convex backend rules — shared validators, Clerk JWT bridge, `args` + `returns` on every public function, in-code filtering, `.take()` caps, rate-limited mutations, action/mutation split, schema with soft-delete and audit trails, single re-export module for client types. The live Convex docs override this skill on conflict. |
 | [`codebase-audit`](codebase-audit/SKILL.md) | Audit the repository and delivery surface with a coverage map, conditional technical and discoverability perspectives, revert-clean falsification probes, four-layer de-duplication, and churn-backed architectural risk. Evidence can use bounded lanes; remediation requires a selected coherent batch. |
-| [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Ambient engineering-quality standard across the whole lifecycle — planning, orchestrating, developing, debugging, reviewing, refactoring, and substantial investigation: ground in reality (docs are leads, not proof), resist the pull to the quick fix and invest in the right structure, solve the full scope, reuse before creating, validate to the real bar, and use maintainability as the governor. |
+| [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Ambient engineering-quality standard across the whole lifecycle — planning, orchestrating, developing, debugging, reviewing, refactoring, and substantial investigation: ground in reality (docs are leads, not proof), find simple solutions for complex problems without shortcuts, solve the full scope, reuse before creating, validate to the real bar, and use maintainability as the governor. |
 | [`bleeding-edge`](bleeding-edge/SKILL.md) | Ambient lens that tilts technology choices toward the newest viable option — latest stable (incl. just-released majors), newly-stable language/platform features, modern tooling, current AI models, and pre-release channels with a documented reason — while staying under `software-engineering-excellence`: verify live, pin, keep it reversible and gate-green, and never silently swap a decided choice. |
 
 ## Background
@@ -222,7 +223,9 @@ that evidence.
 - `code-review` and `codebase-audit` delegate only when the caller supplies the
   additive `subagents` input. Workers own bounded evidence lanes; the
   coordinator owns findings, verdicts, edits, and reported fallbacks.
-- `review-pr` invokes `/update-pr` for the commit/push step (and `/resolve-reviews` when registered).
+- `review-pr` invokes `/update-pr` for the commit/push step and owns review
+  inspection, deterministic waiting, replies, and thread resolution through its
+  bundled helper.
 - `review-pr automatic-merge` discovers active review automation, treats
   incomplete verdicts as pending, and owns one ordinary PR's exact-head
   fix-watch-squash-merge loop. Stack scheduling and atomic merge stay outside it.

@@ -10,9 +10,12 @@ license: Unlicense OR MIT
 
 # Software engineering excellence
 
-Leave the system more maintainable and the next change easier. Prefer the
-smallest complete solution at the right layer: neither a symptom-hiding diff nor
-speculative architecture.
+Leave the system more maintainable and the next change easier. Find simple
+solutions for complex problems, but no shortcuts. Lead with questions that
+reveal the problem's real shape before selecting implementation mechanics.
+A better question separates the desired outcome, hard constraints, and observed
+failure from the mechanism currently being discussed; its answer can change the
+solution rather than merely select details within it.
 
 ## Working standard
 
