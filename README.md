@@ -91,7 +91,7 @@ flowchart TB
   `/run-retro`; none starts the next stage automatically.
 - While `/milestone-rush` is active, let it own the nested delivery loop. It
   delegates implementation through the automatic modes, PR handoff, continuous
-  perspective-lane code review, and merge instead of asking the user to invoke
+  review-axis-lane code review, and merge instead of asking the user to invoke
   those child commands.
 - For ad-hoc or already-started work, enter the delivery loop at the matching
   state: record an idea with `/create-issue`, implement a ready issue or unfiled
@@ -298,6 +298,7 @@ supported frontier models:
 | Issue draft awaiting approval | Investigates, grills, and presents the project-aligned draft without filing it |
 | Automatic issue creation and exact duplicate | Completes every investigation/grill gate before filing, but stops immediately for the existing issue |
 | Artifact-assisted implementation grill | Uses current web and repository evidence, then shows surface-appropriate mockups, diagrams, or disposable prototypes before option selection |
+| Existing-contract implementation grill | Inspects the embedded behavioral contract and runs an executable compatibility probe before architecture or option selection |
 | Required current web research unavailable | Stops before presenting implementation options or editing |
 | Default code review and repository-wide audit | Reproduces safe boundary behavior and reports evidence without remediating in read-only mode |
 | File-scoped code review | Reports findings only in the exact requested files while disclosing any supporting context needed to validate them |

@@ -16,6 +16,7 @@ describe("eval result reporting", () => {
           loadedReferences: [],
           registeredSkillCalls: [],
           inspections: [],
+          events: [],
         },
         grade: {
           passed: false,
