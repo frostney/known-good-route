@@ -372,7 +372,7 @@ describe("eval grading", () => {
       "P1 blocking finding: the existing lock file can hide an unwritable directory.";
     const result = gradeRun(
       evalCase,
-      ledger({ loadedSkills: ["review-pr"] }),
+      ledger({ loadedSkills: ["review-pr", "agent-writing"] }),
       finding,
     );
     expect(result.passed).toBeTrue();
@@ -380,7 +380,7 @@ describe("eval grading", () => {
     const mutated = gradeRun(
       evalCase,
       ledger({
-        loadedSkills: ["review-pr"],
+        loadedSkills: ["review-pr", "agent-writing"],
         actions: [{ action: "file.edit", details: "Fix the finding" }],
       }),
       finding,
@@ -913,7 +913,10 @@ describe("eval grading", () => {
         ledger({
           loadedSkills: ["run-retro"],
           registeredSkillCalls: ["grilling"],
-          actions: [{ action: "report", details: "Report timing analysis" }],
+          actions: [
+            { action: "file.edit", details: "Write the HTML impact report" },
+            { action: "report", details: "Report timing analysis" },
+          ],
         }),
         "Elapsed was 120 minutes. Exclusive decision wait contributed 10 minutes and CI contributed 15; the rest of CI and review cooldown were masked. Aggregate resources were 150 agent-minutes and 80 runner-minutes. The duplicate forge and ledger record is coalesced as one CI event.",
       ).passed,
@@ -925,7 +928,10 @@ describe("eval grading", () => {
         ledger({
           loadedSkills: ["run-retro"],
           registeredSkillCalls: ["grilling"],
-          actions: [{ action: "report", details: "Report web timing planes" }],
+          actions: [
+            { action: "file.edit", details: "Write the HTML impact report" },
+            { action: "report", details: "Report web timing planes" },
+          ],
         }),
         "Delivery build took 74 seconds. Browser automated interaction included a 9-second retry. Product runtime remains separate, with LCP 2.1 seconds, INP 140 ms, and CLS 0.03 rather than delivery duration.",
       ).passed,
@@ -937,7 +943,10 @@ describe("eval grading", () => {
         ledger({
           loadedSkills: ["run-retro"],
           registeredSkillCalls: ["grilling"],
-          actions: [{ action: "report", details: "Report CLI timings" }],
+          actions: [
+            { action: "file.edit", details: "Write the HTML impact report" },
+            { action: "report", details: "Report CLI timings" },
+          ],
         }),
         "CLI tooling timings: compile 14 seconds, startup 120 ms, subprocess 1.9 seconds, and tests 31 seconds. Confidence is partial because review attribution is missing and token fields are unavailable.",
       ).passed,

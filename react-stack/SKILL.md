@@ -34,13 +34,12 @@ before scaffolding, routing, styling, deployment, or a framework upgrade:
 
 - Bun is the only runtime/package manager; keep `bun.lock` and forbid other
   package-manager lockfiles.
-- Use TypeScript, no `any`, functional code and immutable updates by default.
-- Use explicit names; avoid `lib`, `helper`, and catch-all `utils` naming.
+- Use `typescript-stack/SKILL.md` for compiler configuration, type and API design,
+  module boundaries, language-level code style, and TypeScript validation.
 - Biome owns lint, format, and import ordering.
 - `bun test` unit tests are co-located with source. End-to-end tests live in
   root `e2e/`.
 - Source lives under `src/` by domain. `src/app/` contains framework routes only.
-- One public export per file; filename matches export; no barrel re-exports.
 - Components use Atomic Design folders (`atoms`, `molecules`, `organisms`) with
   downward-only dependencies and co-located companions.
 - Convex owns application data; Clerk owns identity. Use

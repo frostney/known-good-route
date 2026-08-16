@@ -1,5 +1,6 @@
 .agent/HANDOFF.md
 .agent/waits/
 node_modules/
+__pycache__/
 .eval-results/
 .env.local
