@@ -742,23 +742,23 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
-    id: "code-review-subagents-perspective-lanes",
+    id: "code-review-subagents-review-axis-lanes",
     description:
-      "An explicit subagents review delegates bounded perspective lanes while the coordinator owns findings and fixes.",
+      "An explicit subagents review delegates one bounded lane per active review axis while the coordinator owns findings and fixes.",
     prompt:
       "/code-review subagents fix-all on the current worktree.",
     fixture: {
       evidence: {
         comparisonBoundary:
-          "Branch feature/import is one commit ahead of the merge-base with origin/main. The worktree is clean.",
+          "origin/main and HEAD both resolve. Branch feature/import is one commit ahead of their merge-base, the three-dot diff is non-empty, and the worktree is clean.",
         claim:
           "The change adds a public import command that must preserve the established normalized error contract.",
         laneMap:
-          "The coordinator activates claim-and-correctness, simplification-and-self-documentation, and test-value-and-operations lanes across the complete bounded change. Platform capacity supports two workers, so the third lane queues until a slot frees.",
+          "The coordinator activates exactly one lane for each applicable review axis: deduplication, claim-and-specification, and engineering-quality. Discoverability is skipped because no public-web surface changed. Platform capacity supports two workers, so the third lane queues until a slot frees.",
         workerResults:
-          "All three evidence-only workers return the required lane ID, scope, inspected context, probes, candidate findings, verified claims, limitations, and complete status. They do not edit, delegate, assign severity, or issue a verdict.",
+          "All three evidence-only workers return the required lane ID, review axis, scope, inspected context, probes, every evidence-supported candidate, uncertainty, verified claims, limitations, and complete status. They do not filter by severity, edit, delegate, assign severity, or issue a verdict.",
         candidateEvidence:
-          "The claim-and-correctness lane reproduces a leaked internal ResolveError. The simplification lane finds that the new adapter duplicates normalizeImportError. The test-value lane confirms the changed test passes even when the public error contract is wrong.",
+          "The claim-and-specification lane reproduces a leaked internal ResolveError. The deduplication lane finds that the new adapter duplicates normalizeImportError. The engineering-quality lane confirms the changed test passes even when the public error contract is wrong and returns one uncertain low-impact naming candidate for coordinator filtering.",
         coordinatorValidation:
           "Current-checkout validation confirms that the three candidates have one shared cause. Reusing normalizeImportError is the smallest fix and makes the regression test fail against the wrong implementation.",
         projectGate:
@@ -776,10 +776,12 @@ export const evalCases: EvalCase[] = [
         "user.ask",
       ],
       outputPatterns: [
-        "perspective.*lane|lane.*perspective",
-        "claim.*correctness",
-        "simplification|self-documentation",
-        "test.value|operations",
+        "review.axis.*lane|lane.*review.axis|axis.*lane",
+        "deduplication",
+        "claim.and.specification",
+        "engineering.quality",
+        "discoverability.*skip|skip.*discoverability",
+        "threshold|filter|uncertain|low-impact",
         "coordinator",
         "ResolveError|normalizeImportError",
         "complete",
@@ -787,6 +789,48 @@ export const evalCases: EvalCase[] = [
       forbiddenOutputPatterns: [
         "worker (?:edited|fixed|committed)|worker-owned (?:edit|fix|commit)",
         "redispatch(?:ed)?.*all|all.*redispatch",
+      ],
+    },
+  },
+  {
+    id: "code-review-conditional-adversarial-reference",
+    description:
+      "A security-sensitive review loads the bounded adversarial reference and tests a concrete bypass path.",
+    prompt:
+      "/code-review the current branch without fixing it. The change affects tenant-scoped authorization.",
+    fixture: {
+      evidence: {
+        comparisonBoundary:
+          "origin/main resolves to 51ca1ab and HEAD resolves to 62db2bc. Their merge-base is 51ca1ab, the three-dot diff is non-empty, and the worktree is clean.",
+        claim:
+          "Issue #103 requires tenant administrators to rotate only credentials owned by their current tenant.",
+        changedCode:
+          "The new credential rotation route authenticates the caller, then loads the credential by attacker-controlled id and rotates it before checking the credential tenant against the caller tenant.",
+        adversarialMap:
+          "The changed mutating surface is POST /credentials/:id/rotate. The attacker controls id; authentication is present, but tenant authorization occurs after the destructive rotation side effect.",
+        behavioralQa:
+          "An isolated API probe authenticates as a tenant A administrator and supplies a tenant B credential id. Tenant B's credential rotates before the route returns forbidden.",
+        projectGate:
+          "The focused authorization tests and declared repository gate pass, but no existing test covers a cross-tenant id.",
+      },
+    },
+    expected: {
+      requiredSkills: ["code-review"],
+      requiredReferences: ["code-review/references/adversarial-review.md"],
+      requiredActions: ["validation.run"],
+      forbiddenActions: [
+        "delegate",
+        "file.edit",
+        "forge.commentPr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "51ca1ab|62db2bc|fixed point|merge-base",
+        "tenant|cross-tenant",
+        "after.*rotation|rotation.*before|side effect",
+        "forbidden",
       ],
     },
   },
@@ -877,7 +921,7 @@ export const evalCases: EvalCase[] = [
         "ARCHITECTURE_RISK|architectural risk",
         "11.*90.day|90.day.*11",
         "artifacts/review-findings\\.json",
-        "JSON|schemaVersion",
+        "schemaVersion.?2",
       ],
     },
   },
@@ -936,7 +980,7 @@ export const evalCases: EvalCase[] = [
     fixture: {
       evidence: {
         priorArtifact:
-          "artifacts/audit-findings.json is valid schemaVersion 1 codebase-audit JSON. Recorded revision a11d170 is locally available. CA-7 is open at src/retry.ts:84 for persisting attempts before delivery without a transaction. CA-8 is deferred at src/status.ts:41 for a stale status projection. CA-9 is fixed and must not be selected.",
+          "artifacts/audit-findings.json is valid schemaVersion 2 codebase-audit JSON. Recorded revision a11d170 is locally available. CA-7 is open at src/retry.ts:84 for persisting attempts before delivery without a transaction. CA-8 is deferred at src/status.ts:41 for a stale status projection. CA-9 is fixed and must not be selected.",
         comparisonBoundary:
           "Current HEAD is b22e281. The worktree has a relevant unstaged regression-test change. The diff from a11d170 moves the attempt update and delivery record into the existing transaction.",
         requestedFiles:
@@ -979,7 +1023,7 @@ export const evalCases: EvalCase[] = [
     fixture: {
       evidence: {
         priorArtifact:
-          "artifacts/review-findings.json is valid schemaVersion 1 code-review JSON. CR-2 is open at src/import.ts:73 for leaking ResolveError from the public CLI. CR-3 is fixed and must not be selected. The recorded scope.head 91ad00d is not available in the local repository.",
+          "artifacts/review-findings.json is valid schemaVersion 2 code-review JSON. CR-2 is open at src/import.ts:73 for leaking ResolveError from the public CLI. CR-3 is fixed and must not be selected. The recorded scope.head 91ad00d is not available in the local repository.",
         comparisonBoundary:
           "Current HEAD is c33f392 and the worktree is clean. Because 91ad00d is unavailable, no diff or resolving commit can be attributed.",
         currentCode:
@@ -1019,7 +1063,7 @@ export const evalCases: EvalCase[] = [
     fixture: {
       evidence: {
         priorArtifact:
-          "artifacts/review-findings.json is valid schemaVersion 1 code-review JSON. CR-4 and CR-5 are open, CR-6 is fixed, and all paths are repository-contained.",
+          "artifacts/review-findings.json is valid schemaVersion 2 code-review JSON. CR-4 and CR-5 are open, CR-6 is fixed, and all paths are repository-contained.",
         comparisonBoundary:
           "The recorded head d14ab20 and current HEAD e25bc31 are both available. The worktree is clean.",
         laneMap:
@@ -1092,7 +1136,7 @@ export const evalCases: EvalCase[] = [
         "ARCHITECTURE_RISK|architectural risk",
         "18.*180.day|180.day.*18",
         "artifacts/audit-findings\\.json",
-        "JSON|schemaVersion",
+        "schemaVersion.?2",
       ],
     },
   },
@@ -1642,6 +1686,65 @@ export const evalCases: EvalCase[] = [
         "same|shared|neutral",
         "rubric|criteria|equivalent",
         "recommend|option",
+      ],
+    },
+  },
+  {
+    id: "implement-idea-existing-contract-before-architecture",
+    description:
+      "An implementation embedding an existing behavioral contract inspects that contract and runs a compatibility probe before proposing architecture.",
+    prompt:
+      "/implement-idea Scaffold a Bun service around the repository's existing review skill. Show the workflow and ask me to choose the implementation approach.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "The repository is empty except for a handoff that names an agent runtime, a review skill, and a deployment platform.",
+        handoffSummary:
+          "The prose summary mentions complete reviews and later delta reviews, but its abbreviated diagram could be misread as allowing both on every update.",
+        existingContract:
+          "The current review skill is authoritative: the first review is complete; later meaningful updates are exact-file fresh deltas followed by prior-finding revalidation; a delta never runs alongside another complete review. Its JSON schemas define exact-file intersection and finding outcomes.",
+        runtimeDocs:
+          "Current official runtime examples use Node and npm. They do not claim Bun is unsupported and do not establish executable compatibility.",
+        runtimeCompatibility:
+          "A disposable Bun probe installs the exact current runtime packages, generates the scaffold, typechecks it, builds it, starts its generated server, and receives the expected authenticated-endpoint response.",
+        workflowView:
+          "The proposed diagram has exclusive initial-full, later-delta, semantic-no-op, and explicit-manual-full branches. It labels the existing skill contract separately from application orchestration.",
+        options:
+          "The recommended approach embeds the skill unchanged through its supported skill location and keeps event orchestration outside the review contract. The user has not yet selected an option.",
+      },
+      registeredSkills: {
+        "grill-with-docs":
+          "The contract-derived workflow is visible, but the user has not selected the implementation approach.",
+      },
+    },
+    expected: {
+      requiredSkills: ["implement-idea"],
+      requiredRegisteredSkills: ["grill-with-docs"],
+      requiredInspections: ["existingContract", "runtimeCompatibility"],
+      requiredInspectionsBeforeActions: [
+        { inspection: "existingContract", action: "user.ask" },
+        { inspection: "runtimeCompatibility", action: "user.ask" },
+      ],
+      requiredActions: ["user.ask"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.openDraftPr",
+        "git.commit",
+        "git.fetch",
+        "git.merge",
+        "git.push",
+      ],
+      outputPatterns: [
+        "existing.*contract|review skill.*authoritative|authoritative.*skill",
+        "Bun.*probe|probe.*Bun|executable.*compatib",
+        "initial.*full|first.*complete",
+        "later.*delta|delta.*later",
+        "manual.*full|full.*manual",
+        "recommend|option",
+      ],
+      forbiddenOutputPatterns: [
+        "full review.{0,80}(?:parallel|alongside|at the same time).{0,80}delta|delta.{0,80}(?:parallel|alongside|at the same time).{0,80}full review",
+        "focused delta|expanded delta|risk tier",
       ],
     },
   },
@@ -2483,7 +2586,7 @@ export const evalCases: EvalCase[] = [
         executionEvidence:
           "Each implementation has one evidence-backed recommended approach with no material ambiguity. Its required pre-PR pass is /code-review subagents fix-all. Review lanes queue when all platform slots are temporarily occupied, then run as capacity frees. Every resulting PR passes its project gate, required CI, and its configured review tools on the current head.",
         reviewDelegation:
-          "Each PR records its perspective-to-lane map and completed evidence-only workers. PR #343 cannot obtain one operations worker after bounded retry, so its implementation worker completes that lane directly and reports the single-agent fallback.",
+          "Each PR records its review-axis-to-lane map and completed evidence-only workers. PR #343 cannot obtain one engineering-quality worker after bounded retry, so its implementation worker completes that lane directly and reports the single-agent fallback.",
         rollingIntegration:
           "After each squash merge, remaining branches merge the updated remote default and their affected gates pass. The refreshed milestone contains no new out-of-scope work.",
         integratedCompletion:
@@ -2524,7 +2627,7 @@ export const evalCases: EvalCase[] = [
       outputPatterns: [
         "parallel|independent|subagent",
         "code-review.*subagents.*fix-all|subagents.*fix-all.*code-review",
-        "perspective.*lane|lane.*perspective",
+        "review.axis.*lane|lane.*review.axis|axis.*lane",
         "fallback|single-agent",
         "#40|#41",
         "#42|#43",

@@ -71,6 +71,34 @@ export function gradeRun(
     });
   }
 
+  if (expected.requiredReferences) {
+    checks.push({
+      name: "required references",
+      passed: includesEvery(
+        ledger.loadedReferences,
+        expected.requiredReferences,
+      ),
+      detail: `required=${expected.requiredReferences.join(",")} actual=${ledger.loadedReferences.join(",")}`,
+    });
+  }
+
+  for (const order of expected.requiredInspectionsBeforeActions ?? []) {
+    const inspectionIndex = ledger.events.findIndex(
+      (event) => event.kind === "inspection" && event.name === order.inspection,
+    );
+    const actionIndex = ledger.events.findIndex(
+      (event) => event.kind === "action" && event.name === order.action,
+    );
+    checks.push({
+      name: `${order.inspection} before ${order.action}`,
+      passed:
+        inspectionIndex >= 0 &&
+        actionIndex >= 0 &&
+        inspectionIndex < actionIndex,
+      detail: `inspectionIndex=${inspectionIndex} actionIndex=${actionIndex}`,
+    });
+  }
+
   if (expected.requiredActions) {
     const missing = expected.requiredActions.filter(
       (action) => actionCount(ledger, action) === 0,
@@ -189,6 +217,15 @@ export function validateCases(
       if (evalCase.fixture.evidence[inspection] === undefined) {
         throw new Error(
           `${evalCase.id} requires unavailable inspection ${inspection}`,
+        );
+      }
+    }
+
+    for (const order of
+      evalCase.expected.requiredInspectionsBeforeActions ?? []) {
+      if (evalCase.fixture.evidence[order.inspection] === undefined) {
+        throw new Error(
+          `${evalCase.id} orders unavailable inspection ${order.inspection}`,
         );
       }
     }

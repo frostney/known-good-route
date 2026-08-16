@@ -72,6 +72,7 @@ function newLedger(): RunLedger {
     loadedReferences: [],
     registeredSkillCalls: [],
     inspections: [],
+    events: [],
   };
 }
 

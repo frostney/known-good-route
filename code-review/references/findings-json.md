@@ -10,7 +10,7 @@ Keep these stable top-level keys:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "kind": "code-review",
   "generatedAt": "RFC 3339 timestamp",
   "verdict": "APPROVE | APPROVE_WITH_IMPROVEMENTS | REQUEST_CHANGES",
@@ -21,8 +21,8 @@ Keep these stable top-level keys:
     "dirtyState": "string"
   },
   "coverage": {
-    "activePerspectives": ["string"],
-    "skippedPerspectives": [{"name": "string", "reason": "string"}],
+    "activeAxes": ["deduplication | claim-and-specification | engineering-quality | discoverability"],
+    "skippedAxes": [{"name": "string", "reason": "string"}],
     "staticOnly": ["string"],
     "unreached": ["string"]
   },

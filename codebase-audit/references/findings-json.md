@@ -10,7 +10,7 @@ Keep these stable top-level keys:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "kind": "codebase-audit",
   "generatedAt": "RFC 3339 timestamp",
   "scope": {

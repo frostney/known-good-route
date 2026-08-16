@@ -14,6 +14,7 @@ function ledger(overrides: Partial<RunLedger> = {}): RunLedger {
     loadedReferences: [],
     registeredSkillCalls: [],
     inspections: [],
+    events: [],
     ...overrides,
   };
 }
@@ -547,7 +548,7 @@ describe("eval grading", () => {
 
   test("requires explicit subagent lanes and coordinator ownership", () => {
     const review = evalCases.find(
-      ({ id }) => id === "code-review-subagents-perspective-lanes",
+      ({ id }) => id === "code-review-subagents-review-axis-lanes",
     );
     const audit = evalCases.find(
       ({ id }) => id === "codebase-audit-subagents-fallback",
@@ -565,7 +566,7 @@ describe("eval grading", () => {
         actions: [
           {
             action: "delegate",
-            details: "Run the bounded perspective lanes",
+            details: "Run the bounded review-axis lanes",
           },
           {
             action: "file.edit",
@@ -577,7 +578,7 @@ describe("eval grading", () => {
           },
         ],
       }),
-      "Perspective lane map: claim and correctness, simplification and self-documentation, and test-value and operations. Every lane returned complete evidence. The coordinator validated the shared ResolveError cause and reused normalizeImportError.",
+      "Review-axis lane map: deduplication, claim and specification, and engineering quality; discoverability was skipped. Every lane returned complete evidence, including an uncertain low-impact candidate for coordinator filtering. The coordinator validated the shared ResolveError cause and reused normalizeImportError.",
     );
     expect(reviewed.passed).toBeTrue();
 
@@ -596,7 +597,7 @@ describe("eval grading", () => {
           },
         ],
       }),
-      "Perspective lane map: claim and correctness, simplification and self-documentation, and test-value and operations. Every lane returned complete evidence. The coordinator validated ResolveError and reused normalizeImportError.",
+      "Review-axis lane map: deduplication, claim and specification, and engineering quality; discoverability was skipped. Every lane returned complete evidence, including an uncertain low-impact candidate for coordinator filtering. The coordinator validated ResolveError and reused normalizeImportError.",
     );
     expect(undelegated.passed).toBeFalse();
 
@@ -655,13 +656,13 @@ describe("eval grading", () => {
         id: "code-review-churn-json-report",
         skill: "code-review",
         output:
-          "CR-1 is an ARCHITECTURE_RISK: dispatchRequest changed 11 times in the 90-day window. Saved schemaVersion 1 JSON to artifacts/review-findings.json.",
+          "CR-1 is an ARCHITECTURE_RISK: dispatchRequest changed 11 times in the 90-day window. Saved schemaVersion 2 JSON to artifacts/review-findings.json.",
       },
       {
         id: "codebase-audit-churn-json-report",
         skill: "codebase-audit",
         output:
-          "CA-1 is an architectural risk: advance changed 18 times in the 180-day window. Saved schemaVersion 1 JSON to artifacts/audit-findings.json.",
+          "CA-1 is an architectural risk: advance changed 18 times in the 180-day window. Saved schemaVersion 2 JSON to artifacts/audit-findings.json.",
       },
     ];
 
@@ -1210,7 +1211,7 @@ describe("eval grading", () => {
       { action: "report", details: "Report integrated completion" },
     ];
     const output =
-      "Milestone 2.0.0 closed under the valid ORCHESTRATION policy after parallel isolated subagent work with no inherited history. The provider-neutral delivery recommendation used current ordinary CI. #40 and #41 were reused; #42 and #43 completed before dependent #44. Each PR used /code-review subagents fix-all with a perspective lane map; PR #343 reported one single-agent fallback. The integrated default branch passed and the event ledger is .agent/milestone-rush-events.jsonl. Run /run-retro only with approval.";
+      "Milestone 2.0.0 closed under the valid ORCHESTRATION policy after parallel isolated subagent work with no inherited history. The provider-neutral delivery recommendation used current ordinary CI. #40 and #41 were reused; #42 and #43 completed before dependent #44. Each PR used /code-review subagents fix-all with a review-axis lane map; PR #343 reported one single-agent fallback. The integrated default branch passed and the event ledger is .agent/milestone-rush-events.jsonl. Run /run-retro only with approval.";
 
     const completed = gradeRun(
       evalCase,
@@ -1386,6 +1387,94 @@ describe("eval grading", () => {
       "Snapshot observed 2026-07-31. Active review: #610 at current-head 610ca11 is not ready because review evidence returned 403 and the verdict is unavailable. It remains pending. Next: restore review-thread access.",
     );
     expect(missing.passed).toBeTrue();
+  });
+
+  test("requires contract and runtime inspection before architecture questions", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "implement-idea-existing-contract-before-architecture",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const output =
+      "The existing review skill is authoritative. A Bun executable compatibility probe passed. The first run is an initial full review; later updates are deltas, and a manual full review is explicit. I recommend the contract-preserving option.";
+    const actions = [
+      { action: "user.ask" as const, details: "Ask for the architecture choice" },
+    ];
+    const base = {
+      loadedSkills: ["implement-idea"],
+      registeredSkillCalls: ["grill-with-docs"],
+      inspections: ["existingContract", "runtimeCompatibility"],
+      actions,
+    };
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          ...base,
+          events: [
+            { kind: "inspection", name: "existingContract" },
+            { kind: "inspection", name: "runtimeCompatibility" },
+            { kind: "action", name: "user.ask" },
+          ],
+        }),
+        output,
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          ...base,
+          events: [
+            { kind: "action", name: "user.ask" },
+            { kind: "inspection", name: "existingContract" },
+            { kind: "inspection", name: "runtimeCompatibility" },
+          ],
+        }),
+        output,
+      ).passed,
+    ).toBeFalse();
+  });
+
+  test("requires conditional skill references", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "code-review-conditional-adversarial-reference",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const output =
+      "At fixed point 51ca1ab..62db2bc, a cross-tenant credential rotates before the forbidden response, so the side effect bypasses tenant authorization.";
+    const base = {
+      loadedSkills: ["code-review"],
+      actions: [
+        {
+          action: "validation.run" as const,
+          details: "Run the isolated cross-tenant probe",
+        },
+      ],
+    };
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          ...base,
+          loadedReferences: [
+            "code-review/references/adversarial-review.md",
+          ],
+        }),
+        output,
+      ).passed,
+    ).toBeTrue();
+    expect(gradeRun(evalCase, ledger(base), output).passed).toBeFalse();
   });
 
   test("validates the committed case set", async () => {

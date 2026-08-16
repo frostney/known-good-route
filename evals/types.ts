@@ -50,6 +50,11 @@ export interface EvalExpectations {
   forbiddenSkills?: string[];
   requiredRegisteredSkills?: string[];
   requiredInspections?: string[];
+  requiredReferences?: string[];
+  requiredInspectionsBeforeActions?: Array<{
+    inspection: string;
+    action: ActionName;
+  }>;
   requiredActions?: ActionName[];
   requiredAnyActions?: ActionName[];
   forbiddenActions?: ActionName[];
@@ -73,6 +78,10 @@ export interface RunLedger {
   loadedReferences: string[];
   registeredSkillCalls: string[];
   inspections: string[];
+  events: Array<{
+    kind: "inspection" | "reference" | "action";
+    name: string;
+  }>;
 }
 
 export interface GradeCheck {
