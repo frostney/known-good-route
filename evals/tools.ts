@@ -48,6 +48,7 @@ export function createEvalTools(
         }
         const content = await readSkillReference(skill, path);
         ledger.loadedReferences.push(`${skillName}/${path}`);
+        ledger.events.push({ kind: "reference", name: `${skillName}/${path}` });
         return { ok: true, content };
       },
     }),
@@ -59,6 +60,7 @@ export function createEvalTools(
       }),
       execute: async ({ source }) => {
         ledger.inspections.push(source);
+        ledger.events.push({ kind: "inspection", name: source });
         const content = evalCase.fixture.evidence[source];
         if (content === undefined) {
           return {
@@ -94,6 +96,7 @@ export function createEvalTools(
       }),
       execute: async ({ action, details }) => {
         ledger.actions.push({ action, details });
+        ledger.events.push({ kind: "action", name: action });
         return {
           ok: true,
           isolated: true,

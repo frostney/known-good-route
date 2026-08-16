@@ -130,7 +130,7 @@ not release publication.
 
 Manage implementation and review workers within the host's shared capacity.
 Keep implementation nodes running while useful work remains, and queue review
-perspective lanes until slots free up; temporary slot exhaustion is not
+review-axis lanes until slots free up; temporary slot exhaustion is not
 sub-agent unavailability. If review sub-agents are unsupported, remain
 unavailable after bounded retry, or return incomplete evidence, the
 implementation worker completes those lanes directly and records the fallback
@@ -170,7 +170,7 @@ Return one audit-style summary covering:
 
 - initial and final scope, including scope drift;
 - issue, worker/worktree, PR, and squash-merge mapping;
-- each PR's review perspective-to-lane map, completed or incomplete lanes, and
+- each PR's review-axis-to-lane map, completed or incomplete lanes, and
   every single-agent fallback with its reason;
 - reused local or PR state;
 - orchestration policy status, decision IDs and conflicts, CI integration
