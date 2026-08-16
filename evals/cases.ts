@@ -471,7 +471,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["review-pr"],
+      requiredSkills: ["review-pr", "agent-writing"],
       forbiddenActions: [
         "file.edit",
         "forge.commentPr",
@@ -504,10 +504,12 @@ export const evalCases: EvalCase[] = [
           "Thread A correctly identifies missing regression coverage for the accepted upper boundary. Thread B asks to remove that upper bound, but the current primary specification explicitly requires rejecting larger finite values.",
         projectGate:
           "Run the focused interpreted and bytecode tests, both full suites, documentation checks, formatting, and diff checks after the fix. After thread mechanics, direct forge state at unchanged head 7af1026 reports terminal successful CI and automation verdicts, zero actionable findings, zero unresolved threads, and zero unanswered inline automation threads.",
+        attribution:
+          "The authenticated GitHub user is @octocat and the exact current model name is GPT-5.6 Sol. Every substantive inline reply must end with the required GitHub Note and remain within 300 characters.",
       },
     },
     expected: {
-      requiredSkills: ["review-pr"],
+      requiredSkills: ["review-pr", "agent-writing"],
       requiredActions: [
         "file.edit",
         "validation.run",
@@ -535,6 +537,7 @@ export const evalCases: EvalCase[] = [
         "7af1026|exact head",
         "unresolved.*0|zero unresolved",
         "unanswered.*0|zero unanswered",
+        "Created on behalf of @octocat using GPT-5\\.6 Sol",
       ],
     },
   },
@@ -1159,7 +1162,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["create-issue"],
+      requiredSkills: ["create-issue", "agent-writing"],
       requiredRegisteredSkills: ["grill-with-docs"],
       requiredActions: ["user.ask"],
       forbiddenActions: ["file.edit", "forge.createIssue"],
@@ -1656,7 +1659,7 @@ export const evalCases: EvalCase[] = [
         uiContext:
           "A shared current-state view plus desktop and mobile mockups compare an inline settings section with a dedicated notification screen. Observed UI, proposed behavior, and nonfunctional mockup data are labeled.",
         options:
-          "The dedicated screen is recommended because the mobile layout and quiet-hours validation need focused space. The user has not selected an option.",
+          "Both options were derived from the same repository and web evidence. Before recommendation, the declared rubric compares mobile usability, accessibility, validation clarity, reuse, and implementation cost. Each option has desktop and mobile mockups plus the same keyboard and time-zone checks. The dedicated screen scores higher, but the user has not selected an option.",
       },
       registeredSkills: {
         "grill-with-docs":
@@ -1680,6 +1683,8 @@ export const evalCases: EvalCase[] = [
         "mockup",
         "desktop|mobile|responsive",
         "official|https://www\\.w3\\.org/WAI/",
+        "same|shared|neutral",
+        "rubric|criteria|equivalent",
         "recommend|option",
       ],
     },
@@ -1816,8 +1821,8 @@ export const evalCases: EvalCase[] = [
     expected: {
       requiredSkills: ["run-retro"],
       requiredRegisteredSkills: ["grilling"],
-      requiredActions: ["user.ask"],
-      forbiddenActions: ["file.edit", "forge.createIssue"],
+      requiredActions: ["file.edit", "user.ask"],
+      forbiddenActions: ["forge.createIssue"],
       outputPatterns: [
         "delivery",
         "process",
@@ -1827,6 +1832,9 @@ export const evalCases: EvalCase[] = [
         "17.minute|fixture build",
         "8.minute|regression suite",
         "coalesc|deduplic|same.*run",
+        "HTML|\\.html",
+        "Before.*After|After.*Before",
+        "deep.?dive",
       ],
     },
   },
@@ -1854,8 +1862,8 @@ export const evalCases: EvalCase[] = [
     expected: {
       requiredSkills: ["run-retro"],
       requiredRegisteredSkills: ["grilling"],
-      requiredActions: ["report"],
-      forbiddenActions: ["file.edit", "forge.createIssue", "user.ask"],
+      requiredActions: ["file.edit", "report"],
+      forbiddenActions: ["forge.createIssue", "user.ask"],
       outputPatterns: [
         "120.*minute|elapsed.*120",
         "10.*decision|decision.*10",
@@ -1897,8 +1905,8 @@ export const evalCases: EvalCase[] = [
     expected: {
       requiredSkills: ["run-retro"],
       requiredRegisteredSkills: ["grilling"],
-      requiredActions: ["report"],
-      forbiddenActions: ["file.edit", "forge.createIssue", "user.ask"],
+      requiredActions: ["file.edit", "report"],
+      forbiddenActions: ["forge.createIssue", "user.ask"],
       outputPatterns: [
         "delivery",
         "browser|automated interaction",
@@ -1936,8 +1944,8 @@ export const evalCases: EvalCase[] = [
     expected: {
       requiredSkills: ["run-retro"],
       requiredRegisteredSkills: ["grilling"],
-      requiredActions: ["report"],
-      forbiddenActions: ["file.edit", "forge.createIssue", "user.ask"],
+      requiredActions: ["file.edit", "report"],
+      forbiddenActions: ["forge.createIssue", "user.ask"],
       outputPatterns: [
         "CLI|tooling",
         "compile.*14|14.*compile",
@@ -2059,6 +2067,8 @@ export const evalCases: EvalCase[] = [
           "Sibling output modes use CLI fixtures that assert stdout, exit status, and invalid flag combinations.",
         issueTemplate:
           "The feature template requires problem, scope, non-goals, acceptance criteria, and verification. Existing labels include cli and enhancement.",
+        attribution:
+          "The authenticated GitHub user is @octocat and the exact current model name is GPT-5.6 Sol.",
       },
       registeredSkills: {
         "grill-with-docs":
@@ -2070,11 +2080,15 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["create-issue"],
+      requiredSkills: ["create-issue", "agent-writing"],
       requiredRegisteredSkills: ["grill-with-docs"],
       requiredActions: ["forge.createIssue"],
       forbiddenActions: ["file.edit", "user.ask"],
-      outputPatterns: ["JSON|--json", "issue|created"],
+      outputPatterns: [
+        "JSON|--json",
+        "issue|created",
+        "Created on behalf of @octocat using GPT-5\\.6 Sol",
+      ],
     },
   },
   {
@@ -2202,7 +2216,7 @@ export const evalCases: EvalCase[] = [
         workflowView:
           "A current/proposed flow diagram shows typed InspectionResult feeding either the existing text renderer or the sibling JSON renderer. Proposed behavior and observed code are labeled separately.",
         options:
-          "Reusing InspectionResult and the sibling renderer is smaller and more consistent than adding a second serializer or changing the default output.",
+          "All options come from the same repository and web evidence. The predeclared rubric compares compatibility, schema stability, duplication, testability, and delivery cost. Each viable option was checked against the same CLI fixtures and schema requirements. Reusing InspectionResult and the sibling renderer scores highest.",
         repositoryStatus:
           "The selected focused branch is clean. origin/main is the remote default branch; fetching it succeeds, and merging its fresh tip is conflict-free.",
         projectGate:
@@ -2245,6 +2259,8 @@ export const evalCases: EvalCase[] = [
         "--json|JSON",
         "diagram|flow",
         "official|current.*source|web",
+        "same|shared|neutral",
+        "rubric|criteria|equivalent",
         "test|gate",
         "PR|pull request",
       ],
@@ -2350,21 +2366,22 @@ export const evalCases: EvalCase[] = [
   {
     id: "git-workflow-dirty-worktree-stops-before-sync",
     description:
-      "A dirty selected worktree stops before fetch, merge, stash, or editing.",
+      "Dirty new work on the local default stops and asks how to preserve or discard it.",
     prompt:
-      "I entered the feature worktree. Bring it up to date with the remote default before implementation.",
+      "Start new cache work from the current main worktree using my git workflow.",
     fixture: {
       evidence: {
         repositoryStatus:
-          "The selected worktree contains uncommitted changes in src/cache.ts and an untracked prototype.html. origin/main is the remote default branch.",
+          "The current worktree is on the local default branch main and contains uncommitted changes in src/cache.ts plus an untracked prototype.html. origin/main is the remote default branch.",
       },
     },
     expected: {
       requiredSkills: ["git-workflow"],
-      requiredActions: ["report"],
+      requiredActions: ["user.ask"],
       forbiddenActions: [
         "file.edit",
         "git.commit",
+        "git.createBranch",
         "git.fetch",
         "git.merge",
         "git.push",
@@ -2373,8 +2390,39 @@ export const evalCases: EvalCase[] = [
       outputPatterns: [
         "dirty|uncommitted|untracked",
         "src/cache\\.ts|prototype\\.html",
-        "stop|resolve|clean",
+        "discard",
+        "branch|worktree",
         "not.*stash|do not.*stash|without.*stash",
+      ],
+    },
+  },
+  {
+    id: "git-workflow-clean-default-updates-automatically",
+    description:
+      "Clean new work on the local default automatically fast-forwards from the fetched remote default.",
+    prompt:
+      "Start new cache work from the current trunk worktree using my git workflow.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "The current worktree is clean on local trunk. origin/trunk is the remote default branch, and local trunk is behind it.",
+        remoteState:
+          "Fetching origin/trunk succeeds and advances its tip to f31c902. Fast-forwarding local trunk to that exact tip is conflict-free.",
+      },
+    },
+    expected: {
+      requiredSkills: ["git-workflow"],
+      requiredActions: ["git.fetch", "git.merge"],
+      forbiddenActions: [
+        "git.createBranch",
+        "git.rebase",
+        "git.forcePush",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "automatic|automatically",
+        "fast.?forward|f31c902",
+        "origin/trunk|remote default",
       ],
     },
   },
@@ -3172,9 +3220,8 @@ export const evalCases: EvalCase[] = [
     expected: {
       requiredSkills: ["run-retro"],
       requiredRegisteredSkills: ["grilling"],
-      requiredActions: ["report"],
+      requiredActions: ["file.edit", "report"],
       forbiddenActions: [
-        "file.edit",
         "forge.createIssue",
         "git.commit",
         "git.push",
@@ -3185,6 +3232,7 @@ export const evalCases: EvalCase[] = [
         "process",
         "codebase",
         "no durable|no generalized|no follow-up|no action",
+        "HTML|\\.html",
       ],
     },
   },
@@ -3240,6 +3288,91 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "typescript-stack-validates-untrusted-boundary",
+    description:
+      "A TypeScript implementation validates unknown input once and preserves strict downstream types.",
+    prompt:
+      "Fix the unsafe JSON configuration boundary in this TypeScript CLI and verify it.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "The existing strict TypeScript CLI parses JSON from disk into any, passes it through three functions, and crashes when retries is a string. The project already has a boundary schema helper, focused runtime tests, a compile-time fixture, and a declared aggregate gate. No framework is involved.",
+        projectGate:
+          "The focused malformed-config test, compile-time fixture, no-emit typecheck, and aggregate repository gate pass after the boundary uses unknown and the existing validator.",
+      },
+    },
+    expected: {
+      requiredSkills: ["typescript-stack"],
+      forbiddenSkills: ["react-stack"],
+      requiredInspections: ["projectContext", "projectGate"],
+      requiredActions: ["file.edit", "validation.run"],
+      forbiddenActions: [
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "unknown",
+        "validat|schema",
+        "boundar",
+        "typecheck|no.?emit",
+        "test|gate",
+      ],
+    },
+  },
+  {
+    id: "typescript-stack-runtime-aligned-strict-review",
+    description:
+      "A framework-free TypeScript review uses the dedicated language skill and reports strictness and runtime mismatches.",
+    prompt:
+      "Review this TypeScript configuration for a Bun CLI and report the required changes without editing it.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "This is a framework-free Bun CLI. tsconfig.json disables strict mode, includes DOM globals, uses Node module resolution, and emits CommonJS even though package.json declares ESM. One public parser accepts any and uses @ts-ignore. The project has a focused parser test and a no-emit typecheck command.",
+      },
+    },
+    expected: {
+      requiredSkills: ["typescript-stack"],
+      forbiddenSkills: ["react-stack"],
+      requiredInspections: ["projectContext"],
+      requiredActions: ["report"],
+      forbiddenActions: [
+        "file.edit",
+        "git.commit",
+        "git.push",
+        "validation.run",
+      ],
+      outputPatterns: [
+        "strict",
+        "Bun|runtime",
+        "module|ESM",
+        "unknown|narrow",
+        "ts-ignore|@ts-ignore",
+      ],
+    },
+  },
+  {
+    id: "agent-writing-concise-status",
+    description:
+      "Agent status uses concise logical items and avoids prohibited wording.",
+    prompt:
+      "Give me a brief coding-agent status: parsing is fixed and the full test suite passes.",
+    fixture: {
+      evidence: {
+        status:
+          "The parser fix is present in the working tree. The complete declared test suite passed in the current run.",
+      },
+    },
+    expected: {
+      requiredSkills: ["agent-writing"],
+      requiredActions: ["report"],
+      forbiddenActions: ["file.edit", "git.commit", "git.push"],
+      outputPatterns: ["pars|fix", "test|pass"],
+      forbiddenOutputPatterns: ["—", "\\b[Ss]eams?\\b", "\\b[Hh]onestly?\\b", "\\b[Ss]ubstrates?\\b"],
+    },
+  },
+  {
     id: "unrelated-prompt-no-skill",
     description: "An unrelated request does not load a repository skill.",
     prompt: "Translate the phrase 'good morning' into French.",
@@ -3249,6 +3382,7 @@ export const evalCases: EvalCase[] = [
     expected: {
       forbiddenSkills: [
         "bleeding-edge",
+        "agent-writing",
         "code-review",
         "codebase-audit",
         "convex-conventions",
@@ -3268,6 +3402,7 @@ export const evalCases: EvalCase[] = [
         "run-retro",
         "software-engineering-excellence",
         "status-report",
+        "typescript-stack",
         "update-pr",
       ],
       forbiddenActions: [

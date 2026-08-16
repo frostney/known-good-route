@@ -2,7 +2,7 @@
 
 ![Known Good Route logo](logo.png)
 
-My personal collection of agent skills for agentic coding — portable `SKILL.md` files that keep my workflows and conventions consistent across projects, covering day-to-day flows (git, issues, PRs, reviews) and one-off project setup, stack, and audit guidance.
+My personal collection of agent skills for agentic coding: portable `SKILL.md` files that keep my workflows and conventions consistent across projects, covering day-to-day flows (git, issues, PRs, reviews) and one-off project setup, stack, and audit guidance.
 
 ## Install
 
@@ -10,7 +10,7 @@ My personal collection of agent skills for agentic coding — portable `SKILL.md
 npx skills add frostney/known-good-route
 ```
 
-Installs into your skills-compatible agent(s) — Cursor, Claude Code, Codex, GitHub Copilot, and more. See [skills.sh](https://www.skills.sh/) for details.
+Installs into your skills-compatible agent(s): Cursor, Claude Code, Codex, GitHub Copilot, and more. See [skills.sh](https://www.skills.sh/) for details.
 
 ## Usage
 
@@ -27,8 +27,8 @@ for ceremony.
 flowchart TB
     subgraph Layers["Per-project layers (outside the loop)"]
         direction LR
-        Scaffold["Scaffold<br/>project-structure + applicable stack<br/>+ convex-conventions when relevant"]
-        Ambient["Ambient<br/>software-engineering-excellence<br/>+ bleeding-edge when adopted"]
+        Scaffold["Scaffold<br/>project-structure + applicable language/stack skills<br/>+ convex-conventions when relevant"]
+        Ambient["Ambient<br/>agent-writing + software-engineering-excellence<br/>+ bleeding-edge when adopted"]
     end
 
     subgraph Outer["Outer loop"]
@@ -77,9 +77,10 @@ flowchart TB
 ```
 
 - **Scaffold** is the repository's structural and stack foundation:
-  `project-structure`, the applicable stack skill, and `convex-conventions` when
-  Convex is in scope. It is not another step in every delivery cycle.
-- **Ambient** guidance governs every stage:
+  `project-structure`, the applicable language and stack skills, and
+  `convex-conventions` when Convex is in scope. It is not another step in every
+  delivery cycle.
+- **Ambient** guidance governs every stage: `agent-writing`,
   `software-engineering-excellence`, plus `bleeding-edge` when the project has
   adopted it. When one conversation coordinates two or more substantial
   deliverables outside an active orchestrator, it retains decisions and
@@ -108,19 +109,19 @@ flowchart TB
 
 | Skill | What it does |
 | --- | --- |
-| [`git-workflow`](git-workflow/SKILL.md) | Default git workflow: require a clean worktree and freshly fetch the remote default before work, use ordinary merge-only branches or native GitHub stacks, permit rewriting only through guarded official stack operations, use always-new commits, and squash-merge PRs. |
+| [`git-workflow`](git-workflow/SKILL.md) | Default git workflow: automatically update clean local-default work and create new local branches/worktrees from the latest remote default; stop on dirty default state and ask whether to discard it or use a focused branch/worktree; require impact-focused commit and PR titles; use ordinary merge-only branches or guarded native GitHub stacks, always-new commits, and squash merges. |
 | [`status-report`](status-report/SKILL.md) | Build a live, read-only Kanban of every open PR and all local worktrees, using current-head CI and review gates, short semantic local-change summaries, and rich, Mermaid, or Markdown rendering according to host capability. |
-| [`create-issue`](create-issue/SKILL.md) | File a well-structured GitHub issue from a tagline using the project's issue template and `VISION.md` when present, capturing UI/UX context, and grilling the user for thoroughness when a grill skill is registered. Supports `automatic` mode for project-context template/label/body selection. |
-| [`implement-issue`](implement-issue/SKILL.md) | Validate an issue against current code, project contracts, and web evidence; enrich grilling with surface-appropriate mockups, diagrams, or disposable prototypes; present implementation options; synchronize with the remote default; implement, verify, review, and hand off via `/create-pr`. Supports `automatic` mode for project-context option selection. |
-| [`implement-idea`](implement-idea/SKILL.md) | Like `implement-issue` but with no GitHub issue: start from a provisional mini-spec of at most 400 characters, investigate and enrich the grill with current web evidence plus surface-appropriate artifacts, confirm the final mini-spec, synchronize with the remote default, then implement → verify → review → `/create-pr`. Supports `automatic` mode for project-context option selection. |
-| [`run-retro`](run-retro/SKILL.md) | Review a completed workstream through delivery-speed, process, and codebase-health lenses; map lifecycle and surface-specific timings, exclusive critical path, masked work, resource usage, and duplicated effort; use `grilling` to agree durable lessons and selected follow-ups. |
+| [`create-issue`](create-issue/SKILL.md) | File a well-structured GitHub issue from a tagline using the project's issue template and `VISION.md` when present, grill for thoroughness, and add a GitHub Note with the exact user and model attribution. Supports `automatic` mode for project-context template/label/body selection. |
+| [`implement-issue`](implement-issue/SKILL.md) | Validate an issue, derive every viable option from one neutral evidence packet, apply one predeclared rubric and equivalent checks, then select, implement, verify, review, and hand off via `/create-pr`. Supports gated `automatic` selection. |
+| [`implement-idea`](implement-idea/SKILL.md) | Turn an unfiled idea into a confirmed mini-spec, derive every viable option from one neutral evidence packet, apply one predeclared rubric and equivalent checks, then select, implement, verify, review, and hand off via `/create-pr`. Supports gated `automatic` selection. |
+| [`run-retro`](run-retro/SKILL.md) | Review a completed workstream and produce an interactive HTML impact report with per-item summaries of at most 300 characters, evidence-backed Before/After states, copyable or app-linked deep dives, and optional animated mechanism diagrams. |
 | [`create-pr`](create-pr/SKILL.md) | Commit relevant local changes, open a templated draft PR or submit a verified native GitHub stack, fill readiness gaps, fix CI failures, and mark each ready layer ready. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and update the current PR, merging ordinary baselines or using guarded native stack synchronization, then refresh stale metadata. |
-| [`review-pr`](review-pr/SKILL.md) | Converge one PR through provider-neutral inspection of automation finding surfaces, exact-final-head CI and review automation, zero unresolved or unanswered automation threads, and deterministic waiting without model heartbeats. Normal mode never merges; `automatic-merge` merges only an ordinary converged PR. |
+| [`review-pr`](review-pr/SKILL.md) | Converge one PR through exact-final-head CI and review evidence, attributed inline replies, zero unresolved or unanswered automation threads, and deterministic waiting. Normal mode never merges; `automatic-merge` merges only an ordinary converged PR. |
 | [`delivery-wait`](delivery-wait/SKILL.md) | Internal deterministic GitHub transition waits for exact-head checks, workflows, merges, tags, release assets, and time-based wakes. |
 | [`code-review`](code-review/SKILL.md) | Review a bounded change against its claim using behavioral and revert-clean falsification probes, churn-backed risk, four-layer de-duplication, and discoverability checks when public web surfaces change. Additive inputs support evidence lanes, exact files, and prior-finding revalidation; fix modes remain local. |
 | [`create-release`](create-release/SKILL.md) | Prepare a changelog-first release PR, then publish only when authorized and through exactly one evidence-backed path. Existing workflows own publication when configured; the agent never double-publishes with `gh release create`. |
-| [`roadmap-review`](roadmap-review/SKILL.md) | Review a project's roadmap from freshly-pulled data — assess current state and release cadence, measure delivery velocity from history, verify candidate work against the source, produce a parallelized throughput-anchored version plan, and (optionally, on confirmation) create milestones and issues. |
+| [`roadmap-review`](roadmap-review/SKILL.md) | Review a project's roadmap from freshly-pulled data: assess current state and release cadence, measure delivery velocity from history, verify candidate work against the source, produce a parallelized throughput-anchored version plan, and (optionally, on confirmation) create milestones and issues. |
 | [`milestone-rush`](milestone-rush/SKILL.md) | Complete a confirmed milestone through repository-owned preflights, isolated worker packets, focused remediation, one terminal complete gate, event-driven waits, native stacks or ordinary PRs, and a closure-validated timing/token ledger; verify integrated completion and offer an explicitly approved retrospective. |
 
 ### One-off project setup, guidance, and audit skills
@@ -128,12 +129,14 @@ flowchart TB
 | Skill | What it does |
 | --- | --- |
 | [`project-structure`](project-structure/SKILL.md) | Language-agnostic repo layout, `README.md` structure, `docs/` template, `AGENTS.md` template (with `CLAUDE.md` symlink and `.agents/skills` ↔ `.claude/skills`), pre-commit hook contract (Lefthook default), scripts directory, changelog (git-cliff), markdown linting (markdownlint), and contracts for duplication, link checking, and architectural / docs–implementation drift. |
-| [`react-stack`](react-stack/SKILL.md) | Default React-based stack across two profiles — web (Next.js App Router) and universal (Expo Router) — with a shared core (Bun-only, TypeScript, Tailwind 4, Biome, Knip, Fallow, `bun test` co-located, single `bun run check` aggregator, Vercel AI Gateway via `@ai-sdk/gateway`, Clerk, Convex, Plop, Lefthook, Atomic Design, source under `src/` by domain). |
-| [`native-nostalgia-stack`](native-nostalgia-stack/SKILL.md) | FreePascal toolchain — FPC in Delphi mode (compiler flags in a shared include), namespace-based unit naming (flat by default), code-style starting points, build / formatter / codebase-health contracts (implementation is the project's choice), Lefthook pre-commit, InstantFPC for one-off scripts. |
-| [`convex-conventions`](convex-conventions/SKILL.md) | Convex backend rules — shared validators, Clerk JWT bridge, `args` + `returns` on every public function, in-code filtering, `.take()` caps, rate-limited mutations, action/mutation split, schema with soft-delete and audit trails, single re-export module for client types. The live Convex docs override this skill on conflict. |
+| [`typescript-stack`](typescript-stack/SKILL.md) | Framework-neutral strict TypeScript conventions for runtime-aligned compiler settings, trustworthy boundaries, explicit public APIs, modules, type/runtime tests, and emitted or no-emit validation. |
+| [`react-stack`](react-stack/SKILL.md) | Default React-based stack across web (Next.js App Router) and universal (Expo Router) profiles, with a shared core of Bun, Tailwind 4, Biome, Knip, Fallow, `bun test`, Vercel AI Gateway, Clerk, Convex, Plop, Lefthook, Atomic Design, and domain-based `src/`. TypeScript policy belongs to `typescript-stack`. |
+| [`native-nostalgia-stack`](native-nostalgia-stack/SKILL.md) | FreePascal toolchain: FPC in Delphi mode (compiler flags in a shared include), namespace-based unit naming (flat by default), code-style starting points, build / formatter / codebase-health contracts (implementation is the project's choice), Lefthook pre-commit, InstantFPC for one-off scripts. |
+| [`convex-conventions`](convex-conventions/SKILL.md) | Convex backend rules: shared validators, Clerk JWT bridge, `args` + `returns` on every public function, in-code filtering, `.take()` caps, rate-limited mutations, action/mutation split, schema with soft-delete and audit trails, single re-export module for client types. The live Convex docs override this skill on conflict. |
 | [`codebase-audit`](codebase-audit/SKILL.md) | Audit the repository and delivery surface with a coverage map, conditional technical and discoverability perspectives, revert-clean falsification probes, four-layer de-duplication, and churn-backed architectural risk. Evidence can use bounded lanes; remediation requires a selected coherent batch. |
-| [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Ambient engineering-quality standard across the whole lifecycle — planning, orchestrating, developing, debugging, reviewing, refactoring, and substantial investigation: ground in reality (docs are leads, not proof), find simple solutions for complex problems without shortcuts, solve the full scope, reuse before creating, validate to the real bar, and use maintainability as the governor. |
-| [`bleeding-edge`](bleeding-edge/SKILL.md) | Ambient lens that tilts technology choices toward the newest viable option — latest stable (incl. just-released majors), newly-stable language/platform features, modern tooling, current AI models, and pre-release channels with a documented reason — while staying under `software-engineering-excellence`: verify live, pin, keep it reversible and gate-green, and never silently swap a decided choice. |
+| [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Ambient engineering-quality standard for planning, orchestration, development, debugging, review, refactoring, and substantial investigation: ground in reality, solve the full scope without shortcuts, reuse before creating, validate to the real bar, and use maintainability as the governor. |
+| [`agent-writing`](agent-writing/SKILL.md) | Ambient response guidance: outcome first, one concise logical item at a time, complete sentences, prohibited wording, and hard 300-character limits for review replies and retrospective impact items. |
+| [`bleeding-edge`](bleeding-edge/SKILL.md) | Ambient lens favoring the newest viable option, including just-released stable versions and justified pre-release channels, under `software-engineering-excellence`: verify live, pin, keep choices reversible and gate-green, and never silently replace a decided choice. |
 
 ## Background
 
@@ -205,7 +208,7 @@ that evidence.
   load only when relevant.
 - **Verify versions live** is a recurring rule across stack skills: the agent confirms the current stable version of every dependency from the registry (`bun pm view <package> version`) or official release notes before adding or upgrading any dependency. Memory and prior conversation turns are not acceptable sources.
 - **Live docs override the skill on conflict** for any third-party surface that evolves quickly (Convex, AI Gateway, etc.).
-- **No project names** appear in any skill body — patterns are extracted, named projects aren't.
+- **No project names** appear in any skill body: patterns are extracted, named projects aren't.
 - **Examples** are exceptional. Prefer expressive interfaces and high-fidelity
   references such as code, tests, specs, and artifacts; use a prose example only
   when it resolves an otherwise ambiguous decision.
@@ -251,21 +254,28 @@ that evidence.
   invokes `/run-retro` only after explicit approval.
 - `run-retro` consumes Milestone Rush's ignored JSONL event ledger when present,
   reconciles it with forge and repository evidence, and keeps exclusive elapsed
-  bottlenecks separate from overlapping and aggregate resource consumption.
+  bottlenecks separate from overlapping and aggregate resource consumption. It
+  always produces a local HTML impact report with concise Before/After cards
+  and offers card-level deep dives through `grilling`.
 - `create-issue`, `implement-issue`, and `implement-idea` invoke `/grill-with-docs` (preferred) or `/grill-me` for thoroughness when registered.
-- `implement-issue` and `implement-idea` always add current web evidence and
-  surface-appropriate visual or dynamic artifacts to the grill; failed web
-  research stops before implementation options.
+- `implement-issue` and `implement-idea` derive all viable options from one
+  neutral evidence packet, declare the rubric first, and run equivalent
+  decision-relevant checks before recommending. Failed web research stops before
+  implementation options.
 - `create-issue`, `implement-issue`, and `implement-idea` read `VISION.md` when present and stop for clarification when the request conflicts with it.
 - `create-issue`, `implement-issue`, and `implement-idea` support an explicit `automatic` prompt mode where the agent auto-selects the project-context recommendation after completing the required investigation/gates.
 - `implement-idea` borrows `/create-issue`'s good-issue components when formulating the idea.
 - `run-retro` requires `grilling` for the retrospective interview and final
   confirmation, then applies only user-selected documentation edits and ticket
   actions.
-- `react-stack` and `native-nostalgia-stack` defer to `project-structure` for
-  language-neutral repository policy; `react-stack` delegates Convex specifics
-  to `convex-conventions`.
-- `bleeding-edge` sits beneath `software-engineering-excellence` as a subordinate lens — it tilts the default technology choice toward the newest viable option while SEE remains the governor and maintainability stays the tiebreaker. It reuses the cross-skill "verify versions live" rule, and it applies its bias *within* the choices decided by the stack skills and `AGENTS.md` Hard Constraints rather than silently swapping them.
+- `typescript-stack`, `react-stack`, and `native-nostalgia-stack` defer to
+  `project-structure` for language-neutral repository policy. `react-stack`
+  delegates TypeScript language policy to `typescript-stack` and Convex
+  specifics to `convex-conventions`.
+- `agent-writing` applies to every user-facing item and generated prose artifact.
+  Issues may contain many concise items; each review reply and retro impact item
+  is capped at 300 characters.
+- `bleeding-edge` sits beneath `software-engineering-excellence` as a subordinate lens: it tilts the default technology choice toward the newest viable option while SEE remains the governor and maintainability stays the tiebreaker. It reuses the cross-skill "verify versions live" rule, and it applies its bias *within* the choices decided by the stack skills and `AGENTS.md` Hard Constraints rather than silently swapping them.
 
 ## Contributing
 
@@ -276,7 +286,7 @@ pip install --upgrade skills-ref
 agentskills validate ./<skill>
 ```
 
-Every skill is validated against the [Agent Skills specification](https://agentskills.io/specification) in CI via [`skills-ref`](https://github.com/agentskills/agentskills) — see [`.github/workflows/validate-skills.yml`](.github/workflows/validate-skills.yml).
+Every skill is validated against the [Agent Skills specification](https://agentskills.io/specification) in CI via [`skills-ref`](https://github.com/agentskills/agentskills): see [`.github/workflows/validate-skills.yml`](.github/workflows/validate-skills.yml).
 
 For behavioral changes, also run the same representative scenarios against the
 supported frontier models:
@@ -297,7 +307,7 @@ supported frontier models:
 | Mixed actionable and invalid inline findings | Fixes validated findings, rebuts invalid ones inline, and never posts a top-level comment |
 | Issue draft awaiting approval | Investigates, grills, and presents the project-aligned draft without filing it |
 | Automatic issue creation and exact duplicate | Completes every investigation/grill gate before filing, but stops immediately for the existing issue |
-| Artifact-assisted implementation grill | Uses current web and repository evidence, then shows surface-appropriate mockups, diagrams, or disposable prototypes before option selection |
+| Artifact-assisted implementation grill | Derives all viable options from one evidence packet and compares them with a predeclared rubric plus equivalent decision-relevant checks before selection |
 | Existing-contract implementation grill | Inspects the embedded behavioral contract and runs an executable compatibility probe before architecture or option selection |
 | Required current web research unavailable | Stops before presenting implementation options or editing |
 | Default code review and repository-wide audit | Reproduces safe boundary behavior and reports evidence without remediating in read-only mode |
@@ -326,7 +336,9 @@ supported frontier models:
 | Chained substantial deliverables | Keeps decisions and provenance in a thin coordinator, delegates one context-isolated bounded worker per deliverable, and consumes terminal summaries instead of raw work traces |
 | Small local change | Runs the real project gate without generic re-checks or verifier subagents |
 | Local convention differs from a generic default | Follows the surrounding code and project gate instead of imposing a blanket style rule |
+| Pascal identifier contains a standard initialism | Preserves forms such as `HTTP` and `GC` unless an external API or project rule requires another spelling |
 | Written issue, PR, roadmap, or retrospective | Leads with the outcome and omits filler, boilerplate, and repeated summaries |
+| Agent-authored response or artifact | Keeps each logical item concise, excludes prohibited wording, and preserves quoted source and code exactly |
 
 The provider-neutral [behavioral eval harness](evals/README.md) runs these
 scenarios through Vercel AI SDK and AI Gateway. `bun run check` validates the
@@ -334,8 +346,8 @@ harness without model spend; `bun run eval` runs the paid model matrix when
 `AI_GATEWAY_API_KEY` is present. Paid evals are local-only and require an
 explicit command; labels and GitHub Actions never trigger them.
 
-**Validator freshness policy:** `skills-ref` is intentionally installed unpinned (`pip install --upgrade skills-ref`) so CI always validates against the latest published spec implementation rather than a frozen snapshot. The workflow caches `~/.cache/pip` to speed up installs; this is safe because pip still resolves the newest release from the index on every run and only reuses a cached wheel when that exact version was already downloaded, so caching never holds back the validator version. This "always latest" rule applies only to the validator package itself — the workflow's GitHub Actions (`checkout`, `setup-python`, `cache`) are pinned to full commit SHAs (with the version in a trailing comment) for supply-chain safety, which is the recommended hardening practice for third-party actions.
+**Validator freshness policy:** `skills-ref` is intentionally installed unpinned (`pip install --upgrade skills-ref`) so CI always validates against the latest published spec implementation rather than a frozen snapshot. The workflow caches `~/.cache/pip` to speed up installs; this is safe because pip still resolves the newest release from the index on every run and only reuses a cached wheel when that exact version was already downloaded, so caching never holds back the validator version. This "always latest" rule applies only to the validator package itself: the workflow's GitHub Actions (`checkout`, `setup-python`, `cache`) are pinned to full commit SHAs (with the version in a trailing comment) for supply-chain safety, which is the recommended hardening practice for third-party actions.
 
 ## License
 
-Dual-licensed under either of [The Unlicense](LICENSE) (public domain) or the [MIT License](LICENSE-MIT) at your option — SPDX expression `Unlicense OR MIT`. Each skill declares the same in its frontmatter.
+Dual-licensed under either of [The Unlicense](LICENSE) (public domain) or the [MIT License](LICENSE-MIT) at your option. The SPDX expression is `Unlicense OR MIT`; each skill declares it in frontmatter.
