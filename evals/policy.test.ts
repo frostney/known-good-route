@@ -41,6 +41,21 @@ describe("cross-skill policy", () => {
     expect(source).toContain("pull request **title**");
   });
 
+  test("code review keeps nitpicks canonical but non-blocking", async () => {
+    const source = await skill("code-review");
+    const findings = await Bun.file(
+      resolve(repositoryRoot, "code-review/references/findings-json.md"),
+    ).text();
+
+    expect(source).toContain("presentation only");
+    expect(source).toContain("NITPICK");
+    expect(source).toContain("never blocks PR creation");
+    expect(source).toContain("filename including extensionless files");
+    expect(findings).toContain(
+      "BLOCKING | IMPORTANT | IMPROVEMENT | NITPICK",
+    );
+  });
+
   test("Pascal preserves standard initialisms", async () => {
     const source = await Bun.file(
       resolve(repositoryRoot, "native-nostalgia-stack/references/code-style.md"),
