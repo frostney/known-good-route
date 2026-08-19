@@ -1,7 +1,7 @@
 # Pull-request readiness
 
 `address-pr-feedback` owns one PR and one exact current head at a time. Re-read
-forge state after every thread action, commit, push, baseline update, automation
+GitHub state after every thread action, commit, push, baseline update, automation
 response, or check transition; delegated output is evidence to verify, not gate
 state.
 
@@ -10,16 +10,16 @@ state.
 Record the repository, PR number or URL, and final head object ID. A PR is
 `ready` only when all conditions are simultaneously observed for that head:
 
-- every behavior criterion has current observed functional evidence for the
+- every required behavior has current observed functional evidence for the
   final content;
-- any criterion verified statically is explicitly permitted that verification
+- any requirement verified statically is explicitly permitted that verification
   mode by its specification and records the limitation;
 - the repository's declared gate passed for that same final content;
 - every required check is terminal and successful;
 - every intentionally active review automation has a terminal completed verdict
   explicitly tied to that head, with no newer incomplete or follow-up review;
 - no actionable current-head finding remains;
-- the forge reports zero unresolved review threads;
+- GitHub reports zero unresolved review threads;
 - every inline automation thread has a maintainer-workflow reply in that thread;
   and
 - no CI, verdict, finding, reply, or thread-readiness evidence belongs only to a
@@ -35,8 +35,8 @@ together.
 The bundled review helper owns GitHub mechanics: inspect current findings and
 thread state, wait while unchanged, publish an explicitly supplied inline reply,
 and resolve an explicitly selected thread. `address-pr-feedback` owns every
-judgment, source edit, validation choice, and readiness decision. Re-read the
-forge through the helper after each mutation and verify the final head,
+judgment, source edit, validation choice, and decision to mark the PR ready.
+Re-read GitHub through the helper after each mutation and verify the final head,
 unresolved count, unanswered automation-thread count, findings, checks, and
 automation states.
 

@@ -29,7 +29,7 @@ Read each as "for the work I am doing right now…"
 
 ## Performance and feedback
 
-- **12.** Did I consider product runtime and the edit-to-trustworthy-answer loop while choosing the design, rather than leave speed until the end?
+- **12.** Did I consider product runtime and the time to reliable feedback while choosing the design, rather than leave speed until the end?
 - **13.** Where the change affects a hot path, command, hook, local environment, CI, concurrency, external work, resource use, or a performance claim, did I measure a representative baseline and changed result?
 - **14.** Are the frequent local checks fast and high-signal, with heavier work placed where it protects correctness without needlessly delaying every iteration?
 - **15.** If measured speed required more complexity, is that complexity contained, covered, documented, and worth its maintenance cost at representative scale?

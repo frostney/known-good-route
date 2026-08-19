@@ -20,7 +20,7 @@ current repository.
 
 - Start with a provisional mini-spec of at most 400 characters, including
   spaces. Confirm the final mini-spec covering the user-visible outcome,
-  scope/non-goals, and verifiable success criteria only after the
+  scope/non-goals, and testable measures of success only after the
   artifact-assisted grill.
 - Read project instructions, vision, contribution guidance, Definition of Ready,
   Definition of Done, relevant domain skills, real project commands, affected
@@ -36,7 +36,7 @@ current repository.
   repository, reproduction, project contracts, current web research, and shared
   current-state artifacts. Derive every option from this same packet.
 - Define one comparison rubric from the confirmed outcome, constraints, and
-  success criteria before scoring. Give every viable option equivalent
+  measures of success before scoring. Give every viable option equivalent
   decision-relevant validation:
   - for UI/UX differences, show each materially different experience;
   - for architecture or workflow differences, show each relevant flow;
@@ -97,7 +97,7 @@ security, scope, or vision decision disables automatic mode.
    consistency; attach the evidence to the PR.
 8. Run targeted checks while developing, then the applicable Definition of Done
    and repository gate. Fix failures rather than weakening the gate.
-9. Run one `/code-review fix-all` pass against the success criteria, Definition
+9. Run one `/code-review fix-all` pass against the measures of success, Definition
    of Done, project conventions, branch diff, and reproducible behavior.
    Resolve every validated in-scope finding and rerun affected checks. Stop for
    a material new decision; do not continue with unresolved Blocking or

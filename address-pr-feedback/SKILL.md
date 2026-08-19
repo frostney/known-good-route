@@ -29,9 +29,9 @@ only after the same exact-head readiness contract passes.
   In `automatic-merge` mode, a documented automation retrigger command is the
   only allowed top-level comment.
 - Before any substantive review post or reply, resolve the authenticated GitHub
-  username and exact model name from current forge and host evidence. Stop if
-  either is unavailable; never guess. End each reply with this GitHub Note and
-  keep the full reply at 300 characters or fewer:
+  username and exact model name from the current GitHub account and agent
+  environment. Stop if either is unavailable; never guess. End each reply with
+  this GitHub Note and keep the full reply at 300 characters or fewer:
 
   > [!NOTE]
   > Created on behalf of @username using ModelName.
@@ -95,7 +95,7 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    required checks, applicable project instructions, active review automation,
    terminal states, unresolved-thread count, and unanswered inline-automation-
    thread count. Establish the complete PR specification from the user request,
-   linked issue or confirmed mini-spec, acceptance criteria, PR body, product
+   linked issue or confirmed mini-spec, required behavior, PR body, product
    docs, ADRs or durable decisions, and the nearest Definitions of Ready and
    Done. Label any claim inferred from the current change rather than a source.
 2. If an ordinary branch needs a baseline update, merge the remote base by
@@ -122,18 +122,19 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    cannot accept a reply. Resolve attribution identities before the first reply
    and append the required Note to every substantive reply.
 5. Compare the complete branch change, including uncommitted review fixes and
-   any baseline merge, with every specification and readiness criterion. Keep a
-   criterion-to-evidence record for the current change. Invalidate evidence when
+   any baseline merge, with the full specification and everything required
+   before pushing. Keep a record linking each requirement to its evidence for
+   the current change. Invalidate evidence when
    source, test, configuration, dependency, generated output, baseline, or
    delivered behavior changes in a way that can affect it. Exercise every
-   testable criterion without current evidence through the real delivered
-   interface. Cover the intended path and the most consequential failure or
+   requirement that can be tested and lacks current evidence through the real
+   delivered interface. Cover the intended path and the most consequential failure or
    boundary path. Record setup, input, expected result, and observed result;
-   include rendered UI and accessibility evidence for user-facing changes. Mark
-   a criterion static-only when real execution is unsafe or unavailable, and do
-   not present it as behaviorally verified. Run the repository's declared
-   pre-PR gate. Fix every in-scope gap, then repeat this step until every
-   criterion has current evidence and the gate passes on the unchanged change.
+   include rendered UI and accessibility evidence for user-facing changes. When
+   real execution is unsafe or unavailable, record the requirement as
+   static-only and do not present it as behaviorally verified. Run the
+   repository's declared pre-PR gate. Fix every in-scope gap, then repeat this
+   step until every requirement has current evidence and the gate passes on the unchanged change.
    Stop before pushing when a required behavior cannot be validated safely or
    the specification does not permit static verification.
 6. Invoke `/code-review fix-all` on that complete current change. Apply every
@@ -148,10 +149,10 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
 7. Re-read the exact head, required checks, terminal automation verdicts,
    actionable findings, unresolved threads, and unanswered inline automation
    threads. Apply the readiness and `retry_at` rules in the reference. A new
-   head invalidates external gate evidence. Preserve local criterion evidence
-   only when the pushed content is identical and its recorded dependencies did
-   not change. A validated CI, code, or behavior failure returns to step 5
-   before another commit or push.
+   head invalidates external gate evidence. Preserve local evidence for each
+   requirement only when the pushed content is identical and its recorded
+   dependencies did not change. A validated CI, code, or behavior failure
+   returns to step 5 before another commit or push.
 8. In normal mode, return the result contract without merging. In
    `automatic-merge` mode, launch the helper's foreground `wait` operation with
    the exact head, repository policy, checkpoint, and safely derived deadline.

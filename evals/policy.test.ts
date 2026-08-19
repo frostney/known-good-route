@@ -21,14 +21,14 @@ describe("cross-skill policy", () => {
     }
   });
 
-  test("forge prose uses exact attributed GitHub Notes", async () => {
+  test("GitHub prose uses exact attributed Notes", async () => {
     const note = "> [!NOTE]\n   > Created on behalf of @username using ModelName.";
     const createIssue = await skill("create-issue");
     const addressPrFeedback = await skill("address-pr-feedback");
 
     expect(createIssue).toContain(note);
     expect(addressPrFeedback).toContain(note.replace("   >", "  >"));
-    expect(createIssue).toContain("Stop if either is unavailable");
+    expect(createIssue).toMatch(/Stop if either is\s+unavailable/);
     expect(addressPrFeedback).toContain("exact automation retrigger command");
     expect(addressPrFeedback).toContain("300 characters or fewer");
   });
@@ -36,8 +36,8 @@ describe("cross-skill policy", () => {
   test("PR feedback repeats specification and functional validation before push", async () => {
     const source = await skill("address-pr-feedback");
 
-    expect(source).toContain("criterion-to-evidence record");
-    expect(source).toMatch(/real delivered\s+interface/);
+    expect(source).toContain("record linking each requirement to its evidence");
+    expect(source).toMatch(/real\s+delivered\s+interface/);
     expect(source).toContain("pre-PR gate");
     expect(source).toContain("/code-review fix-all");
     expect(source).toContain("same unchanged change");
@@ -52,6 +52,20 @@ describe("cross-skill policy", () => {
     expect(source).toContain("over 250 words");
     expect(source).toContain("references/generated-writing-patterns.md");
     expect(source).not.toContain("Target about 300 characters per item");
+  });
+
+  test("writing guidance replaces compressed labels with specific wording", async () => {
+    const source = await Bun.file(
+      resolve(
+        repositoryRoot,
+        "agent-writing/references/generated-writing-patterns.md",
+      ),
+    ).text();
+
+    expect(source).toContain("Coined labels that compress a multi-step process");
+    expect(source).toContain("requirements for marking the PR ready");
+    expect(source).toContain("time from making an edit to reliable evidence");
+    expect(source).toContain("Preserve quoted headings, fixture keys, and code identifiers");
   });
 
   test("git titles state impact", async () => {

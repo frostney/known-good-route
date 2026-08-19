@@ -19,7 +19,8 @@ These are [Agent Skills](https://agentskills.io): any skills-compatible agent lo
 ### Operating loop
 
 Establish each repository's **Scaffold** once, keep its **Ambient** guidance
-active throughout, and run the outer loop from fresh project and forge evidence.
+active throughout, and run the outer loop from fresh project, issue, and
+pull-request evidence.
 Enter at the state the work is actually in; never replay earlier stages merely
 for ceremony.
 
@@ -146,9 +147,9 @@ Design decisions and conventions shared across every skill in this collection.
 
 The suite is also audited against
 [Writing Great Skills](https://github.com/mattpocock/skills/tree/main/skills/productivity/writing-great-skills):
-keep the process predictable, completion criteria checkable, each rule in one
-authoritative place, branch-specific detail behind direct context pointers, and
-no-op prose pruned.
+keep the process predictable, make completion requirements easy to check, keep
+each rule in one authoritative place, put branch-specific detail behind direct
+context pointers, and prune no-op prose.
 
 ### Frontier-model prompt contract
 
@@ -180,7 +181,7 @@ including Anthropic's
 - Lead final responses and written artifacts with the outcome. Keep complete,
   readable sentences and decision-relevant evidence; omit filler, boilerplate,
   repeated summaries, and internal-reasoning narration.
-- Keep startup descriptions limited to outcome and activation criteria. Put
+- Keep startup descriptions limited to the outcome and when to use the skill. Put
   model effort, verbosity, thinking, context-budget plumbing, asynchronous
   progress delivery, and any model-specific verifier strategy in the harness.
 - Keep ambient repository context lightweight and specific: non-obvious
@@ -232,7 +233,7 @@ that evidence.
   additive `subagents` input. Workers own bounded evidence lanes; the
   coordinator owns findings, verdicts, edits, and reported fallbacks.
 - `address-pr-feedback` establishes the PR specification, actively exercises
-  every criterion whose evidence was invalidated, runs the project gate and
+  every requirement whose evidence was invalidated, runs the project gate and
   `/code-review fix-all` on the same unchanged change before each substantive
   code push, then invokes `/update-pr`. It owns review inspection, deterministic
   waiting, replies, and thread resolution through its bundled helper. Read-only
@@ -264,8 +265,9 @@ that evidence.
   standalone implementations remain unchanged. It never creates a release and
   invokes `/run-retro` only after explicit approval.
 - `run-retro` consumes Milestone Rush's ignored JSONL event ledger when present,
-  reconciles it with forge and repository evidence, and keeps exclusive elapsed
-  bottlenecks separate from overlapping and aggregate resource consumption. It
+  reconciles it with issue, pull-request, and repository evidence, and keeps
+  exclusive elapsed bottlenecks separate from overlapping and aggregate
+  resource consumption. It
   always produces a local HTML impact report with concise Before/After cards
   and offers card-level deep dives through `grilling`.
 - `create-issue`, `implement-issue`, and `implement-idea` invoke `/grill-with-docs` (preferred) or `/grill-me` for thoroughness when registered.
@@ -310,7 +312,7 @@ supported frontier models:
 | Already-fixed issue | Reports source/test evidence instead of inventing a change |
 | Branch with committed work and a clean tree | Verifies the local change against its specification and real behavior, then opens the PR without creating an empty commit |
 | Dirty focused branch with unrelated local state | Refines and tests only relevant work before the first push, excludes secrets, and marks the PR ready only after all gates pass |
-| Local change misses a specification criterion | Exercises the delivered interface, fixes the gap, and repeats local specification and functional checks before opening the draft PR |
+| Local change misses a specification requirement | Exercises the delivered interface, fixes the gap, and repeats local specification and functional checks before opening the draft PR |
 | Draft PR missing a Definition of Ready item | Returns repository gaps to local convergence before a new commit and push, then waits for green CI before marking ready |
 | Draft PR missing only required metadata | Corrects the PR body or links without creating an empty commit |
 | Definition of Ready requires a material decision | Keeps the PR draft and reports the exact unresolved decision |
@@ -318,7 +320,7 @@ supported frontier models:
 | PR update with additive merge conflicts | Preserves both feature paths, validates the merge, and pushes normally |
 | Explicitly read-only PR review | Reports validated findings without editing or changing PR state |
 | Mixed actionable and invalid inline findings | Fixes validated findings, rebuts invalid ones inline, and never posts a top-level comment |
-| Review fixes ready to push | Re-establishes the PR specification, actively tests every criterion with invalidated evidence through the delivered interface, passes the project gate and `/code-review fix-all` on the unchanged change, then commits and pushes |
+| Review fixes ready to push | Re-establishes the PR specification, actively tests every requirement with invalidated evidence through the delivered interface, passes the project gate and `/code-review fix-all` on the unchanged change, then commits and pushes |
 | Issue draft awaiting approval | Investigates, grills, and presents the project-aligned draft without filing it |
 | Automatic issue creation and exact duplicate | Completes every investigation/grill gate before filing, but stops immediately for the existing issue |
 | Artifact-assisted implementation grill | Derives all viable options from one evidence packet and compares them with a predeclared rubric plus equivalent decision-relevant checks before selection |
@@ -338,7 +340,7 @@ supported frontier models:
 | Tag-triggered release workflow | Pushes the tag once, monitors automation, and never calls `gh release create` |
 | No releasable commits or ambiguous publisher | Stops without manufacturing a version change, tag, or release |
 | New branch, Git sync, dirty worktree, and divergent push | Starts focused work at the fetched remote-default tip without tracking it, merges updates without rebasing, stops before syncing dirty work, and never forces a rejected push |
-| Sparse or mutation-ready roadmap review | Lowers confidence when evidence is thin and asks before document or forge changes |
+| Sparse or mutation-ready roadmap review | Lowers confidence when evidence is thin and asks before document, issue, or pull-request changes |
 | Parallel milestone rush with mixed existing state | Reuses delivered, PR, branch, worktree, and issue state; rolls independent merges forward; and closes only after integrated validation |
 | Explicit sub-agent review or audit | Maps bounded evidence lanes, keeps verdicts and edits with the coordinator, and reports any single-agent fallback |
 | Milestone rush with a blocked dependency chain | Completes independent work, records replacement and deferred scope, and leaves the blocked milestone open |

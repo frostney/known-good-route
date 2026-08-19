@@ -32,7 +32,7 @@ evidence that no implementation is needed.
   issue, repository, reproduction, project contracts, current web research, and
   shared current-state artifacts. Derive every option from this same packet.
 - Define one comparison rubric from the issue outcome, constraints, and
-  acceptance criteria before scoring. Give every viable option equivalent
+  requirements before scoring. Give every viable option equivalent
   decision-relevant validation:
   - for UI/UX differences, show each materially different experience;
   - for architecture or workflow differences, show each relevant flow;
@@ -100,7 +100,7 @@ security, scope, or vision decision disables automatic mode.
    consistency; attach the evidence to the PR.
 9. Run targeted checks while developing, then the applicable Definition of Done
    and repository gate. Fix failures rather than weakening the gate.
-10. Run one `/code-review fix-all` pass against the acceptance criteria,
+10. Run one `/code-review fix-all` pass against the requirements,
     Definition of Done, project conventions, branch diff, and reproducible
     behavior. Resolve every validated in-scope finding and rerun affected
     checks. Stop for a material new decision; do not continue with unresolved

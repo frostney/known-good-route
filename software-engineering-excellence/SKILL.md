@@ -69,8 +69,8 @@ changes.
 - For the feedback loop, consider dependency setup, builds, local startup and
   reload, code generation, focused checks, tests, typechecks, lint and format
   checks, pre-commit hooks, CI queue and execution time, and preview or deploy
-  feedback. Measure total time from an edit to a trustworthy answer, not only
-  one fast command inside a slow sequence.
+  feedback. Measure the full time from making an edit to getting reliable
+  evidence that the change works, not just one fast command in a slow sequence.
 - Keep fast, high-signal checks early. Use correct incremental work, focused
   commands, caching, parallelism, and shared results where they reduce the
   critical path. Do not gain speed by weakening coverage, skipping hooks,
@@ -105,13 +105,13 @@ delegation.
 
 Give a worker only the applicable selected decisions and contracts, repository
 and issue or pull-request identity, exact starting state, owned scope,
-dependencies, acceptance criteria, and gates. Include recent conversation only
+dependencies, required behavior, and gates. Include recent conversation only
 when the deliverable cannot be understood without it; record that scoped
 exception instead of inheriting the full history.
 
-Require one terminal summary per worker: outcome, changed repository or forge
-state, exact validation evidence, blockers or contradictory evidence, and facts
-needed by a dependent deliverable. Keep intermediate investigation, command
+Require one terminal summary per worker: outcome, changed repository, issue, or
+pull-request state, exact validation evidence, blockers or contradictory
+evidence, and facts needed by a dependent deliverable. Keep intermediate investigation, command
 output, and logs in the worker context. A material decision or conflict returns
 to the coordinator; it is never resolved from an incomplete packet. If the host
 cannot provide isolated workers, report that limitation and do not claim the

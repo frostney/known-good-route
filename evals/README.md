@@ -21,7 +21,7 @@ references load through a separate tool only when the entry skill calls for
 them.
 
 `ToolLoopAgent` provides one tool loop for all models. Fixture tools expose
-deterministic evidence and record intended Git, forge, file, validation,
+deterministic evidence and record intended Git, issue, pull-request, file, validation,
 delegation, and user-question actions without touching a real repository or
 external service. Assertions grade that ledger before applying output regexes.
 

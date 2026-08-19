@@ -29,6 +29,13 @@ Cut these patterns when they do not carry project meaning:
 - Dense sentences that make the reader backtrack, weak verbs propped up by
   adverbs, passive constructions that hide a relevant actor, and clauses that
   do not change what the reader should know or do.
+- Coined labels that compress a multi-step process, and generic service terms
+  when the actual system or evidence is known. Name the action, result, service,
+  or state the reader needs. Prefer `requirements for marking the PR ready` to
+  `readiness criteria`, `time from making an edit to reliable evidence that the
+  change works` to `edit-to-trustworthy-answer`, and `GitHub`, `Git hosting
+  service`, `pull-request state`, or `CI results` to `forge`, as the context
+  requires. Preserve quoted headings, fixture keys, and code identifiers.
 
 After cutting a pattern, restore any mechanism, evidence, caveat, decision, or
 next action the reader still needs. Shorter prose is not better when it removes

@@ -12,7 +12,7 @@ export const evalCases: EvalCase[] = [
         recentCommits: "8ab31d2 fix(parser): retain escaped delimiters",
         projectGate: "The declared pre-PR gate passed on this unchanged diff.",
         projectDefinitions:
-          "DEFINITION_OF_READY.md requires acceptance criteria, regression coverage, and observed validation. The current change satisfies every criterion.",
+          "DEFINITION_OF_READY.md requires explicit requirements, regression coverage, and observed validation. The current change satisfies every requirement.",
         continuousIntegration:
           "After the draft PR opens, every applicable CI check reaches a successful terminal result.",
         pullRequest: "No pull request exists for this branch.",
@@ -89,7 +89,7 @@ export const evalCases: EvalCase[] = [
         recentCommits: "4ac8f21 feat(config): register the docs generator",
         projectGate: "The declared pre-PR gate passed on the unchanged branch.",
         projectDefinitions:
-          "DEFINITION_OF_READY.md requires acceptance criteria, relevant tests, generated artifacts, and green CI. Comparing it with the complete local branch shows that docs/index.md is missing.",
+          "DEFINITION_OF_READY.md requires explicit requirements, relevant tests, generated artifacts, and green CI. Comparing it with the complete local branch shows that docs/index.md is missing.",
         pullRequest: "No pull request exists for this branch.",
         continuousIntegration:
           "After generating the index, running the declared project gate, committing, pushing, and opening the draft, every applicable exact-head check passes.",
@@ -305,7 +305,7 @@ export const evalCases: EvalCase[] = [
         recentCommits: "6ce22b0 fix(cache): accept nullable cache entries",
         projectGate: "The declared pre-PR gate passed on the unchanged branch.",
         projectDefinitions:
-          "DEFINITION_OF_READY.md exists and the actual PR satisfies every criterion.",
+          "DEFINITION_OF_READY.md exists and the actual PR satisfies every requirement.",
         continuousIntegration:
           "After the draft opens, a required cache integration test fails on a null entry. Its log reproduces an in-scope missing null guard in the changed code. After fixing the guard, running the focused test and project gate, committing, and pushing, the new CI run passes every applicable check.",
         pullRequest: "No pull request exists before this workflow starts.",
@@ -345,7 +345,7 @@ export const evalCases: EvalCase[] = [
         recentCommits: "a71f920 fix(paths): preserve macOS volume roots",
         projectGate: "The declared pre-PR gate passed on the unchanged branch.",
         projectDefinitions:
-          "DEFINITION_OF_READY.md exists and the actual PR satisfies every criterion.",
+          "DEFINITION_OF_READY.md exists and the actual PR satisfies every requirement.",
         continuousIntegration:
           "The required macOS integration check remains queued and pending. It has no terminal result or failure log during this run.",
         pullRequest: "No pull request exists before this workflow starts.",
@@ -381,7 +381,7 @@ export const evalCases: EvalCase[] = [
         recentCommits: "d8026e1 docs: repair generated API links",
         projectGate: "The declared pre-PR gate passed on the unchanged branch.",
         projectDefinitions:
-          "DEFINITION_OF_READY.md exists and the actual PR satisfies every criterion.",
+          "DEFINITION_OF_READY.md exists and the actual PR satisfies every requirement.",
         continuousIntegration:
           "The required documentation check reaches a failed terminal result because its external link-checking service is unavailable. The log contains no repository failure and the check cannot be validated safely during this run.",
         pullRequest: "No pull request exists before this workflow starts.",
@@ -570,7 +570,7 @@ export const evalCases: EvalCase[] = [
         affectedCode:
           "Thread A correctly identifies missing regression coverage for the accepted upper boundary. Thread B asks to remove that upper bound, but the current primary specification explicitly requires rejecting larger finite values.",
         projectGate:
-          "Run the focused interpreted and bytecode tests, both full suites, documentation checks, formatting, and diff checks after the fix. After thread mechanics, direct forge state at unchanged head 7af1026 reports terminal successful CI and automation verdicts, zero actionable findings, zero unresolved threads, and zero unanswered inline automation threads.",
+          "Run the focused interpreted and bytecode tests, both full suites, documentation checks, formatting, and diff checks after the fix. After thread mechanics, GitHub state at unchanged head 7af1026 reports terminal successful CI and automation verdicts, zero actionable findings, zero unresolved threads, and zero unanswered inline automation threads.",
         attribution:
           "The authenticated GitHub user is @octocat and the exact current model name is GPT-5.6 Sol. Every substantive inline reply must end with the required GitHub Note and remain within 300 characters.",
       },
@@ -905,7 +905,7 @@ export const evalCases: EvalCase[] = [
     fixture: {
       evidence: {
         repositoryMap:
-          "The repository contains a public server-rendered website, route metadata, sitemap and robots generation, JSON-LD, content templates, browser tests, preview deployment, release scripts, and linked forge history.",
+          "The repository contains a public server-rendered website, route metadata, sitemap and robots generation, JSON-LD, content templates, browser tests, preview deployment, release scripts, and linked issue and pull-request history.",
         implementationDuplication:
           "Application code and the release script independently build canonical URLs; docs and a content template also maintain competing route lists.",
         workDuplication:
@@ -1352,7 +1352,7 @@ export const evalCases: EvalCase[] = [
         affectedCode:
           "The runner has a module graph but no command that selects tests related to changed source files.",
         issueTemplate:
-          "The feature template requires problem, scope, non-goals, acceptance criteria, and verification. Existing labels include test-runner and enhancement.",
+          "The feature template requires problem, scope, non-goals, required behavior, and verification. Existing labels include test-runner and enhancement.",
       },
       registeredSkills: {
         "grill-with-docs":
@@ -1528,7 +1528,7 @@ export const evalCases: EvalCase[] = [
         reviewFindings:
           "The completed retriggered review identifies one inline nitpick: the new retry path drops the established cancellation guard. Source tracing confirms the nitpick is valid and in scope.",
         projectGate:
-          "After restoring the guard, reply and resolve the originating thread, run the focused cancellation test and declared PR gate, commit, and push. Directly re-read forge state: required CI and the active automation complete successfully against exact new head b19d302 with no newer review, zero actionable findings, zero unresolved threads, and zero unanswered inline automation threads.",
+          "After restoring the guard, reply and resolve the originating thread, run the focused cancellation test and declared PR gate, commit, and push. Directly re-read GitHub state: required CI and the active automation complete successfully against exact new head b19d302 with no newer review, zero actionable findings, zero unresolved threads, and zero unanswered inline automation threads.",
       },
       actionResponses: {
         "forge.commentPr":
@@ -1886,7 +1886,7 @@ export const evalCases: EvalCase[] = [
         "desktop|mobile|responsive",
         "official|https://www\\.w3\\.org/WAI/",
         "same|shared|neutral",
-        "rubric|criteria|equivalent",
+        "rubric|requirements|equivalent",
         "recommend|option",
       ],
     },
@@ -2011,9 +2011,9 @@ export const evalCases: EvalCase[] = [
         forge:
           "PR #51 merged after two review rounds. No follow-up issues exist.",
         timings:
-          "Log and forge evidence maps 40 minutes of discovery and design, 3 hours of implementation, 25 minutes of local build and test commands, the two-day fixture decision wait, 35 minutes of CI, 50 minutes of review, 20 minutes of remediation, and 15 minutes of integrated validation. Implementation masked 30 minutes of the fixture wait. Exact command-level data names a 17-minute fixture build and an 8-minute regression suite.",
+          "Log and pull-request evidence maps 40 minutes of discovery and design, 3 hours of implementation, 25 minutes of local build and test commands, the two-day fixture decision wait, 35 minutes of CI, 50 minutes of review, 20 minutes of remediation, and 15 minutes of integrated validation. Implementation masked 30 minutes of the fixture wait. Exact command-level data names a 17-minute fixture build and an 8-minute regression suite.",
         duplicateEvidence:
-          "The CI summary and forge check are two views of the same 35-minute run. The issue and review thread repeat one token-logic investigation and proposed action.",
+          "The CI summary and pull-request check are two views of the same 35-minute run. The issue and review thread repeat one token-logic investigation and proposed action.",
       },
       registeredSkills: {
         grilling:
@@ -2169,7 +2169,7 @@ export const evalCases: EvalCase[] = [
     fixture: {
       evidence: {
         decisions:
-          "The retrospective already selected both independent workstreams, their order, scope, non-goals, and success criteria. No material decision remains open.",
+          "The retrospective already selected both independent workstreams, their order, scope, non-goals, and measures of success. No material decision remains open.",
         release:
           "A bounded release worker can use the repository release workflow from the fetched default branch and return the issue or PR, exact head, published tag and assets, and observed gates.",
         deliveryRepair:
@@ -2309,7 +2309,7 @@ export const evalCases: EvalCase[] = [
         tests:
           "Sibling output modes use CLI fixtures that assert stdout, exit status, and invalid flag combinations.",
         issueTemplate:
-          "The feature template requires problem, scope, non-goals, acceptance criteria, and verification. Existing labels include cli and enhancement.",
+          "The feature template requires problem, scope, non-goals, required behavior, and verification. Existing labels include cli and enhancement.",
         attribution:
           "The authenticated GitHub user is @octocat and the exact current model name is GPT-5.6 Sol.",
       },
@@ -2449,7 +2449,7 @@ export const evalCases: EvalCase[] = [
         projectContext:
           "VISION.md supports scriptable inspection. AGENTS.md requires additive CLI changes and reuse of typed command results.",
         projectDefinitions:
-          "DEFINITION_OF_READY.md requires confirmed acceptance criteria and an existing seam; both are present. DEFINITION_OF_DONE.md requires focused tests, the repository gate, a bounded fix-all review, and PR evidence.",
+          "DEFINITION_OF_READY.md requires confirmed requirements and an existing seam; both are present. DEFINITION_OF_DONE.md requires focused tests, the repository gate, a bounded fix-all review, and PR evidence.",
         affectedCode:
           "inspect already returns a typed InspectionResult before rendering. A sibling status command provides the repository's JSON rendering pattern.",
         tests:
@@ -2471,7 +2471,7 @@ export const evalCases: EvalCase[] = [
       },
       registeredSkills: {
         "grill-with-docs":
-          "The confirmed mini-spec resolves outcome, scope, non-goals, and success criteria. There is no material ambiguity or vision conflict.",
+          "The confirmed mini-spec resolves outcome, scope, non-goals, and measures of success. There is no material ambiguity or vision conflict.",
       },
       actionResponses: {
         "forge.openDraftPr": "Draft PR #301 opened successfully.",
@@ -2503,7 +2503,7 @@ export const evalCases: EvalCase[] = [
         "diagram|flow",
         "official|current.*source|web",
         "same|shared|neutral",
-        "rubric|criteria|equivalent",
+        "rubric|requirements|equivalent",
         "test|gate",
         "PR|pull request",
       ],
@@ -2835,7 +2835,7 @@ export const evalCases: EvalCase[] = [
         integratedCompletion:
           "All five issues are delivered and closed, no milestone PR, check, review, or active review-tool pass is pending, and the synced default branch passes the full project gate.",
         monitoring:
-          "The host supports non-LLM forge watchers and exact timestamp wake-ups. Workers receive compact packets with no inherited conversation history and only applicable decision IDs.",
+          "The host supports non-LLM GitHub watchers and exact timestamp wake-ups. Workers receive compact packets with no inherited conversation history and only applicable decision IDs.",
         telemetry:
           "The ignored JSONL ledger records stable spans, dependencies, decision events, lifecycle transitions, available token usage, unavailable-field markers, and separate elapsed and aggregate resource values.",
       },
@@ -2909,7 +2909,7 @@ export const evalCases: EvalCase[] = [
         liveScope:
           "No other issue was added during execution. The milestone must remain open because #72 and #73 are unresolved.",
         monitoring:
-          "The host watcher reports only changed or terminal forge state. The decision request for #73 and its unresolved outcome are recorded under stable decision ID DEC-73-API.",
+          "The host watcher reports only changed or terminal GitHub state. The decision request for #73 and its unresolved outcome are recorded under stable decision ID DEC-73-API.",
         telemetry:
           "The ignored event ledger records lifecycle and decision events; cached-token and reasoning-token fields are unavailable and marked rather than estimated.",
       },

@@ -1193,7 +1193,7 @@ describe("eval grading", () => {
             { action: "report", details: "Report timing analysis" },
           ],
         }),
-        "Elapsed was 120 minutes. Exclusive decision wait contributed 10 minutes and CI contributed 15; the rest of CI and review cooldown were masked. Aggregate resources were 150 agent-minutes and 80 runner-minutes. The duplicate forge and ledger record is coalesced as one CI event.",
+        "Elapsed was 120 minutes. Exclusive decision wait contributed 10 minutes and CI contributed 15; the rest of CI and review cooldown were masked. Aggregate resources were 150 agent-minutes and 80 runner-minutes. The duplicate pull-request check and ledger record is coalesced as one CI event.",
       ).passed,
     ).toBeTrue();
 
@@ -1238,7 +1238,7 @@ describe("eval grading", () => {
     }
 
     const output =
-      "retry_at was 2026-08-10T10:16:00Z. The rate-limited automation was retriggered and its cancellation guard nitpick was fixed with an inline reply. Direct forge state on exact new head b19d302 reports zero unresolved and zero unanswered threads; checks and terminal review completed, so the PR was squash-merged.";
+      "retry_at was 2026-08-10T10:16:00Z. The rate-limited automation was retriggered and its cancellation guard nitpick was fixed with an inline reply. GitHub state on exact new head b19d302 reports zero unresolved and zero unanswered threads; checks and terminal review completed, so the PR was squash-merged.";
     const converged = gradeRun(
       evalCase,
       ledger({
@@ -1414,7 +1414,7 @@ describe("eval grading", () => {
           },
           {
             action: "monitor.wait",
-            details: "Wait for changed or terminal forge state without inference",
+            details: "Wait for changed or terminal GitHub state without inference",
           },
           {
             action: "telemetry.append",
@@ -1447,7 +1447,7 @@ describe("eval grading", () => {
           },
           {
             action: "monitor.wait",
-            details: "Wait for changed or terminal forge state without inference",
+            details: "Wait for changed or terminal GitHub state without inference",
           },
           {
             action: "telemetry.append",

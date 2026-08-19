@@ -1,7 +1,7 @@
 # Lifecycle timing analysis
 
-Use available conversation, repository, forge, command, test-runner, browser,
-deployment, and Milestone Rush JSONL evidence. Coalesce the same event across
+Use available conversation, repository, issue, pull-request, command,
+test-runner, browser, deployment, and Milestone Rush JSONL evidence. Coalesce the same event across
 sources by stable identity, timestamp, head, and causal relationship while
 retaining provenance. Never manufacture missing start times, durations, usage,
 or causal links.
@@ -67,14 +67,14 @@ Build a dependency-aware timeline rather than adding durations blindly.
 
 For missing or contradictory span relationships, provide a range or mark the
 attribution unavailable. State whether each conclusion is ledger-backed,
-forge-reconciled, log-derived, or approximate.
+confirmed from issue or pull-request history, log-derived, or approximate.
 
 ## Retrospective de-duplication
 
 - **Work:** identify repeated investigations, questions, decisions, findings,
   remediation, reruns, and handoffs within the workstream.
-- **Evidence:** count one underlying event once when the ledger, forge, CI, and
-  logs expose it in multiple forms; retain all source references.
+- **Evidence:** count one underlying event once when the ledger, issue or
+  pull-request history, CI, and logs expose it in multiple forms; retain all source references.
 - **Output:** merge lessons with the same cause, impact, and proposed action;
   preserve provenance and reconcile conflicts.
 

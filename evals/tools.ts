@@ -55,7 +55,7 @@ export function createEvalTools(
     }),
     inspectFixture: tool({
       description:
-        "Inspect one named source of repository, project, issue, workflow, test, or forge evidence in the isolated fixture.",
+        "Inspect one named source of repository, project, issue, pull-request, workflow, or test evidence in the isolated fixture.",
       inputSchema: z.object({
         source: z.string(),
       }),
@@ -90,7 +90,7 @@ export function createEvalTools(
     }),
     performAction: tool({
       description:
-        "Record an action in the isolated fixture. Every mutation, validation, user question, delegation, or external action must use this tool; it never changes a real repository or forge.",
+        "Record an action in the isolated fixture. Every mutation, validation, user question, delegation, or external action must use this tool; it never changes a real repository, issue, or pull request.",
       inputSchema: z.object({
         action: z.enum(actionNames),
         details: z.string(),

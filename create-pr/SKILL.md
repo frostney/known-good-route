@@ -31,27 +31,28 @@ confirmed stack layers owned by the current change, not unrelated branches.
 3. If currently on the base branch, create a focused branch named from the issue
    or change.
 4. Establish the specification before publishing anything. Read the explicit
-   request, linked issue or confirmed mini-spec, acceptance criteria, applicable
+   request, linked issue or confirmed mini-spec, required behavior, applicable
    project instructions, product docs, ADRs or durable decisions, and the
    nearest `DEFINITION_OF_READY.md`. Treat text as a lead until current source
    and behavior verify it. If no source states the claim, reconstruct the
    narrowest claim supported by the change and label it as inferred.
-5. Compare the complete actual change with every specification and readiness
-   criterion. Inspect its source, tests, documentation, generated artifacts,
+5. Compare the complete actual change with the full specification and everything
+   required before opening the PR. Inspect its source, tests, documentation,
+   generated artifacts,
    compatibility effects, and each stack layer's acceptance subset. If no
    `DEFINITION_OF_READY.md` exists after a real search, apply this workflow's
    built-in gates.
-6. Exercise every testable acceptance criterion through the real product
+6. Exercise every requirement that can be tested through the real product
    interface. Cover the intended path and the most consequential failure or
    boundary path. Use the rendered UI, API, CLI, library entry point, job,
    migration, package, or deployment path that the change actually delivers.
-   Record setup, input, expected result, and observed result. Mark a criterion
-   static-only when real execution is not safe or available; do not present it
-   as behaviorally verified.
+   Record setup, input, expected result, and observed result. When real execution
+   is not safe or available, record the requirement as static-only; do not
+   present it as behaviorally verified.
 7. Fill every in-scope implementation, test, documentation, or artifact gap.
    Rerun the affected functional checks and the repository's declared pre-PR
    gate, then compare the resulting change with the specification again.
-   Continue this local loop until every in-scope criterion has current evidence
+   Continue this local loop until every in-scope requirement has current evidence
    and the gate passes on the unchanged diff. Never weaken a gate or substitute
    a codebase inspection for testing delivered functionality. Stop for a
    material product, architecture, security, compatibility, or scope decision,
@@ -74,14 +75,14 @@ confirmed stack layers owned by the current change, not unrelated branches.
     after every submitted layer passes its local acceptance subset; only guarded
     official stack operations may rebase or push with force-with-lease. Preserve
     bottom-to-top topology and keep each layer draft.
-11. Run the PR-specific readiness phase. Compare every criterion with the
+11. Run the PR-specific readiness phase. Compare every requirement with the
     actual PR diff, body, links, metadata, committed tests and documentation,
     observed local evidence, and any facts that exist only after publication.
     Correct metadata-only gaps without a commit.
 12. If the PR-specific phase exposes a repository, code, or behavior gap, return
     to steps 4 through 7. Apply the fix locally, repeat specification comparison
     and real functional testing, rerun the declared gate, create a new commit,
-    and only then push. Never mark a criterion satisfied without observed
+    and only then push. Never mark a requirement satisfied without observed
     evidence.
 13. Invoke `delivery-wait`'s foreground `wait checks-terminal` operation with
     the repository, exact head, checkpoint, absolute deadline, and `--json`; the
@@ -90,8 +91,8 @@ confirmed stack layers owned by the current change, not unrelated branches.
     returns to the local loop in steps 4 through 7 before a new commit and push.
     If the host cannot passively await a subprocess, report the unsupported
     capability instead of polling through model turns.
-14. Keep the PR in draft while any readiness criterion or CI check is pending or
-    failing. If an expected pull-request workflow produces no run, read the PR's
+14. Keep the PR in draft while any requirement for marking it ready or CI check
+    is pending or failing. If an expected pull-request workflow produces no run, read the PR's
     `mergeable_state` first: a dirty PR gets no pull-request runs, and no
     retrigger can help until the conflict is resolved. Continue monitoring
     pending checks; if they cannot reach a terminal result during the run,

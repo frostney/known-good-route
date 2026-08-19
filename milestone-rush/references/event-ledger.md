@@ -83,7 +83,7 @@ Before milestone closure, validate every event for the current `runId`:
   and decision transitions that occurred are represented;
 - command spans record elapsed milliseconds and effective worker capacity when
   exposed by the command; CI spans name workflow/run/job IDs and runner time
-  when the forge exposes them;
+  when CI exposes them;
 - usage and resource values exposed by the host are recorded, while every null
   value is named in the matching `unavailableFields` array; and
 - superseded local or CI work ends as `cancelled` or has an explicit blocker
