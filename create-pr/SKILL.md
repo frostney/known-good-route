@@ -41,8 +41,11 @@ confirmed stack layers owned by the current change, not unrelated branches.
    base branch. Fill the matching PR template for each submitted layer,
    preserving its structure. If none exists, use
    Summary, Testing, and Linked issues. Keep the body proportional to the change.
-   Put each closing keyword on its own line: `Closes #N`, and only on the layer
-   that completes that issue.
+   Before writing the body, search the repository's open and closed issues,
+   and recent sibling sessions or adjacent branches where available, for
+   related findings: a deterministic repro or a duplicate may already be
+   filed, so link what exists. Put each closing keyword on its own line: `Closes #N`, and only
+   on the layer that completes that issue.
 9. Open one draft PR against the remote default for an ordinary branch. For a
    stack, preserve bottom-to-top native topology and keep each new layer draft
    until that layer satisfies the remaining gates.
@@ -63,8 +66,12 @@ confirmed stack layers owned by the current change, not unrelated branches.
     wait on the new exact head. If the host cannot passively await a subprocess,
     report the unsupported capability instead of polling through model turns.
 13. Keep the PR in draft while any readiness criterion or CI check is pending or
-    failing. Continue monitoring pending checks; if they cannot reach a terminal
-    result during the run, report their current state. Stop and report the exact
+    failing. If an expected pull_request workflow produces no run at all, read
+    the PR's `mergeable_state` first: a dirty (unmergeable) PR gets no
+    pull_request runs whatsoever, and no retrigger (push or close/reopen) can
+    help until the conflict is resolved. Continue monitoring pending checks; if
+    they cannot reach a terminal result during the run, report their current
+    state. Stop and report the exact
     blocker when satisfying it requires a material product decision, unrelated
     work, unavailable external service, or a change that cannot be validated
     safely.

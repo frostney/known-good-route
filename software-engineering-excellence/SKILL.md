@@ -36,7 +36,10 @@ solution rather than merely select details within it.
    the registered `diagnosing-bugs` skill when available. Report the diagnosis
    and evidence before changing code. If the failure blocks the requested result
    or belongs to its authorized scope, fix it and verify the fix; otherwise
-   report it to the user without absorbing it into the current change.
+   report it to the user without absorbing it into the current change. An
+   anomaly observed while validating, such as a flaky line, a one-in-N
+   artifact, or an unexplained timeout, is a defect report rather than a
+   footnote: diagnose it or file it; never resolve it by documenting it.
 5. **Make every surface earn its cost.** Add only code, tests, fallbacks,
    abstractions, or tools with a real caller, requirement, or failure mode.
    Remove unused surfaces.
