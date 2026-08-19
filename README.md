@@ -55,7 +55,7 @@ flowchart TB
         Branch["Completed branch"]
         CreatePR["/create-pr"]
         ExistingPR["Existing PR"]
-        ReviewPR["/review-pr"]
+        AddressPRFeedback["/address-pr-feedback"]
         Integrated["Integrated change"]
 
         Track --> Issue
@@ -63,9 +63,9 @@ flowchart TB
         Issue --> CreatePR
         Idea --> CreatePR
         Branch --> CreatePR
-        CreatePR --> ReviewPR
-        ExistingPR --> ReviewPR
-        ReviewPR --> Integrated
+        CreatePR --> AddressPRFeedback
+        ExistingPR --> AddressPRFeedback
+        AddressPRFeedback --> Integrated
     end
 
     Audit["Optional diagnostic side path<br/>/codebase-audit when evidence justifies it"]
@@ -97,13 +97,15 @@ flowchart TB
 - For ad-hoc or already-started work, enter the delivery loop at the matching
   state: record an idea with `/create-issue`, implement a ready issue or unfiled
   idea, hand off a completed branch with `/create-pr`, or continue an existing
-  PR with `/review-pr`.
+  PR with `/address-pr-feedback`.
 - `/codebase-audit` is a diagnostic side path when repository evidence warrants
   a whole-codebase assessment, not a mandatory checkpoint.
 - Supporting mechanics stay underneath the loop: `git-workflow` governs git
   operations, `/code-review fix-all` is the ordinary bounded pre-PR review,
-  milestone rush uses `/code-review subagents fix-all`, and `/update-pr` handles
-  review-driven commits and pushes.
+  milestone rush uses `/code-review subagents fix-all`, `address-pr-feedback`
+  repeats local specification, functional-validation, project-gate, and
+  `/code-review fix-all` checks before substantive pushes, and `/update-pr`
+  handles the resulting commits and pushes.
 
 ### Recurring workflow skills
 
@@ -115,9 +117,9 @@ flowchart TB
 | [`implement-issue`](implement-issue/SKILL.md) | Validate an issue, derive every viable option from one neutral evidence packet, apply one predeclared rubric and equivalent checks, then select, implement, verify, review, and hand off via `/create-pr`. Supports gated `automatic` selection. |
 | [`implement-idea`](implement-idea/SKILL.md) | Turn an unfiled idea into a confirmed mini-spec, derive every viable option from one neutral evidence packet, apply one predeclared rubric and equivalent checks, then select, implement, verify, review, and hand off via `/create-pr`. Supports gated `automatic` selection. |
 | [`run-retro`](run-retro/SKILL.md) | Review a completed workstream and produce an interactive HTML impact report with per-item summaries of at most 300 characters, evidence-backed Before/After states, copyable or app-linked deep dives, and optional animated mechanism diagrams. |
-| [`create-pr`](create-pr/SKILL.md) | Commit relevant local changes, open a templated draft PR or submit a verified native GitHub stack, fill readiness gaps, fix CI failures, and mark each ready layer ready. |
+| [`create-pr`](create-pr/SKILL.md) | Converge the complete change locally against its specification and real behavior before the first push, open a templated draft PR or submit a verified native GitHub stack, fill PR-only readiness gaps, fix CI failures through the same local loop, and mark each ready layer ready. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and update the current PR, merging ordinary baselines or using guarded native stack synchronization, then refresh stale metadata. |
-| [`review-pr`](review-pr/SKILL.md) | Converge one PR through exact-final-head CI and review evidence, attributed inline replies, zero unresolved or unanswered automation threads, and deterministic waiting. Normal mode never merges; `automatic-merge` merges only an ordinary converged PR. |
+| [`address-pr-feedback`](address-pr-feedback/SKILL.md) | Address feedback on one PR, actively validate its specification and delivered behavior before substantive pushes, run `/code-review fix-all`, require exact-final-head CI and review evidence, reply in originating threads, and wait deterministically. Normal mode never merges; `automatic-merge` merges only an ordinary ready PR. |
 | [`delivery-wait`](delivery-wait/SKILL.md) | Internal deterministic GitHub transition waits for exact-head checks, workflows, merges, tags, release assets, and time-based wakes. |
 | [`code-review`](code-review/SKILL.md) | Review a bounded change against its claim using behavioral and revert-clean falsification probes, churn-backed risk, four-layer de-duplication, calibrated findings through non-blocking Nitpicks, and discoverability checks when public web surfaces change. Additive inputs support evidence lanes, exact files, and prior-finding revalidation; fix modes remain local. |
 | [`create-release`](create-release/SKILL.md) | Prepare a changelog-first release PR, then publish only when authorized and through exactly one evidence-backed path. Existing workflows own publication when configured; the agent never double-publishes with `gh release create`. |
@@ -134,8 +136,8 @@ flowchart TB
 | [`native-nostalgia-stack`](native-nostalgia-stack/SKILL.md) | FreePascal toolchain: FPC in Delphi mode (compiler flags in a shared include), namespace-based unit naming (flat by default), code-style starting points, build / formatter / codebase-health contracts (implementation is the project's choice), Lefthook pre-commit, InstantFPC for one-off scripts. |
 | [`convex-conventions`](convex-conventions/SKILL.md) | Convex backend rules: shared validators, Clerk JWT bridge, `args` + `returns` on every public function, in-code filtering, `.take()` caps, rate-limited mutations, action/mutation split, schema with soft-delete and audit trails, single re-export module for client types. The live Convex docs override this skill on conflict. |
 | [`codebase-audit`](codebase-audit/SKILL.md) | Audit the repository and delivery surface with a coverage map, conditional technical and discoverability perspectives, revert-clean falsification probes, four-layer de-duplication, and churn-backed architectural risk. Evidence can use bounded lanes; remediation requires a selected coherent batch. |
-| [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Ambient engineering-quality standard for planning, orchestration, development, debugging, review, refactoring, and substantial investigation: ground in reality, solve the full scope without shortcuts, reuse before creating, validate to the real bar, and use maintainability as the governor. |
-| [`agent-writing`](agent-writing/SKILL.md) | Ambient response guidance: outcome first, one concise logical item at a time, complete sentences, prohibited wording, and hard 300-character limits for review replies and retrospective impact items. |
+| [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Ambient engineering-quality standard for planning, orchestration, development, debugging, review, refactoring, and substantial investigation: ground in reality, solve the full scope, reuse before creating, validate the real behavior, protect product and developer-feedback performance throughout delivery, and keep maintainability as the governor. |
+| [`agent-writing`](agent-writing/SKILL.md) | Ambient project-prose guidance: project rules first, outcome and evidence before background, plain active language, numerical revision thresholds rather than length targets, a conditional durable-prose revision catalogue, deterministic prohibited wording, and hard 300-character limits for review replies and retrospective impact items. |
 | [`bleeding-edge`](bleeding-edge/SKILL.md) | Ambient lens favoring the newest viable option, including just-released stable versions and justified pre-release channels, under `software-engineering-excellence`: verify live, pin, keep choices reversible and gate-green, and never silently replace a decided choice. |
 
 ## Background
@@ -187,8 +189,8 @@ including Anthropic's
   generic worked examples that narrow exploration.
 - Validate prompt changes incrementally on the same representative scenarios.
 
-Fable 5 benefits from explicit independent verification on genuinely long
-autonomous runs, while Opus 5 can over-verify when given generic verification or
+Fable 5 benefits from explicit evidence grounding on long autonomous runs,
+while Opus 5 can over-verify when given generic verification or
 verifier-subagent instructions. Skills therefore name the observable evidence
 and project gates that matter; model-specific scaffolding decides how to obtain
 that evidence.
@@ -229,15 +231,24 @@ that evidence.
 - `code-review` and `codebase-audit` delegate only when the caller supplies the
   additive `subagents` input. Workers own bounded evidence lanes; the
   coordinator owns findings, verdicts, edits, and reported fallbacks.
-- `review-pr` invokes `/update-pr` for the commit/push step and owns review
-  inspection, deterministic waiting, replies, and thread resolution through its
-  bundled helper.
-- `review-pr automatic-merge` discovers active review automation, treats
-  incomplete verdicts as pending, and owns one ordinary PR's exact-head
-  fix-watch-squash-merge loop. Stack scheduling and atomic merge stay outside it.
+- `address-pr-feedback` establishes the PR specification, actively exercises
+  every criterion whose evidence was invalidated, runs the project gate and
+  `/code-review fix-all` on the same unchanged change before each substantive
+  code push, then invokes `/update-pr`. It owns review inspection, deterministic
+  waiting, replies, and thread resolution through its bundled helper. Read-only
+  mode remains non-mutating.
+- `create-pr` compares the complete local change with its source specification,
+  exercises delivered functionality through its real interface, and fixes gaps
+  in a local loop before the first push. PR-only metadata and CI form a second
+  readiness phase; code or behavior gaps return to the local loop before the
+  next push.
+- `address-pr-feedback automatic-merge` discovers active review automation,
+  treats incomplete verdicts as pending, and owns one ordinary PR's exact-head
+  fix-watch-squash-merge loop. Stack scheduling and atomic merge stay outside
+  it.
 - `status-report` reuses the current-head CI and reviewer-readiness semantics of
-  `review-pr` and `milestone-rush`, but remains strictly read-only and never
-  invokes either workflow.
+  `address-pr-feedback` and `milestone-rush`, but remains strictly read-only and
+  never invokes either workflow.
 - `create-release` invokes `/create-pr` to open the release PR, follows
   `git-workflow` for branching and push rules, and defers to `project-structure`
   for changelog tooling. Its publication gate re-reads merged workflows and
@@ -247,7 +258,7 @@ that evidence.
   milestone and tracked scope; it never starts the execution engine
   automatically.
 - `milestone-rush` parallelizes independent nodes through `/implement-issue
-  automatic` or confirmed `/implement-idea automatic`, then uses `/review-pr
+  automatic` or confirmed `/implement-idea automatic`, then uses `/address-pr-feedback
   automatic-merge` for rolling integration. Each implementation's bounded
   pre-PR pass uses `/code-review subagents fix-all` by default, while ordinary
   standalone implementations remain unchanged. It never creates a release and
@@ -273,8 +284,9 @@ that evidence.
   delegates TypeScript language policy to `typescript-stack` and Convex
   specifics to `convex-conventions`.
 - `agent-writing` applies to every user-facing item and generated prose artifact.
-  Issues may contain many concise items; each review reply and retro impact item
-  is capped at 300 characters.
+  Project-specific instructions and templates take precedence. Issues may
+  contain many concise items; each review reply and retro impact item is capped
+  at 300 characters.
 - `bleeding-edge` sits beneath `software-engineering-excellence` as a subordinate lens: it tilts the default technology choice toward the newest viable option while SEE remains the governor and maintainability stays the tiebreaker. It reuses the cross-skill "verify versions live" rule, and it applies its bias *within* the choices decided by the stack skills and `AGENTS.md` Hard Constraints rather than silently swapping them.
 
 ## Contributing
@@ -296,15 +308,17 @@ supported frontier models:
 | Clear implementation with one selected option | Completes without another permission prompt or unrelated cleanup |
 | Materially ambiguous architecture | Surfaces the decision and recommendation before editing |
 | Already-fixed issue | Reports source/test evidence instead of inventing a change |
-| Branch with committed work and a clean tree | Opens the PR without creating an empty commit, verifies readiness and green CI, then marks it ready |
-| Dirty focused branch with unrelated local state | Commits only relevant work, excludes secrets, fixes CI, and marks the PR ready only after all gates pass |
-| Draft PR missing a Definition of Ready item | Fills the in-scope gap, validates and pushes a new commit, and waits for green CI before marking ready |
+| Branch with committed work and a clean tree | Verifies the local change against its specification and real behavior, then opens the PR without creating an empty commit |
+| Dirty focused branch with unrelated local state | Refines and tests only relevant work before the first push, excludes secrets, and marks the PR ready only after all gates pass |
+| Local change misses a specification criterion | Exercises the delivered interface, fixes the gap, and repeats local specification and functional checks before opening the draft PR |
+| Draft PR missing a Definition of Ready item | Returns repository gaps to local convergence before a new commit and push, then waits for green CI before marking ready |
 | Draft PR missing only required metadata | Corrects the PR body or links without creating an empty commit |
 | Definition of Ready requires a material decision | Keeps the PR draft and reports the exact unresolved decision |
 | Fixable, pending, or external CI failure | Fixes validated in-scope failures, but keeps pending or externally blocked PRs draft |
 | PR update with additive merge conflicts | Preserves both feature paths, validates the merge, and pushes normally |
 | Explicitly read-only PR review | Reports validated findings without editing or changing PR state |
 | Mixed actionable and invalid inline findings | Fixes validated findings, rebuts invalid ones inline, and never posts a top-level comment |
+| Review fixes ready to push | Re-establishes the PR specification, actively tests every criterion with invalidated evidence through the delivered interface, passes the project gate and `/code-review fix-all` on the unchanged change, then commits and pushes |
 | Issue draft awaiting approval | Investigates, grills, and presents the project-aligned draft without filing it |
 | Automatic issue creation and exact duplicate | Completes every investigation/grill gate before filing, but stops immediately for the existing issue |
 | Artifact-assisted implementation grill | Derives all viable options from one evidence packet and compares them with a predeclared rubric plus equivalent decision-relevant checks before selection |
@@ -316,6 +330,7 @@ supported frontier models:
 | Churn-backed review with JSON output | Measures symbol/file history, requires a concrete architectural co-signal, and writes only the requested machine-readable findings artifact |
 | Audit probe requires production mutation | Marks the path static-only and unreached instead of creating an external side effect |
 | Measured prototype misses its required target | Stops before production migration, publication, or speculative follow-on work |
+| Slow command, hook, local environment, or CI path | Measures the critical feedback path and improves it under the maintainability governor instead of postponing speed until handoff |
 | Stale audit with missing evidence | Separates confirmed gaps, corrected claims, and unsupported measurements before planning |
 | Rate-limited review bot | Reports the review as unavailable or incomplete, never passed |
 | Automatic merge with active review tooling | Retriggers incomplete reviews, evaluates inline and summary findings, and merges only the fully reviewed current head |
@@ -338,7 +353,7 @@ supported frontier models:
 | Local convention differs from a generic default | Follows the surrounding code and project gate instead of imposing a blanket style rule |
 | Pascal identifier contains a standard initialism | Preserves forms such as `HTTP` and `GC` unless an external API or project rule requires another spelling |
 | Written issue, PR, roadmap, or retrospective | Leads with the outcome and omits filler, boilerplate, and repeated summaries |
-| Agent-authored response or artifact | Keeps each logical item concise, excludes prohibited wording, and preserves quoted source and code exactly |
+| Agent-authored response or artifact | Applies project-specific voice first, states concrete evidence in plain language, removes generated-writing patterns, and preserves quoted source and code exactly |
 
 The provider-neutral [behavioral eval harness](evals/README.md) runs these
 scenarios through Vercel AI SDK and AI Gateway. `bun run check` validates the

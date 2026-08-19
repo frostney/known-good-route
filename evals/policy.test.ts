@@ -24,13 +24,34 @@ describe("cross-skill policy", () => {
   test("forge prose uses exact attributed GitHub Notes", async () => {
     const note = "> [!NOTE]\n   > Created on behalf of @username using ModelName.";
     const createIssue = await skill("create-issue");
-    const reviewPr = await skill("review-pr");
+    const addressPrFeedback = await skill("address-pr-feedback");
 
     expect(createIssue).toContain(note);
-    expect(reviewPr).toContain(note.replace("   >", "  >"));
+    expect(addressPrFeedback).toContain(note.replace("   >", "  >"));
     expect(createIssue).toContain("Stop if either is unavailable");
-    expect(reviewPr).toContain("exact automation retrigger command");
-    expect(reviewPr).toContain("300 characters or fewer");
+    expect(addressPrFeedback).toContain("exact automation retrigger command");
+    expect(addressPrFeedback).toContain("300 characters or fewer");
+  });
+
+  test("PR feedback repeats specification and functional validation before push", async () => {
+    const source = await skill("address-pr-feedback");
+
+    expect(source).toContain("criterion-to-evidence record");
+    expect(source).toMatch(/real delivered\s+interface/);
+    expect(source).toContain("pre-PR gate");
+    expect(source).toContain("/code-review fix-all");
+    expect(source).toContain("same unchanged change");
+  });
+
+  test("writing guidance uses revision thresholds and conditional detail", async () => {
+    const source = await skill("agent-writing");
+
+    expect(source).toContain("never as targets to fill");
+    expect(source).toContain("no minimum length");
+    expect(source).toContain("over 60 words");
+    expect(source).toContain("over 250 words");
+    expect(source).toContain("references/generated-writing-patterns.md");
+    expect(source).not.toContain("Target about 300 characters per item");
   });
 
   test("git titles state impact", async () => {

@@ -28,6 +28,7 @@ export function createEvalTools(
           return { ok: false, error: `Unknown skill: ${name}` };
         }
         ledger.loadedSkills.push(name);
+        ledger.events.push({ kind: "skill", name });
         return { ok: true, name, instructions: skill.body };
       },
     }),

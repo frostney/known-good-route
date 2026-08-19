@@ -71,7 +71,6 @@ describe("eval grading", () => {
       ledger({
         loadedSkills: ["create-pr"],
         actions: [
-          { action: "forge.openDraftPr", details: "Open the draft PR" },
           {
             action: "file.edit",
             details: "Generate the missing docs index",
@@ -85,10 +84,19 @@ describe("eval grading", () => {
             details: "Commit the generated docs index",
           },
           { action: "git.push", details: "Push the readiness fix" },
+          { action: "forge.openDraftPr", details: "Open the draft PR" },
           {
             action: "forge.markPrReady",
             details: "Mark ready after the green CI rerun",
           },
+        ],
+        events: [
+          { kind: "action", name: "file.edit" },
+          { kind: "action", name: "validation.run" },
+          { kind: "action", name: "git.commit" },
+          { kind: "action", name: "git.push" },
+          { kind: "action", name: "forge.openDraftPr" },
+          { kind: "action", name: "forge.markPrReady" },
         ],
       }),
       "Filled the missing generated index gap. CI is green and the PR is ready.",
@@ -110,6 +118,77 @@ describe("eval grading", () => {
       "The PR is ready.",
     );
     expect(premature.passed).toBeFalse();
+  });
+
+  test("requires local specification convergence before PR publication", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "create-pr-local-spec-convergence-before-publish",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const actions = [
+      { action: "file.edit" as const, details: "Fix missing-file mapping" },
+      { action: "validation.run" as const, details: "Run real CLI probes" },
+      { action: "validation.run" as const, details: "Run the project gate" },
+      { action: "git.commit" as const, details: "Commit the converged change" },
+      { action: "git.push" as const, details: "Push after local convergence" },
+      {
+        action: "forge.openDraftPr" as const,
+        details: "Open the draft PR",
+      },
+      {
+        action: "forge.markPrReady" as const,
+        details: "Mark ready after exact-head CI",
+      },
+    ];
+    const output =
+      "Fixed the missing file path to return exit 2. Real CLI functional probes and the project gate passed locally before the push; draft PR #209 is ready.";
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: ["create-pr"],
+          inspections: ["specification", "functionalBehavior"],
+          actions,
+          events: [
+            { kind: "inspection", name: "specification" },
+            { kind: "inspection", name: "functionalBehavior" },
+            { kind: "action", name: "file.edit" },
+            { kind: "action", name: "validation.run" },
+            { kind: "action", name: "validation.run" },
+            { kind: "action", name: "git.commit" },
+            { kind: "action", name: "git.push" },
+            { kind: "action", name: "forge.openDraftPr" },
+            { kind: "action", name: "forge.markPrReady" },
+          ],
+        }),
+        output,
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: ["create-pr"],
+          inspections: ["specification", "functionalBehavior"],
+          actions,
+          events: [
+            { kind: "action", name: "git.push" },
+            { kind: "action", name: "forge.openDraftPr" },
+            { kind: "inspection", name: "specification" },
+            { kind: "inspection", name: "functionalBehavior" },
+            { kind: "action", name: "file.edit" },
+            { kind: "action", name: "validation.run" },
+          ],
+        }),
+        output,
+      ).passed,
+    ).toBeFalse();
   });
 
   test("accepts a metadata-only readiness repair without a commit", () => {
@@ -245,13 +324,13 @@ describe("eval grading", () => {
       {
         id: "create-pr-readiness-decision-blocked",
         actions: [
-          { action: "forge.openDraftPr", details: "Open the draft PR" },
           {
             action: "report",
             details: "Report the unresolved product decision",
           },
         ],
-        output: "The readiness decision is blocked, so the PR remains draft.",
+        output:
+          "The readiness decision is blocked before the next push or PR creation.",
       },
       {
         id: "create-pr-pending-ci-keeps-draft",
@@ -362,7 +441,7 @@ describe("eval grading", () => {
 
   test("keeps an explicitly read-only review non-mutating", () => {
     const evalCase = evalCases.find(
-      ({ id }) => id === "review-pr-read-only-finding",
+      ({ id }) => id === "address-pr-feedback-read-only-finding",
     );
     expect(evalCase).toBeDefined();
     if (!evalCase) {
@@ -373,7 +452,7 @@ describe("eval grading", () => {
       "P1 blocking finding: the existing lock file can hide an unwritable directory.";
     const result = gradeRun(
       evalCase,
-      ledger({ loadedSkills: ["review-pr", "agent-writing"] }),
+      ledger({ loadedSkills: ["address-pr-feedback", "agent-writing"] }),
       finding,
     );
     expect(result.passed).toBeTrue();
@@ -381,7 +460,7 @@ describe("eval grading", () => {
     const mutated = gradeRun(
       evalCase,
       ledger({
-        loadedSkills: ["review-pr", "agent-writing"],
+        loadedSkills: ["address-pr-feedback", "agent-writing"],
         actions: [{ action: "file.edit", details: "Fix the finding" }],
       }),
       finding,
@@ -391,7 +470,7 @@ describe("eval grading", () => {
 
   test("rejects mechanically applicable but out-of-scope review edits", () => {
     const evalCase = evalCases.find(
-      ({ id }) => id === "review-pr-mechanical-match-out-of-scope",
+      ({ id }) => id === "address-pr-feedback-mechanical-match-out-of-scope",
     );
     expect(evalCase).toBeDefined();
     if (!evalCase) {
@@ -405,7 +484,7 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         evalCase,
-        ledger({ loadedSkills: ["review-pr"], inspections: inspected }),
+        ledger({ loadedSkills: ["address-pr-feedback"], inspections: inspected }),
         output,
       ).passed,
     ).toBeTrue();
@@ -414,7 +493,7 @@ describe("eval grading", () => {
       gradeRun(
         evalCase,
         ledger({
-          loadedSkills: ["review-pr"],
+          loadedSkills: ["address-pr-feedback"],
           inspections: inspected,
           actions: [
             { action: "file.edit", details: "Remove Open in Editor" },
@@ -429,10 +508,159 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         evalCase,
-        ledger({ loadedSkills: ["review-pr"] }),
+        ledger({ loadedSkills: ["address-pr-feedback"] }),
         output,
       ).passed,
     ).toBeFalse();
+  });
+
+  test("requires specification validation and code-review before an address-pr-feedback push", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "address-pr-feedback-code-review-before-push",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const actions = [
+      { action: "file.edit" as const, details: "Fix the 100-item boundary" },
+      {
+        action: "validation.run" as const,
+        details: "Probe 100, 101, and unauthorized requests through the API",
+      },
+      {
+        action: "validation.run" as const,
+        details: "Run the declared project gate on the unchanged change",
+      },
+      {
+        action: "codeReview.run" as const,
+        details: "Run the first bounded code-review pass",
+      },
+      {
+        action: "file.edit" as const,
+        details: "Restore authorization before the boundary response",
+      },
+      {
+        action: "validation.run" as const,
+        details: "Repeat 100, 101, and unauthorized API probes",
+      },
+      {
+        action: "validation.run" as const,
+        details: "Rerun the declared project gate on the unchanged change",
+      },
+      {
+        action: "codeReview.run" as const,
+        details: "Repeat code-review on the remediated change",
+      },
+      { action: "forge.replyInline" as const, details: "Reply with evidence" },
+      { action: "forge.resolveThread" as const, details: "Resolve the thread" },
+      { action: "git.commit" as const, details: "Commit after code review" },
+      { action: "git.push" as const, details: "Push the reviewed fix" },
+    ];
+    const output =
+      "The 100-item request passes, the 101-item request is rejected, and the authorization failure is preserved. After the first code-review fix, I reran the API paths and declared project gate; the second code-review pass completed before the push.";
+    const inspections = [
+      "pullRequest",
+      "specification",
+      "affectedCode",
+      "codeReview",
+      "projectGate",
+      "attribution",
+    ];
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: ["address-pr-feedback", "code-review"],
+          inspections,
+          actions,
+          events: [
+            { kind: "action", name: "file.edit" },
+            { kind: "action", name: "validation.run" },
+            { kind: "action", name: "validation.run" },
+            { kind: "skill", name: "code-review" },
+            { kind: "action", name: "codeReview.run" },
+            { kind: "action", name: "file.edit" },
+            { kind: "action", name: "validation.run" },
+            { kind: "action", name: "validation.run" },
+            { kind: "action", name: "codeReview.run" },
+            { kind: "action", name: "forge.replyInline" },
+            { kind: "action", name: "forge.resolveThread" },
+            { kind: "action", name: "git.commit" },
+            { kind: "action", name: "git.push" },
+          ],
+        }),
+        output,
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: ["address-pr-feedback", "code-review"],
+          inspections,
+          actions: [
+            { action: "file.edit", details: "Fix the 100-item boundary" },
+            { action: "validation.run", details: "Probe the API paths" },
+            { action: "validation.run", details: "Run the project gate" },
+            { action: "codeReview.run", details: "Run code-review" },
+            {
+              action: "file.edit",
+              details: "Restore authorization ordering",
+            },
+            { action: "git.commit", details: "Commit without retesting" },
+            { action: "git.push", details: "Push without retesting" },
+          ],
+          events: [
+            { kind: "action", name: "file.edit" },
+            { kind: "action", name: "validation.run" },
+            { kind: "action", name: "validation.run" },
+            { kind: "skill", name: "code-review" },
+            { kind: "action", name: "codeReview.run" },
+            { kind: "action", name: "file.edit" },
+            { kind: "action", name: "git.commit" },
+            { kind: "action", name: "git.push" },
+          ],
+        }),
+        output,
+      ).passed,
+    ).toBeFalse();
+  });
+
+  test("requires the durable-prose reference for a substantial PR body", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "agent-writing-durable-prose-reference",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const output =
+      "## Summary\nInvalidRequest now covers malformed JSON.\n\n## Testing\n`bun run check` passed 152 tests in 6.8 seconds.\n\n## Risks\nThe valid-request response is unchanged.";
+    const base = {
+      loadedSkills: ["agent-writing"],
+      inspections: ["projectStyle", "change", "validation"],
+      actions: [{ action: "report" as const, details: "Draft the PR body" }],
+    };
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          ...base,
+          loadedReferences: [
+            "agent-writing/references/generated-writing-patterns.md",
+          ],
+        }),
+        output,
+      ).passed,
+    ).toBeTrue();
+
+    expect(gradeRun(evalCase, ledger(base), output).passed).toBeFalse();
   });
 
   test("accepts a local bounded code-review fix-all trajectory", () => {
@@ -1002,7 +1230,7 @@ describe("eval grading", () => {
 
   test("requires reviewer convergence before automatic merge", () => {
     const evalCase = evalCases.find(
-      ({ id }) => id === "review-pr-automatic-merge-retries-active-reviewer",
+      ({ id }) => id === "address-pr-feedback-automatic-merge-retries-active-reviewer",
     );
     expect(evalCase).toBeDefined();
     if (!evalCase) {
@@ -1014,7 +1242,7 @@ describe("eval grading", () => {
     const converged = gradeRun(
       evalCase,
       ledger({
-        loadedSkills: ["review-pr"],
+        loadedSkills: ["address-pr-feedback", "code-review"],
         actions: [
           {
             action: "forge.commentPr",
@@ -1037,6 +1265,17 @@ describe("eval grading", () => {
             details: "Squash-merge the fully reviewed current head",
           },
         ],
+        events: [
+          { kind: "action", name: "forge.commentPr" },
+          { kind: "action", name: "file.edit" },
+          { kind: "action", name: "validation.run" },
+          { kind: "skill", name: "code-review" },
+          { kind: "action", name: "git.commit" },
+          { kind: "action", name: "git.push" },
+          { kind: "action", name: "forge.replyInline" },
+          { kind: "action", name: "forge.resolveThread" },
+          { kind: "action", name: "forge.mergePr" },
+        ],
       }),
       output,
     );
@@ -1045,7 +1284,7 @@ describe("eval grading", () => {
     const premature = gradeRun(
       evalCase,
       ledger({
-        loadedSkills: ["review-pr"],
+        loadedSkills: ["address-pr-feedback"],
         actions: [
           {
             action: "forge.mergePr",
@@ -1060,7 +1299,7 @@ describe("eval grading", () => {
 
   test("requires the finding snapshot before accepting a review conclusion", () => {
     const evalCase = evalCases.find(
-      ({ id }) => id === "review-pr-terminal-check-does-not-hide-finding",
+      ({ id }) => id === "address-pr-feedback-terminal-check-does-not-hide-finding",
     );
     expect(evalCase).toBeDefined();
     if (!evalCase) {
@@ -1073,7 +1312,7 @@ describe("eval grading", () => {
       gradeRun(
         evalCase,
         ledger({
-          loadedSkills: ["review-pr"],
+          loadedSkills: ["address-pr-feedback"],
           inspections: ["reviewInspection"],
         }),
         output,
@@ -1083,7 +1322,7 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         evalCase,
-        ledger({ loadedSkills: ["review-pr"] }),
+        ledger({ loadedSkills: ["address-pr-feedback"] }),
         output,
       ).passed,
     ).toBeFalse();
@@ -1091,13 +1330,13 @@ describe("eval grading", () => {
 
   test("keeps unanswered, stale, and stacked PR states outside merge", () => {
     const unanswered = evalCases.find(
-      ({ id }) => id === "review-pr-unanswered-inline-automation-thread",
+      ({ id }) => id === "address-pr-feedback-unanswered-inline-automation-thread",
     );
     const stale = evalCases.find(
-      ({ id }) => id === "review-pr-stale-verdict-ambiguous-retry",
+      ({ id }) => id === "address-pr-feedback-stale-verdict-ambiguous-retry",
     );
     const stack = evalCases.find(
-      ({ id }) => id === "review-pr-stack-layer-returns-ready",
+      ({ id }) => id === "address-pr-feedback-stack-layer-returns-ready",
     );
     expect(unanswered).toBeDefined();
     expect(stale).toBeDefined();
@@ -1109,7 +1348,7 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         unanswered,
-        ledger({ loadedSkills: ["review-pr"] }),
+        ledger({ loadedSkills: ["address-pr-feedback"] }),
         "At exact head 620beef there are zero unresolved threads but one unanswered automation thread. The PR is not ready until the maintainer inline reply exists.",
       ).passed,
     ).toBeTrue();
@@ -1117,7 +1356,7 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         stale,
-        ledger({ loadedSkills: ["review-pr"] }),
+        ledger({ loadedSkills: ["address-pr-feedback"] }),
         "Exact head 621cafe is pending: the terminal verdict belongs to stale previous head 621old0 and the current timing statements conflict, so retry_at is null.",
       ).passed,
     ).toBeTrue();
@@ -1125,7 +1364,7 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         stack,
-        ledger({ loadedSkills: ["review-pr"] }),
+        ledger({ loadedSkills: ["address-pr-feedback"] }),
         "Exact head 622feed is ready and returned to the stack owner without merging; atomic merge remains outside this single-PR workflow.",
       ).passed,
     ).toBeTrue();
@@ -1134,7 +1373,7 @@ describe("eval grading", () => {
       gradeRun(
         stack,
         ledger({
-          loadedSkills: ["review-pr"],
+          loadedSkills: ["address-pr-feedback"],
           actions: [
             { action: "git.stackMerge", details: "Merge the stack directly" },
           ],

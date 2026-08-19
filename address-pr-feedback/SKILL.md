@@ -1,20 +1,22 @@
 ---
-name: review-pr
+name: address-pr-feedback
 description: >-
-  Resolves current pull-request review findings in place, validates and pushes
-  fixes, and can autonomously converge and merge an opted-in pull request. Use
-  when the user runs /review-pr or /review-pr automatic-merge.
+  Addresses current pull-request feedback in place, validates and pushes fixes,
+  establishes exact-head readiness, and can merge an opted-in pull request. Use
+  when the user runs /address-pr-feedback or /address-pr-feedback
+  automatic-merge.
 license: Unlicense OR MIT
 compatibility: >-
   Requires Python 3.11 or newer, the GitHub CLI (gh) authenticated to the target
-  repository, the internal `delivery-wait` skill, and network access.
+  repository, the internal `code-review` and `delivery-wait` skills, and network
+  access.
 ---
 
-# Review PR
+# Address PR feedback
 
-Converge exactly one pull request without creating a second review conversation.
-With the exact `automatic-merge` qualifier, merge an ordinary PR only after the
-same exact-head convergence contract passes.
+Work through exactly one pull request without creating a second review
+conversation. With the exact `automatic-merge` qualifier, merge an ordinary PR
+only after the same exact-head readiness contract passes.
 
 ## Invariants
 
@@ -55,11 +57,16 @@ same exact-head convergence contract passes.
 - Treat review, approval, thread-readiness, finding, and CI evidence as valid
   only for the exact current PR head. A new commit or baseline update resets
   every affected gate.
+- Before every substantive code push owned by this workflow, complete the local
+  specification, functional-validation, project-gate, and `/code-review
+  fix-all` loop in steps 5 and 6. Reply-only and metadata-only updates do not
+  need this gate. Explicit read-only mode never invokes a mutating review
+  operation.
 - Own no label routing, milestone scheduling, stack scheduling, cross-PR
   admission, or project-specific CI policy. If the PR is a native stack member,
-  converge this layer and return its state to the stack owner without merging.
+  make this layer ready and return its state to the stack owner without merging.
 
-Read [references/convergence.md](references/convergence.md) before deciding that
+Read [references/readiness.md](references/readiness.md) before deciding that
 a PR is ready, pending, blocked, or merged.
 
 Use `scripts/review_wait.py` for review inspection, deterministic waiting,
@@ -74,8 +81,8 @@ Use a caller-owned checkpoint below gitignored `.agent/waits/`.
 The exact `automatic-merge` qualifier authorizes relevant fixes, validation,
 new commits, permitted pushes, documented automation retriggers, monitoring,
 one ordinary squash merge, source-branch deletion, and local cleanup under
-`git-workflow`. Normal `/review-pr` remains non-merging. An explicit read-only
-instruction remains non-mutating and disables automatic merge.
+`git-workflow`. Normal `/address-pr-feedback` remains non-merging. An explicit
+read-only instruction remains non-mutating and disables automatic merge.
 
 An active review automation is a gate when repository policy or the current PR
 shows it was intentionally invoked. Inspect inline threads plus top-level
@@ -87,10 +94,15 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
 1. Confirm the repository and exact PR identity. Read its current head, diff,
    required checks, applicable project instructions, active review automation,
    terminal states, unresolved-thread count, and unanswered inline-automation-
-   thread count.
-2. If an ordinary branch needs a baseline update, use `/update-pr`. A stack owner
-   must perform any stack-wide synchronization before asking this skill to
-   re-evaluate the affected layer.
+   thread count. Establish the complete PR specification from the user request,
+   linked issue or confirmed mini-spec, acceptance criteria, PR body, product
+   docs, ADRs or durable decisions, and the nearest Definitions of Ready and
+   Done. Label any claim inferred from the current change rather than a source.
+2. If an ordinary branch needs a baseline update, merge the remote base by
+   following `/update-pr`'s no-rebase workflow, but defer its commit and push
+   until the pre-push review in step 6 passes. A stack owner must perform any
+   stack-wide synchronization before asking this skill to re-evaluate the
+   affected layer.
 3. Run the review helper's `inspect` operation for the exact PR head. It returns
    active automation evidence, one explicit `findingSurfaces` collection across
    inline threads, exact-head reviews, and automation top-level comments,
@@ -109,14 +121,37 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    nitpick, and never substitute a top-level comment when an inline comment
    cannot accept a reply. Resolve attribution identities before the first reply
    and append the required Note to every substantive reply.
-5. Run checks relevant to the changed behavior, including rendered UI and
-   accessibility checks for user-facing changes.
-6. Use `/update-pr` to commit and push. If unavailable, follow its documented
-   no-amend, no-force-push workflow directly.
+5. Compare the complete branch change, including uncommitted review fixes and
+   any baseline merge, with every specification and readiness criterion. Keep a
+   criterion-to-evidence record for the current change. Invalidate evidence when
+   source, test, configuration, dependency, generated output, baseline, or
+   delivered behavior changes in a way that can affect it. Exercise every
+   testable criterion without current evidence through the real delivered
+   interface. Cover the intended path and the most consequential failure or
+   boundary path. Record setup, input, expected result, and observed result;
+   include rendered UI and accessibility evidence for user-facing changes. Mark
+   a criterion static-only when real execution is unsafe or unavailable, and do
+   not present it as behaviorally verified. Run the repository's declared
+   pre-PR gate. Fix every in-scope gap, then repeat this step until every
+   criterion has current evidence and the gate passes on the unchanged change.
+   Stop before pushing when a required behavior cannot be validated safely or
+   the specification does not permit static verification.
+6. Invoke `/code-review fix-all` on that complete current change. Apply every
+   validated in-scope finding, then return to step 5 because those edits may
+   invalidate specification evidence or checks. Repeat the code review only
+   when remediation changes its input; do not cycle on an unchanged finding.
+   Stop before pushing when validation or review exposes a material product,
+   architecture, security, compatibility, or scope decision. Once steps 5 and
+   6 pass on the same unchanged change, use `/update-pr` to commit and push
+   without amending or force-pushing. If that skill is unavailable, follow its
+   documented workflow directly.
 7. Re-read the exact head, required checks, terminal automation verdicts,
    actionable findings, unresolved threads, and unanswered inline automation
-   threads. Apply the convergence and `retry_at` rules in the reference. A new
-   head restarts this step with no inherited gate evidence.
+   threads. Apply the readiness and `retry_at` rules in the reference. A new
+   head invalidates external gate evidence. Preserve local criterion evidence
+   only when the pushed content is identical and its recorded dependencies did
+   not change. A validated CI, code, or behavior failure returns to step 5
+   before another commit or push.
 8. In normal mode, return the result contract without merging. In
    `automatic-merge` mode, launch the helper's foreground `wait` operation with
    the exact head, repository policy, checkpoint, and safely derived deadline.

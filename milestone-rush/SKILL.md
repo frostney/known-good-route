@@ -98,8 +98,8 @@ not release publication.
    relevant local state only when its ownership and scope are clear; preserve
    ambiguous, dirty, pre-existing, or unrelated state and report it.
 4. Let the implementation workflow validate, review, and hand off through
-   `/create-pr`. As each ordinary PR becomes ready, run `/review-pr
-   automatic-merge`. For a native stack, collect each layer's `review-pr`
+   `/create-pr`. As each ordinary PR becomes ready, run `/address-pr-feedback
+   automatic-merge`. For a native stack, collect each layer's `address-pr-feedback`
    exact-head `ready` result, then let the stack owner recheck and atomically
    merge the selected ready prefix through `git-workflow`.
 5. Keep remediation validation focused on the changed behavior. Run the
