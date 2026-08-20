@@ -12,6 +12,26 @@ from typing import Iterable
 BANNED_WORDS = re.compile(
     r"\b(?:seam|seams|honest|honestly|substrate|substrates)\b", re.IGNORECASE
 )
+BANNED_PATTERNS = (
+    (
+        "banned opener",
+        re.compile(
+            r"^\s*(?:great question|absolutely|certainly|of course)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "banned construction not just X, but Y",
+        re.compile(r"\bnot\s+just\b[^.\n]{0,200}\bbut\b", re.IGNORECASE),
+    ),
+    (
+        "banned closer",
+        re.compile(
+            r"\b(?:i hope this helps|let me know if|happy to help)\b",
+            re.IGNORECASE,
+        ),
+    ),
+)
 INLINE_CODE = re.compile(r"`[^`]*`")
 
 
@@ -41,6 +61,9 @@ def check_lines(path: Path, lines: Iterable[str]) -> list[str]:
             findings.append(
                 f"{path}:{line_number}: banned word {match.group(0).lower()}"
             )
+        for label, pattern in BANNED_PATTERNS:
+            if pattern.search(prose):
+                findings.append(f"{path}:{line_number}: {label}")
     return findings
 
 
