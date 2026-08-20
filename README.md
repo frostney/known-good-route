@@ -117,9 +117,10 @@ flowchart TB
 | [`git-workflow`](git-workflow/SKILL.md) | Default git workflow: automatically update clean local-default work and create new local branches/worktrees from the latest remote default; stop on dirty default state and ask whether to discard it or use a focused branch/worktree; require impact-focused commit and PR titles; use ordinary merge-only branches or guarded native GitHub stacks, always-new commits, and squash merges. |
 | [`status-report`](status-report/SKILL.md) | Build a live, read-only Kanban of every open PR and all local worktrees, using current-head CI and review gates, short semantic local-change summaries, and rich, Mermaid, or Markdown rendering according to host capability. |
 | [`create-issue`](create-issue/SKILL.md) | File a well-structured GitHub issue from a tagline using the project's issue template and `VISION.md` when present, grill for thoroughness, and add a GitHub Note with the exact user and model attribution. Supports `automatic` mode for project-context template/label/body selection. |
-| [`implement-issue`](implement-issue/SKILL.md) | Validate an issue, compare viable options from one evidence packet, then implement and repeat code review plus black-box testing until both pass unchanged before the project gate and `/create-pr`. Supports gated `automatic` selection. |
-| [`implement-idea`](implement-idea/SKILL.md) | Turn an unfiled idea into a confirmed mini-spec, compare viable options from one evidence packet, then implement and repeat code review plus black-box testing until both pass unchanged before the project gate and `/create-pr`. Supports gated `automatic` selection. |
-| [`run-retro`](run-retro/SKILL.md) | Review a completed workstream and produce an interactive HTML impact report with per-item summaries of at most 300 characters, evidence-backed Before/After states, copyable or app-linked deep dives, and optional animated mechanism diagrams. |
+| [`implement-issue`](implement-issue/SKILL.md) | Validate an issue, present viable options from one evidence packet in a temporary interactive HTML impact review, use `grilling` for selection, then implement and repeat code review plus black-box testing until both pass unchanged before the project gate and `/create-pr`. Automatic mode skips the report and grill. |
+| [`implement-idea`](implement-idea/SKILL.md) | Turn an unfiled idea into a confirmed mini-spec, present viable options from one evidence packet in a temporary interactive HTML impact review, use `grilling` for selection, then implement and repeat code review plus black-box testing until both pass unchanged before the project gate and `/create-pr`. Automatic mode skips the report and grill. |
+| [`render-html`](render-html/SKILL.md) | Render validated, self-contained interactive reports from one flexible structured schema with evidence classifications, Before/After states, option tradeoffs, weighted scores, copy status, and optional diagrams. |
+| [`run-retro`](run-retro/SKILL.md) | Review a completed workstream and use `render-html` to produce a durable impact report with per-item summaries of at most 300 characters, evidence-backed Before/After states, copyable or app-linked deep dives, and optional animated mechanism diagrams. |
 | [`create-pr`](create-pr/SKILL.md) | Publish a completed change as a templated draft PR or verified native GitHub stack, reconcile PR-only metadata, wait for exact-head CI, and mark each complete layer ready without testing or fixing implementation behavior. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and update the current PR, merging ordinary baselines or using guarded native stack synchronization, then refresh stale metadata. |
 | [`address-pr-feedback`](address-pr-feedback/SKILL.md) | Address feedback on one PR, repeat `/code-review fix-all` and black-box specification testing before substantive pushes, require exact-final-head CI and review evidence, reply in originating threads, and wait deterministically. Normal mode never merges; `automatic-merge` merges only an ordinary ready PR. |
@@ -276,14 +277,21 @@ that evidence.
   exclusive elapsed bottlenecks separate from overlapping and aggregate
   resource consumption. It
   always produces a local HTML impact report with concise Before/After cards
-  and offers card-level deep dives through `grilling`.
-- `create-issue`, `implement-issue`, and `implement-idea` invoke `/grill-with-docs` (preferred) or `/grill-me` for thoroughness when registered.
+  through `render-html` and offers card-level deep dives through `grilling`.
+- `create-issue` invokes `/grill-with-docs` or `/grill-me` for thoroughness when
+  registered. Non-automatic `implement-issue` and `implement-idea` instead
+  require `render-html`, Python 3, and `grilling` as hard dependencies.
 - `implement-issue` and `implement-idea` derive all viable options from one
   neutral evidence packet, declare the rubric first, and run equivalent
-  decision-relevant checks before recommending. Failed web research stops before
-  implementation options.
+  decision-relevant checks before recommending. In non-automatic mode they
+  render the comparison outside the worktree, use it during `grilling`, and
+  remove it after selection. Failed web research stops before implementation
+  options.
 - `create-issue`, `implement-issue`, and `implement-idea` read `VISION.md` when present and stop for clarification when the request conflicts with it.
-- `create-issue`, `implement-issue`, and `implement-idea` support an explicit `automatic` prompt mode where the agent auto-selects the project-context recommendation after completing the required investigation/gates.
+- `create-issue`, `implement-issue`, and `implement-idea` support an explicit
+  `automatic` prompt mode where the agent auto-selects the project-context
+  recommendation after completing the required investigation and gates.
+  Implementation automatic mode skips the interactive report and `grilling`.
 - `implement-idea` borrows `/create-issue`'s good-issue components when formulating the idea.
 - `run-retro` requires `grilling` for the retrospective interview and final
   confirmation, then applies only user-selected documentation edits and ticket
