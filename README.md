@@ -300,7 +300,8 @@ that evidence.
   `project-structure` for language-neutral repository policy. `react-stack`
   delegates TypeScript language policy to `typescript-stack` and Convex
   specifics to `convex-conventions`.
-- `agent-writing` applies to every user-facing item and generated prose artifact.
+- `agent-writing` applies to agent-authored communication and engineering
+  artifacts, but not application-generated or branded product output.
   Project-specific instructions and templates take precedence. Issues may
   contain many concise items; each review reply and retro impact item is capped
   at 300 characters.

@@ -1,6 +1,12 @@
 ---
 name: render-html
-description: Render validated, self-contained interactive HTML reports from structured evidence. Use for implementation option reviews, retrospective impact reports, or other reports that compare items, show Before and After states, score tradeoffs, or provide copyable discussion prompts.
+description: >-
+  Renders validated, self-contained interactive HTML reports from structured
+  evidence. Use when a workflow needs an implementation option review,
+  retrospective impact report, or another report that compares items, shows
+  Before and After states, scores tradeoffs, or provides copyable discussion
+  prompts.
+license: Unlicense OR MIT
 ---
 
 # Render HTML
