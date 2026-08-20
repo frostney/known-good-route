@@ -2069,7 +2069,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["implement-idea"],
+      requiredSkills: ["implement-idea", "agent-writing"],
       requiredRegisteredSkills: ["grill-with-docs"],
       requiredInspections: ["existingContract", "runtimeCompatibility"],
       requiredInspectionsBeforeActions: [
@@ -2254,7 +2254,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["run-retro"],
+      requiredSkills: ["run-retro", "agent-writing"],
       requiredRegisteredSkills: ["grilling"],
       requiredActions: ["file.edit", "report"],
       forbiddenActions: ["forge.createIssue", "user.ask"],
@@ -3758,10 +3758,18 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       requiredSkills: ["agent-writing"],
+      requiredInspections: ["status"],
       requiredActions: ["report"],
       forbiddenActions: ["file.edit", "git.commit", "git.push"],
-      outputPatterns: ["pars|fix", "test|pass"],
-      forbiddenOutputPatterns: ["—", "\\b[Ss]eams?\\b", "\\b[Hh]onestly?\\b", "\\b[Ss]ubstrates?\\b"],
+      outputPatterns: ["^(?:The )?pars", "test|pass"],
+      forbiddenOutputPatterns: [
+        "—",
+        "\\b[Ss]eams?\\b",
+        "\\b[Hh]onestly?\\b",
+        "\\b[Ss]ubstrates?\\b",
+        "^(?:great question|absolutely|certainly|of course)",
+        "(?:I hope this helps|let me know if|happy to help)",
+      ],
     },
   },
   {
@@ -3838,6 +3846,150 @@ export const evalCases: EvalCase[] = [
         "—",
         "(?:crucial|delve|pivotal|showcase|tapestry|testament|vibrant)",
         "not just .*, but",
+      ],
+    },
+  },
+  {
+    id: "agent-writing-direct-api-explanation",
+    description:
+      "A direct API explanation answers immediately and avoids investigation narration.",
+    prompt:
+      "What is AsyncLocalStorage? Is it a Node API or a third-party library? Answer briefly from the supplied source evidence.",
+    fixture: {
+      evidence: {
+        apiDefinition:
+          "AsyncLocalStorage is a built-in Node.js API exported by node:async_hooks. It carries request or operation context through asynchronous callbacks and promise continuations. No third-party package is required.",
+      },
+    },
+    expected: {
+      requiredSkills: ["agent-writing"],
+      requiredInspections: ["apiDefinition"],
+      requiredActions: ["report"],
+      forbiddenActions: ["file.edit", "git.commit", "git.push"],
+      outputPatterns: [
+        "^(?:AsyncLocalStorage|It) (?:is|'s).*(?:built-in|Node)",
+        "node:async_hooks",
+        "context|state",
+      ],
+      forbiddenOutputPatterns: [
+        "I(?:'ll| am going to| will) (?:check|look|investigate)",
+        "third-party dependency|install (?:a|the) package",
+        "(?:great question|absolutely|certainly|of course)",
+        "(?:I hope this helps|let me know if|happy to help)",
+      ],
+    },
+  },
+  {
+    id: "agent-writing-correction-trace",
+    description:
+      "A correction leads with the current fact and traces the evidence failure.",
+    prompt:
+      "Correct your earlier statement that the project gate passed and explain what went wrong.",
+    fixture: {
+      evidence: {
+        earlierClaim:
+          "The assistant said the project gate passed on the current branch.",
+        currentValidation:
+          "The current branch's `bun run check` failed 2 tests. The assistant had reused a successful result from the previous commit. The branch is not ready; rerun the gate after fixing the failures.",
+      },
+    },
+    expected: {
+      requiredSkills: ["agent-writing"],
+      requiredInspections: ["earlierClaim", "currentValidation"],
+      requiredActions: ["report"],
+      forbiddenActions: ["file.edit", "git.commit", "git.push"],
+      outputPatterns: [
+        "^`?bun run check`? failed 2 tests|^The current.*failed 2 tests",
+        "earlier|previous claim",
+        "previous commit|stale",
+        "not ready",
+        "rerun|run.*after",
+      ],
+      forbiddenOutputPatterns: ["^(?:sorry|apologies|I apologize)"],
+    },
+  },
+  {
+    id: "agent-writing-preserves-settled-term",
+    description:
+      "A wording recommendation preserves a defined project term and its settled meaning.",
+    prompt:
+      "Review the phrase North Star under the writing rules and recommend whether to remove it.",
+    fixture: {
+      evidence: {
+        projectDecision:
+          "The project defines North Star as continuous improvement beyond its minimum engineering bar. The user previously decided to keep the term and clarify that distinction.",
+        genericGuidance:
+          "Undefined ornamental metaphors should be replaced with the actual component, operation, or tradeoff.",
+      },
+    },
+    expected: {
+      requiredSkills: ["agent-writing"],
+      requiredInspections: ["projectDecision", "genericGuidance"],
+      requiredActions: ["report"],
+      forbiddenActions: ["file.edit", "git.commit", "git.push"],
+      outputPatterns: ["keep|preserve", "North Star", "defined|settled", "beyond|improv"],
+      forbiddenOutputPatterns: ["remove|replace.*North Star|North Star.*replace"],
+    },
+  },
+  {
+    id: "agent-writing-introduces-finding-label",
+    description:
+      "A final handoff introduces a necessary finding label through plain language.",
+    prompt:
+      "Write a concise final handoff for the supplied compiler investigation.",
+    fixture: {
+      evidence: {
+        outcome:
+          "All six requested fixes pass their original reproductions. A new critical bytecode constructor-write defect remains and is tracked as P1.",
+        validation:
+          "Interpreted mode passed 329 of 330 corpus tests. Bytecode mode passed 328 of 330 because P1 loses constructor writes inside an imported function declaration.",
+        nextAction:
+          "Fix the bytecode constructor-write defect before starting bare-specifier resolution.",
+      },
+    },
+    expected: {
+      requiredSkills: ["agent-writing"],
+      requiredInspections: ["outcome", "validation", "nextAction"],
+      requiredActions: ["report"],
+      forbiddenActions: ["file.edit", "git.commit", "git.push"],
+      outputPatterns: [
+        "six.*fix|fix.*six",
+        "bytecode constructor-write defect.{0,20}P1|P1.{0,20}bytecode constructor-write defect",
+        "329.*330",
+        "328.*330",
+        "before.*bare-specifier|bare-specifier.*after",
+      ],
+      forbiddenOutputPatterns: [
+        "## P1|## P2|\\bR1\\b|\\bG1\\b|\\bN1\\b",
+        "worth savoring|real story|crown jewel",
+      ],
+    },
+  },
+  {
+    id: "agent-writing-byte-identical-context",
+    description:
+      "Text equality uses plain wording while compiler output retains byte-identical precision.",
+    prompt:
+      "Rewrite both supplied comparisons using the repository writing rules.",
+    fixture: {
+      evidence: {
+        proseComparison:
+          "README.md and docs/overview.md contain exactly the same explanatory paragraph.",
+        compilerComparison:
+          "Two compiler runs produced output files with the same byte sequence and checksum.",
+      },
+    },
+    expected: {
+      requiredSkills: ["agent-writing"],
+      requiredInspections: ["proseComparison", "compilerComparison"],
+      requiredActions: ["report"],
+      forbiddenActions: ["file.edit", "git.commit", "git.push"],
+      outputPatterns: [
+        "README\\.md.*docs/overview\\.md.*identical (?:text|content)|identical (?:text|content).*README\\.md.*docs/overview\\.md",
+        "compiler.*byte-identical|byte-identical.*compiler",
+      ],
+      forbiddenOutputPatterns: [
+        "README\\.md[^.\\n]{0,100}docs/overview\\.md[^.\\n]{0,100}byte-identical|byte-identical[^.\\n]{0,100}README\\.md[^.\\n]{0,100}docs/overview\\.md",
       ],
     },
   },

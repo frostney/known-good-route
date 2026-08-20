@@ -86,8 +86,12 @@ describe("cross-skill policy", () => {
 
     expect(source).toContain("never as targets to fill");
     expect(source).toContain("no minimum length");
+    expect(source).toContain("over 120 words");
     expect(source).toContain("over 60 words");
     expect(source).toContain("over 250 words");
+    expect(source).toContain("Revise before sending");
+    expect(source).toContain("application-generated reports");
+    expect(source).toContain("Reserve `byte-identical` for compiler or binary output");
     expect(source).toContain("references/generated-writing-patterns.md");
     expect(source).not.toContain("Target about 300 characters per item");
   });

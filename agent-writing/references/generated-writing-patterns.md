@@ -14,9 +14,8 @@ Cut these patterns when they do not carry project meaning:
   `intricate`, `landscape` used abstractly, `pivotal`, `showcase`, `tapestry`,
   `testament`, `underscore`, and `vibrant`. Prefer the plain, project-specific
   word.
-- Fancy substitutes for `is`, `has`, or `use`; the `not just X, but Y` frame;
-  forced groups of three; false `from X to Y` ranges; and repeated restatements
-  with new synonyms.
+- Fancy substitutes for `is`, `has`, or `use`; forced groups of three; false
+  `from X to Y` ranges; and repeated restatements with new synonyms.
 - Unexplained technical or business metaphors such as `substrate`, `wedge`,
   `vector`, `locus`, `vantage`, `nexus`, `primitive` used as a noun, `harness`
   used metaphorically, `surface` used vaguely, `bedrock`, `scaffolding`,
@@ -24,8 +23,6 @@ Cut these patterns when they do not carry project meaning:
   `north star`, and `flywheel`. Keep a metaphor when the project gives it a
   stable, explicit meaning; otherwise name the actual component, operation,
   boundary, or tradeoff.
-- Chatbot openers and closers, praise before an answer, sycophancy, cutoff
-  disclaimers, filler, stacked hedges, decorative emoji, and repeated summaries.
 - Dense sentences that make the reader backtrack, weak verbs propped up by
   adverbs, passive constructions that hide a relevant actor, and clauses that
   do not change what the reader should know or do.

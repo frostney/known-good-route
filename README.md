@@ -141,7 +141,7 @@ flowchart TB
 | [`convex-conventions`](convex-conventions/SKILL.md) | Convex backend rules: shared validators, Clerk JWT bridge, `args` + `returns` on every public function, in-code filtering, `.take()` caps, rate-limited mutations, action/mutation split, schema with soft-delete and audit trails, single re-export module for client types. The live Convex docs override this skill on conflict. |
 | [`codebase-audit`](codebase-audit/SKILL.md) | Audit the repository and delivery surface with a coverage map, conditional technical and discoverability perspectives, revert-clean falsification probes, four-layer de-duplication, and churn-backed architectural risk. Evidence can use bounded lanes; remediation requires a selected coherent batch. |
 | [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Ambient engineering-quality standard for planning, orchestration, development, debugging, review, refactoring, and substantial investigation: ground in reality, solve the full scope, reuse before creating, validate the real behavior, protect product and developer-feedback performance throughout delivery, and keep maintainability as the governor. |
-| [`agent-writing`](agent-writing/SKILL.md) | Ambient project-prose guidance: project rules first, outcome and evidence before background, plain active language, numerical revision thresholds rather than length targets, a conditional durable-prose revision catalogue, deterministic prohibited wording, and hard 300-character limits for review replies and retrospective impact items. |
+| [`agent-writing`](agent-writing/SKILL.md) | Ambient harness and engineering-artifact prose contract: product-output voice stays separate; answers, evidence, and lifecycle state come first; prior decisions and existing mechanisms are inspected; numerical revision thresholds trigger a mandatory before-send pass; deterministic wording and 300-character constrained-item limits remain enforced. |
 | [`bleeding-edge`](bleeding-edge/SKILL.md) | Ambient lens favoring the newest viable option, including just-released stable versions and justified pre-release channels, under `software-engineering-excellence`: verify live, pin, keep choices reversible and gate-green, and never silently replace a decided choice. |
 
 ## Background
@@ -365,7 +365,7 @@ supported frontier models:
 | Local convention differs from a generic default | Follows the surrounding code and project gate instead of imposing a blanket style rule |
 | Pascal identifier contains a standard initialism | Preserves forms such as `HTTP` and `GC` unless an external API or project rule requires another spelling |
 | Written issue, PR, roadmap, or retrospective | Leads with the outcome and omits filler, boilerplate, and repeated summaries |
-| Agent-authored response or artifact | Applies project-specific voice first, states concrete evidence in plain language, removes generated-writing patterns, and preserves quoted source and code exactly |
+| Agent-authored response or engineering artifact | Uses project terminology, evidence sources, templates, and exact required text without importing product voice; leads with current evidence and preserves quoted source and code exactly |
 
 The provider-neutral [behavioral eval harness](evals/README.md) runs these
 scenarios through Vercel AI SDK and AI Gateway. `bun run check` validates the

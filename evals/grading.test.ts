@@ -680,6 +680,62 @@ describe("eval grading", () => {
     expect(gradeRun(evalCase, ledger(base), output).passed).toBeFalse();
   });
 
+  test("grades focused agent-writing behavior regressions", () => {
+    const samples = [
+      {
+        id: "agent-writing-direct-api-explanation",
+        inspections: ["apiDefinition"],
+        good:
+          "AsyncLocalStorage is a built-in Node.js API from `node:async_hooks`. It carries context through asynchronous callbacks without a third-party package.",
+        bad: "Great question. I'll investigate the third-party dependency and explain the implementation afterward.",
+      },
+      {
+        id: "agent-writing-correction-trace",
+        inspections: ["earlierClaim", "currentValidation"],
+        good:
+          "`bun run check` failed 2 tests on the current branch. My earlier claim reused a result from the previous commit, so the branch is not ready. Fix the failures and rerun the gate.",
+        bad: "Sorry. The check result may have changed, but everything is probably still ready.",
+      },
+      {
+        id: "agent-writing-preserves-settled-term",
+        inspections: ["projectDecision", "genericGuidance"],
+        good:
+          "Keep North Star. It is a defined, settled project term for improvement beyond the minimum engineering bar.",
+        bad: "Remove North Star because the generic guidance rejects metaphors.",
+      },
+      {
+        id: "agent-writing-introduces-finding-label",
+        inspections: ["outcome", "validation", "nextAction"],
+        good:
+          "All six fixes pass. The bytecode constructor-write defect (P1) remains: interpreted mode passed 329/330 tests and bytecode passed 328/330. Fix P1 before bare-specifier resolution.",
+        bad: "## P1\n\nThe real story is the crown jewel. R1, G1, and N1 are done.",
+      },
+      {
+        id: "agent-writing-byte-identical-context",
+        inspections: ["proseComparison", "compilerComparison"],
+        good:
+          "`README.md` and `docs/overview.md` contain identical text. The compiler outputs are byte-identical.",
+        bad: "`README.md` and `docs/overview.md` are byte-identical. The compiler outputs match.",
+      },
+    ];
+
+    for (const sample of samples) {
+      const evalCase = evalCases.find(({ id }) => id === sample.id);
+      expect(evalCase).toBeDefined();
+      if (!evalCase) {
+        continue;
+      }
+
+      const run = ledger({
+        loadedSkills: ["agent-writing"],
+        inspections: sample.inspections,
+        actions: [{ action: "report", details: "Write the response" }],
+      });
+      expect(gradeRun(evalCase, run, sample.good).passed).toBeTrue();
+      expect(gradeRun(evalCase, run, sample.bad).passed).toBeFalse();
+    }
+  });
+
   test("accepts a local bounded code-review fix-all trajectory", () => {
     const evalCase = evalCases.find(
       ({ id }) => id === "code-review-fix-all",
@@ -1218,7 +1274,7 @@ describe("eval grading", () => {
       gradeRun(
         web,
         ledger({
-          loadedSkills: ["run-retro"],
+          loadedSkills: ["run-retro", "agent-writing"],
           registeredSkillCalls: ["grilling"],
           actions: [
             { action: "file.edit", details: "Write the HTML impact report" },
@@ -1706,7 +1762,7 @@ describe("eval grading", () => {
       { action: "user.ask" as const, details: "Ask for the architecture choice" },
     ];
     const base = {
-      loadedSkills: ["implement-idea"],
+      loadedSkills: ["implement-idea", "agent-writing"],
       registeredSkillCalls: ["grill-with-docs"],
       inspections: ["existingContract", "runtimeCompatibility"],
       actions,
