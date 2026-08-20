@@ -1544,6 +1544,53 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "implement-issue-structured-impact-review-before-choice",
+    description:
+      "A non-automatic issue implementation renders a temporary structured option review and grills before editing.",
+    prompt: "/implement-issue 44",
+    fixture: {
+      evidence: {
+        issue:
+          "Issue #44 is open and ready. It requires failed fallback clipboard commands to display Copy failed instead of Copied.",
+        projectDefinitions:
+          "Definition of Ready is satisfied. Definition of Done requires a behavioral regression test and the complete project gate.",
+        affectedCode:
+          "The report renderer catches thrown copy errors but unconditionally returns success after document.execCommand('copy').",
+        reproduction:
+          "With navigator.clipboard unavailable and execCommand returning false, the rendered report displays Copied.",
+        webResearch:
+          "Current MDN documentation states that execCommand returns a boolean indicating whether the command is supported or enabled.",
+        options:
+          "One shared rubric compares honoring the boolean, removing the fallback, and replacing copy controls. A temporary render-html report contains observed and proposed evidence, neutral impacts, pros, cons, 0-5 scores, weighted totals, uncertainty, copyable prompts, and a recommendation only after every option.",
+      },
+      registeredSkills: {
+        grilling:
+          "The user can review the temporary impact report but has not selected an implementation option.",
+      },
+    },
+    expected: {
+      requiredSkills: ["implement-issue", "render-html"],
+      requiredRegisteredSkills: ["grilling"],
+      requiredActionSequence: ["report", "user.ask"],
+      requiredActions: ["report", "user.ask"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.openDraftPr",
+        "git.commit",
+        "git.fetch",
+        "git.merge",
+        "git.push",
+      ],
+      outputPatterns: [
+        "temporary|outside.*worktree",
+        "HTML|impact report|report path",
+        "observed|proposed",
+        "pros|cons|tradeoffs",
+        "recommend|option",
+      ],
+    },
+  },
+  {
     id: "measured-prototype-misses-threshold",
     description:
       "A performance prototype that misses its target stops before production work.",
@@ -1975,17 +2022,24 @@ export const evalCases: EvalCase[] = [
         webResearch:
           "Current official platform documentation confirms multiple viable persistence and conflict-resolution models; none supplies the product's ownership policy.",
         architectureView:
-          "A current-state flow and three proposed offline flows make the ownership and conflict-resolution differences visible.",
+          "A temporary render-html impact report uses one shared rubric and shows the current-state flow plus three neutral proposed offline flows with pros, cons, scores, uncertainty, and a closing recommendation. The ownership and conflict-resolution differences remain material.",
         projectDefinitions:
           "Definition of Ready requires material architecture choices to be resolved.",
       },
+      registeredSkills: {
+        grilling:
+          "The user reviewed the temporary impact report, but the ownership and conflict-resolution choice remains unresolved.",
+      },
     },
     expected: {
-      requiredSkills: ["implement-idea"],
-      requiredActions: ["user.ask"],
+      requiredSkills: ["implement-idea", "render-html"],
+      requiredRegisteredSkills: ["grilling"],
+      requiredActionSequence: ["report", "user.ask"],
+      requiredActions: ["report", "user.ask"],
       forbiddenActions: ["file.edit", "git.commit", "forge.openDraftPr"],
       outputPatterns: [
         "architecture|diagram|flow",
+        "HTML|impact report|report path",
         "web|official|current",
         "ownership|conflict",
       ],
@@ -2010,17 +2064,18 @@ export const evalCases: EvalCase[] = [
         uiContext:
           "A shared current-state view plus desktop and mobile mockups compare an inline settings section with a dedicated notification screen. Observed UI, proposed behavior, and nonfunctional mockup data are labeled.",
         options:
-          "Both options were derived from the same repository and web evidence. Before recommendation, the declared rubric compares mobile usability, accessibility, validation clarity, reuse, and implementation cost. Each option has desktop and mobile mockups plus the same keyboard and time-zone checks. The dedicated screen scores higher, but the user has not selected an option.",
+          "Both options were derived from the same repository and web evidence. Before recommendation, the declared rubric compares mobile usability, accessibility, validation clarity, reuse, and implementation cost. Each option has desktop and mobile mockups plus the same keyboard and time-zone checks. A temporary render-html report shows shared evidence, neutral options, pros, cons, scores, uncertainty, and a closing recommendation. The dedicated screen scores higher, but the user has not selected an option.",
       },
       registeredSkills: {
-        "grill-with-docs":
+        grilling:
           "The user reviewed the current-state view and both responsive option mockups, but has not selected the implementation approach.",
       },
     },
     expected: {
-      requiredSkills: ["implement-idea"],
-      requiredRegisteredSkills: ["grill-with-docs"],
-      requiredActions: ["user.ask"],
+      requiredSkills: ["implement-idea", "render-html"],
+      requiredRegisteredSkills: ["grilling"],
+      requiredActionSequence: ["report", "user.ask"],
+      requiredActions: ["report", "user.ask"],
       forbiddenActions: [
         "file.edit",
         "forge.openDraftPr",
@@ -2036,6 +2091,8 @@ export const evalCases: EvalCase[] = [
         "official|https://www\\.w3\\.org/WAI/",
         "same|shared|neutral",
         "rubric|requirements|equivalent",
+        "HTML|impact report|report path",
+        "pros|cons|tradeoffs",
         "recommend|option",
       ],
     },
@@ -2061,22 +2118,23 @@ export const evalCases: EvalCase[] = [
         workflowView:
           "The proposed diagram has exclusive initial-full, later-delta, semantic-no-op, and explicit-manual-full branches. It labels the existing skill contract separately from application orchestration.",
         options:
-          "The recommended approach embeds the skill unchanged through its supported skill location and keeps event orchestration outside the review contract. The user has not yet selected an option.",
+          "A temporary render-html report compares the contract-preserving and wrapper approaches with shared evidence, pros, cons, scores, and uncertainty, then closes with the recommendation to embed the skill unchanged through its supported location and keep event orchestration outside the review contract. The user has not yet selected an option.",
       },
       registeredSkills: {
-        "grill-with-docs":
+        grilling:
           "The contract-derived workflow is visible, but the user has not selected the implementation approach.",
       },
     },
     expected: {
-      requiredSkills: ["implement-idea"],
-      requiredRegisteredSkills: ["grill-with-docs"],
+      requiredSkills: ["implement-idea", "render-html"],
+      requiredRegisteredSkills: ["grilling"],
       requiredInspections: ["existingContract", "runtimeCompatibility"],
       requiredInspectionsBeforeActions: [
         { inspection: "existingContract", action: "user.ask" },
         { inspection: "runtimeCompatibility", action: "user.ask" },
       ],
-      requiredActions: ["user.ask"],
+      requiredActionSequence: ["report", "user.ask"],
+      requiredActions: ["report", "user.ask"],
       forbiddenActions: [
         "file.edit",
         "forge.openDraftPr",
@@ -2091,6 +2149,7 @@ export const evalCases: EvalCase[] = [
         "initial.*full|first.*complete",
         "later.*delta|delta.*later",
         "manual.*full|full.*manual",
+        "HTML|impact report|report path",
         "recommend|option",
       ],
       forbiddenOutputPatterns: [
@@ -2170,7 +2229,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["run-retro"],
+      requiredSkills: ["run-retro", "render-html"],
       requiredRegisteredSkills: ["grilling"],
       requiredActions: ["file.edit", "user.ask"],
       forbiddenActions: ["forge.createIssue"],
@@ -2211,7 +2270,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["run-retro"],
+      requiredSkills: ["run-retro", "render-html"],
       requiredRegisteredSkills: ["grilling"],
       requiredActions: ["file.edit", "report"],
       forbiddenActions: ["forge.createIssue", "user.ask"],
@@ -2254,7 +2313,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["run-retro"],
+      requiredSkills: ["run-retro", "render-html"],
       requiredRegisteredSkills: ["grilling"],
       requiredActions: ["file.edit", "report"],
       forbiddenActions: ["forge.createIssue", "user.ask"],
@@ -2293,7 +2352,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["run-retro"],
+      requiredSkills: ["run-retro", "render-html"],
       requiredRegisteredSkills: ["grilling"],
       requiredActions: ["file.edit", "report"],
       forbiddenActions: ["forge.createIssue", "user.ask"],
@@ -2590,7 +2649,7 @@ export const evalCases: EvalCase[] = [
   {
     id: "implement-idea-automatic-happy-path",
     description:
-      "An automatic idea follows research, artifact, sync, implementation, review, and PR gates.",
+      "An automatic idea follows research, sync, implementation, review, and PR gates without an interactive report or grill.",
     prompt:
       "/implement-idea automatic. Provisional mini-spec: add --json to inspect, keep text as default, reject --json with --quiet, and test success plus the invalid combination.",
     fixture: {
@@ -2618,10 +2677,6 @@ export const evalCases: EvalCase[] = [
         continuousIntegration:
           "After the draft PR opens, every readiness item is present and every applicable CI check passes.",
       },
-      registeredSkills: {
-        "grill-with-docs":
-          "The confirmed mini-spec resolves outcome, scope, non-goals, and measures of success. There is no material ambiguity or vision conflict.",
-      },
       actionResponses: {
         "forge.openDraftPr": "Draft PR #301 opened successfully.",
         "forge.markPrReady": "PR #301 marked ready successfully.",
@@ -2629,7 +2684,6 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       requiredSkills: ["implement-idea"],
-      requiredRegisteredSkills: ["grill-with-docs"],
       requiredActions: [
         "git.fetch",
         "git.merge",
@@ -3610,7 +3664,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["run-retro"],
+      requiredSkills: ["run-retro", "render-html"],
       requiredRegisteredSkills: ["grilling"],
       requiredActions: ["file.edit", "report"],
       forbiddenActions: [

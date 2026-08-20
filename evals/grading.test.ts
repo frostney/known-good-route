@@ -1203,7 +1203,7 @@ describe("eval grading", () => {
       gradeRun(
         critical,
         ledger({
-          loadedSkills: ["run-retro"],
+          loadedSkills: ["run-retro", "render-html"],
           registeredSkillCalls: ["grilling"],
           actions: [
             { action: "file.edit", details: "Write the HTML impact report" },
@@ -1218,7 +1218,7 @@ describe("eval grading", () => {
       gradeRun(
         web,
         ledger({
-          loadedSkills: ["run-retro"],
+          loadedSkills: ["run-retro", "render-html"],
           registeredSkillCalls: ["grilling"],
           actions: [
             { action: "file.edit", details: "Write the HTML impact report" },
@@ -1233,7 +1233,7 @@ describe("eval grading", () => {
       gradeRun(
         partial,
         ledger({
-          loadedSkills: ["run-retro"],
+          loadedSkills: ["run-retro", "render-html"],
           registeredSkillCalls: ["grilling"],
           actions: [
             { action: "file.edit", details: "Write the HTML impact report" },
@@ -1701,13 +1701,14 @@ describe("eval grading", () => {
     }
 
     const output =
-      "The existing review skill is authoritative. A Bun executable compatibility probe passed. The first run is an initial full review; later updates are deltas, and a manual full review is explicit. I recommend the contract-preserving option.";
+      "The existing review skill is authoritative. A Bun executable compatibility probe passed. The first run is an initial full review; later updates are deltas, and a manual full review is explicit. The temporary HTML impact report compares the options. I recommend the contract-preserving option.";
     const actions = [
+      { action: "report" as const, details: "Render the impact report" },
       { action: "user.ask" as const, details: "Ask for the architecture choice" },
     ];
     const base = {
-      loadedSkills: ["implement-idea"],
-      registeredSkillCalls: ["grill-with-docs"],
+      loadedSkills: ["implement-idea", "render-html"],
+      registeredSkillCalls: ["grilling"],
       inspections: ["existingContract", "runtimeCompatibility"],
       actions,
     };
@@ -1720,6 +1721,7 @@ describe("eval grading", () => {
           events: [
             { kind: "inspection", name: "existingContract" },
             { kind: "inspection", name: "runtimeCompatibility" },
+            { kind: "action", name: "report" },
             { kind: "action", name: "user.ask" },
           ],
         }),
@@ -1736,6 +1738,7 @@ describe("eval grading", () => {
             { kind: "action", name: "user.ask" },
             { kind: "inspection", name: "existingContract" },
             { kind: "inspection", name: "runtimeCompatibility" },
+            { kind: "action", name: "report" },
           ],
         }),
         output,

@@ -21,6 +21,29 @@ describe("cross-skill policy", () => {
     }
   });
 
+  test("interactive implementation reviews require structured HTML and grilling", async () => {
+    for (const name of ["implement-idea", "implement-issue"]) {
+      const source = await skill(name);
+      expect(source).toContain("require the registered `grilling` and `render-html`");
+      expect(source).toContain("temporary interactive impact report");
+      expect(source).toContain("pros, cons, scores, uncertainties");
+      expect(source).toContain("absolute path and continue");
+      expect(source).toMatch(/remove\s+the temporary report/i);
+      expect(source).toMatch(
+        /Automatic mode[\s\S]*skips the interactive HTML report and `grilling`/,
+      );
+    }
+  });
+
+  test("retrospectives delegate durable report rendering", async () => {
+    const source = await skill("run-retro");
+
+    expect(source).toContain("Requires registered grilling and render-html skills");
+    expect(source).toContain("The report is a durable retrospective artifact");
+    expect(source).toContain("Read the `render-html` schema");
+    expect(source).not.toContain("render_retro.py");
+  });
+
   test("GitHub prose uses exact attributed Notes", async () => {
     const note = "> [!NOTE]\n   > Created on behalf of @username using ModelName.";
     const createIssue = await skill("create-issue");
