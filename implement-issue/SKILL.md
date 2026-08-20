@@ -8,8 +8,9 @@ description: >-
 license: Unlicense OR MIT
 compatibility: >-
   Requires the GitHub CLI (gh) authenticated to the target repository and
-  network access; verification is driven by the project's DEFINITION_OF_DONE.md
-  and declared commands.
+  network access. Non-automatic mode also requires registered grilling and
+  render-html skills plus Python 3. Verification is driven by the project's
+  DEFINITION_OF_DONE.md and declared commands.
 ---
 
 # Implement issue
@@ -26,9 +27,9 @@ evidence that no implementation is needed.
   options. Prefer official and primary sources, reconcile them with the versions
   in the checkout, and treat remembered links only as search leads. Stop if the
   search cannot produce current evidence relevant to the decision.
-- When `grill-with-docs` or `grill-me` is registered, run its actual
-  user-question loop before presenting options. Prefer `grill-with-docs`; if
-  neither exists, note that once and continue.
+- Outside automatic mode, require the registered `grilling` and `render-html`
+  skills plus Python 3. Stop if any dependency is unavailable. Use the actual
+  `grilling` decision loop; do not imitate it with ad-hoc questions.
 - Before proposing an option, assemble one neutral evidence packet from the
   issue, repository, reproduction, project contracts, current web research, and
   shared current-state artifacts. Derive every option from this same packet.
@@ -53,6 +54,11 @@ evidence that no implementation is needed.
   rubric, then recommend one and wait for the user's choice unless automatic
   mode applies. Include a compact evidence digest with the most relevant source
   links, checked project versions, scores, and remaining uncertainty.
+- Outside automatic mode, use `render-html` to present that comparison as a
+  temporary interactive impact report before the `grilling` decision loop.
+  Include shared structured evidence, the declared rubric, option impacts,
+  pros, cons, scores, uncertainties, and copyable discussion prompts. Keep the
+  recommendation in the closing section after every neutral option.
 - When current evidence conclusively fails a required prototype or readiness
   threshold, report that stop without asking whether to bypass the gate.
 - For any code or test change, repeat `/code-review fix-all` and black-box
@@ -69,11 +75,12 @@ built-in checks plus commands the repository actually declares.
 ## Automatic mode
 
 Automatic mode applies only when the original prompt says `automatic` or
-explicitly requests it. It does not waive any gate. Do not select an option until
-the shared packet, predeclared rubric, and equivalent checks are complete. If a
-comparison remains incomplete, report the gap and confidence impact rather than
-treating the initial preference as validated. A material product, architecture,
-security, scope, or vision decision disables automatic mode.
+explicitly requests it. It skips the interactive HTML report and `grilling`
+loop, but does not waive any other gate. Do not select an option until the
+shared packet, predeclared rubric, and equivalent checks are complete. If a
+comparison remains incomplete, report the gap and confidence impact rather
+than treating the initial preference as validated. A material product,
+architecture, security, scope, or vision decision disables automatic mode.
 
 ## Workflow
 
@@ -89,37 +96,43 @@ security, scope, or vision decision disables automatic mode.
      and test evidence;
    - fixed without regression coverage: add the missing test only;
    - shared-root-cause sibling paths still affected: include only those paths.
-5. Build the neutral evidence packet and comparison rubric. Run the grill with
-   that shared context, confirm any clarified scope, derive the options, and
-   validate each option with equivalent decision-relevant checks. Compare first;
+5. Build the neutral evidence packet and comparison rubric, derive the options,
+   and validate each with equivalent decision-relevant checks. Compare first;
    recommend only afterward.
-6. After selection, reuse or create a focused branch/worktree and apply the
+6. Outside automatic mode, create a temporary directory outside the worktree.
+   Follow the `render-html` schema and render the option comparison there. Open
+   the report for review. If inline host preview is unavailable, provide its
+   absolute path and continue. Run `grilling` one decision at a time using the
+   report and shared evidence, then wait for the user's choice in chat. Remove
+   the temporary report and its inputs after selection unless the user
+   explicitly asks to keep them.
+7. After selection, reuse or create a focused branch/worktree and apply the
    `git-workflow` remote-default synchronization gate before editing.
-7. Implement the smallest complete change at the correct layer. Update tests and
+8. Implement the smallest complete change at the correct layer. Update tests and
    docs required by the issue and project contracts.
-8. For UI/UX work, render every affected state; capture reviewable before/after
+9. For UI/UX work, render every affected state; capture reviewable before/after
    evidence; check accessibility, responsive behavior, themes, and design-system
    consistency; attach the evidence to the PR.
-9. Run targeted checks while developing. Fix failures rather than weakening a
+10. Run targeted checks while developing. Fix failures rather than weakening a
    check.
-10. Run `/code-review fix-all` against the requirements, Definition of Done,
+11. Run `/code-review fix-all` against the requirements, Definition of Done,
     project conventions, branch diff, and reproducible behavior. Resolve every
     validated in-scope finding. Stop for a material new decision or unresolved
     Blocking or Important finding. If `/code-review` is unavailable, perform
     the same bounded review and fix pass directly.
-11. Run `/test-against-spec fix` when it is available. Otherwise perform the
+12. Run `/test-against-spec fix` when it is available. Otherwise perform the
     same black-box test directly: use explicit issue requirements, avoid source
     as proof, prefer an exact-revision preview deployment when available, and
     fall back to the local environment. Record each requirement and its observed
     result or limitation.
-12. If step 10 or 11 changes the implementation or reports incomplete work,
-    continue implementing and restart at step 10. Repeat until code review and
+13. If step 11 or 12 changes the implementation or reports incomplete work,
+    continue implementing and restart at step 11. Repeat until code review and
     behavior testing both pass on the same unchanged implementation. Stop and
     ask when required behavior remains unverified after exhausting the available
     environments, unless the user explicitly accepts the limitation or requests
     a draft PR to obtain the missing preview environment.
-13. Run the applicable Definition of Done and repository gate. If fixing a gate
-    failure changes the implementation, return to step 10. Do not duplicate a
+14. Run the applicable Definition of Done and repository gate. If fixing a gate
+    failure changes the implementation, return to step 11. Do not duplicate a
     broad gate inside the behavior-testing step.
-14. Use `/create-pr`, include `Closes #<issue>`, pass forward the current
+15. Use `/create-pr`, include `Closes #<issue>`, pass forward the current
     completion evidence, and report only observed results.

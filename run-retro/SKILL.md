@@ -8,10 +8,10 @@ description: >-
   substantial workstream or running a project retrospective.
 license: Unlicense OR MIT
 compatibility: >-
-  Requires a registered grilling skill and access to the workstream's available
-  conversation, repository, issue, pull-request, and CI evidence. HTML report
-  rendering requires Python 3. Selected tickets also require create-issue and
-  access to the Git hosting service.
+  Requires registered grilling and render-html skills, Python 3, and access to
+  the workstream's available conversation, repository, issue, pull-request, and
+  CI evidence. Selected tickets also require create-issue and access to the Git
+  hosting service.
 ---
 
 # Run retrospective
@@ -20,9 +20,9 @@ Assess the completed workstream through delivery-speed, process, and
 codebase-health lenses. The actual `grilling` skill owns the decision loop.
 Apply only documentation edits and ticket actions the user selects from the
 detailed summary. Every run also produces an HTML impact report under
-[references/html-report.md](references/html-report.md); creating or refreshing
-that report is authorized by the retrospective request, but committing,
-publishing, and all other edits are not.
+the `render-html` schema. Creating or refreshing that report is authorized by
+the retrospective request, but committing, publishing, and all other edits are
+not.
 
 ## Gates
 
@@ -39,6 +39,9 @@ publishing, and all other edits are not.
   ad-hoc questions; stop if it is unavailable. Let it ask one decision at a time
   with a recommendation. Act only after it reaches shared understanding and
   confirms the exact action set.
+- Require `render-html` and Python 3 before starting the report. Stop if either
+  is unavailable. The report is a durable retrospective artifact, not a
+  temporary implementation review.
 - Assess all three lenses, even when one produces no durable finding:
   - **Delivery speed:** less waiting, rework, handoff friction, unnecessary
     scope, or cognitive load without weakening quality.
@@ -82,11 +85,15 @@ selects its exact proposed contents.
    attribution.
 4. Remove unsupported, session-specific, duplicate, and already-covered
    candidates; classify the rest using the routes above.
-5. Draft one impact card per key delivered change or material outcome. Follow
-   the HTML contract, render with its helper, and verify the file. Each impact
-   item is at most 300 characters and has evidence-backed Before and After
-   states. Add a mechanism diagram when the change alters a pattern, lifecycle,
-   state flow, or interaction across at least three meaningful elements.
+5. Choose an existing repository retrospective-output convention when present;
+   otherwise write `.agent/retrospectives/<yyyy-mm-dd>-<workstream-slug>.html`.
+   Read the `render-html` schema, then draft one item per key delivered change
+   or material outcome with `itemLabel` set to `Impact`. Each item is at most
+   300 characters and requires evidence-backed Before and After states. Add
+   structured evidence, uncertainty, and a copyable discussion prompt. Add a
+   mechanism diagram when the change alters a pattern, lifecycle, state flow,
+   or interaction across at least three meaningful elements. Render and verify
+   the durable report with `render-html`.
 6. Run `grilling` one decision at a time with the boundary, evidence, current
    docs, absences, candidates, and report path. Explicitly offer to deep-dive
    into any impact card with the user. Use a host-supplied app link when one is
