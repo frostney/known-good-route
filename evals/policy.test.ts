@@ -21,16 +21,89 @@ describe("cross-skill policy", () => {
     }
   });
 
-  test("forge prose uses exact attributed GitHub Notes", async () => {
+  test("GitHub prose uses exact attributed Notes", async () => {
     const note = "> [!NOTE]\n   > Created on behalf of @username using ModelName.";
     const createIssue = await skill("create-issue");
-    const reviewPr = await skill("review-pr");
+    const addressPrFeedback = await skill("address-pr-feedback");
 
     expect(createIssue).toContain(note);
-    expect(reviewPr).toContain(note.replace("   >", "  >"));
-    expect(createIssue).toContain("Stop if either is unavailable");
-    expect(reviewPr).toContain("exact automation retrigger command");
-    expect(reviewPr).toContain("300 characters or fewer");
+    expect(addressPrFeedback).toContain(note.replace("   >", "  >"));
+    expect(createIssue).toMatch(/Stop if either is\s+unavailable/);
+    expect(addressPrFeedback).toContain("exact automation retrigger command");
+    expect(addressPrFeedback).toContain("300 characters or fewer");
+  });
+
+  test("PR feedback repeats code review and black-box testing before the project gate", async () => {
+    const source = await skill("address-pr-feedback");
+
+    expect(source).toContain("/code-review fix-all");
+    expect(source).toContain("/test-against-spec fix");
+    expect(source).toContain("exact-revision preview deployment");
+    expect(source).toContain("same unchanged implementation");
+    expect(source.indexOf("/code-review fix-all")).toBeLessThan(
+      source.indexOf("/test-against-spec fix"),
+    );
+    expect(source.indexOf("/test-against-spec fix")).toBeLessThan(
+      source.indexOf("declared pre-PR gate"),
+    );
+  });
+
+  test("implementation owns the review and behavior-testing loop", async () => {
+    for (const name of ["implement-idea", "implement-issue"]) {
+      const source = await skill(name);
+      expect(source).toContain("/code-review fix-all");
+      expect(source).toContain("/test-against-spec fix");
+      expect(source).toContain("same unchanged implementation");
+      expect(source).toMatch(/If fixing a gate\s+failure changes the implementation, return to step/);
+    }
+  });
+
+  test("behavior testing is black-box, preview-first, and read-only by default", async () => {
+    const source = await skill("test-against-spec");
+
+    expect(source).toContain("Report by default");
+    expect(source).toContain("exact `fix` qualifier");
+    expect(source).toMatch(/Never\s+infer it from the implementation/);
+    expect(source).toContain("Do not use implementation source");
+    expect(source).toContain("Prefer a preview deployment");
+    expect(source).toContain("report the fix as applied but unverified");
+    expect(source).toContain("does not replace source review");
+  });
+
+  test("create-pr publishes completion evidence without testing or fixing implementation", async () => {
+    const source = await skill("create-pr");
+
+    expect(source).toContain("completion evidence supplied by");
+    expect(source).toContain("Do not test delivered behavior");
+    expect(source).toMatch(/Do not fix it\s+here/);
+    expect(source).toContain("explicit user request for a draft PR");
+    expect(source).toContain("preview tied to its exact revision");
+    expect(source).not.toContain("/test-against-spec");
+  });
+
+  test("writing guidance uses revision thresholds and conditional detail", async () => {
+    const source = await skill("agent-writing");
+
+    expect(source).toContain("never as targets to fill");
+    expect(source).toContain("no minimum length");
+    expect(source).toContain("over 60 words");
+    expect(source).toContain("over 250 words");
+    expect(source).toContain("references/generated-writing-patterns.md");
+    expect(source).not.toContain("Target about 300 characters per item");
+  });
+
+  test("writing guidance replaces compressed labels with specific wording", async () => {
+    const source = await Bun.file(
+      resolve(
+        repositoryRoot,
+        "agent-writing/references/generated-writing-patterns.md",
+      ),
+    ).text();
+
+    expect(source).toContain("Coined labels that compress a multi-step process");
+    expect(source).toContain("requirements for marking the PR ready");
+    expect(source).toContain("time from making an edit to reliable evidence");
+    expect(source).toContain("Preserve quoted headings, fixture keys, and code identifiers");
   });
 
   test("git titles state impact", async () => {

@@ -57,59 +57,151 @@ describe("eval grading", () => {
     expect(missingAction.passed).toBeFalse();
   });
 
-  test("requires readiness-gap remediation before marking a PR ready", () => {
+  test("returns implementation gaps without publishing or fixing them", () => {
     const evalCase = evalCases.find(
-      ({ id }) => id === "create-pr-fills-readiness-gap-before-ready",
+      ({ id }) => id === "create-pr-reports-implementation-gap",
     );
     expect(evalCase).toBeDefined();
     if (!evalCase) {
       return;
     }
 
-    const remediated = gradeRun(
+    const returned = gradeRun(
       evalCase,
       ledger({
         loadedSkills: ["create-pr"],
-        actions: [
-          { action: "forge.openDraftPr", details: "Open the draft PR" },
-          {
-            action: "file.edit",
-            details: "Generate the missing docs index",
-          },
-          {
-            action: "validation.run",
-            details: "Run the declared project gate",
-          },
-          {
-            action: "git.commit",
-            details: "Commit the generated docs index",
-          },
-          { action: "git.push", details: "Push the readiness fix" },
-          {
-            action: "forge.markPrReady",
-            details: "Mark ready after the green CI rerun",
-          },
-        ],
+        inspections: ["completionEvidence"],
+        actions: [{ action: "report", details: "Return the implementation gap" }],
       }),
-      "Filled the missing generated index gap. CI is green and the PR is ready.",
+      "The generated docs index is missing, so this returns to implementation. No PR was opened or pushed.",
     );
-    expect(remediated.passed).toBeTrue();
+    expect(returned.passed).toBeTrue();
 
-    const premature = gradeRun(
+    const repairedHere = gradeRun(
       evalCase,
       ledger({
         loadedSkills: ["create-pr"],
+        inspections: ["completionEvidence"],
         actions: [
-          { action: "forge.openDraftPr", details: "Open the draft PR" },
-          {
-            action: "forge.markPrReady",
-            details: "Mark ready without filling the gap",
-          },
+          { action: "file.edit", details: "Generate the missing docs index" },
+          { action: "git.commit", details: "Commit the implementation fix" },
+          { action: "git.push", details: "Push the implementation fix" },
         ],
       }),
-      "The PR is ready.",
+      "Filled the generated docs index gap during create-pr.",
     );
-    expect(premature.passed).toBeFalse();
+    expect(repairedHere.passed).toBeFalse();
+  });
+
+  test("keeps missing behavior evidence out of publication", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "create-pr-missing-behavior-evidence-stops",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const output =
+      "Observed black-box behavior evidence for the built CLI is missing. Return to implementation; no push or PR was created.";
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: ["create-pr"],
+          inspections: ["specification", "completionEvidence"],
+          actions: [{ action: "report", details: "Return missing evidence" }],
+        }),
+        output,
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: ["create-pr"],
+          inspections: ["specification", "completionEvidence"],
+          actions: [
+            { action: "behaviorTest.run", details: "Run the CLI behavior here" },
+            { action: "forge.openDraftPr", details: "Publish despite missing evidence" },
+          ],
+        }),
+        output,
+      ).passed,
+    ).toBeFalse();
+  });
+
+  test("grades read-only and fix-mode black-box specification testing", () => {
+    const reportCase = evalCases.find(
+      ({ id }) => id === "test-against-spec-preview-report",
+    );
+    const fixCase = evalCases.find(
+      ({ id }) => id === "test-against-spec-fix-preview-remains-unverified",
+    );
+    expect(reportCase).toBeDefined();
+    expect(fixCase).toBeDefined();
+    if (!reportCase || !fixCase) {
+      return;
+    }
+
+    expect(
+      gradeRun(
+        reportCase,
+        ledger({
+          loadedSkills: ["test-against-spec"],
+          inspections: [
+            "specification",
+            "repositoryStatus",
+            "previewDeployment",
+            "observedBehavior",
+          ],
+          actions: [
+            {
+              action: "behaviorTest.run",
+              details: "Exercise both profile paths through the preview UI",
+            },
+            { action: "report", details: "Report observed behavior" },
+          ],
+        }),
+        "Preview 9c4e221 passed: valid profile values save and survive refresh; an invalid handle shows the specified inline error.",
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        fixCase,
+        ledger({
+          loadedSkills: ["test-against-spec"],
+          inspections: [
+            "specification",
+            "repositoryStatus",
+            "previewDeployment",
+            "observedBehavior",
+          ],
+          actions: [
+            {
+              action: "behaviorTest.run",
+              details: "Reproduce the missing Retry action on preview c8a02f4",
+            },
+            { action: "file.edit", details: "Apply the focused Retry fix" },
+            {
+              action: "behaviorTest.run",
+              details: "Check available environments after the fix",
+            },
+            { action: "report", details: "Report the verification limit" },
+          ],
+          events: [
+            { kind: "action", name: "behaviorTest.run" },
+            { kind: "action", name: "file.edit" },
+            { kind: "action", name: "behaviorTest.run" },
+            { kind: "action", name: "report" },
+          ],
+        }),
+        "Fix applied, but it remains unverified: the only preview still serves old revision c8a02f4.",
+      ).passed,
+    ).toBeTrue();
   });
 
   test("accepts a metadata-only readiness repair without a commit", () => {
@@ -245,13 +337,13 @@ describe("eval grading", () => {
       {
         id: "create-pr-readiness-decision-blocked",
         actions: [
-          { action: "forge.openDraftPr", details: "Open the draft PR" },
           {
             action: "report",
             details: "Report the unresolved product decision",
           },
         ],
-        output: "The readiness decision is blocked, so the PR remains draft.",
+        output:
+          "The readiness decision is blocked before the next push or PR creation.",
       },
       {
         id: "create-pr-pending-ci-keeps-draft",
@@ -362,7 +454,7 @@ describe("eval grading", () => {
 
   test("keeps an explicitly read-only review non-mutating", () => {
     const evalCase = evalCases.find(
-      ({ id }) => id === "review-pr-read-only-finding",
+      ({ id }) => id === "address-pr-feedback-read-only-finding",
     );
     expect(evalCase).toBeDefined();
     if (!evalCase) {
@@ -373,7 +465,7 @@ describe("eval grading", () => {
       "P1 blocking finding: the existing lock file can hide an unwritable directory.";
     const result = gradeRun(
       evalCase,
-      ledger({ loadedSkills: ["review-pr", "agent-writing"] }),
+      ledger({ loadedSkills: ["address-pr-feedback", "agent-writing"] }),
       finding,
     );
     expect(result.passed).toBeTrue();
@@ -381,7 +473,7 @@ describe("eval grading", () => {
     const mutated = gradeRun(
       evalCase,
       ledger({
-        loadedSkills: ["review-pr", "agent-writing"],
+        loadedSkills: ["address-pr-feedback", "agent-writing"],
         actions: [{ action: "file.edit", details: "Fix the finding" }],
       }),
       finding,
@@ -391,7 +483,7 @@ describe("eval grading", () => {
 
   test("rejects mechanically applicable but out-of-scope review edits", () => {
     const evalCase = evalCases.find(
-      ({ id }) => id === "review-pr-mechanical-match-out-of-scope",
+      ({ id }) => id === "address-pr-feedback-mechanical-match-out-of-scope",
     );
     expect(evalCase).toBeDefined();
     if (!evalCase) {
@@ -405,7 +497,7 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         evalCase,
-        ledger({ loadedSkills: ["review-pr"], inspections: inspected }),
+        ledger({ loadedSkills: ["address-pr-feedback"], inspections: inspected }),
         output,
       ).passed,
     ).toBeTrue();
@@ -414,7 +506,7 @@ describe("eval grading", () => {
       gradeRun(
         evalCase,
         ledger({
-          loadedSkills: ["review-pr"],
+          loadedSkills: ["address-pr-feedback"],
           inspections: inspected,
           actions: [
             { action: "file.edit", details: "Remove Open in Editor" },
@@ -429,10 +521,163 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         evalCase,
-        ledger({ loadedSkills: ["review-pr"] }),
+        ledger({ loadedSkills: ["address-pr-feedback"] }),
         output,
       ).passed,
     ).toBeFalse();
+  });
+
+  test("requires code review and black-box testing to converge before the project gate", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "address-pr-feedback-code-review-before-push",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const actions = [
+      { action: "file.edit" as const, details: "Fix the 100-item boundary" },
+      {
+        action: "codeReview.run" as const,
+        details: "Run the first bounded code-review pass",
+      },
+      {
+        action: "behaviorTest.run" as const,
+        details: "Probe 100, 101, and unauthorized requests through the API",
+      },
+      {
+        action: "file.edit" as const,
+        details: "Restore authorization before the boundary response",
+      },
+      {
+        action: "codeReview.run" as const,
+        details: "Restart code-review on the behavior fix",
+      },
+      {
+        action: "behaviorTest.run" as const,
+        details: "Repeat 100, 101, and unauthorized API probes",
+      },
+      {
+        action: "validation.run" as const,
+        details: "Run the declared project gate after both passes",
+      },
+      { action: "forge.replyInline" as const, details: "Reply with evidence" },
+      { action: "forge.resolveThread" as const, details: "Resolve the thread" },
+      { action: "git.commit" as const, details: "Commit after code review" },
+      { action: "git.push" as const, details: "Push the reviewed fix" },
+    ];
+    const output =
+      "Code review ran before black-box testing through the real API. The first behavior pass found the authorization regression, so I fixed it and restarted both checks. The 100-item request passes, 101 is rejected, and authorization is preserved. The declared project gate then passed before the push.";
+    const inspections = [
+      "pullRequest",
+      "specification",
+      "affectedCode",
+      "codeReview",
+      "behaviorTesting",
+      "projectGate",
+      "attribution",
+    ];
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: [
+            "address-pr-feedback",
+            "code-review",
+            "test-against-spec",
+          ],
+          inspections,
+          actions,
+          events: [
+            { kind: "action", name: "file.edit" },
+            { kind: "skill", name: "code-review" },
+            { kind: "action", name: "codeReview.run" },
+            { kind: "skill", name: "test-against-spec" },
+            { kind: "action", name: "behaviorTest.run" },
+            { kind: "action", name: "file.edit" },
+            { kind: "action", name: "codeReview.run" },
+            { kind: "action", name: "behaviorTest.run" },
+            { kind: "action", name: "validation.run" },
+            { kind: "action", name: "forge.replyInline" },
+            { kind: "action", name: "forge.resolveThread" },
+            { kind: "action", name: "git.commit" },
+            { kind: "action", name: "git.push" },
+          ],
+        }),
+        output,
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: [
+            "address-pr-feedback",
+            "code-review",
+            "test-against-spec",
+          ],
+          inspections,
+          actions: [
+            { action: "file.edit", details: "Fix the 100-item boundary" },
+            { action: "codeReview.run", details: "Run code-review" },
+            { action: "behaviorTest.run", details: "Probe the API paths" },
+            {
+              action: "file.edit",
+              details: "Restore authorization ordering",
+            },
+            { action: "git.commit", details: "Commit without retesting" },
+            { action: "git.push", details: "Push without retesting" },
+          ],
+          events: [
+            { kind: "action", name: "file.edit" },
+            { kind: "skill", name: "code-review" },
+            { kind: "action", name: "codeReview.run" },
+            { kind: "skill", name: "test-against-spec" },
+            { kind: "action", name: "behaviorTest.run" },
+            { kind: "action", name: "file.edit" },
+            { kind: "action", name: "git.commit" },
+            { kind: "action", name: "git.push" },
+          ],
+        }),
+        output,
+      ).passed,
+    ).toBeFalse();
+  });
+
+  test("requires the durable-prose reference for a substantial PR body", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "agent-writing-durable-prose-reference",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const output =
+      "## Summary\nInvalidRequest now covers malformed JSON.\n\n## Testing\n`bun run check` passed 152 tests in 6.8 seconds.\n\n## Risks\nThe valid-request response is unchanged.";
+    const base = {
+      loadedSkills: ["agent-writing"],
+      inspections: ["projectStyle", "change", "validation"],
+      actions: [{ action: "report" as const, details: "Draft the PR body" }],
+    };
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          ...base,
+          loadedReferences: [
+            "agent-writing/references/generated-writing-patterns.md",
+          ],
+        }),
+        output,
+      ).passed,
+    ).toBeTrue();
+
+    expect(gradeRun(evalCase, ledger(base), output).passed).toBeFalse();
   });
 
   test("accepts a local bounded code-review fix-all trajectory", () => {
@@ -965,7 +1210,7 @@ describe("eval grading", () => {
             { action: "report", details: "Report timing analysis" },
           ],
         }),
-        "Elapsed was 120 minutes. Exclusive decision wait contributed 10 minutes and CI contributed 15; the rest of CI and review cooldown were masked. Aggregate resources were 150 agent-minutes and 80 runner-minutes. The duplicate forge and ledger record is coalesced as one CI event.",
+        "Elapsed was 120 minutes. Exclusive decision wait contributed 10 minutes and CI contributed 15; the rest of CI and review cooldown were masked. Aggregate resources were 150 agent-minutes and 80 runner-minutes. The duplicate pull-request check and ledger record is coalesced as one CI event.",
       ).passed,
     ).toBeTrue();
 
@@ -1002,7 +1247,7 @@ describe("eval grading", () => {
 
   test("requires reviewer convergence before automatic merge", () => {
     const evalCase = evalCases.find(
-      ({ id }) => id === "review-pr-automatic-merge-retries-active-reviewer",
+      ({ id }) => id === "address-pr-feedback-automatic-merge-retries-active-reviewer",
     );
     expect(evalCase).toBeDefined();
     if (!evalCase) {
@@ -1010,11 +1255,11 @@ describe("eval grading", () => {
     }
 
     const output =
-      "retry_at was 2026-08-10T10:16:00Z. The rate-limited automation was retriggered and its cancellation guard nitpick was fixed with an inline reply. Direct forge state on exact new head b19d302 reports zero unresolved and zero unanswered threads; checks and terminal review completed, so the PR was squash-merged.";
+      "retry_at was 2026-08-10T10:16:00Z. The rate-limited automation was retriggered and its cancellation guard nitpick was fixed with an inline reply. GitHub state on exact new head b19d302 reports zero unresolved and zero unanswered threads; checks and terminal review completed, so the PR was squash-merged.";
     const converged = gradeRun(
       evalCase,
       ledger({
-        loadedSkills: ["review-pr"],
+        loadedSkills: ["address-pr-feedback", "code-review"],
         actions: [
           {
             action: "forge.commentPr",
@@ -1037,6 +1282,17 @@ describe("eval grading", () => {
             details: "Squash-merge the fully reviewed current head",
           },
         ],
+        events: [
+          { kind: "action", name: "forge.commentPr" },
+          { kind: "action", name: "file.edit" },
+          { kind: "action", name: "validation.run" },
+          { kind: "skill", name: "code-review" },
+          { kind: "action", name: "git.commit" },
+          { kind: "action", name: "git.push" },
+          { kind: "action", name: "forge.replyInline" },
+          { kind: "action", name: "forge.resolveThread" },
+          { kind: "action", name: "forge.mergePr" },
+        ],
       }),
       output,
     );
@@ -1045,7 +1301,7 @@ describe("eval grading", () => {
     const premature = gradeRun(
       evalCase,
       ledger({
-        loadedSkills: ["review-pr"],
+        loadedSkills: ["address-pr-feedback"],
         actions: [
           {
             action: "forge.mergePr",
@@ -1060,7 +1316,7 @@ describe("eval grading", () => {
 
   test("requires the finding snapshot before accepting a review conclusion", () => {
     const evalCase = evalCases.find(
-      ({ id }) => id === "review-pr-terminal-check-does-not-hide-finding",
+      ({ id }) => id === "address-pr-feedback-terminal-check-does-not-hide-finding",
     );
     expect(evalCase).toBeDefined();
     if (!evalCase) {
@@ -1073,7 +1329,7 @@ describe("eval grading", () => {
       gradeRun(
         evalCase,
         ledger({
-          loadedSkills: ["review-pr"],
+          loadedSkills: ["address-pr-feedback"],
           inspections: ["reviewInspection"],
         }),
         output,
@@ -1083,7 +1339,7 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         evalCase,
-        ledger({ loadedSkills: ["review-pr"] }),
+        ledger({ loadedSkills: ["address-pr-feedback"] }),
         output,
       ).passed,
     ).toBeFalse();
@@ -1091,13 +1347,13 @@ describe("eval grading", () => {
 
   test("keeps unanswered, stale, and stacked PR states outside merge", () => {
     const unanswered = evalCases.find(
-      ({ id }) => id === "review-pr-unanswered-inline-automation-thread",
+      ({ id }) => id === "address-pr-feedback-unanswered-inline-automation-thread",
     );
     const stale = evalCases.find(
-      ({ id }) => id === "review-pr-stale-verdict-ambiguous-retry",
+      ({ id }) => id === "address-pr-feedback-stale-verdict-ambiguous-retry",
     );
     const stack = evalCases.find(
-      ({ id }) => id === "review-pr-stack-layer-returns-ready",
+      ({ id }) => id === "address-pr-feedback-stack-layer-returns-ready",
     );
     expect(unanswered).toBeDefined();
     expect(stale).toBeDefined();
@@ -1109,7 +1365,7 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         unanswered,
-        ledger({ loadedSkills: ["review-pr"] }),
+        ledger({ loadedSkills: ["address-pr-feedback"] }),
         "At exact head 620beef there are zero unresolved threads but one unanswered automation thread. The PR is not ready until the maintainer inline reply exists.",
       ).passed,
     ).toBeTrue();
@@ -1117,7 +1373,7 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         stale,
-        ledger({ loadedSkills: ["review-pr"] }),
+        ledger({ loadedSkills: ["address-pr-feedback"] }),
         "Exact head 621cafe is pending: the terminal verdict belongs to stale previous head 621old0 and the current timing statements conflict, so retry_at is null.",
       ).passed,
     ).toBeTrue();
@@ -1125,7 +1381,7 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         stack,
-        ledger({ loadedSkills: ["review-pr"] }),
+        ledger({ loadedSkills: ["address-pr-feedback"] }),
         "Exact head 622feed is ready and returned to the stack owner without merging; atomic merge remains outside this single-PR workflow.",
       ).passed,
     ).toBeTrue();
@@ -1134,7 +1390,7 @@ describe("eval grading", () => {
       gradeRun(
         stack,
         ledger({
-          loadedSkills: ["review-pr"],
+          loadedSkills: ["address-pr-feedback"],
           actions: [
             { action: "git.stackMerge", details: "Merge the stack directly" },
           ],
@@ -1175,7 +1431,7 @@ describe("eval grading", () => {
           },
           {
             action: "monitor.wait",
-            details: "Wait for changed or terminal forge state without inference",
+            details: "Wait for changed or terminal GitHub state without inference",
           },
           {
             action: "telemetry.append",
@@ -1208,7 +1464,7 @@ describe("eval grading", () => {
           },
           {
             action: "monitor.wait",
-            details: "Wait for changed or terminal forge state without inference",
+            details: "Wait for changed or terminal GitHub state without inference",
           },
           {
             action: "telemetry.append",

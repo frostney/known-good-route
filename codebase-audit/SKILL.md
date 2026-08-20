@@ -122,7 +122,7 @@ final findings, remediation batches, and report.
   implementation. A passing unit suite does not validate a broken build,
   migration, package, deployment, or rollback path.
 
-## Audit criteria
+## Audit checks
 
 ### De-duplication
 
@@ -134,7 +134,8 @@ Apply four separate checks across the repository and its delivery surface:
   custom tooling, and competing representations of one concept.
 - **Work:** find repeated investigations, questions, decisions, findings,
   tickets, remediation, reruns, and recurring repair patterns across current
-  forge history and decision records. Reuse and revalidate existing work.
+  issue and pull-request history and decision records. Reuse and revalidate
+  existing work.
 - **Evidence:** coalesce the same event reported by multiple checks, logs,
   ledgers, or tools so it is counted once while retaining every source.
 - **Output:** combine candidates with the same cause, impact, and remedy into one
@@ -145,7 +146,7 @@ public contract or competing representation. Report a cross-repository finding
 only when the user included that scope or current public-contract evidence makes
 the external impact part of the repository finding.
 
-### Technical criteria
+### Technical checks
 
 - Trace boundary inputs, authorization, state changes, failures, partial
   success, retries, concurrency, idempotency, deletions, and side effects where

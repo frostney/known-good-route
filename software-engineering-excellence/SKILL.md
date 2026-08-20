@@ -2,18 +2,19 @@
 name: software-engineering-excellence
 description: >-
   Applies the user's ambient engineering bar: current evidence, complete
-  in-scope solutions, reuse, real validation, right-sized value, and
-  maintainability. Use for planning, orchestrating, implementing, debugging,
-  reviewing, refactoring, architecture, release delivery, or substantial
-  technical investigation.
+  in-scope solutions, reuse, real validation, maintainability-governed
+  performance, and fast developer feedback. Use for planning, orchestrating,
+  implementing, debugging, reviewing, refactoring, architecture, release
+  delivery, or substantial technical investigation.
 license: Unlicense OR MIT
 ---
 
 # Software engineering excellence
 
 Leave the system more maintainable and the next change easier. Find simple
-solutions for complex problems, but no shortcuts. Lead with questions that
-reveal the problem's real shape before selecting implementation mechanics.
+solutions for complex problems, but no shortcuts. Maintainability governs
+tradeoffs, including performance work. Lead with questions that reveal the
+problem's real shape before selecting implementation mechanics.
 A better question separates the desired outcome, hard constraints, and observed
 failure from the mechanism currently being discussed; its answer can change the
 solution rather than merely select details within it.
@@ -40,19 +41,57 @@ solution rather than merely select details within it.
    anomaly observed while validating, such as a flaky line, a one-in-N
    artifact, or an unexplained timeout, is a defect report rather than a
    footnote: diagnose it or file it; never resolve it by documenting it.
-5. **Make every surface earn its cost.** Add only code, tests, fallbacks,
+5. **Protect performance throughout delivery.** Treat product runtime and the
+   developer feedback loop as design inputs from the first investigation, not
+   as a final optimization pass. Find the relevant critical path, measure when
+   the trigger below applies, and prevent unexplained regressions.
+6. **Make every surface earn its cost.** Add only code, tests, fallbacks,
    abstractions, or tools with a real caller, requirement, or failure mode.
    Remove unused surfaces.
-6. **Respect authority boundaries.** Diagnosis, review, and planning authorize
+7. **Respect authority boundaries.** Diagnosis, review, and planning authorize
    assessment; change requests authorize reversible in-scope implementation and
    relevant validation. Pause only for a material product, architecture,
    security, compatibility, or scope choice that evidence cannot resolve.
 
 For genuinely multi-layer work, establish a thin runnable path and deepen it in
-increments. Validate material performance changes against a relevant baseline.
-Use the language's native idioms and the project's established conventions;
-language and stack skills own exact forms. Follow surrounding comment density
-and explain non-obvious decisions.
+increments. Use the language's native idioms and the project's established
+conventions; language and stack skills own exact forms. Follow surrounding
+comment density and explain non-obvious decisions.
+
+## Performance throughout delivery
+
+Performance includes the shipped system and the speed of producing trustworthy
+changes.
+
+- For the product, consider relevant latency, throughput, startup, memory,
+  allocation and garbage collection, I/O, network or FFI work, concurrency, and
+  resource cost.
+- For the feedback loop, consider dependency setup, builds, local startup and
+  reload, code generation, focused checks, tests, typechecks, lint and format
+  checks, pre-commit hooks, CI queue and execution time, and preview or deploy
+  feedback. Measure the full time from making an edit to getting reliable
+  evidence that the change works, not just one fast command in a slow sequence.
+- Keep fast, high-signal checks early. Use correct incremental work, focused
+  commands, caching, parallelism, and shared results where they reduce the
+  critical path. Do not gain speed by weakening coverage, skipping hooks,
+  hiding failures, or making local and CI behavior disagree.
+- Consider these costs on every change. Measure a representative baseline and
+  the changed result when work touches a frequent or latency-sensitive path, a
+  command or hook, local startup or reload, CI structure, concurrency, an
+  external operation, material resource use, or any performance claim.
+- Record the workload, environment, warm or cold state when relevant, samples,
+  and statistic that supports the decision. Compare like with like. A single
+  favorable run or the word `faster` is not evidence.
+- Treat an unexplained material regression in product behavior or developer
+  feedback as a defect. Diagnose flakiness, retries, serialization, duplicated
+  work, and queue delay because unreliable feedback is also slow feedback.
+
+Maintainability remains the governor. Prefer the clearest simple design that
+meets the measured need. A demonstrated bottleneck may justify contained
+complexity when the gain matters at representative scale and the change has a
+clear contract, regression coverage, and a maintained measurement. Do not add
+complexity for a speculative speedup or a benchmark that does not transfer to
+real use.
 
 ## Context boundaries
 
@@ -66,13 +105,13 @@ delegation.
 
 Give a worker only the applicable selected decisions and contracts, repository
 and issue or pull-request identity, exact starting state, owned scope,
-dependencies, acceptance criteria, and gates. Include recent conversation only
+dependencies, required behavior, and gates. Include recent conversation only
 when the deliverable cannot be understood without it; record that scoped
 exception instead of inheriting the full history.
 
-Require one terminal summary per worker: outcome, changed repository or forge
-state, exact validation evidence, blockers or contradictory evidence, and facts
-needed by a dependent deliverable. Keep intermediate investigation, command
+Require one terminal summary per worker: outcome, changed repository, issue, or
+pull-request state, exact validation evidence, blockers or contradictory
+evidence, and facts needed by a dependent deliverable. Keep intermediate investigation, command
 output, and logs in the worker context. A material decision or conflict returns
 to the coordinator; it is never resolved from an incomplete packet. If the host
 cannot provide isolated workers, report that limitation and do not claim the

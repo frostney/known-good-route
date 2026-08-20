@@ -99,6 +99,52 @@ export function gradeRun(
     });
   }
 
+  for (const order of expected.requiredSkillsBeforeActions ?? []) {
+    const skillIndex = ledger.events.findIndex(
+      (event) => event.kind === "skill" && event.name === order.skill,
+    );
+    const actionIndex = ledger.events.findIndex(
+      (event) => event.kind === "action" && event.name === order.action,
+    );
+    checks.push({
+      name: `${order.skill} before ${order.action}`,
+      passed: skillIndex >= 0 && actionIndex >= 0 && skillIndex < actionIndex,
+      detail: `skillIndex=${skillIndex} actionIndex=${actionIndex}`,
+    });
+  }
+
+  for (const order of expected.requiredActionsBeforeActions ?? []) {
+    const beforeIndex = ledger.events.findIndex(
+      (event) => event.kind === "action" && event.name === order.before,
+    );
+    const afterIndex = ledger.events.findIndex(
+      (event) => event.kind === "action" && event.name === order.after,
+    );
+    checks.push({
+      name: `${order.before} before ${order.after}`,
+      passed:
+        beforeIndex >= 0 && afterIndex >= 0 && beforeIndex < afterIndex,
+      detail: `beforeIndex=${beforeIndex} afterIndex=${afterIndex}`,
+    });
+  }
+
+  if (expected.requiredActionSequence) {
+    let sequenceIndex = 0;
+    for (const event of ledger.events) {
+      if (
+        event.kind === "action" &&
+        event.name === expected.requiredActionSequence[sequenceIndex]
+      ) {
+        sequenceIndex += 1;
+      }
+    }
+    checks.push({
+      name: "required action sequence",
+      passed: sequenceIndex === expected.requiredActionSequence.length,
+      detail: `required=${expected.requiredActionSequence.join(",")} matched=${sequenceIndex}`,
+    });
+  }
+
   if (expected.requiredActions) {
     const missing = expected.requiredActions.filter(
       (action) => actionCount(ledger, action) === 0,

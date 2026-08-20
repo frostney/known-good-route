@@ -26,6 +26,8 @@ export const actionNames = [
   "git.stackSync",
   "monitor.wait",
   "report",
+  "behaviorTest.run",
+  "codeReview.run",
   "telemetry.append",
   "user.ask",
   "validation.run",
@@ -55,6 +57,15 @@ export interface EvalExpectations {
     inspection: string;
     action: ActionName;
   }>;
+  requiredSkillsBeforeActions?: Array<{
+    skill: string;
+    action: ActionName;
+  }>;
+  requiredActionsBeforeActions?: Array<{
+    before: ActionName;
+    after: ActionName;
+  }>;
+  requiredActionSequence?: ActionName[];
   requiredActions?: ActionName[];
   requiredAnyActions?: ActionName[];
   forbiddenActions?: ActionName[];
@@ -79,7 +90,7 @@ export interface RunLedger {
   registeredSkillCalls: string[];
   inspections: string[];
   events: Array<{
-    kind: "inspection" | "reference" | "action";
+    kind: "skill" | "inspection" | "reference" | "action";
     name: string;
   }>;
 }

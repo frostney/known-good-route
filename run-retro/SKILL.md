@@ -1,16 +1,17 @@
 ---
 name: run-retro
 description: >-
-  Reviews a completed workstream from conversation, repository, and forge
-  evidence, maps lifecycle and ground-level timings, uses grilling to agree
+  Reviews a completed workstream from conversation, repository, issue,
+  pull-request, and CI evidence, maps lifecycle and ground-level timings, uses grilling to agree
   improvements to delivery speed, process, and codebase health, then applies
   selected documentation edits and follow-up ticket actions. Use when ending a
   substantial workstream or running a project retrospective.
 license: Unlicense OR MIT
 compatibility: >-
   Requires a registered grilling skill and access to the workstream's available
-  conversation, repository, and forge evidence. HTML report rendering requires
-  Python 3. Selected tickets also require create-issue and forge access.
+  conversation, repository, issue, pull-request, and CI evidence. HTML report
+  rendering requires Python 3. Selected tickets also require create-issue and
+  access to the Git hosting service.
 ---
 
 # Run retrospective
@@ -32,8 +33,8 @@ publishing, and all other edits are not.
 - For a completed Milestone Rush, read its ignored
   `.agent/milestone-rush-events.jsonl` under
   [references/timing-analysis.md](references/timing-analysis.md). Reconcile it
-  with current repository and forge evidence; partial or missing telemetry is a
-  confidence limitation, not permission to infer values.
+  with current repository, issue, pull-request, and CI evidence; partial or
+  missing telemetry is a confidence limitation, not permission to infer values.
 - Invoke `grilling` with the evidence and candidates. Do not imitate it with
   ad-hoc questions; stop if it is unavailable. Let it ask one decision at a time
   with a recommendation. Act only after it reaches shared understanding and

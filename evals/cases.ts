@@ -12,7 +12,7 @@ export const evalCases: EvalCase[] = [
         recentCommits: "8ab31d2 fix(parser): retain escaped delimiters",
         projectGate: "The declared pre-PR gate passed on this unchanged diff.",
         projectDefinitions:
-          "DEFINITION_OF_READY.md requires acceptance criteria, regression coverage, and observed validation. The current change satisfies every criterion.",
+          "DEFINITION_OF_READY.md requires explicit requirements, regression coverage, and observed validation. The current change satisfies every requirement.",
         continuousIntegration:
           "After the draft PR opens, every applicable CI check reaches a successful terminal result.",
         pullRequest: "No pull request exists for this branch.",
@@ -78,9 +78,9 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
-    id: "create-pr-fills-readiness-gap-before-ready",
+    id: "create-pr-reports-implementation-gap",
     description:
-      "A draft PR fills a missing readiness item, then becomes ready after a green CI rerun.",
+      "An implementation gap returns to implementation without publication.",
     prompt: "/create-pr",
     fixture: {
       evidence: {
@@ -89,10 +89,10 @@ export const evalCases: EvalCase[] = [
         recentCommits: "4ac8f21 feat(config): register the docs generator",
         projectGate: "The declared pre-PR gate passed on the unchanged branch.",
         projectDefinitions:
-          "DEFINITION_OF_READY.md requires acceptance criteria, relevant tests, generated artifacts, and green CI. Comparing it with the actual PR shows that docs/index.md is missing.",
+          "DEFINITION_OF_READY.md requires explicit requirements, relevant tests, generated artifacts, and green CI. Comparing it with the complete local branch shows that docs/index.md is missing.",
         pullRequest: "No pull request exists for this branch.",
-        continuousIntegration:
-          "The required generated-docs check confirms that docs/index.md is missing and names the repository's generator. After generating the index, running the declared project gate, committing, and pushing, the new CI run passes every applicable check.",
+        completionEvidence:
+          "Code review and behavior testing passed, but completion review records docs/index.md as a missing generated artifact.",
       },
       actionResponses: {
         "forge.openDraftPr": "Draft PR #203 opened successfully.",
@@ -100,21 +100,72 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       requiredSkills: ["create-pr"],
-      requiredActions: [
-        "forge.openDraftPr",
-        "file.edit",
-        "validation.run",
-        "git.commit",
-        "git.push",
-        "forge.markPrReady",
-      ],
+      requiredInspections: ["completionEvidence"],
+      requiredActions: ["report"],
       forbiddenActions: [
+        "file.edit",
         "forge.mergePr",
+        "forge.openDraftPr",
+        "forge.markPrReady",
         "git.amend",
         "git.forcePush",
+        "git.commit",
+        "git.push",
         "git.rebase",
+        "validation.run",
       ],
-      outputPatterns: ["missing|gap|omit", "generated|index", "CI|check", "ready"],
+      outputPatterns: [
+        "missing|gap|omit",
+        "generated|index",
+        "implementation",
+        "no.*(?:push|PR)|before.*(?:push|PR)",
+      ],
+    },
+  },
+  {
+    id: "create-pr-missing-behavior-evidence-stops",
+    description:
+      "Missing behavior evidence returns to implementation without testing or publishing.",
+    prompt: "/create-pr for issue #91.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "Branch feature/import-errors has relevant uncommitted implementation and test changes, no unrelated local work, and no remote branch or pull request.",
+        specification:
+          "Issue #91 requires the import CLI to return exit 2 with a stable JSON error when an input file is missing, while preserving the successful import result. DEFINITION_OF_READY.md requires both observable paths to be exercised through the built CLI before publication.",
+        completionEvidence:
+          "The implementation workflow supplied code-review and project-gate results, but no observed black-box result for the built CLI.",
+        projectGate:
+          "The complete declared pre-PR gate passed on the unchanged diff.",
+        pullRequest: "No pull request exists before this workflow starts.",
+      },
+      actionResponses: {
+        "forge.openDraftPr": "Draft PR #209 opened successfully.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr"],
+      requiredInspections: ["specification", "completionEvidence"],
+      requiredActions: ["report"],
+      forbiddenActions: [
+        "behaviorTest.run",
+        "file.edit",
+        "forge.mergePr",
+        "forge.openDraftPr",
+        "forge.markPrReady",
+        "git.amend",
+        "git.commit",
+        "git.forcePush",
+        "git.push",
+        "git.rebase",
+        "validation.run",
+      ],
+      outputPatterns: [
+        "missing|no observed|unverified",
+        "behavior|black.box|built CLI",
+        "implementation",
+        "no.*(?:push|PR)|before.*(?:push|PR)",
+      ],
     },
   },
   {
@@ -192,7 +243,7 @@ export const evalCases: EvalCase[] = [
   {
     id: "create-pr-readiness-decision-blocked",
     description:
-      "A material readiness decision keeps an otherwise green PR in draft.",
+      "A material local readiness decision stops before a new push or draft PR.",
     prompt: "/create-pr",
     fixture: {
       evidence: {
@@ -201,35 +252,37 @@ export const evalCases: EvalCase[] = [
         recentCommits: "9fd412a feat(auth): add authentication entry point",
         projectGate: "The declared pre-PR gate passed on the unchanged branch.",
         projectDefinitions:
-          "DEFINITION_OF_READY.md requires the public authentication API to be selected. The PR contains two incompatible exported alternatives and no approved choice; resolving this requires a material product decision.",
+          "DEFINITION_OF_READY.md requires the public authentication API to be selected. The local branch contains two incompatible exported alternatives and no approved choice; resolving this requires a material product decision.",
         continuousIntegration:
           "Every applicable CI check reaches a successful terminal result.",
         pullRequest: "No pull request exists before this workflow starts.",
       },
-      actionResponses: {
-        "forge.openDraftPr": "Draft PR #205 opened successfully.",
-      },
     },
     expected: {
       requiredSkills: ["create-pr"],
-      requiredActions: ["forge.openDraftPr"],
       requiredAnyActions: ["user.ask", "report"],
       forbiddenActions: [
         "file.edit",
         "forge.mergePr",
+        "forge.openDraftPr",
         "git.amend",
         "git.commit",
         "git.forcePush",
+        "git.push",
         "git.rebase",
         "forge.markPrReady",
       ],
-      outputPatterns: ["draft", "decision|blocked", "ready|readiness"],
+      outputPatterns: [
+        "decision|blocked",
+        "ready|readiness",
+        "before.*(?:push|PR)|no.*(?:push|PR)",
+      ],
     },
   },
   {
-    id: "create-pr-fixes-ci-failure-before-ready",
+    id: "create-pr-ci-failure-returns-to-implementation",
     description:
-      "A readiness-complete PR fixes an in-scope CI failure before becoming ready.",
+      "An in-scope CI failure keeps the PR draft and returns to implementation.",
     prompt: "/create-pr",
     fixture: {
       evidence: {
@@ -238,9 +291,9 @@ export const evalCases: EvalCase[] = [
         recentCommits: "6ce22b0 fix(cache): accept nullable cache entries",
         projectGate: "The declared pre-PR gate passed on the unchanged branch.",
         projectDefinitions:
-          "DEFINITION_OF_READY.md exists and the actual PR satisfies every criterion.",
+          "DEFINITION_OF_READY.md exists and the actual PR satisfies every requirement.",
         continuousIntegration:
-          "After the draft opens, a required cache integration test fails on a null entry. Its log reproduces an in-scope missing null guard in the changed code. After fixing the guard, running the focused test and project gate, committing, and pushing, the new CI run passes every applicable check.",
+          "After the draft opens, a required cache integration test fails on a null entry. Its log reproduces an in-scope missing null guard in the changed code.",
         pullRequest: "No pull request exists before this workflow starts.",
       },
       actionResponses: {
@@ -251,19 +304,20 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["create-pr"],
       requiredActions: [
         "forge.openDraftPr",
-        "file.edit",
-        "validation.run",
-        "git.commit",
-        "git.push",
-        "forge.markPrReady",
+        "report",
       ],
       forbiddenActions: [
+        "file.edit",
         "forge.mergePr",
+        "forge.markPrReady",
         "git.amend",
+        "git.commit",
         "git.forcePush",
+        "git.push",
         "git.rebase",
+        "validation.run",
       ],
-      outputPatterns: ["null|cache", "CI|check", "ready"],
+      outputPatterns: ["null|cache", "CI|check", "draft", "implementation"],
     },
   },
   {
@@ -278,7 +332,7 @@ export const evalCases: EvalCase[] = [
         recentCommits: "a71f920 fix(paths): preserve macOS volume roots",
         projectGate: "The declared pre-PR gate passed on the unchanged branch.",
         projectDefinitions:
-          "DEFINITION_OF_READY.md exists and the actual PR satisfies every criterion.",
+          "DEFINITION_OF_READY.md exists and the actual PR satisfies every requirement.",
         continuousIntegration:
           "The required macOS integration check remains queued and pending. It has no terminal result or failure log during this run.",
         pullRequest: "No pull request exists before this workflow starts.",
@@ -314,7 +368,7 @@ export const evalCases: EvalCase[] = [
         recentCommits: "d8026e1 docs: repair generated API links",
         projectGate: "The declared pre-PR gate passed on the unchanged branch.",
         projectDefinitions:
-          "DEFINITION_OF_READY.md exists and the actual PR satisfies every criterion.",
+          "DEFINITION_OF_READY.md exists and the actual PR satisfies every requirement.",
         continuousIntegration:
           "The required documentation check reaches a failed terminal result because its external link-checking service is unavailable. The log contains no repository failure and the check cannot be validated safely during this run.",
         pullRequest: "No pull request exists before this workflow starts.",
@@ -371,6 +425,140 @@ export const evalCases: EvalCase[] = [
         "git.rebase",
       ],
       outputPatterns: ["stack|bottom|top", "90", "exact.head|exact head"],
+    },
+  },
+  {
+    id: "create-pr-draft-for-missing-preview",
+    description:
+      "An explicitly requested draft may obtain a preview but cannot become ready before behavior testing.",
+    prompt:
+      "/create-pr as a draft so we can obtain the missing preview deployment for behavior testing.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "The completed branch is clean, pushed, and one commit ahead of origin/main.",
+        completionEvidence:
+          "Code review and the project gate passed on the exact commit. Deployment-only behavior is unverified because no local or preview environment can run it before a PR exists.",
+        projectGate:
+          "The declared project gate passed on the unchanged commit.",
+        continuousIntegration:
+          "After the draft opens, CI passes and a preview deployment starts for the exact PR head.",
+        pullRequest: "No pull request exists for this branch.",
+      },
+      actionResponses: {
+        "forge.openDraftPr": "Draft PR #210 opened successfully.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr"],
+      requiredInspections: ["completionEvidence"],
+      requiredActions: ["forge.openDraftPr", "report"],
+      forbiddenActions: [
+        "behaviorTest.run",
+        "file.edit",
+        "forge.markPrReady",
+        "git.commit",
+        "git.push",
+        "validation.run",
+      ],
+      outputPatterns: [
+        "draft",
+        "preview",
+        "exact.*(?:revision|head)|(?:revision|head).*exact",
+        "behavior test|black.box|test.*behavior",
+      ],
+    },
+  },
+  {
+    id: "test-against-spec-preview-report",
+    description:
+      "Read-only behavior testing uses an exact-revision preview and reports observed paths.",
+    prompt: "/test-against-spec",
+    fixture: {
+      evidence: {
+        specification:
+          "The confirmed product specification requires saving a valid profile, preserving entered values after refresh, and showing the documented inline error for an invalid handle.",
+        repositoryStatus:
+          "The branch head is commit 9c4e221 and the worktree is clean.",
+        previewDeployment:
+          "The Vercel preview identifies commit 9c4e221 and is available through the rendered product.",
+        observedBehavior:
+          "Through the preview UI, a valid profile saves and survives refresh. An invalid handle remains unsaved and displays the specified inline error.",
+      },
+    },
+    expected: {
+      requiredSkills: ["test-against-spec"],
+      requiredInspections: [
+        "specification",
+        "repositoryStatus",
+        "previewDeployment",
+        "observedBehavior",
+      ],
+      requiredActions: ["behaviorTest.run", "report"],
+      forbiddenActions: [
+        "codeReview.run",
+        "file.edit",
+        "forge.openDraftPr",
+        "git.commit",
+        "git.push",
+        "validation.run",
+      ],
+      outputPatterns: [
+        "9c4e221",
+        "preview",
+        "save|refresh",
+        "invalid handle|inline error",
+        "pass",
+      ],
+    },
+  },
+  {
+    id: "test-against-spec-fix-preview-remains-unverified",
+    description:
+      "Fix mode reproduces externally, fixes locally, and reports an unavailable refreshed preview as unverified.",
+    prompt: "/test-against-spec fix",
+    fixture: {
+      evidence: {
+        specification:
+          "The confirmed specification requires a deployment-only callback to show a retry action after a timeout and complete successfully when retried.",
+        repositoryStatus:
+          "The working branch starts at commit c8a02f4. The callback behavior depends on deployment credentials that are unavailable locally.",
+        previewDeployment:
+          "The current preview is tied to c8a02f4. It reproduces the missing retry action, but no refreshed preview is available after the local fix.",
+        observedBehavior:
+          "On preview c8a02f4 the timeout appears without Retry. The local environment cannot execute the deployment callback. After the fix, the only preview still serves c8a02f4.",
+      },
+    },
+    expected: {
+      requiredSkills: ["test-against-spec"],
+      requiredInspections: [
+        "specification",
+        "repositoryStatus",
+        "previewDeployment",
+        "observedBehavior",
+      ],
+      requiredActions: ["behaviorTest.run", "file.edit", "report"],
+      requiredActionSequence: [
+        "behaviorTest.run",
+        "file.edit",
+        "behaviorTest.run",
+        "report",
+      ],
+      minActionCounts: { "behaviorTest.run": 2 },
+      forbiddenActions: [
+        "codeReview.run",
+        "forge.openDraftPr",
+        "git.commit",
+        "git.push",
+        "validation.run",
+      ],
+      outputPatterns: [
+        "fix.*applied|applied.*fix",
+        "unverified",
+        "preview",
+        "c8a02f4|unchanged|stale|old revision",
+      ],
+      forbiddenOutputPatterns: ["all.*pass|fully verified"],
     },
   },
   {
@@ -455,11 +643,11 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
-    id: "review-pr-read-only-finding",
+    id: "address-pr-feedback-read-only-finding",
     description:
       "An explicitly read-only PR review reports a validated finding without mutation.",
     prompt:
-      "/review-pr 117. This is read-only: do not edit files, commit, push, reply, resolve threads, or change PR state.",
+      "/address-pr-feedback 117. This is read-only: do not edit files, commit, push, reply, resolve threads, or change PR state.",
     fixture: {
       evidence: {
         pullRequest:
@@ -471,7 +659,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["review-pr", "agent-writing"],
+      requiredSkills: ["address-pr-feedback", "agent-writing"],
       forbiddenActions: [
         "file.edit",
         "forge.commentPr",
@@ -489,11 +677,11 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
-    id: "review-pr-mixed-inline-findings",
+    id: "address-pr-feedback-mixed-inline-findings",
     description:
       "Review handling fixes valid findings and rebuts invalid ones only inline.",
     prompt:
-      "/review-pr 1026. Verify every current inline finding, fix only still-valid issues, and skip the rest with evidence.",
+      "/address-pr-feedback 1026. Verify every current inline finding, fix only still-valid issues, and skip the rest with evidence.",
     fixture: {
       evidence: {
         repositoryStatus:
@@ -503,20 +691,41 @@ export const evalCases: EvalCase[] = [
         affectedCode:
           "Thread A correctly identifies missing regression coverage for the accepted upper boundary. Thread B asks to remove that upper bound, but the current primary specification explicitly requires rejecting larger finite values.",
         projectGate:
-          "Run the focused interpreted and bytecode tests, both full suites, documentation checks, formatting, and diff checks after the fix. After thread mechanics, direct forge state at unchanged head 7af1026 reports terminal successful CI and automation verdicts, zero actionable findings, zero unresolved threads, and zero unanswered inline automation threads.",
+          "Run the focused interpreted and bytecode tests, both full suites, documentation checks, formatting, and diff checks after the fix. After thread mechanics, GitHub state at unchanged head 7af1026 reports terminal successful CI and automation verdicts, zero actionable findings, zero unresolved threads, and zero unanswered inline automation threads.",
         attribution:
           "The authenticated GitHub user is @octocat and the exact current model name is GPT-5.6 Sol. Every substantive inline reply must end with the required GitHub Note and remain within 300 characters.",
       },
     },
     expected: {
-      requiredSkills: ["review-pr", "agent-writing"],
+      requiredSkills: [
+        "address-pr-feedback",
+        "agent-writing",
+        "code-review",
+        "test-against-spec",
+      ],
+      requiredSkillsBeforeActions: [
+        { skill: "code-review", action: "git.commit" },
+        { skill: "code-review", action: "git.push" },
+        { skill: "test-against-spec", action: "git.commit" },
+        { skill: "test-against-spec", action: "git.push" },
+      ],
       requiredActions: [
         "file.edit",
+        "codeReview.run",
+        "behaviorTest.run",
         "validation.run",
         "git.commit",
         "git.push",
         "forge.replyInline",
         "forge.resolveThread",
+      ],
+      requiredActionSequence: [
+        "file.edit",
+        "codeReview.run",
+        "behaviorTest.run",
+        "validation.run",
+        "git.commit",
+        "git.push",
       ],
       forbiddenActions: [
         "forge.commentPr",
@@ -542,10 +751,10 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
-    id: "review-pr-mechanical-match-out-of-scope",
+    id: "address-pr-feedback-mechanical-match-out-of-scope",
     description:
       "A mechanically applicable review suggestion remains non-actionable when it contradicts the PR scope and documented intentional behavior.",
-    prompt: "/review-pr 1027. Resolve the current review findings.",
+    prompt: "/address-pr-feedback 1027. Resolve the current review findings.",
     fixture: {
       evidence: {
         pullRequest:
@@ -557,7 +766,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["review-pr"],
+      requiredSkills: ["address-pr-feedback"],
       requiredInspections: [
         "pullRequest",
         "affectedCode",
@@ -584,11 +793,107 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
-    id: "review-pr-terminal-check-does-not-hide-finding",
+    id: "address-pr-feedback-code-review-before-push",
+    description:
+      "Review fixes repeat code review and black-box testing before the project gate and push.",
+    prompt:
+      "/address-pr-feedback 1028. Resolve the current valid finding and update the PR.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "The focused PR branch is current with its remote base and starts clean.",
+        pullRequest:
+          "PR #1028 at head 7af1028 links issue #91 and has one unresolved inline finding. After a new pushed head, required CI and review automation complete successfully with no remaining findings or threads.",
+        specification:
+          "Issue #91 and the API contract cap a batch at 100 items. The endpoint must accept exactly 100, reject 101 with the documented boundary error, and preserve the existing authorization failure.",
+        affectedCode:
+          "The finding correctly reports that the changed batch endpoint accepts 101 items although its specification caps requests at 100.",
+        codeReview:
+          "The bounded code-review pass after the boundary fix reports no source-based findings. After the later behavior fix, the repeated bounded pass also reports no findings.",
+        behaviorTesting:
+          "The first real-API behavior pass accepts 100 and rejects 101, but discovers that unauthorized 101-item requests now return the boundary error before authorization. After correcting that ordering, the repeated real-API pass observes all three specified outcomes.",
+        projectGate:
+          "After code review and black-box behavior testing both pass on the same unchanged implementation, run the declared project gate.",
+        attribution:
+          "The authenticated GitHub user is @octocat and the exact current model name is GPT-5.6 Sol.",
+      },
+    },
+    expected: {
+      requiredSkills: [
+        "address-pr-feedback",
+        "code-review",
+        "test-against-spec",
+      ],
+      requiredInspections: [
+        "pullRequest",
+        "specification",
+        "affectedCode",
+        "codeReview",
+        "behaviorTesting",
+        "projectGate",
+        "attribution",
+      ],
+      requiredSkillsBeforeActions: [
+        { skill: "code-review", action: "codeReview.run" },
+        { skill: "test-against-spec", action: "behaviorTest.run" },
+      ],
+      requiredActions: [
+        "file.edit",
+        "validation.run",
+        "behaviorTest.run",
+        "codeReview.run",
+        "git.commit",
+        "git.push",
+        "forge.replyInline",
+        "forge.resolveThread",
+      ],
+      requiredActionsBeforeActions: [
+        { before: "codeReview.run", after: "git.push" },
+        { before: "behaviorTest.run", after: "validation.run" },
+        { before: "validation.run", after: "git.push" },
+      ],
+      requiredActionSequence: [
+        "file.edit",
+        "codeReview.run",
+        "behaviorTest.run",
+        "file.edit",
+        "codeReview.run",
+        "behaviorTest.run",
+        "validation.run",
+        "git.commit",
+        "git.push",
+      ],
+      minActionCounts: {
+        "file.edit": 2,
+        "behaviorTest.run": 2,
+        "validation.run": 1,
+        "codeReview.run": 2,
+      },
+      forbiddenActions: [
+        "forge.commentPr",
+        "forge.mergePr",
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+      ],
+      outputPatterns: [
+        "code-review|code review",
+        "100",
+        "101",
+        "authoriz",
+        "black.box|real API|behavior",
+        "reran|repeated|restart",
+        "project gate|declared gate",
+        "before.*push|pre-push",
+      ],
+    },
+  },
+  {
+    id: "address-pr-feedback-terminal-check-does-not-hide-finding",
     description:
       "A terminal neutral automation check cannot substitute for inspecting its exact-head finding surfaces.",
     prompt:
-      "/review-pr 118 as a read-only readiness check. Do not mutate repository or pull-request state.",
+      "/address-pr-feedback 118 as a read-only readiness check. Do not mutate repository or pull-request state.",
     fixture: {
       evidence: {
         reviewInspection:
@@ -596,7 +901,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["review-pr"],
+      requiredSkills: ["address-pr-feedback"],
       requiredInspections: ["reviewInspection"],
       forbiddenActions: [
         "file.edit",
@@ -749,7 +1054,7 @@ export const evalCases: EvalCase[] = [
     fixture: {
       evidence: {
         repositoryMap:
-          "The repository contains a public server-rendered website, route metadata, sitemap and robots generation, JSON-LD, content templates, browser tests, preview deployment, release scripts, and linked forge history.",
+          "The repository contains a public server-rendered website, route metadata, sitemap and robots generation, JSON-LD, content templates, browser tests, preview deployment, release scripts, and linked issue and pull-request history.",
         implementationDuplication:
           "Application code and the release script independently build canonical URLs; docs and a content template also maintain competing route lists.",
         workDuplication:
@@ -1196,7 +1501,7 @@ export const evalCases: EvalCase[] = [
         affectedCode:
           "The runner has a module graph but no command that selects tests related to changed source files.",
         issueTemplate:
-          "The feature template requires problem, scope, non-goals, acceptance criteria, and verification. Existing labels include test-runner and enhancement.",
+          "The feature template requires problem, scope, non-goals, required behavior, and verification. Existing labels include test-runner and enhancement.",
       },
       registeredSkills: {
         "grill-with-docs":
@@ -1314,11 +1619,11 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
-    id: "review-pr-rate-limit-is-not-pass",
+    id: "address-pr-feedback-rate-limit-is-not-pass",
     description:
       "A rate-limited review bot is reported as unavailable, never as passed.",
     prompt:
-      "/review-pr 998. This is a read-only readiness check: do not edit, reply, resolve, commit, push, or change PR state.",
+      "/address-pr-feedback 998. This is a read-only readiness check: do not edit, reply, resolve, commit, push, or change PR state.",
     fixture: {
       evidence: {
         pullRequest:
@@ -1330,7 +1635,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["review-pr"],
+      requiredSkills: ["address-pr-feedback"],
       forbiddenActions: [
         "file.edit",
         "forge.commentPr",
@@ -1357,10 +1662,10 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
-    id: "review-pr-automatic-merge-retries-active-reviewer",
+    id: "address-pr-feedback-automatic-merge-retries-active-reviewer",
     description:
       "Automatic merge retriggers a rate-limited active reviewer, fixes its nitpick, and merges only the reviewed current head.",
-    prompt: "/review-pr 412 automatic-merge",
+    prompt: "/address-pr-feedback 412 automatic-merge",
     fixture: {
       evidence: {
         repositoryStatus:
@@ -1372,7 +1677,7 @@ export const evalCases: EvalCase[] = [
         reviewFindings:
           "The completed retriggered review identifies one inline nitpick: the new retry path drops the established cancellation guard. Source tracing confirms the nitpick is valid and in scope.",
         projectGate:
-          "After restoring the guard, reply and resolve the originating thread, run the focused cancellation test and declared PR gate, commit, and push. Directly re-read forge state: required CI and the active automation complete successfully against exact new head b19d302 with no newer review, zero actionable findings, zero unresolved threads, and zero unanswered inline automation threads.",
+          "After restoring the guard, reply and resolve the originating thread, run the focused cancellation test and declared PR gate, commit, and push. Directly re-read GitHub state: required CI and the active automation complete successfully against exact new head b19d302 with no newer review, zero actionable findings, zero unresolved threads, and zero unanswered inline automation threads.",
       },
       actionResponses: {
         "forge.commentPr":
@@ -1382,7 +1687,11 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["review-pr"],
+      requiredSkills: ["address-pr-feedback", "code-review"],
+      requiredSkillsBeforeActions: [
+        { skill: "code-review", action: "git.commit" },
+        { skill: "code-review", action: "git.push" },
+      ],
       requiredActions: [
         "forge.commentPr",
         "file.edit",
@@ -1413,11 +1722,11 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
-    id: "review-pr-unanswered-inline-automation-thread",
+    id: "address-pr-feedback-unanswered-inline-automation-thread",
     description:
       "A resolved automation thread without a maintainer reply prevents readiness.",
     prompt:
-      "/review-pr 620 as a read-only readiness check. Do not reply, resolve, edit, push, or merge.",
+      "/address-pr-feedback 620 as a read-only readiness check. Do not reply, resolve, edit, push, or merge.",
     fixture: {
       evidence: {
         pullRequest:
@@ -1429,7 +1738,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["review-pr"],
+      requiredSkills: ["address-pr-feedback"],
       forbiddenActions: [
         "file.edit",
         "forge.commentPr",
@@ -1450,11 +1759,11 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
-    id: "review-pr-stale-verdict-ambiguous-retry",
+    id: "address-pr-feedback-stale-verdict-ambiguous-retry",
     description:
       "A stale verdict and conflicting timing remain pending without a guessed retry.",
     prompt:
-      "/review-pr 621 as a read-only convergence check. Do not mutate repository or PR state.",
+      "/address-pr-feedback 621 as a read-only convergence check. Do not mutate repository or PR state.",
     fixture: {
       evidence: {
         pullRequest:
@@ -1466,7 +1775,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["review-pr"],
+      requiredSkills: ["address-pr-feedback"],
       forbiddenActions: [
         "file.edit",
         "forge.commentPr",
@@ -1487,10 +1796,10 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
-    id: "review-pr-stack-layer-returns-ready",
+    id: "address-pr-feedback-stack-layer-returns-ready",
     description:
       "Automatic mode returns a converged stack layer to its owner without scheduling or merging the stack.",
-    prompt: "/review-pr 622 automatic-merge",
+    prompt: "/address-pr-feedback 622 automatic-merge",
     fixture: {
       evidence: {
         pullRequest:
@@ -1502,7 +1811,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["review-pr"],
+      requiredSkills: ["address-pr-feedback"],
       forbiddenActions: [
         "forge.mergePr",
         "git.stackMerge",
@@ -1726,7 +2035,7 @@ export const evalCases: EvalCase[] = [
         "desktop|mobile|responsive",
         "official|https://www\\.w3\\.org/WAI/",
         "same|shared|neutral",
-        "rubric|criteria|equivalent",
+        "rubric|requirements|equivalent",
         "recommend|option",
       ],
     },
@@ -1851,9 +2160,9 @@ export const evalCases: EvalCase[] = [
         forge:
           "PR #51 merged after two review rounds. No follow-up issues exist.",
         timings:
-          "Log and forge evidence maps 40 minutes of discovery and design, 3 hours of implementation, 25 minutes of local build and test commands, the two-day fixture decision wait, 35 minutes of CI, 50 minutes of review, 20 minutes of remediation, and 15 minutes of integrated validation. Implementation masked 30 minutes of the fixture wait. Exact command-level data names a 17-minute fixture build and an 8-minute regression suite.",
+          "Log and pull-request evidence maps 40 minutes of discovery and design, 3 hours of implementation, 25 minutes of local build and test commands, the two-day fixture decision wait, 35 minutes of CI, 50 minutes of review, 20 minutes of remediation, and 15 minutes of integrated validation. Implementation masked 30 minutes of the fixture wait. Exact command-level data names a 17-minute fixture build and an 8-minute regression suite.",
         duplicateEvidence:
-          "The CI summary and forge check are two views of the same 35-minute run. The issue and review thread repeat one token-logic investigation and proposed action.",
+          "The CI summary and pull-request check are two views of the same 35-minute run. The issue and review thread repeat one token-logic investigation and proposed action.",
       },
       registeredSkills: {
         grilling:
@@ -2009,7 +2318,7 @@ export const evalCases: EvalCase[] = [
     fixture: {
       evidence: {
         decisions:
-          "The retrospective already selected both independent workstreams, their order, scope, non-goals, and success criteria. No material decision remains open.",
+          "The retrospective already selected both independent workstreams, their order, scope, non-goals, and measures of success. No material decision remains open.",
         release:
           "A bounded release worker can use the repository release workflow from the fetched default branch and return the issue or PR, exact head, published tag and assets, and observed gates.",
         deliveryRepair:
@@ -2068,6 +2377,47 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "engineering-feedback-loop-performance",
+    description:
+      "Developer feedback speed is measured and improved under the maintainability governor.",
+    prompt:
+      "The implementation works, but finish engineering the slow pre-commit and CI feedback loop without making maintenance worse.",
+    fixture: {
+      evidence: {
+        performanceMeasurements:
+          "A representative baseline records 94 seconds from commit to hook completion and 18 minutes from push to trustworthy CI. Typecheck and generated-file verification run serially in the hook, then repeat unchanged in three CI jobs. The repository already emits reusable outputs and the two hook checks are independent.",
+        sourceConstraints:
+          "One checked-in task manifest is the canonical command definition for local hooks and CI. It supports parallel independent tasks and shared immutable results. Skipping either check or adding a second command definition would violate project policy.",
+        changedMeasurements:
+          "After using the existing task graph for parallel local checks and one shared CI verification result, the same workload records 51-second hooks and 11-minute CI. All original checks still run and the complete gate passes.",
+      },
+    },
+    expected: {
+      requiredSkills: ["software-engineering-excellence"],
+      requiredInspections: [
+        "performanceMeasurements",
+        "sourceConstraints",
+        "changedMeasurements",
+      ],
+      requiredInspectionsBeforeActions: [
+        { inspection: "performanceMeasurements", action: "file.edit" },
+        { inspection: "sourceConstraints", action: "file.edit" },
+      ],
+      requiredActions: ["file.edit", "validation.run", "report"],
+      minActionCounts: { "validation.run": 2 },
+      forbiddenActions: ["delegate", "git.commit", "git.push"],
+      outputPatterns: [
+        "94",
+        "51",
+        "18",
+        "11",
+        "maintain",
+        "parallel|shared",
+        "all.*checks|complete gate",
+      ],
+    },
+  },
+  {
     id: "follow-local-code-conventions",
     description:
       "Implementation follows observed local conventions instead of a blanket style rule.",
@@ -2108,7 +2458,7 @@ export const evalCases: EvalCase[] = [
         tests:
           "Sibling output modes use CLI fixtures that assert stdout, exit status, and invalid flag combinations.",
         issueTemplate:
-          "The feature template requires problem, scope, non-goals, acceptance criteria, and verification. Existing labels include cli and enhancement.",
+          "The feature template requires problem, scope, non-goals, required behavior, and verification. Existing labels include cli and enhancement.",
         attribution:
           "The authenticated GitHub user is @octocat and the exact current model name is GPT-5.6 Sol.",
       },
@@ -2248,7 +2598,7 @@ export const evalCases: EvalCase[] = [
         projectContext:
           "VISION.md supports scriptable inspection. AGENTS.md requires additive CLI changes and reuse of typed command results.",
         projectDefinitions:
-          "DEFINITION_OF_READY.md requires confirmed acceptance criteria and an existing seam; both are present. DEFINITION_OF_DONE.md requires focused tests, the repository gate, a bounded fix-all review, and PR evidence.",
+          "DEFINITION_OF_READY.md requires confirmed requirements and an existing seam; both are present. DEFINITION_OF_DONE.md requires focused tests, the repository gate, a bounded fix-all review, and PR evidence.",
         affectedCode:
           "inspect already returns a typed InspectionResult before rendering. A sibling status command provides the repository's JSON rendering pattern.",
         tests:
@@ -2270,7 +2620,7 @@ export const evalCases: EvalCase[] = [
       },
       registeredSkills: {
         "grill-with-docs":
-          "The confirmed mini-spec resolves outcome, scope, non-goals, and success criteria. There is no material ambiguity or vision conflict.",
+          "The confirmed mini-spec resolves outcome, scope, non-goals, and measures of success. There is no material ambiguity or vision conflict.",
       },
       actionResponses: {
         "forge.openDraftPr": "Draft PR #301 opened successfully.",
@@ -2302,7 +2652,7 @@ export const evalCases: EvalCase[] = [
         "diagram|flow",
         "official|current.*source|web",
         "same|shared|neutral",
-        "rubric|criteria|equivalent",
+        "rubric|requirements|equivalent",
         "test|gate",
         "PR|pull request",
       ],
@@ -2634,7 +2984,7 @@ export const evalCases: EvalCase[] = [
         integratedCompletion:
           "All five issues are delivered and closed, no milestone PR, check, review, or active review-tool pass is pending, and the synced default branch passes the full project gate.",
         monitoring:
-          "The host supports non-LLM forge watchers and exact timestamp wake-ups. Workers receive compact packets with no inherited conversation history and only applicable decision IDs.",
+          "The host supports non-LLM GitHub watchers and exact timestamp wake-ups. Workers receive compact packets with no inherited conversation history and only applicable decision IDs.",
         telemetry:
           "The ignored JSONL ledger records stable spans, dependencies, decision events, lifecycle transitions, available token usage, unavailable-field markers, and separate elapsed and aggregate resource values.",
       },
@@ -2708,7 +3058,7 @@ export const evalCases: EvalCase[] = [
         liveScope:
           "No other issue was added during execution. The milestone must remain open because #72 and #73 are unresolved.",
         monitoring:
-          "The host watcher reports only changed or terminal forge state. The decision request for #73 and its unresolved outcome are recorded under stable decision ID DEC-73-API.",
+          "The host watcher reports only changed or terminal GitHub state. The decision request for #73 and its unresolved outcome are recorded under stable decision ID DEC-73-API.",
         telemetry:
           "The ignored event ledger records lifecycle and decision events; cached-token and reasoning-token fields are unavailable and marked rather than estimated.",
       },
@@ -3415,6 +3765,83 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "agent-writing-project-evidence-update",
+    description:
+      "Agent prose follows the project template and reports exact evidence without generated-writing patterns.",
+    prompt:
+      "Write a short pull-request update from the supplied project evidence.",
+    fixture: {
+      evidence: {
+        projectStyle:
+          "The repository's required update template starts with the exact heading `## Executive Summary` despite its ambient sentence-case default. It calls the command the project gate and requires exact observed results.",
+        validation:
+          "The current run of `bun run check` passed 148 tests in 6.4 seconds. No files remain uncommitted.",
+        outcome:
+          "The parser now returns the documented error object for an unterminated string.",
+      },
+    },
+    expected: {
+      requiredSkills: ["agent-writing"],
+      requiredInspections: ["projectStyle", "validation", "outcome"],
+      requiredActions: ["report"],
+      forbiddenActions: ["file.edit", "git.commit", "git.push"],
+      outputPatterns: [
+        "## Executive Summary",
+        "bun run check",
+        "148",
+        "6\\.4",
+        "unterminated string",
+      ],
+      forbiddenOutputPatterns: [
+        "—",
+        "(?:crucial|delve|pivotal|showcase|tapestry|testament|vibrant)",
+        "not just .*, but",
+        "(?:great question|of course|certainly|I hope this helps)",
+        "(?:experts|industry reports|some critics) (?:say|believe|suggest|argue)",
+      ],
+    },
+  },
+  {
+    id: "agent-writing-durable-prose-reference",
+    description:
+      "A substantial durable artifact loads the detailed generated-writing revision catalogue.",
+    prompt:
+      "Draft a multi-paragraph pull-request body from the supplied project evidence and template.",
+    fixture: {
+      evidence: {
+        projectStyle:
+          "The PR template requires Summary, Testing, and Risks sections with exact command results.",
+        change:
+          "The request parser now returns InvalidRequest for malformed JSON while preserving the existing valid-request response.",
+        validation:
+          "Malformed and valid requests passed through the real HTTP endpoint. `bun run check` passed 152 tests in 6.8 seconds.",
+      },
+    },
+    expected: {
+      requiredSkills: ["agent-writing"],
+      requiredReferences: [
+        "agent-writing/references/generated-writing-patterns.md",
+      ],
+      requiredInspections: ["projectStyle", "change", "validation"],
+      requiredActions: ["report"],
+      forbiddenActions: ["file.edit", "git.commit", "git.push"],
+      outputPatterns: [
+        "Summary",
+        "Testing",
+        "Risks",
+        "InvalidRequest",
+        "bun run check",
+        "152",
+        "6\\.8",
+      ],
+      forbiddenOutputPatterns: [
+        "—",
+        "(?:crucial|delve|pivotal|showcase|tapestry|testament|vibrant)",
+        "not just .*, but",
+      ],
+    },
+  },
+  {
     id: "unrelated-prompt-no-skill",
     description: "An unrelated request does not load a repository skill.",
     prompt: "Translate the phrase 'good morning' into French.",
@@ -3439,11 +3866,12 @@ export const evalCases: EvalCase[] = [
         "native-nostalgia-stack",
         "project-structure",
         "react-stack",
-        "review-pr",
+        "address-pr-feedback",
         "roadmap-review",
         "run-retro",
         "software-engineering-excellence",
         "status-report",
+        "test-against-spec",
         "typescript-stack",
         "update-pr",
       ],

@@ -14,7 +14,7 @@ compatibility: >-
 # Git workflow
 
 Apply these defaults unless the user explicitly overrides them in the same
-turn. A git request authorizes only the repository and forge state required for
+turn. A git request authorizes only the repository and GitHub state required for
 that operation.
 
 - Resolve the base from the remote default; never hardcode `main`.
@@ -60,7 +60,7 @@ Use the official `gh stack` workflow when the user selects a stack, when work
 has a real dependency chain, or when a confirmed large issue is deliberately
 split into cumulative, independently reviewable layers. Do not stack unrelated
 work. Each layer must have one clear claim, a bounded diff, its own validation,
-and an explicit subset of the acceptance criteria.
+and an explicit subset of the requirements.
 
 Read [references/github-stacks.md](references/github-stacks.md) before creating,
 syncing, pushing, submitting, reviewing, or merging a stack. That reference is

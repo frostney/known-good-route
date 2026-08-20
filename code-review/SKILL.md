@@ -178,8 +178,8 @@ selected prior findings.
    or the change is empty or unrelated.
 4. Include committed, staged, unstaged, and relevant untracked work. Separate
    dirty-worktree findings from committed-change findings.
-5. Establish the claim from the issue, PR, confirmed mini-spec, acceptance
-   criteria, and commits. If none exists, reconstruct the narrowest supported
+5. Establish the claim from the issue, PR, confirmed mini-spec, required
+   behavior, and commits. If none exists, reconstruct the narrowest supported
    claim from the change and label it as inferred.
 6. Activate de-duplication, claim and specification, and engineering quality for
    every fresh review. Activate discoverability only for changes to public pages,

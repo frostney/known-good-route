@@ -7,7 +7,7 @@ description: >-
   /milestone-rush for an exact milestone or selects it after /roadmap-review.
 license: Unlicense OR MIT
 compatibility: >-
-  Requires authenticated forge access, git worktrees, the internal
+  Requires authenticated GitHub access, git worktrees, the internal
   `delivery-wait` skill, and a host that supports subagents and passive
   foreground-process waiting; implementation, review, and validation use the
   project's installed workflow skills and declared gates.
@@ -28,11 +28,11 @@ not release publication.
   explicit approval before invoking it.
 - Accept either a confirmed `/roadmap-review` handoff or direct invocation. For
   direct invocation, verify current scope, direction, readiness, dependencies,
-  and success criteria before executing. Stop for material replanning rather
+  and measures of success before executing. Stop for material replanning rather
   than silently changing the milestone.
 - Treat a confirmed roadmap item as the mini-spec for `/implement-idea
   automatic` only when it states the outcome, scope and non-goals, and
-  verifiable success criteria.
+  testable measures of success.
 - Respect project instructions, Definitions of Ready and Done, branch
   protection, review policy, and the remote default branch. Never amend, bypass
   a gate, or overwrite unrelated work. Ordinary branches remain merge-only;
@@ -98,8 +98,8 @@ not release publication.
    relevant local state only when its ownership and scope are clear; preserve
    ambiguous, dirty, pre-existing, or unrelated state and report it.
 4. Let the implementation workflow validate, review, and hand off through
-   `/create-pr`. As each ordinary PR becomes ready, run `/review-pr
-   automatic-merge`. For a native stack, collect each layer's `review-pr`
+   `/create-pr`. As each ordinary PR becomes ready, run `/address-pr-feedback
+   automatic-merge`. For a native stack, collect each layer's `address-pr-feedback`
    exact-head `ready` result, then let the stack owner recheck and atomically
    merge the selected ready prefix through `git-workflow`.
 5. Keep remediation validation focused on the changed behavior. Run the
@@ -110,7 +110,7 @@ not release publication.
 6. Treat heavyweight full CI as terminal promotion evidence, never as a remote
    debugger. Dispatch it only after the current base, required PR checks, and
    every active review tool have converged on the candidate head. Cancel
-   superseded runs when the forge supports safe cancellation; record otherwise
+   superseded runs when the CI service supports safe cancellation; record otherwise
    unavoidable waste. A later head, base, topology, or review change invalidates
    the proof.
 7. Integrate continuously rather than waiting for a batch. After every squash
@@ -118,7 +118,7 @@ not release publication.
    default into every affected remaining branch and rerun its applicable gates.
    Review and CI evidence is valid only for the current PR head.
 8. Add newly discovered work to the milestone only when evidence shows it is
-   required by an existing acceptance criterion, dependency, regression, or
+   required by an existing requirement, dependency, regression, or
    Definition of Done. Keep tightly coupled fixes in the current PR; create an
    issue for independently trackable required work. Record desirable follow-ups
    without expanding the milestone.
@@ -149,10 +149,11 @@ by repository policy blocks spawning; never substitute model heartbeats.
 - Quarantine a blocked node and its dependents, then continue every independent
   runnable node. Pause only when no further safe progress remains. Never close
   a milestone with blocked or unverified work.
-- Retry transient review, CI, and forge states through event-driven waits under
+- Retry transient review, CI, issue, and pull-request states through event-driven waits under
   the host's platform limits. Use an exact safe `retry_at` when available. A
   rate limit or missing verdict is pending, not green.
-- Before closure, re-fetch forge state and verify that every in-scope item is
+- Before closure, re-fetch milestone, issue, pull-request, review, and CI state
+  and verify that every in-scope item is
   delivered and closed with evidence; no milestone PR, required check, review
   thread, or active review-tool pass remains pending; and the synced default
   branch passes the applicable full project gate. A failure resumes execution.

@@ -43,7 +43,7 @@ freshly fetched remote default and pushing normally.
 ## Submit, validate, and merge
 
 - Use `gh stack submit` to create or update the native stack. Reconcile every
-  PR's title, body, base, draft state, linked acceptance criteria, and observed
+  PR's title, body, base, draft state, linked requirements, and observed
   validation after submission. Put a closing keyword only on the layer that
   completes the issue.
 - Treat every layer as a real PR. Validate its exact head and review its own

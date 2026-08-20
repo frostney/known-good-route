@@ -2,8 +2,9 @@
 name: implement-issue
 description: >-
   Validates and implements a GitHub issue against current repository evidence,
-  runs the project's completion gate, reviews the change, and opens a draft pull
-  request. Use when the user runs /implement-issue with an issue number.
+  repeats code review and black-box testing, runs the project's completion gate,
+  and opens a draft pull request. Use when the user runs /implement-issue with
+  an issue number.
 license: Unlicense OR MIT
 compatibility: >-
   Requires the GitHub CLI (gh) authenticated to the target repository and
@@ -32,7 +33,7 @@ evidence that no implementation is needed.
   issue, repository, reproduction, project contracts, current web research, and
   shared current-state artifacts. Derive every option from this same packet.
 - Define one comparison rubric from the issue outcome, constraints, and
-  acceptance criteria before scoring. Give every viable option equivalent
+  requirements before scoring. Give every viable option equivalent
   decision-relevant validation:
   - for UI/UX differences, show each materially different experience;
   - for architecture or workflow differences, show each relevant flow;
@@ -54,8 +55,9 @@ evidence that no implementation is needed.
   links, checked project versions, scores, and remaining uncertainty.
 - When current evidence conclusively fails a required prototype or readiness
   threshold, report that stop without asking whether to bypass the gate.
-- For any code or test change, complete the project gate, one bounded
-  `/code-review fix-all`, and `/create-pr`.
+- For any code or test change, repeat `/code-review fix-all` and black-box
+  testing against the issue until both pass on the same unchanged
+  implementation, then complete the project gate and `/create-pr`.
 
 ## Project definitions
 
@@ -98,13 +100,26 @@ security, scope, or vision decision disables automatic mode.
 8. For UI/UX work, render every affected state; capture reviewable before/after
    evidence; check accessibility, responsive behavior, themes, and design-system
    consistency; attach the evidence to the PR.
-9. Run targeted checks while developing, then the applicable Definition of Done
-   and repository gate. Fix failures rather than weakening the gate.
-10. Run one `/code-review fix-all` pass against the acceptance criteria,
-    Definition of Done, project conventions, branch diff, and reproducible
-    behavior. Resolve every validated in-scope finding and rerun affected
-    checks. Stop for a material new decision; do not continue with unresolved
-    Blocking or Important findings. If `/code-review` is unavailable, perform
-    that same bounded review and fix pass directly.
-11. Use `/create-pr`, include `Closes #<issue>`, and report only observed
-    completion evidence.
+9. Run targeted checks while developing. Fix failures rather than weakening a
+   check.
+10. Run `/code-review fix-all` against the requirements, Definition of Done,
+    project conventions, branch diff, and reproducible behavior. Resolve every
+    validated in-scope finding. Stop for a material new decision or unresolved
+    Blocking or Important finding. If `/code-review` is unavailable, perform
+    the same bounded review and fix pass directly.
+11. Run `/test-against-spec fix` when it is available. Otherwise perform the
+    same black-box test directly: use explicit issue requirements, avoid source
+    as proof, prefer an exact-revision preview deployment when available, and
+    fall back to the local environment. Record each requirement and its observed
+    result or limitation.
+12. If step 10 or 11 changes the implementation or reports incomplete work,
+    continue implementing and restart at step 10. Repeat until code review and
+    behavior testing both pass on the same unchanged implementation. Stop and
+    ask when required behavior remains unverified after exhausting the available
+    environments, unless the user explicitly accepts the limitation or requests
+    a draft PR to obtain the missing preview environment.
+13. Run the applicable Definition of Done and repository gate. If fixing a gate
+    failure changes the implementation, return to step 10. Do not duplicate a
+    broad gate inside the behavior-testing step.
+14. Use `/create-pr`, include `Closes #<issue>`, pass forward the current
+    completion evidence, and report only observed results.

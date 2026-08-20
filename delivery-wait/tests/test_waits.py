@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 DELIVERY = ROOT / "delivery-wait" / "scripts" / "delivery_wait.py"
-REVIEW = ROOT / "review-pr" / "scripts" / "review_wait.py"
+REVIEW = ROOT / "address-pr-feedback" / "scripts" / "review_wait.py"
 
 
 FAKE_GH = r'''#!/usr/bin/env python3
