@@ -12,8 +12,8 @@ Record the repository, PR number or URL, and final head object ID. A PR is
 
 - every required behavior has current observed functional evidence for the
   final content;
-- any requirement verified statically is explicitly permitted that verification
-  mode by its specification and records the limitation;
+- every requirement without executable behavior has current evidence from code
+  review or the project gate;
 - the repository's declared gate passed for that same final content;
 - every required check is terminal and successful;
 - every intentionally active review automation has a terminal completed verdict

@@ -1,9 +1,10 @@
 ---
 name: implement-idea
 description: >-
-  Turns an unfiled idea into a confirmed mini-spec, implements and validates the
-  selected approach, reviews it, and opens a draft pull request. Use when the
-  user runs /implement-idea or asks to build something without an existing issue.
+  Turns an unfiled idea into a confirmed mini-spec, implements the selected
+  approach, repeats code review and black-box testing, runs the project gate,
+  and opens a draft pull request. Use when the user runs /implement-idea or asks
+  to build something without an existing issue.
 license: Unlicense OR MIT
 compatibility: >-
   Requires git and the GitHub CLI (gh) for the /create-pr handoff, plus network
@@ -56,8 +57,9 @@ current repository.
   rubric, then recommend one and wait for the user's choice unless automatic
   mode applies. Include a compact evidence digest with the most relevant source
   links, checked project versions, scores, and remaining uncertainty.
-- For any code or test change, complete the project gate, one bounded
-  `/code-review fix-all`, and `/create-pr`.
+- For any code or test change, repeat `/code-review fix-all` and black-box
+  testing against the confirmed mini-spec until both pass on the same unchanged
+  implementation, then complete the project gate and `/create-pr`.
 
 ## Project definitions
 
@@ -95,13 +97,26 @@ security, scope, or vision decision disables automatic mode.
 7. For UI/UX work, render every affected state; capture reviewable before/after
    evidence; check accessibility, responsive behavior, themes, and design-system
    consistency; attach the evidence to the PR.
-8. Run targeted checks while developing, then the applicable Definition of Done
-   and repository gate. Fix failures rather than weakening the gate.
-9. Run one `/code-review fix-all` pass against the measures of success, Definition
-   of Done, project conventions, branch diff, and reproducible behavior.
-   Resolve every validated in-scope finding and rerun affected checks. Stop for
-   a material new decision; do not continue with unresolved Blocking or
-   Important findings. If `/code-review` is unavailable, perform that same
-   bounded review and fix pass directly.
-10. Use `/create-pr` and summarize the mini-spec, delivered outcome, and observed
-    completion evidence in the PR.
+8. Run targeted checks while developing. Fix failures rather than weakening a
+   check.
+9. Run `/code-review fix-all` against the measures of success, Definition of
+   Done, project conventions, branch diff, and reproducible behavior. Resolve
+   every validated in-scope finding. Stop for a material new decision or
+   unresolved Blocking or Important finding. If `/code-review` is unavailable,
+   perform the same bounded review and fix pass directly.
+10. Run `/test-against-spec fix` when it is available. Otherwise perform the
+    same black-box test directly: use the confirmed mini-spec, avoid source as
+    proof, prefer an exact-revision preview deployment when available, and fall
+    back to the local environment. Record each requirement and its observed
+    result or limitation.
+11. If step 9 or 10 changes the implementation or reports incomplete work,
+    continue implementing and restart at step 9. Repeat until code review and
+    behavior testing both pass on the same unchanged implementation. Stop and
+    ask when required behavior remains unverified after exhausting the available
+    environments, unless the user explicitly accepts the limitation or requests
+    a draft PR to obtain the missing preview environment.
+12. Run the applicable Definition of Done and repository gate. If fixing a gate
+    failure changes the implementation, return to step 9. Do not duplicate a
+    broad gate inside the behavior-testing step.
+13. Use `/create-pr` and pass forward the current mini-spec, delivered outcome,
+    and observed completion evidence for the PR.

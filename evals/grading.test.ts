@@ -57,114 +57,61 @@ describe("eval grading", () => {
     expect(missingAction.passed).toBeFalse();
   });
 
-  test("requires readiness-gap remediation before marking a PR ready", () => {
+  test("returns implementation gaps without publishing or fixing them", () => {
     const evalCase = evalCases.find(
-      ({ id }) => id === "create-pr-fills-readiness-gap-before-ready",
+      ({ id }) => id === "create-pr-reports-implementation-gap",
     );
     expect(evalCase).toBeDefined();
     if (!evalCase) {
       return;
     }
 
-    const remediated = gradeRun(
+    const returned = gradeRun(
       evalCase,
       ledger({
         loadedSkills: ["create-pr"],
-        actions: [
-          {
-            action: "file.edit",
-            details: "Generate the missing docs index",
-          },
-          {
-            action: "validation.run",
-            details: "Run the declared project gate",
-          },
-          {
-            action: "git.commit",
-            details: "Commit the generated docs index",
-          },
-          { action: "git.push", details: "Push the readiness fix" },
-          { action: "forge.openDraftPr", details: "Open the draft PR" },
-          {
-            action: "forge.markPrReady",
-            details: "Mark ready after the green CI rerun",
-          },
-        ],
-        events: [
-          { kind: "action", name: "file.edit" },
-          { kind: "action", name: "validation.run" },
-          { kind: "action", name: "git.commit" },
-          { kind: "action", name: "git.push" },
-          { kind: "action", name: "forge.openDraftPr" },
-          { kind: "action", name: "forge.markPrReady" },
-        ],
+        inspections: ["completionEvidence"],
+        actions: [{ action: "report", details: "Return the implementation gap" }],
       }),
-      "Filled the missing generated index gap. CI is green and the PR is ready.",
+      "The generated docs index is missing, so this returns to implementation. No PR was opened or pushed.",
     );
-    expect(remediated.passed).toBeTrue();
+    expect(returned.passed).toBeTrue();
 
-    const premature = gradeRun(
+    const repairedHere = gradeRun(
       evalCase,
       ledger({
         loadedSkills: ["create-pr"],
+        inspections: ["completionEvidence"],
         actions: [
-          { action: "forge.openDraftPr", details: "Open the draft PR" },
-          {
-            action: "forge.markPrReady",
-            details: "Mark ready without filling the gap",
-          },
+          { action: "file.edit", details: "Generate the missing docs index" },
+          { action: "git.commit", details: "Commit the implementation fix" },
+          { action: "git.push", details: "Push the implementation fix" },
         ],
       }),
-      "The PR is ready.",
+      "Filled the generated docs index gap during create-pr.",
     );
-    expect(premature.passed).toBeFalse();
+    expect(repairedHere.passed).toBeFalse();
   });
 
-  test("requires local specification convergence before PR publication", () => {
+  test("keeps missing behavior evidence out of publication", () => {
     const evalCase = evalCases.find(
-      ({ id }) => id === "create-pr-local-spec-convergence-before-publish",
+      ({ id }) => id === "create-pr-missing-behavior-evidence-stops",
     );
     expect(evalCase).toBeDefined();
     if (!evalCase) {
       return;
     }
 
-    const actions = [
-      { action: "file.edit" as const, details: "Fix missing-file mapping" },
-      { action: "validation.run" as const, details: "Run real CLI probes" },
-      { action: "validation.run" as const, details: "Run the project gate" },
-      { action: "git.commit" as const, details: "Commit the converged change" },
-      { action: "git.push" as const, details: "Push after local convergence" },
-      {
-        action: "forge.openDraftPr" as const,
-        details: "Open the draft PR",
-      },
-      {
-        action: "forge.markPrReady" as const,
-        details: "Mark ready after exact-head CI",
-      },
-    ];
     const output =
-      "Fixed the missing file path to return exit 2. Real CLI functional probes and the project gate passed locally before the push; draft PR #209 is ready.";
+      "Observed black-box behavior evidence for the built CLI is missing. Return to implementation; no push or PR was created.";
 
     expect(
       gradeRun(
         evalCase,
         ledger({
           loadedSkills: ["create-pr"],
-          inspections: ["specification", "functionalBehavior"],
-          actions,
-          events: [
-            { kind: "inspection", name: "specification" },
-            { kind: "inspection", name: "functionalBehavior" },
-            { kind: "action", name: "file.edit" },
-            { kind: "action", name: "validation.run" },
-            { kind: "action", name: "validation.run" },
-            { kind: "action", name: "git.commit" },
-            { kind: "action", name: "git.push" },
-            { kind: "action", name: "forge.openDraftPr" },
-            { kind: "action", name: "forge.markPrReady" },
-          ],
+          inspections: ["specification", "completionEvidence"],
+          actions: [{ action: "report", details: "Return missing evidence" }],
         }),
         output,
       ).passed,
@@ -175,20 +122,86 @@ describe("eval grading", () => {
         evalCase,
         ledger({
           loadedSkills: ["create-pr"],
-          inspections: ["specification", "functionalBehavior"],
-          actions,
-          events: [
-            { kind: "action", name: "git.push" },
-            { kind: "action", name: "forge.openDraftPr" },
-            { kind: "inspection", name: "specification" },
-            { kind: "inspection", name: "functionalBehavior" },
-            { kind: "action", name: "file.edit" },
-            { kind: "action", name: "validation.run" },
+          inspections: ["specification", "completionEvidence"],
+          actions: [
+            { action: "behaviorTest.run", details: "Run the CLI behavior here" },
+            { action: "forge.openDraftPr", details: "Publish despite missing evidence" },
           ],
         }),
         output,
       ).passed,
     ).toBeFalse();
+  });
+
+  test("grades read-only and fix-mode black-box specification testing", () => {
+    const reportCase = evalCases.find(
+      ({ id }) => id === "test-against-spec-preview-report",
+    );
+    const fixCase = evalCases.find(
+      ({ id }) => id === "test-against-spec-fix-preview-remains-unverified",
+    );
+    expect(reportCase).toBeDefined();
+    expect(fixCase).toBeDefined();
+    if (!reportCase || !fixCase) {
+      return;
+    }
+
+    expect(
+      gradeRun(
+        reportCase,
+        ledger({
+          loadedSkills: ["test-against-spec"],
+          inspections: [
+            "specification",
+            "repositoryStatus",
+            "previewDeployment",
+            "observedBehavior",
+          ],
+          actions: [
+            {
+              action: "behaviorTest.run",
+              details: "Exercise both profile paths through the preview UI",
+            },
+            { action: "report", details: "Report observed behavior" },
+          ],
+        }),
+        "Preview 9c4e221 passed: valid profile values save and survive refresh; an invalid handle shows the specified inline error.",
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        fixCase,
+        ledger({
+          loadedSkills: ["test-against-spec"],
+          inspections: [
+            "specification",
+            "repositoryStatus",
+            "previewDeployment",
+            "observedBehavior",
+          ],
+          actions: [
+            {
+              action: "behaviorTest.run",
+              details: "Reproduce the missing Retry action on preview c8a02f4",
+            },
+            { action: "file.edit", details: "Apply the focused Retry fix" },
+            {
+              action: "behaviorTest.run",
+              details: "Check available environments after the fix",
+            },
+            { action: "report", details: "Report the verification limit" },
+          ],
+          events: [
+            { kind: "action", name: "behaviorTest.run" },
+            { kind: "action", name: "file.edit" },
+            { kind: "action", name: "behaviorTest.run" },
+            { kind: "action", name: "report" },
+          ],
+        }),
+        "Fix applied, but it remains unverified: the only preview still serves old revision c8a02f4.",
+      ).passed,
+    ).toBeTrue();
   });
 
   test("accepts a metadata-only readiness repair without a commit", () => {
@@ -514,7 +527,7 @@ describe("eval grading", () => {
     ).toBeFalse();
   });
 
-  test("requires specification validation and code-review before an address-pr-feedback push", () => {
+  test("requires code review and black-box testing to converge before the project gate", () => {
     const evalCase = evalCases.find(
       ({ id }) => id === "address-pr-feedback-code-review-before-push",
     );
@@ -526,32 +539,28 @@ describe("eval grading", () => {
     const actions = [
       { action: "file.edit" as const, details: "Fix the 100-item boundary" },
       {
-        action: "validation.run" as const,
-        details: "Probe 100, 101, and unauthorized requests through the API",
-      },
-      {
-        action: "validation.run" as const,
-        details: "Run the declared project gate on the unchanged change",
-      },
-      {
         action: "codeReview.run" as const,
         details: "Run the first bounded code-review pass",
+      },
+      {
+        action: "behaviorTest.run" as const,
+        details: "Probe 100, 101, and unauthorized requests through the API",
       },
       {
         action: "file.edit" as const,
         details: "Restore authorization before the boundary response",
       },
       {
-        action: "validation.run" as const,
+        action: "codeReview.run" as const,
+        details: "Restart code-review on the behavior fix",
+      },
+      {
+        action: "behaviorTest.run" as const,
         details: "Repeat 100, 101, and unauthorized API probes",
       },
       {
         action: "validation.run" as const,
-        details: "Rerun the declared project gate on the unchanged change",
-      },
-      {
-        action: "codeReview.run" as const,
-        details: "Repeat code-review on the remediated change",
+        details: "Run the declared project gate after both passes",
       },
       { action: "forge.replyInline" as const, details: "Reply with evidence" },
       { action: "forge.resolveThread" as const, details: "Resolve the thread" },
@@ -559,12 +568,13 @@ describe("eval grading", () => {
       { action: "git.push" as const, details: "Push the reviewed fix" },
     ];
     const output =
-      "The 100-item request passes, the 101-item request is rejected, and the authorization failure is preserved. After the first code-review fix, I reran the API paths and declared project gate; the second code-review pass completed before the push.";
+      "Code review ran before black-box testing through the real API. The first behavior pass found the authorization regression, so I fixed it and restarted both checks. The 100-item request passes, 101 is rejected, and authorization is preserved. The declared project gate then passed before the push.";
     const inspections = [
       "pullRequest",
       "specification",
       "affectedCode",
       "codeReview",
+      "behaviorTesting",
       "projectGate",
       "attribution",
     ];
@@ -573,19 +583,23 @@ describe("eval grading", () => {
       gradeRun(
         evalCase,
         ledger({
-          loadedSkills: ["address-pr-feedback", "code-review"],
+          loadedSkills: [
+            "address-pr-feedback",
+            "code-review",
+            "test-against-spec",
+          ],
           inspections,
           actions,
           events: [
             { kind: "action", name: "file.edit" },
-            { kind: "action", name: "validation.run" },
-            { kind: "action", name: "validation.run" },
             { kind: "skill", name: "code-review" },
             { kind: "action", name: "codeReview.run" },
+            { kind: "skill", name: "test-against-spec" },
+            { kind: "action", name: "behaviorTest.run" },
             { kind: "action", name: "file.edit" },
-            { kind: "action", name: "validation.run" },
-            { kind: "action", name: "validation.run" },
             { kind: "action", name: "codeReview.run" },
+            { kind: "action", name: "behaviorTest.run" },
+            { kind: "action", name: "validation.run" },
             { kind: "action", name: "forge.replyInline" },
             { kind: "action", name: "forge.resolveThread" },
             { kind: "action", name: "git.commit" },
@@ -600,13 +614,16 @@ describe("eval grading", () => {
       gradeRun(
         evalCase,
         ledger({
-          loadedSkills: ["address-pr-feedback", "code-review"],
+          loadedSkills: [
+            "address-pr-feedback",
+            "code-review",
+            "test-against-spec",
+          ],
           inspections,
           actions: [
             { action: "file.edit", details: "Fix the 100-item boundary" },
-            { action: "validation.run", details: "Probe the API paths" },
-            { action: "validation.run", details: "Run the project gate" },
             { action: "codeReview.run", details: "Run code-review" },
+            { action: "behaviorTest.run", details: "Probe the API paths" },
             {
               action: "file.edit",
               details: "Restore authorization ordering",
@@ -616,10 +633,10 @@ describe("eval grading", () => {
           ],
           events: [
             { kind: "action", name: "file.edit" },
-            { kind: "action", name: "validation.run" },
-            { kind: "action", name: "validation.run" },
             { kind: "skill", name: "code-review" },
             { kind: "action", name: "codeReview.run" },
+            { kind: "skill", name: "test-against-spec" },
+            { kind: "action", name: "behaviorTest.run" },
             { kind: "action", name: "file.edit" },
             { kind: "action", name: "git.commit" },
             { kind: "action", name: "git.push" },

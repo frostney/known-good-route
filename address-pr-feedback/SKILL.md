@@ -57,11 +57,11 @@ only after the same exact-head readiness contract passes.
 - Treat review, approval, thread-readiness, finding, and CI evidence as valid
   only for the exact current PR head. A new commit or baseline update resets
   every affected gate.
-- Before every substantive code push owned by this workflow, complete the local
-  specification, functional-validation, project-gate, and `/code-review
-  fix-all` loop in steps 5 and 6. Reply-only and metadata-only updates do not
-  need this gate. Explicit read-only mode never invokes a mutating review
-  operation.
+- Before every substantive code push owned by this workflow, repeat
+  `/code-review fix-all` and black-box testing against the specification until
+  both pass on the same unchanged implementation, then run the project gate.
+  Reply-only and metadata-only updates do not need this loop. Explicit read-only
+  mode never invokes a mutating review operation.
 - Own no label routing, milestone scheduling, stack scheduling, cross-PR
   admission, or project-specific CI policy. If the PR is a native stack member,
   make this layer ready and return its state to the stack owner without merging.
@@ -100,7 +100,7 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    Done. Label any claim inferred from the current change rather than a source.
 2. If an ordinary branch needs a baseline update, merge the remote base by
    following `/update-pr`'s no-rebase workflow, but defer its commit and push
-   until the pre-push review in step 6 passes. A stack owner must perform any
+   until the pre-push loop in steps 5 through 7 passes. A stack owner must perform any
    stack-wide synchronization before asking this skill to re-evaluate the
    affected layer.
 3. Run the review helper's `inspect` operation for the exact PR head. It returns
@@ -121,39 +121,34 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    nitpick, and never substitute a top-level comment when an inline comment
    cannot accept a reply. Resolve attribution identities before the first reply
    and append the required Note to every substantive reply.
-5. Compare the complete branch change, including uncommitted review fixes and
-   any baseline merge, with the full specification and everything required
-   before pushing. Keep a record linking each requirement to its evidence for
-   the current change. Invalidate evidence when
-   source, test, configuration, dependency, generated output, baseline, or
-   delivered behavior changes in a way that can affect it. Exercise every
-   requirement that can be tested and lacks current evidence through the real
-   delivered interface. Cover the intended path and the most consequential failure or
-   boundary path. Record setup, input, expected result, and observed result;
-   include rendered UI and accessibility evidence for user-facing changes. When
-   real execution is unsafe or unavailable, record the requirement as
-   static-only and do not present it as behaviorally verified. Run the
-   repository's declared pre-PR gate. Fix every in-scope gap, then repeat this
-   step until every requirement has current evidence and the gate passes on the unchanged change.
-   Stop before pushing when a required behavior cannot be validated safely or
-   the specification does not permit static verification.
-6. Invoke `/code-review fix-all` on that complete current change. Apply every
-   validated in-scope finding, then return to step 5 because those edits may
-   invalidate specification evidence or checks. Repeat the code review only
-   when remediation changes its input; do not cycle on an unchanged finding.
-   Stop before pushing when validation or review exposes a material product,
-   architecture, security, compatibility, or scope decision. Once steps 5 and
-   6 pass on the same unchanged change, use `/update-pr` to commit and push
-   without amending or force-pushing. If that skill is unavailable, follow its
-   documented workflow directly.
-7. Re-read the exact head, required checks, terminal automation verdicts,
+5. Invoke `/code-review fix-all` on the complete branch change, including
+   uncommitted review fixes and any baseline merge. Apply every validated
+   in-scope finding. Stop for a material product, architecture, security,
+   compatibility, or scope decision, or for an unresolved Blocking or Important
+   finding. If `/code-review` is unavailable, perform the same bounded review
+   and fix pass directly.
+6. Run `/test-against-spec fix` when it is available. Otherwise perform the same
+   black-box test directly against the explicit PR specification. Do not use
+   source as proof of behavior. Prefer an exact-revision preview deployment when
+   available, then use the local environment. Record each requirement,
+   environment, setup, action or command, input, expected result, observed
+   result, and limitation. If neither environment can reproduce required
+   behavior, stop before pushing and report it as unverified.
+7. If step 5 or 6 changes the implementation or reports incomplete work,
+   continue fixing and restart at step 5. Repeat until code review and behavior
+   testing pass on the same unchanged implementation. Then run the repository's
+   declared pre-PR gate. If fixing a gate failure changes the implementation,
+   restart at step 5. Once the complete loop passes unchanged, use `/update-pr`
+   to commit and push without amending or force-pushing. If that skill is
+   unavailable, follow its documented workflow directly.
+8. Re-read the exact head, required checks, terminal automation verdicts,
    actionable findings, unresolved threads, and unanswered inline automation
    threads. Apply the readiness and `retry_at` rules in the reference. A new
    head invalidates external gate evidence. Preserve local evidence for each
    requirement only when the pushed content is identical and its recorded
    dependencies did not change. A validated CI, code, or behavior failure
    returns to step 5 before another commit or push.
-8. In normal mode, return the result contract without merging. In
+9. In normal mode, return the result contract without merging. In
    `automatic-merge` mode, launch the helper's foreground `wait` operation with
    the exact head, repository policy, checkpoint, and safely derived deadline.
    Resume this workflow only when the command returns a meaningful transition.
@@ -163,10 +158,10 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    provider policy, or retry count. If the host cannot passively await a
    subprocess, return `pending` with that unsupported capability instead of
    using model heartbeats.
-9. Stop without merging for a material product decision, unrelated failure,
+10. Stop without merging for a material product decision, unrelated failure,
    unsafe or divergent PR, unavailable terminal external dependency, or
    unresolved required finding. Report the exact blocker.
-10. In `automatic-merge` mode, squash-merge through `git-workflow` only when the
+11. In `automatic-merge` mode, squash-merge through `git-workflow` only when the
     ordinary PR is `ready` under the exact final-head contract. Sync the local
     default branch, remove only clean worktrees owned by this run, and report
     the merged PR, final head, validation, reviews, and cleanup. For a native

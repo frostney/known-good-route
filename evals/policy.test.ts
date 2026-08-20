@@ -33,14 +33,52 @@ describe("cross-skill policy", () => {
     expect(addressPrFeedback).toContain("300 characters or fewer");
   });
 
-  test("PR feedback repeats specification and functional validation before push", async () => {
+  test("PR feedback repeats code review and black-box testing before the project gate", async () => {
     const source = await skill("address-pr-feedback");
 
-    expect(source).toContain("record linking each requirement to its evidence");
-    expect(source).toMatch(/real\s+delivered\s+interface/);
-    expect(source).toContain("pre-PR gate");
     expect(source).toContain("/code-review fix-all");
-    expect(source).toContain("same unchanged change");
+    expect(source).toContain("/test-against-spec fix");
+    expect(source).toContain("exact-revision preview deployment");
+    expect(source).toContain("same unchanged implementation");
+    expect(source.indexOf("/code-review fix-all")).toBeLessThan(
+      source.indexOf("/test-against-spec fix"),
+    );
+    expect(source.indexOf("/test-against-spec fix")).toBeLessThan(
+      source.indexOf("declared pre-PR gate"),
+    );
+  });
+
+  test("implementation owns the review and behavior-testing loop", async () => {
+    for (const name of ["implement-idea", "implement-issue"]) {
+      const source = await skill(name);
+      expect(source).toContain("/code-review fix-all");
+      expect(source).toContain("/test-against-spec fix");
+      expect(source).toContain("same unchanged implementation");
+      expect(source).toMatch(/If fixing a gate\s+failure changes the implementation, return to step/);
+    }
+  });
+
+  test("behavior testing is black-box, preview-first, and read-only by default", async () => {
+    const source = await skill("test-against-spec");
+
+    expect(source).toContain("Report by default");
+    expect(source).toContain("exact `fix` qualifier");
+    expect(source).toMatch(/Never\s+infer it from the implementation/);
+    expect(source).toContain("Do not use implementation source");
+    expect(source).toContain("Prefer a preview deployment");
+    expect(source).toContain("report the fix as applied but unverified");
+    expect(source).toContain("does not replace source review");
+  });
+
+  test("create-pr publishes completion evidence without testing or fixing implementation", async () => {
+    const source = await skill("create-pr");
+
+    expect(source).toContain("completion evidence supplied by");
+    expect(source).toContain("Do not test delivered behavior");
+    expect(source).toMatch(/Do not fix it\s+here/);
+    expect(source).toContain("explicit user request for a draft PR");
+    expect(source).toContain("preview tied to its exact revision");
+    expect(source).not.toContain("/test-against-spec");
   });
 
   test("writing guidance uses revision thresholds and conditional detail", async () => {

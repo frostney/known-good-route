@@ -53,6 +53,7 @@ flowchart TB
         Ready["Ready issue"]
         Issue["/implement-issue"]
         Idea["Unfiled idea<br/>/implement-idea"]
+        ReviewAndTest["Complete implementation<br/>/code-review fix-all<br/>+ /test-against-spec fix"]
         Branch["Completed branch"]
         CreatePR["/create-pr"]
         ExistingPR["Existing PR"]
@@ -61,8 +62,10 @@ flowchart TB
 
         Track --> Issue
         Ready --> Issue
-        Issue --> CreatePR
-        Idea --> CreatePR
+        Issue --> ReviewAndTest
+        Idea --> ReviewAndTest
+        ReviewAndTest -->|"both pass unchanged"| CreatePR
+        ReviewAndTest -->|"incomplete: continue implementation"| ReviewAndTest
         Branch --> CreatePR
         CreatePR --> AddressPRFeedback
         ExistingPR --> AddressPRFeedback
@@ -103,10 +106,9 @@ flowchart TB
   a whole-codebase assessment, not a mandatory checkpoint.
 - Supporting mechanics stay underneath the loop: `git-workflow` governs git
   operations, `/code-review fix-all` is the ordinary bounded pre-PR review,
-  milestone rush uses `/code-review subagents fix-all`, `address-pr-feedback`
-  repeats local specification, functional-validation, project-gate, and
-  `/code-review fix-all` checks before substantive pushes, and `/update-pr`
-  handles the resulting commits and pushes.
+  `/test-against-spec fix` performs black-box behavior testing after review,
+  milestone rush uses `/code-review subagents fix-all`, and `/update-pr` handles
+  reviewed and behaviorally tested commits and pushes.
 
 ### Recurring workflow skills
 
@@ -115,14 +117,15 @@ flowchart TB
 | [`git-workflow`](git-workflow/SKILL.md) | Default git workflow: automatically update clean local-default work and create new local branches/worktrees from the latest remote default; stop on dirty default state and ask whether to discard it or use a focused branch/worktree; require impact-focused commit and PR titles; use ordinary merge-only branches or guarded native GitHub stacks, always-new commits, and squash merges. |
 | [`status-report`](status-report/SKILL.md) | Build a live, read-only Kanban of every open PR and all local worktrees, using current-head CI and review gates, short semantic local-change summaries, and rich, Mermaid, or Markdown rendering according to host capability. |
 | [`create-issue`](create-issue/SKILL.md) | File a well-structured GitHub issue from a tagline using the project's issue template and `VISION.md` when present, grill for thoroughness, and add a GitHub Note with the exact user and model attribution. Supports `automatic` mode for project-context template/label/body selection. |
-| [`implement-issue`](implement-issue/SKILL.md) | Validate an issue, derive every viable option from one neutral evidence packet, apply one predeclared rubric and equivalent checks, then select, implement, verify, review, and hand off via `/create-pr`. Supports gated `automatic` selection. |
-| [`implement-idea`](implement-idea/SKILL.md) | Turn an unfiled idea into a confirmed mini-spec, derive every viable option from one neutral evidence packet, apply one predeclared rubric and equivalent checks, then select, implement, verify, review, and hand off via `/create-pr`. Supports gated `automatic` selection. |
+| [`implement-issue`](implement-issue/SKILL.md) | Validate an issue, compare viable options from one evidence packet, then implement and repeat code review plus black-box testing until both pass unchanged before the project gate and `/create-pr`. Supports gated `automatic` selection. |
+| [`implement-idea`](implement-idea/SKILL.md) | Turn an unfiled idea into a confirmed mini-spec, compare viable options from one evidence packet, then implement and repeat code review plus black-box testing until both pass unchanged before the project gate and `/create-pr`. Supports gated `automatic` selection. |
 | [`run-retro`](run-retro/SKILL.md) | Review a completed workstream and produce an interactive HTML impact report with per-item summaries of at most 300 characters, evidence-backed Before/After states, copyable or app-linked deep dives, and optional animated mechanism diagrams. |
-| [`create-pr`](create-pr/SKILL.md) | Converge the complete change locally against its specification and real behavior before the first push, open a templated draft PR or submit a verified native GitHub stack, fill PR-only readiness gaps, fix CI failures through the same local loop, and mark each ready layer ready. |
+| [`create-pr`](create-pr/SKILL.md) | Publish a completed change as a templated draft PR or verified native GitHub stack, reconcile PR-only metadata, wait for exact-head CI, and mark each complete layer ready without testing or fixing implementation behavior. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and update the current PR, merging ordinary baselines or using guarded native stack synchronization, then refresh stale metadata. |
-| [`address-pr-feedback`](address-pr-feedback/SKILL.md) | Address feedback on one PR, actively validate its specification and delivered behavior before substantive pushes, run `/code-review fix-all`, require exact-final-head CI and review evidence, reply in originating threads, and wait deterministically. Normal mode never merges; `automatic-merge` merges only an ordinary ready PR. |
+| [`address-pr-feedback`](address-pr-feedback/SKILL.md) | Address feedback on one PR, repeat `/code-review fix-all` and black-box specification testing before substantive pushes, require exact-final-head CI and review evidence, reply in originating threads, and wait deterministically. Normal mode never merges; `automatic-merge` merges only an ordinary ready PR. |
 | [`delivery-wait`](delivery-wait/SKILL.md) | Internal deterministic GitHub transition waits for exact-head checks, workflows, merges, tags, release assets, and time-based wakes. |
 | [`code-review`](code-review/SKILL.md) | Review a bounded change against its claim using behavioral and revert-clean falsification probes, churn-backed risk, four-layer de-duplication, calibrated findings through non-blocking Nitpicks, and discoverability checks when public web surfaces change. Additive inputs support evidence lanes, exact files, and prior-finding revalidation; fix modes remain local. |
+| [`test-against-spec`](test-against-spec/SKILL.md) | Test externally observable behavior against explicit requirements through real interfaces, preferring an exact-revision preview deployment when available. Report by default; the exact `fix` qualifier authorizes in-scope fixes and black-box retesting. |
 | [`create-release`](create-release/SKILL.md) | Prepare a changelog-first release PR, then publish only when authorized and through exactly one evidence-backed path. Existing workflows own publication when configured; the agent never double-publishes with `gh release create`. |
 | [`roadmap-review`](roadmap-review/SKILL.md) | Review a project's roadmap from freshly-pulled data: assess current state and release cadence, measure delivery velocity from history, verify candidate work against the source, produce a parallelized throughput-anchored version plan, and (optionally, on confirmation) create milestones and issues. |
 | [`milestone-rush`](milestone-rush/SKILL.md) | Complete a confirmed milestone through repository-owned preflights, isolated worker packets, focused remediation, one terminal complete gate, event-driven waits, native stacks or ordinary PRs, and a closure-validated timing/token ledger; verify integrated completion and offer an explicitly approved retrospective. |
@@ -215,10 +218,10 @@ that evidence.
 - **Examples** are exceptional. Prefer expressive interfaces and high-fidelity
   references such as code, tests, specs, and artifacts; use a prose example only
   when it resolves an otherwise ambiguous decision.
-- **Standalone duplication stays minimal.** The grill gate is duplicated in
-  `create-issue`, `implement-issue`, and `implement-idea` because a skill cannot
-  depend on another skill's internal reference file. Update all three copies
-  together, but do not duplicate rationale or negative examples.
+- **Standalone fallbacks stay concise.** A workflow invokes another installed
+  skill when that skill owns the task. When the companion skill is unavailable,
+  preserve the required outcome directly without depending on its internal
+  files or copying its full procedure.
 
 ### Cross-skill references
 
@@ -226,23 +229,27 @@ that evidence.
 - `implement-issue` and `implement-idea` apply `git-workflow`'s clean-worktree
   and freshly fetched remote-default synchronization gate after selecting a
   branch/worktree and before editing.
-- `implement-issue` and `implement-idea` invoke one bounded
-  `/code-review fix-all` before `/create-pr`; they stop for material new
-  decisions and do not proceed with unresolved Blocking or Important findings.
+- `implement-issue` and `implement-idea` repeat `/code-review fix-all` followed
+  by `/test-against-spec fix` until both pass on the same unchanged
+  implementation. They use a concise black-box fallback when the testing skill
+  is unavailable, run the project gate after the loop, then invoke `/create-pr`.
 - `code-review` and `codebase-audit` delegate only when the caller supplies the
   additive `subagents` input. Workers own bounded evidence lanes; the
   coordinator owns findings, verdicts, edits, and reported fallbacks.
-- `address-pr-feedback` establishes the PR specification, actively exercises
-  every requirement whose evidence was invalidated, runs the project gate and
-  `/code-review fix-all` on the same unchanged change before each substantive
-  code push, then invokes `/update-pr`. It owns review inspection, deterministic
-  waiting, replies, and thread resolution through its bundled helper. Read-only
-  mode remains non-mutating.
-- `create-pr` compares the complete local change with its source specification,
-  exercises delivered functionality through its real interface, and fixes gaps
-  in a local loop before the first push. PR-only metadata and CI form a second
-  readiness phase; code or behavior gaps return to the local loop before the
-  next push.
+- `address-pr-feedback` repeats `/code-review fix-all` followed by
+  `/test-against-spec fix` or its black-box fallback before each substantive
+  code push. It runs the project gate only after both pass unchanged, then
+  invokes `/update-pr`. It owns review inspection, deterministic waiting,
+  replies, and thread resolution through its bundled helper. Read-only mode
+  remains non-mutating.
+- `test-against-spec` proves externally observable behavior without using source
+  as evidence. It prefers an exact-revision preview deployment when available,
+  falls back to the local environment, reports by default, and fixes only with
+  the exact `fix` qualifier. It never owns the broad project gate.
+- `create-pr` publishes a completed branch. It verifies that completion evidence
+  and the project gate apply to the exact change, reuses current gate evidence,
+  corrects PR-only metadata, waits for CI, and never tests or fixes delivered
+  behavior.
 - `address-pr-feedback automatic-merge` discovers active review automation,
   treats incomplete verdicts as pending, and owns one ordinary PR's exact-head
   fix-watch-squash-merge loop. Stack scheduling and atomic merge stay outside
@@ -310,17 +317,20 @@ supported frontier models:
 | Clear implementation with one selected option | Completes without another permission prompt or unrelated cleanup |
 | Materially ambiguous architecture | Surfaces the decision and recommendation before editing |
 | Already-fixed issue | Reports source/test evidence instead of inventing a change |
-| Branch with committed work and a clean tree | Verifies the local change against its specification and real behavior, then opens the PR without creating an empty commit |
-| Dirty focused branch with unrelated local state | Refines and tests only relevant work before the first push, excludes secrets, and marks the PR ready only after all gates pass |
-| Local change misses a specification requirement | Exercises the delivered interface, fixes the gap, and repeats local specification and functional checks before opening the draft PR |
-| Draft PR missing a Definition of Ready item | Returns repository gaps to local convergence before a new commit and push, then waits for green CI before marking ready |
+| Branch with committed work and a clean tree | Reuses current completion evidence, then opens the PR without creating an empty commit |
+| Dirty focused branch with unrelated local state | Commits only the completed relevant work, excludes secrets, and marks the PR ready only after publication requirements and CI pass |
+| Implementation misses required behavior | Runs code review, reproduces and fixes the gap through the delivered interface, then repeats review and black-box testing until both pass unchanged |
+| Draft PR missing a Definition of Ready item | Reports missing implementation evidence without publishing, or corrects PR-only metadata and then waits for green CI before marking ready |
 | Draft PR missing only required metadata | Corrects the PR body or links without creating an empty commit |
 | Definition of Ready requires a material decision | Keeps the PR draft and reports the exact unresolved decision |
-| Fixable, pending, or external CI failure | Fixes validated in-scope failures, but keeps pending or externally blocked PRs draft |
+| Code, behavior, pending, or external CI failure | Keeps the PR draft and returns code or behavior failures to implementation; pending or external failures remain pending |
 | PR update with additive merge conflicts | Preserves both feature paths, validates the merge, and pushes normally |
 | Explicitly read-only PR review | Reports validated findings without editing or changing PR state |
 | Mixed actionable and invalid inline findings | Fixes validated findings, rebuts invalid ones inline, and never posts a top-level comment |
-| Review fixes ready to push | Re-establishes the PR specification, actively tests every requirement with invalidated evidence through the delivered interface, passes the project gate and `/code-review fix-all` on the unchanged change, then commits and pushes |
+| Review fixes ready to push | Repeats `/code-review fix-all` and black-box testing until both pass unchanged, then passes the project gate before committing and pushing |
+| Read-only behavior check with a current preview | Prefers the exact-revision preview, exercises every observable requirement, and reports results without reading source or editing |
+| Behavior fix lacks a reproducible environment | Fixes and retests as far as available access permits, then reports the remaining behavior as unverified without claiming completion |
+| Required behavior needs a preview that does not exist | Opens a draft only when the user explicitly requests it to obtain the preview, keeps it draft, and returns to behavior testing on the exact deployed revision |
 | Issue draft awaiting approval | Investigates, grills, and presents the project-aligned draft without filing it |
 | Automatic issue creation and exact duplicate | Completes every investigation/grill gate before filing, but stops immediately for the existing issue |
 | Artifact-assisted implementation grill | Derives all viable options from one evidence packet and compares them with a predeclared rubric plus equivalent decision-relevant checks before selection |

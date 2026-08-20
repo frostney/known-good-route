@@ -78,9 +78,9 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
-    id: "create-pr-fills-readiness-gap-before-ready",
+    id: "create-pr-reports-implementation-gap",
     description:
-      "A local readiness gap is fixed before the corrective push and draft PR.",
+      "An implementation gap returns to implementation without publication.",
     prompt: "/create-pr",
     fixture: {
       evidence: {
@@ -91,8 +91,8 @@ export const evalCases: EvalCase[] = [
         projectDefinitions:
           "DEFINITION_OF_READY.md requires explicit requirements, relevant tests, generated artifacts, and green CI. Comparing it with the complete local branch shows that docs/index.md is missing.",
         pullRequest: "No pull request exists for this branch.",
-        continuousIntegration:
-          "After generating the index, running the declared project gate, committing, pushing, and opening the draft, every applicable exact-head check passes.",
+        completionEvidence:
+          "Code review and behavior testing passed, but completion review records docs/index.md as a missing generated artifact.",
       },
       actionResponses: {
         "forge.openDraftPr": "Draft PR #203 opened successfully.",
@@ -100,32 +100,32 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       requiredSkills: ["create-pr"],
-      requiredActions: [
+      requiredInspections: ["completionEvidence"],
+      requiredActions: ["report"],
+      forbiddenActions: [
         "file.edit",
-        "validation.run",
-        "git.commit",
-        "git.push",
+        "forge.mergePr",
         "forge.openDraftPr",
         "forge.markPrReady",
-      ],
-      requiredActionsBeforeActions: [
-        { before: "file.edit", after: "git.push" },
-        { before: "validation.run", after: "git.push" },
-        { before: "git.push", after: "forge.openDraftPr" },
-      ],
-      forbiddenActions: [
-        "forge.mergePr",
         "git.amend",
         "git.forcePush",
+        "git.commit",
+        "git.push",
         "git.rebase",
+        "validation.run",
       ],
-      outputPatterns: ["missing|gap|omit", "generated|index", "CI|check", "ready"],
+      outputPatterns: [
+        "missing|gap|omit",
+        "generated|index",
+        "implementation",
+        "no.*(?:push|PR)|before.*(?:push|PR)",
+      ],
     },
   },
   {
-    id: "create-pr-local-spec-convergence-before-publish",
+    id: "create-pr-missing-behavior-evidence-stops",
     description:
-      "A functional specification gap is fixed and retested locally before the first push or draft PR.",
+      "Missing behavior evidence returns to implementation without testing or publishing.",
     prompt: "/create-pr for issue #91.",
     fixture: {
       evidence: {
@@ -133,12 +133,10 @@ export const evalCases: EvalCase[] = [
           "Branch feature/import-errors has relevant uncommitted implementation and test changes, no unrelated local work, and no remote branch or pull request.",
         specification:
           "Issue #91 requires the import CLI to return exit 2 with a stable JSON error when an input file is missing, while preserving the successful import result. DEFINITION_OF_READY.md requires both observable paths to be exercised through the built CLI before publication.",
-        functionalBehavior:
-          "The first built-CLI probe confirms successful import, but a missing file returns exit 1 and a stack trace. After correcting the error mapping, both real CLI probes produce the specified exit codes and output.",
+        completionEvidence:
+          "The implementation workflow supplied code-review and project-gate results, but no observed black-box result for the built CLI.",
         projectGate:
-          "After the behavior fix, the focused tests and complete declared pre-PR gate pass on the unchanged diff.",
-        continuousIntegration:
-          "After the locally converged branch opens as draft PR #209, every applicable exact-head check reaches a successful terminal result.",
+          "The complete declared pre-PR gate passed on the unchanged diff.",
         pullRequest: "No pull request exists before this workflow starts.",
       },
       actionResponses: {
@@ -147,38 +145,26 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       requiredSkills: ["create-pr"],
-      requiredInspections: ["specification", "functionalBehavior"],
-      requiredInspectionsBeforeActions: [
-        { inspection: "specification", action: "git.push" },
-        { inspection: "functionalBehavior", action: "git.push" },
-        { inspection: "specification", action: "forge.openDraftPr" },
-        { inspection: "functionalBehavior", action: "forge.openDraftPr" },
-      ],
-      requiredActions: [
+      requiredInspections: ["specification", "completionEvidence"],
+      requiredActions: ["report"],
+      forbiddenActions: [
+        "behaviorTest.run",
         "file.edit",
-        "validation.run",
-        "git.commit",
-        "git.push",
+        "forge.mergePr",
         "forge.openDraftPr",
         "forge.markPrReady",
-      ],
-      minActionCounts: { "validation.run": 2 },
-      requiredActionsBeforeActions: [
-        { before: "file.edit", after: "git.push" },
-        { before: "validation.run", after: "git.push" },
-        { before: "validation.run", after: "forge.openDraftPr" },
-      ],
-      forbiddenActions: [
-        "forge.mergePr",
         "git.amend",
+        "git.commit",
         "git.forcePush",
+        "git.push",
         "git.rebase",
+        "validation.run",
       ],
       outputPatterns: [
-        "exit 2|missing file",
-        "real CLI|built CLI|functional",
-        "before.*push|local|locally",
-        "ready",
+        "missing|no observed|unverified",
+        "behavior|black.box|built CLI",
+        "implementation",
+        "no.*(?:push|PR)|before.*(?:push|PR)",
       ],
     },
   },
@@ -294,9 +280,9 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
-    id: "create-pr-fixes-ci-failure-before-ready",
+    id: "create-pr-ci-failure-returns-to-implementation",
     description:
-      "A readiness-complete PR fixes an in-scope CI failure before becoming ready.",
+      "An in-scope CI failure keeps the PR draft and returns to implementation.",
     prompt: "/create-pr",
     fixture: {
       evidence: {
@@ -307,7 +293,7 @@ export const evalCases: EvalCase[] = [
         projectDefinitions:
           "DEFINITION_OF_READY.md exists and the actual PR satisfies every requirement.",
         continuousIntegration:
-          "After the draft opens, a required cache integration test fails on a null entry. Its log reproduces an in-scope missing null guard in the changed code. After fixing the guard, running the focused test and project gate, committing, and pushing, the new CI run passes every applicable check.",
+          "After the draft opens, a required cache integration test fails on a null entry. Its log reproduces an in-scope missing null guard in the changed code.",
         pullRequest: "No pull request exists before this workflow starts.",
       },
       actionResponses: {
@@ -318,19 +304,20 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["create-pr"],
       requiredActions: [
         "forge.openDraftPr",
-        "file.edit",
-        "validation.run",
-        "git.commit",
-        "git.push",
-        "forge.markPrReady",
+        "report",
       ],
       forbiddenActions: [
+        "file.edit",
         "forge.mergePr",
+        "forge.markPrReady",
         "git.amend",
+        "git.commit",
         "git.forcePush",
+        "git.push",
         "git.rebase",
+        "validation.run",
       ],
-      outputPatterns: ["null|cache", "CI|check", "ready"],
+      outputPatterns: ["null|cache", "CI|check", "draft", "implementation"],
     },
   },
   {
@@ -438,6 +425,140 @@ export const evalCases: EvalCase[] = [
         "git.rebase",
       ],
       outputPatterns: ["stack|bottom|top", "90", "exact.head|exact head"],
+    },
+  },
+  {
+    id: "create-pr-draft-for-missing-preview",
+    description:
+      "An explicitly requested draft may obtain a preview but cannot become ready before behavior testing.",
+    prompt:
+      "/create-pr as a draft so we can obtain the missing preview deployment for behavior testing.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "The completed branch is clean, pushed, and one commit ahead of origin/main.",
+        completionEvidence:
+          "Code review and the project gate passed on the exact commit. Deployment-only behavior is unverified because no local or preview environment can run it before a PR exists.",
+        projectGate:
+          "The declared project gate passed on the unchanged commit.",
+        continuousIntegration:
+          "After the draft opens, CI passes and a preview deployment starts for the exact PR head.",
+        pullRequest: "No pull request exists for this branch.",
+      },
+      actionResponses: {
+        "forge.openDraftPr": "Draft PR #210 opened successfully.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr"],
+      requiredInspections: ["completionEvidence"],
+      requiredActions: ["forge.openDraftPr", "report"],
+      forbiddenActions: [
+        "behaviorTest.run",
+        "file.edit",
+        "forge.markPrReady",
+        "git.commit",
+        "git.push",
+        "validation.run",
+      ],
+      outputPatterns: [
+        "draft",
+        "preview",
+        "exact.*(?:revision|head)|(?:revision|head).*exact",
+        "behavior test|black.box|test.*behavior",
+      ],
+    },
+  },
+  {
+    id: "test-against-spec-preview-report",
+    description:
+      "Read-only behavior testing uses an exact-revision preview and reports observed paths.",
+    prompt: "/test-against-spec",
+    fixture: {
+      evidence: {
+        specification:
+          "The confirmed product specification requires saving a valid profile, preserving entered values after refresh, and showing the documented inline error for an invalid handle.",
+        repositoryStatus:
+          "The branch head is commit 9c4e221 and the worktree is clean.",
+        previewDeployment:
+          "The Vercel preview identifies commit 9c4e221 and is available through the rendered product.",
+        observedBehavior:
+          "Through the preview UI, a valid profile saves and survives refresh. An invalid handle remains unsaved and displays the specified inline error.",
+      },
+    },
+    expected: {
+      requiredSkills: ["test-against-spec"],
+      requiredInspections: [
+        "specification",
+        "repositoryStatus",
+        "previewDeployment",
+        "observedBehavior",
+      ],
+      requiredActions: ["behaviorTest.run", "report"],
+      forbiddenActions: [
+        "codeReview.run",
+        "file.edit",
+        "forge.openDraftPr",
+        "git.commit",
+        "git.push",
+        "validation.run",
+      ],
+      outputPatterns: [
+        "9c4e221",
+        "preview",
+        "save|refresh",
+        "invalid handle|inline error",
+        "pass",
+      ],
+    },
+  },
+  {
+    id: "test-against-spec-fix-preview-remains-unverified",
+    description:
+      "Fix mode reproduces externally, fixes locally, and reports an unavailable refreshed preview as unverified.",
+    prompt: "/test-against-spec fix",
+    fixture: {
+      evidence: {
+        specification:
+          "The confirmed specification requires a deployment-only callback to show a retry action after a timeout and complete successfully when retried.",
+        repositoryStatus:
+          "The working branch starts at commit c8a02f4. The callback behavior depends on deployment credentials that are unavailable locally.",
+        previewDeployment:
+          "The current preview is tied to c8a02f4. It reproduces the missing retry action, but no refreshed preview is available after the local fix.",
+        observedBehavior:
+          "On preview c8a02f4 the timeout appears without Retry. The local environment cannot execute the deployment callback. After the fix, the only preview still serves c8a02f4.",
+      },
+    },
+    expected: {
+      requiredSkills: ["test-against-spec"],
+      requiredInspections: [
+        "specification",
+        "repositoryStatus",
+        "previewDeployment",
+        "observedBehavior",
+      ],
+      requiredActions: ["behaviorTest.run", "file.edit", "report"],
+      requiredActionSequence: [
+        "behaviorTest.run",
+        "file.edit",
+        "behaviorTest.run",
+        "report",
+      ],
+      minActionCounts: { "behaviorTest.run": 2 },
+      forbiddenActions: [
+        "codeReview.run",
+        "forge.openDraftPr",
+        "git.commit",
+        "git.push",
+        "validation.run",
+      ],
+      outputPatterns: [
+        "fix.*applied|applied.*fix",
+        "unverified",
+        "preview",
+        "c8a02f4|unchanged|stale|old revision",
+      ],
+      forbiddenOutputPatterns: ["all.*pass|fully verified"],
     },
   },
   {
@@ -576,18 +697,35 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["address-pr-feedback", "agent-writing", "code-review"],
+      requiredSkills: [
+        "address-pr-feedback",
+        "agent-writing",
+        "code-review",
+        "test-against-spec",
+      ],
       requiredSkillsBeforeActions: [
         { skill: "code-review", action: "git.commit" },
         { skill: "code-review", action: "git.push" },
+        { skill: "test-against-spec", action: "git.commit" },
+        { skill: "test-against-spec", action: "git.push" },
       ],
       requiredActions: [
         "file.edit",
+        "codeReview.run",
+        "behaviorTest.run",
         "validation.run",
         "git.commit",
         "git.push",
         "forge.replyInline",
         "forge.resolveThread",
+      ],
+      requiredActionSequence: [
+        "file.edit",
+        "codeReview.run",
+        "behaviorTest.run",
+        "validation.run",
+        "git.commit",
+        "git.push",
       ],
       forbiddenActions: [
         "forge.commentPr",
@@ -657,7 +795,7 @@ export const evalCases: EvalCase[] = [
   {
     id: "address-pr-feedback-code-review-before-push",
     description:
-      "Review fixes pass a bounded local code-review and functional validation before commit and push.",
+      "Review fixes repeat code review and black-box testing before the project gate and push.",
     prompt:
       "/address-pr-feedback 1028. Resolve the current valid finding and update the PR.",
     fixture: {
@@ -671,29 +809,38 @@ export const evalCases: EvalCase[] = [
         affectedCode:
           "The finding correctly reports that the changed batch endpoint accepts 101 items although its specification caps requests at 100.",
         codeReview:
-          "The first bounded code-review pass after the boundary fix detects that unauthorized 101-item requests now return the boundary error before authorization. After correcting that ordering and repeating the functional checks and project gate, the second bounded pass reports no findings.",
+          "The bounded code-review pass after the boundary fix reports no source-based findings. After the later behavior fix, the repeated bounded pass also reports no findings.",
+        behaviorTesting:
+          "The first real-API behavior pass accepts 100 and rejects 101, but discovers that unauthorized 101-item requests now return the boundary error before authorization. After correcting that ordering, the repeated real-API pass observes all three specified outcomes.",
         projectGate:
-          "After the boundary fix, exercise accepted 100-item, rejected 101-item, and unauthorized requests through the real API, then run the declared project gate on the unchanged change.",
+          "After code review and black-box behavior testing both pass on the same unchanged implementation, run the declared project gate.",
         attribution:
           "The authenticated GitHub user is @octocat and the exact current model name is GPT-5.6 Sol.",
       },
     },
     expected: {
-      requiredSkills: ["address-pr-feedback", "code-review"],
+      requiredSkills: [
+        "address-pr-feedback",
+        "code-review",
+        "test-against-spec",
+      ],
       requiredInspections: [
         "pullRequest",
         "specification",
         "affectedCode",
         "codeReview",
+        "behaviorTesting",
         "projectGate",
         "attribution",
       ],
       requiredSkillsBeforeActions: [
         { skill: "code-review", action: "codeReview.run" },
+        { skill: "test-against-spec", action: "behaviorTest.run" },
       ],
       requiredActions: [
         "file.edit",
         "validation.run",
+        "behaviorTest.run",
         "codeReview.run",
         "git.commit",
         "git.push",
@@ -701,24 +848,25 @@ export const evalCases: EvalCase[] = [
         "forge.resolveThread",
       ],
       requiredActionsBeforeActions: [
-        { before: "validation.run", after: "git.push" },
         { before: "codeReview.run", after: "git.push" },
+        { before: "behaviorTest.run", after: "validation.run" },
+        { before: "validation.run", after: "git.push" },
       ],
       requiredActionSequence: [
         "file.edit",
-        "validation.run",
-        "validation.run",
         "codeReview.run",
+        "behaviorTest.run",
         "file.edit",
-        "validation.run",
-        "validation.run",
         "codeReview.run",
+        "behaviorTest.run",
+        "validation.run",
         "git.commit",
         "git.push",
       ],
       minActionCounts: {
         "file.edit": 2,
-        "validation.run": 4,
+        "behaviorTest.run": 2,
+        "validation.run": 1,
         "codeReview.run": 2,
       },
       forbiddenActions: [
@@ -733,7 +881,8 @@ export const evalCases: EvalCase[] = [
         "100",
         "101",
         "authoriz",
-        "reran|repeated",
+        "black.box|real API|behavior",
+        "reran|repeated|restart",
         "project gate|declared gate",
         "before.*push|pre-push",
       ],
@@ -3722,6 +3871,7 @@ export const evalCases: EvalCase[] = [
         "run-retro",
         "software-engineering-excellence",
         "status-report",
+        "test-against-spec",
         "typescript-stack",
         "update-pr",
       ],

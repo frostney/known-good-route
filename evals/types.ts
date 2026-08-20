@@ -26,6 +26,7 @@ export const actionNames = [
   "git.stackSync",
   "monitor.wait",
   "report",
+  "behaviorTest.run",
   "codeReview.run",
   "telemetry.append",
   "user.ask",

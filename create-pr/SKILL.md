@@ -1,10 +1,9 @@
 ---
 name: create-pr
 description: >-
-  Converges a change locally against its specification and real behavior,
-  commits relevant work, opens a templated draft pull request, fills PR-only
-  readiness gaps, fixes CI, and marks it ready. Use when the user runs
-  /create-pr.
+  Publishes a completed change as a templated draft pull request, reconciles
+  PR-only metadata and readiness state, waits for CI, and marks it ready. Use
+  when the user runs /create-pr.
 license: Unlicense OR MIT
 compatibility: >-
   Requires git, Python 3.11 or newer, the GitHub CLI (gh) authenticated to the
@@ -13,10 +12,10 @@ compatibility: >-
 
 # Create PR
 
-The request authorizes the repository's declared gates, relevant fixes and
-commits, PR metadata updates, one ordinary draft pull request or the confirmed
-native stack layers owned by the change, and their transitions to ready for
-review. It does not authorize unrelated changes.
+The request authorizes the repository's declared gates, relevant commits, PR
+metadata updates, one ordinary draft pull request or the confirmed native stack
+layers owned by the change, and their transitions to ready for review. It does
+not authorize implementation fixes or unrelated changes.
 
 When the branch belongs to a native GitHub stack, read
 [../git-workflow/references/github-stacks.md](../git-workflow/references/github-stacks.md).
@@ -30,38 +29,31 @@ confirmed stack layers owned by the current change, not unrelated branches.
    Continue without an empty commit when the work is already committed.
 3. If currently on the base branch, create a focused branch named from the issue
    or change.
-4. Establish the specification before publishing anything. Read the explicit
-   request, linked issue or confirmed mini-spec, required behavior, applicable
-   project instructions, product docs, ADRs or durable decisions, and the
-   nearest `DEFINITION_OF_READY.md`. Treat text as a lead until current source
-   and behavior verify it. If no source states the claim, reconstruct the
-   narrowest claim supported by the change and label it as inferred.
-5. Compare the complete actual change with the full specification and everything
-   required before opening the PR. Inspect its source, tests, documentation,
-   generated artifacts,
-   compatibility effects, and each stack layer's acceptance subset. If no
-   `DEFINITION_OF_READY.md` exists after a real search, apply this workflow's
-   built-in gates.
-6. Exercise every requirement that can be tested through the real product
-   interface. Cover the intended path and the most consequential failure or
-   boundary path. Use the rendered UI, API, CLI, library entry point, job,
-   migration, package, or deployment path that the change actually delivers.
-   Record setup, input, expected result, and observed result. When real execution
-   is not safe or available, record the requirement as static-only; do not
-   present it as behaviorally verified.
-7. Fill every in-scope implementation, test, documentation, or artifact gap.
-   Rerun the affected functional checks and the repository's declared pre-PR
-   gate, then compare the resulting change with the specification again.
-   Continue this local loop until every in-scope requirement has current evidence
-   and the gate passes on the unchanged diff. Never weaken a gate or substitute
-   a codebase inspection for testing delivered functionality. Stop for a
-   material product, architecture, security, compatibility, or scope decision,
-   unrelated work, or behavior that cannot be validated safely.
-8. Stage only relevant files, excluding secrets and unrelated local work.
+4. Establish the PR claim and publication requirements before publishing
+   anything. Read the explicit request, linked issue or confirmed mini-spec,
+   applicable project instructions, product docs, ADRs or durable decisions,
+   the nearest `DEFINITION_OF_READY.md`, and the completion evidence supplied by
+   the implementation workflow. If no source states the claim, reconstruct the
+   narrowest claim supported by the commits and diff and label it as inferred.
+5. Verify that code review, observed behavior, and the repository's project gate
+   all passed on the exact current change. An explicitly accepted limitation
+   must name the unverified behavior. Reuse a current project-gate result rather
+   than running it again. If the gate result is missing or stale, run the
+   declared gate once without weakening it.
+6. Stop when required review or behavior evidence is missing, stale, failed, or
+   unverified without explicit acceptance. Stop when the project gate fails.
+   Report the exact missing evidence or failure and return the change to its
+   implementation workflow. Do not test delivered behavior, inspect source as a
+   substitute, or fix implementation, test, documentation, generated-artifact,
+   compatibility, or CI gaps in this workflow. The only publication exception
+   is an explicit user request for a draft PR to obtain a preview environment
+   that does not otherwise exist. That PR must remain draft until behavior is
+   tested on a preview tied to its exact revision.
+7. Stage only relevant files, excluding secrets and unrelated local work.
    Commit uncommitted work with a concise Conventional Commit subject. Never
    amend and never skip hooks. Preserve already-published history and add a new
    commit for any correction.
-9. Title each pull request with a Conventional Commit subject covering the whole
+8. Title each pull request with a Conventional Commit subject covering the whole
    change, since the squash merge makes that title the commit subject on the
    base branch. Fill the matching PR template for each submitted layer and
    preserve its structure. If none exists, use Summary, Testing, and Linked
@@ -69,38 +61,40 @@ confirmed stack layers owned by the current change, not unrelated branches.
    open and closed issues and recent sibling sessions or adjacent branches when
    available for related findings and duplicates. Put each closing keyword on
    its own line as `Closes #N`, and only on the layer that completes that issue.
-10. Only after the local convergence loop passes, push an ordinary branch
-    normally and set its upstream when needed, then open one draft PR against
-    the remote default. For a verified native stack, use `gh stack submit` only
-    after every submitted layer passes its local acceptance subset; only guarded
-    official stack operations may rebase or push with force-with-lease. Preserve
-    bottom-to-top topology and keep each layer draft.
-11. Run the PR-specific readiness phase. Compare every requirement with the
-    actual PR diff, body, links, metadata, committed tests and documentation,
-    observed local evidence, and any facts that exist only after publication.
-    Correct metadata-only gaps without a commit.
-12. If the PR-specific phase exposes a repository, code, or behavior gap, return
-    to steps 4 through 7. Apply the fix locally, repeat specification comparison
-    and real functional testing, rerun the declared gate, create a new commit,
-    and only then push. Never mark a requirement satisfied without observed
-    evidence.
-13. Invoke `delivery-wait`'s foreground `wait checks-terminal` operation with
+9. Only after the publication checks pass, push an ordinary branch normally and
+   set its upstream when needed, then open one draft PR against the remote
+   default. For a verified native stack, use `gh stack submit` only after every
+   submitted layer has current completion evidence; only guarded official stack
+   operations may rebase or push with force-with-lease. Preserve bottom-to-top
+   topology and keep each layer draft.
+10. Run the PR-specific phase. Compare the actual PR diff, body, links, metadata,
+    committed tests and documentation, supplied completion evidence, and facts
+    that exist only after publication. Correct metadata-only gaps without a
+    commit.
+11. If the PR-specific phase or CI exposes a repository, code, behavior, test,
+    documentation, generated-artifact, or compatibility gap, keep the PR draft
+    and return the exact failure to the implementation workflow. Do not fix it
+    here. A later caller may update the PR after the appropriate implementation,
+    review, behavior-testing, and project-gate loop passes.
+12. Invoke `delivery-wait`'s foreground `wait checks-terminal` operation with
     the repository, exact head, checkpoint, absolute deadline, and `--json`; the
     harness passively awaits it without model heartbeats. When it returns,
-    inspect unsuccessful logs. A validated in-scope code or behavior failure
-    returns to the local loop in steps 4 through 7 before a new commit and push.
+    inspect unsuccessful logs. Report a validated code or behavior failure under
+    step 11 rather than fixing it.
     If the host cannot passively await a subprocess, report the unsupported
     capability instead of polling through model turns.
-14. Keep the PR in draft while any requirement for marking it ready or CI check
-    is pending or failing. If an expected pull-request workflow produces no run, read the PR's
+13. Keep the PR in draft while any requirement for marking it ready or CI check
+    is pending or failing. A PR opened to obtain a preview returns to the
+    implementation workflow for black-box testing and cannot become ready in
+    this run. If an expected pull-request workflow produces no run, read the PR's
     `mergeable_state` first: a dirty PR gets no pull-request runs, and no
     retrigger can help until the conflict is resolved. Continue monitoring
     pending checks; if they cannot reach a terminal result during the run,
     report their current state. Stop and report the exact blocker for a material
     decision, unrelated failure, unavailable external service, or validation
     that cannot be performed safely.
-15. Once the PR is missing nothing required by the local and PR-specific
-    readiness phases and all applicable CI is observed green for its exact head,
-    mark it ready for review. Return every affected URL, native stack order when
-    applicable, final states, fixes made, and observed specification,
-    functional, readiness, and CI evidence.
+14. Once the PR is missing nothing required by the publication and PR-specific
+    phases and all applicable CI is observed green for its exact head, mark it
+    ready for review. Return every affected URL, native stack order when
+    applicable, final states, metadata changes, supplied completion evidence,
+    and observed readiness and CI evidence.
