@@ -3,7 +3,7 @@ name: software-engineering-excellence
 description: >-
   Applies the user's ambient engineering bar: current evidence, complete
   in-scope solutions, reuse, real validation, maintainability-governed
-  performance, and fast developer feedback. Use for planning, orchestrating,
+  performance, and fast developer feedback. Use when planning, orchestrating,
   implementing, debugging, reviewing, refactoring, architecture, release
   delivery, or substantial technical investigation.
 license: Unlicense OR MIT
