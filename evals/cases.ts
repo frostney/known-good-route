@@ -1873,6 +1873,134 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "address-stack-feedback-read-only-is-non-mutating",
+    description:
+      "A read-only stack review reports the whole native stack without triggers, replies, fixes, or merge actions.",
+    prompt: "/address-stack-feedback 17 read-only",
+    fixture: {
+      evidence: {
+        nativeStack:
+          "Repository octo/app native stack 17 is bottom-to-top PR #701 at 701aaaa and PR #702 at 702bbbb. Both heads and the base are unchanged.",
+        reviewEvidence:
+          "PR #701 is reviewed but has a live inline finding at the integrated top. PR #702 review is terminal and clean. The #701 thread is unresolved and unanswered.",
+        authority:
+          "Read-only disables checkout, triggers, replies, resolutions, edits, commits, pushes, PR state changes, and merge.",
+      },
+    },
+    expected: {
+      requiredSkills: ["address-stack-feedback"],
+      requiredReferences: ["address-stack-feedback/references/readiness.md"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.markPrReady",
+        "forge.mergePr",
+        "forge.replyInline",
+        "forge.resolveThread",
+        "git.commit",
+        "git.push",
+        "git.stackMerge",
+        "git.stackSubmit",
+      ],
+      outputPatterns: [
+        "stack 17|stack.*17",
+        "#701|701aaaa",
+        "#702|702bbbb",
+        "pending|blocked",
+        "unresolved|unanswered|live finding",
+        "read-only|no mutation|not mutated",
+      ],
+      forbiddenOutputPatterns: ["\\bready\\b", "\\bmerged\\b"],
+    },
+  },
+  {
+    id: "address-stack-feedback-adds-one-fix-layer-and-returns-whole-ready",
+    description:
+      "Live findings from frozen layers accumulate in one reviewed top fix layer and only the complete stack becomes ready.",
+    prompt: "/address-stack-feedback 18",
+    fixture: {
+      evidence: {
+        nativeStack:
+          "Repository octo/app native stack 18 starts bottom-to-top as PR #711 at 711aaaa and PR #712 at 712bbbb. Their exact-head reviews are terminal and their heads stay frozen.",
+        findings:
+          "PR #711 and PR #712 each have one validated live inline finding at the integrated top. Both can be fixed without a material decision.",
+        fixRound:
+          "One appended top fix layer PR #713 at 713cccc contains both fixes. Code review, black-box behavior tests, the project gate, exact-head CI, and its own review all pass unchanged. Every originating and fix-layer thread is replied to and resolved.",
+        finalAudit:
+          "The final live native stack is exactly [#711 711aaaa, #712 712bbbb, #713 713cccc], with no unresolved or unanswered thread and no actionable finding.",
+      },
+    },
+    expected: {
+      requiredSkills: [
+        "address-stack-feedback",
+        "code-review",
+        "test-against-spec",
+      ],
+      requiredReferences: ["address-stack-feedback/references/readiness.md"],
+      requiredActions: [
+        "file.edit",
+        "forge.replyInline",
+        "forge.resolveThread",
+        "git.commit",
+        "git.stackSubmit",
+        "codeReview.run",
+        "behaviorTest.run",
+        "validation.run",
+        "report",
+      ],
+      maxActionCounts: { "git.stackSubmit": 1 },
+      forbiddenActions: [
+        "forge.mergePr",
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+        "git.stackMerge",
+      ],
+      outputPatterns: [
+        "stack 18|stack.*18",
+        "#711|711aaaa",
+        "#712|712bbbb",
+        "#713|713cccc",
+        "covered",
+        "complete.*ready|stack.*ready|ready.*stack",
+        "not merged|without merg|merge.*caller|merge.*outside",
+      ],
+    },
+  },
+  {
+    id: "address-stack-feedback-invalidates-drifted-descendants",
+    description:
+      "A changed lower exact head invalidates that member and every descendant instead of preserving stale readiness.",
+    prompt: "/address-stack-feedback 19 read-only",
+    fixture: {
+      evidence: {
+        expectedStack:
+          "The reviewed snapshot was [#721 721aaaa, #722 722bbbb, #723 723cccc].",
+        liveStack:
+          "Native stack 19 now reports [#721 721aaaa, #722 722new0, #723 723cccc]. The position-1 head changed outside this workflow.",
+      },
+    },
+    expected: {
+      requiredSkills: ["address-stack-feedback"],
+      requiredReferences: ["address-stack-feedback/references/readiness.md"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.mergePr",
+        "git.commit",
+        "git.push",
+        "git.stackMerge",
+        "git.stackSubmit",
+      ],
+      outputPatterns: [
+        "stack 19|stack.*19",
+        "722new0|#722",
+        "invalidat",
+        "position 1|#722.*descendant|#723",
+        "pending|blocked",
+      ],
+      forbiddenOutputPatterns: ["complete.*ready|stack.*ready", "\\bmerged\\b"],
+    },
+  },
+  {
     id: "status-report-reconciles-prs-and-worktrees",
     description:
       "A status report reconciles every open PR and worktree into one read-only current-head board.",
@@ -4176,6 +4304,7 @@ export const evalCases: EvalCase[] = [
         "project-structure",
         "react-stack",
         "address-pr-feedback",
+        "address-stack-feedback",
         "roadmap-review",
         "run-retro",
         "software-engineering-excellence",

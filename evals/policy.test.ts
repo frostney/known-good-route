@@ -99,6 +99,51 @@ describe("cross-skill policy", () => {
     );
   });
 
+  test("stack feedback freezes reviewed heads and admits only the complete stack", async () => {
+    const source = await skill("address-stack-feedback");
+    const readiness = await Bun.file(
+      resolve(repositoryRoot, "address-stack-feedback/references/readiness.md"),
+    ).text();
+
+    expect(source).toContain("one repository-scoped native stack number");
+    expect(source).toContain("Review every initial member once for its exact head");
+    expect(source).toContain("create exactly one new branch above the current top");
+    expect(source).toContain("never push those fixes into any frozen member");
+    expect(source).toContain("Never merge, enqueue, enable automatic merge, buy review capacity");
+    expect(source).toMatch(/The exact\s+`read-only` qualifier disables every mutation/);
+    expect(readiness).toContain("A covered lower member can still contain the reported flaw");
+    expect(readiness).toMatch(/never returns\s+`merged`/);
+  });
+
+  test("stack feedback keeps CodeRabbit behavior in executable adapter code", async () => {
+    const source = await skill("address-stack-feedback");
+    const adapter = await Bun.file(
+      resolve(
+        repositoryRoot,
+        "address-stack-feedback/scripts/coderabbit_adapter.py",
+      ),
+    ).text();
+
+    expect(source).toContain("Provider-neutral behavior is the default");
+    expect(source).toMatch(/does not\s+own stack identity, findings, fixes, readiness/);
+    expect(source).toContain("scripts/coderabbit_adapter.py");
+    expect(source).toContain("do not reconstruct its trigger, completion");
+    expect(source).not.toContain("references/coderabbit.md");
+    expect(adapter).toContain('"@coderabbitai review"');
+    expect(adapter).toContain('"@coderabbitai full review"');
+    expect(adapter).toContain("updated_at");
+    expect(adapter).toContain("fcntl.LOCK_EX");
+    expect(adapter).not.toContain("usage-based");
+  });
+
+  test("milestone rush delegates a native stack once and retains merge authority", async () => {
+    const source = await skill("milestone-rush");
+
+    expect(source).toContain("/address-stack-feedback\n   <stack-number>` once");
+    expect(source).toContain("complete ready stack through `git-workflow`");
+    expect(source).toContain("Never\n   merge a prefix beneath a required top fix layer");
+  });
+
   test("implementation owns the review and behavior-testing loop", async () => {
     for (const name of ["implement-idea", "implement-issue"]) {
       const source = await skill(name);

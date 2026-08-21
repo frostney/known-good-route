@@ -99,9 +99,11 @@ not release publication.
    ambiguous, dirty, pre-existing, or unrelated state and report it.
 4. Let the implementation workflow validate, review, and hand off through
    `/create-pr`. As each ordinary PR becomes ready, run `/address-pr-feedback
-   automatic-merge`. For a native stack, collect each layer's `address-pr-feedback`
-   exact-head `ready` result, then let the stack owner recheck and atomically
-   merge the selected ready prefix through `git-workflow`.
+   automatic-merge`. For a native stack, invoke `/address-stack-feedback
+   <stack-number>` once for the stack identity. Accept only its exact-topology,
+   exact-head whole-stack `ready` result; then recheck that same snapshot and
+   atomically merge the complete ready stack through `git-workflow`. Never
+   merge a prefix beneath a required top fix layer.
 5. Keep remediation validation focused on the changed behavior. Run the
    repository's complete local gate once only after implementation and bounded
    review fixes converge on the intended head, unless a new material source

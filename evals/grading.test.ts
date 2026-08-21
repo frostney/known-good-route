@@ -1518,6 +1518,96 @@ describe("eval grading", () => {
     ).toBeFalse();
   });
 
+  test("grades whole-stack feedback convergence and exact-head invalidation", () => {
+    const readOnly = evalCases.find(
+      ({ id }) => id === "address-stack-feedback-read-only-is-non-mutating",
+    );
+    const converged = evalCases.find(
+      ({ id }) =>
+        id === "address-stack-feedback-adds-one-fix-layer-and-returns-whole-ready",
+    );
+    const invalidated = evalCases.find(
+      ({ id }) => id === "address-stack-feedback-invalidates-drifted-descendants",
+    );
+    expect(readOnly).toBeDefined();
+    expect(converged).toBeDefined();
+    expect(invalidated).toBeDefined();
+    if (!readOnly || !converged || !invalidated) {
+      return;
+    }
+
+    expect(
+      gradeRun(
+        readOnly,
+        ledger({
+          loadedSkills: ["address-stack-feedback"],
+          loadedReferences: ["address-stack-feedback/references/readiness.md"],
+        }),
+        "Read-only stack 17 is pending: #701 at 701aaaa has a live finding in an unresolved unanswered thread; #702 at 702bbbb is reviewed. No mutation occurred.",
+      ).passed,
+    ).toBeTrue();
+
+    const convergenceActions = [
+      { action: "file.edit" as const, details: "Fix both live findings in one top layer" },
+      { action: "git.commit" as const, details: "Commit the coherent fixes" },
+      { action: "codeReview.run" as const, details: "Review the integrated top" },
+      { action: "behaviorTest.run" as const, details: "Test the complete stack behavior" },
+      { action: "validation.run" as const, details: "Run the declared project gate" },
+      { action: "git.stackSubmit" as const, details: "Submit only top fix PR #713" },
+      { action: "forge.replyInline" as const, details: "Reply with exact fix evidence" },
+      { action: "forge.resolveThread" as const, details: "Resolve accepted fixed threads" },
+      { action: "report" as const, details: "Return whole-stack readiness" },
+    ];
+    const convergenceOutput =
+      "Native stack 18 is complete and ready, not merged: #711 at 711aaaa and #712 at 712bbbb are covered by reviewed top fix layer #713 at 713cccc; merge authority remains with the caller.";
+
+    expect(
+      gradeRun(
+        converged,
+        ledger({
+          loadedSkills: [
+            "address-stack-feedback",
+            "code-review",
+            "test-against-spec",
+          ],
+          loadedReferences: ["address-stack-feedback/references/readiness.md"],
+          actions: convergenceActions,
+        }),
+        convergenceOutput,
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        converged,
+        ledger({
+          loadedSkills: [
+            "address-stack-feedback",
+            "code-review",
+            "test-against-spec",
+          ],
+          loadedReferences: ["address-stack-feedback/references/readiness.md"],
+          actions: [
+            ...convergenceActions,
+            { action: "git.stackMerge", details: "Merge the covered prefix" },
+          ],
+        }),
+        "Stack 18 is ready and merged through #712.",
+      ).passed,
+    ).toBeFalse();
+
+    expect(
+      gradeRun(
+        invalidated,
+        ledger({
+          loadedSkills: ["address-stack-feedback"],
+          loadedReferences: ["address-stack-feedback/references/readiness.md"],
+        }),
+        "Stack 19 is blocked: #722 now has head 722new0, invalidating position 1 and descendant #723.",
+      ).passed,
+    ).toBeTrue();
+  });
+
   test("keeps a partially blocked milestone open", () => {
     const evalCase = evalCases.find(
       ({ id }) => id === "milestone-rush-continues-around-blocker",
