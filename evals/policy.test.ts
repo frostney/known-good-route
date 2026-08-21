@@ -115,18 +115,25 @@ describe("cross-skill policy", () => {
     expect(readiness).toMatch(/never returns\s+`merged`/);
   });
 
-  test("stack feedback keeps provider behavior behind a narrow adapter", async () => {
+  test("stack feedback keeps CodeRabbit behavior in executable adapter code", async () => {
     const source = await skill("address-stack-feedback");
-    const coderabbit = await Bun.file(
-      resolve(repositoryRoot, "address-stack-feedback/references/coderabbit.md"),
+    const adapter = await Bun.file(
+      resolve(
+        repositoryRoot,
+        "address-stack-feedback/scripts/coderabbit_adapter.py",
+      ),
     ).text();
 
     expect(source).toContain("Provider-neutral behavior is the default");
     expect(source).toMatch(/does not\s+own stack identity, findings, fixes, readiness/);
-    expect(coderabbit).toMatch(/limiter is account-scoped/);
-    expect(coderabbit).toContain("incremental");
-    expect(coderabbit).toContain("full review");
-    expect(coderabbit).toContain("Never enable the provider's usage-based paid review option");
+    expect(source).toContain("scripts/coderabbit_adapter.py");
+    expect(source).toContain("do not reconstruct its trigger, completion");
+    expect(source).not.toContain("references/coderabbit.md");
+    expect(adapter).toContain('"@coderabbitai review"');
+    expect(adapter).toContain('"@coderabbitai full review"');
+    expect(adapter).toContain("updated_at");
+    expect(adapter).toContain("fcntl.LOCK_EX");
+    expect(adapter).not.toContain("usage-based");
   });
 
   test("milestone rush delegates a native stack once and retains merge authority", async () => {

@@ -47,14 +47,21 @@ stack reaches a clean fixed point or an explicit blocker.
   > Created on behalf of @username using ModelName.
 
 Read [references/readiness.md](references/readiness.md) before assigning layer or
-stack state. Read [references/coderabbit.md](references/coderabbit.md) only when
-current repository policy or live activity identifies CodeRabbit as active.
+stack state.
 
 Use `scripts/stack_state.py` with `--json` for native topology snapshots and
 change waits. Use `address-pr-feedback/scripts/review_wait.py` with `--json` for
 each pull request's finding surfaces, review transitions, replies, and
 resolutions. The helpers supply facts and exact mutations; this workflow owns
 finding judgment, remediation, coverage, and readiness.
+
+When current policy or activity identifies CodeRabbit as active, use
+`scripts/coderabbit_adapter.py`; do not reconstruct its trigger, completion,
+acknowledgment, coverage, rate-limit, or locking logic from prose. In read-only
+mode, run `status` with every exact `PR=SHA`. In normal mode, run `run` for one
+PR at a time with its exact head and an absolute deadline. Supply every known
+repository with recent CodeRabbit activity through repeated `--scan-repo`
+arguments so the adapter can select the newest edited account-scoped wait.
 
 ## Review rounds
 
@@ -68,10 +75,10 @@ finding judgment, remediation, coverage, and readiness.
    claims. Stop when member scope is unrelated or the stack cannot safely ship
    as one atomic unit.
 3. Discover active review providers from current policy, checks, and activity.
-   Keep the core provider-neutral. Load an exact provider reference only for
-   behavior that generic GitHub checks, reviews, comments, and explicit retry
-   times cannot represent. A missing or ambiguous required provider operation is
-   pending, never a guessed trigger, completion, or wait.
+   Keep the core provider-neutral. Use executable adapter code only for behavior
+   that generic GitHub checks, reviews, comments, and explicit retry times cannot
+   represent. A missing or ambiguous required provider operation is pending,
+   never a guessed trigger, completion, or wait.
 4. Review every initial member once for its exact head. Serialize triggers when
    the active provider has account-wide, repository-wide, or other shared
    limits. During waits, use foreground transition commands and passively await
@@ -121,9 +128,12 @@ the provider-specific trigger, completion evidence, contention scope, explicit
 retry source, and escalation needed to obtain a trustworthy review. It does not
 own stack identity, findings, fixes, readiness, merge authority, or general CI.
 
-Do not invent adapters for ordinary GitHub review state. Do not copy one
-provider's bot names, commands, comment text, quotas, timers, or paid options
-into the core workflow.
+Do not invent adapters for ordinary GitHub review state. Do not copy provider
+commands, comment parsing, timers, or paid options into the core workflow. The
+CodeRabbit adapter is the sole owner of its two permitted trigger commands. Its
+`run` operation serializes triggers with one authenticated-account lock, polls
+through stated waits, escalates untrusted incremental acknowledgments to a full
+review, refuses guessed retry times, and never exposes a paid-review command.
 
 ## Result contract
 
