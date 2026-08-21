@@ -6,6 +6,15 @@ sources by stable identity, timestamp, head, and causal relationship while
 retaining provenance. Never manufacture missing start times, durations, usage,
 or causal links.
 
+For a Milestone Rush ledger, run the bundled one-shot `validate` and `summarize`
+commands from
+[`event-ledger.md`](../../milestone-rush/references/event-ledger.md) for the
+selected `runId` before reconstructing totals. Treat schema-v2 normalized
+counter totals and provenance as primary telemetry, then reconcile lifecycle
+and forge evidence. Schema-v1 counters are non-aggregatable, and missing
+baselines, resets, gaps, or unavailable host adapters are confidence limits,
+not invitations to recover primary totals from model prose.
+
 ## Canonical lifecycle
 
 Map these high-level phases when they occur: discovery, design, decision waiting,
@@ -77,6 +86,12 @@ confirmed from issue or pull-request history, log-derived, or approximate.
   pull-request history, CI, and logs expose it in multiple forms; retain all source references.
 - **Output:** merge lessons with the same cause, impact, and proposed action;
   preserve provenance and reconcile conflicts.
+
+Audit the complete available coordinator and subagent record as a process
+surface. Report repeated reasoning, evidence reconstruction, loaded-but-unused
+or bypassed skills, manual resumes, capability-routing mistakes, and other
+no-value context separately from delivery, process, and codebase findings so
+context cost does not become a vague substitute for a supported lesson.
 
 Implementation duplication may be reported when it directly caused workstream
 friction. Wider repository discovery belongs to `codebase-audit`. If the

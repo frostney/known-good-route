@@ -2369,6 +2369,104 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "retrospective-traces-process-before-correction",
+    description:
+      "A retro traces decisions, implementation, docs, and the complete agent record before recommending a correction.",
+    prompt:
+      "Run the retro and recommend how to prevent the delivery workflow from repeating this failure.",
+    fixture: {
+      evidence: {
+        workstream:
+          "The delivery completed after a coordinator and three subagents worked across two manually resumed sessions.",
+        originatingDecisions:
+          "ADR-9 already settles the intended ready-for-review transition. No contradictory current requirement exists.",
+        currentImplementation:
+          "The executable controller performs that transition one state later than ADR-9 requires.",
+        currentDocumentation:
+          "The operator guide copied the controller's later transition and now disagrees with ADR-9.",
+        coordinatorConversation:
+          "The coordinator asked the settled transition question twice and reconstructed the same CI evidence after each resume.",
+        subagentConversations:
+          "One subagent loaded the delivery skill but bypassed it; another repeated an already completed implementation trace.",
+        processTelemetry:
+          "The record identifies two manual resumes, duplicate evidence collection, and one capability-routing mistake. One terminated subagent transcript is unavailable.",
+      },
+      registeredSkills: {
+        grilling:
+          "Ask one decision at a time. The user selects a documentation correction and implementation ticket after seeing the complete evidence.",
+      },
+    },
+    expected: {
+      requiredSkills: ["run-retro", "render-html"],
+      requiredRegisteredSkills: ["grilling"],
+      requiredInspections: [
+        "originatingDecisions",
+        "currentImplementation",
+        "currentDocumentation",
+        "coordinatorConversation",
+        "subagentConversations",
+        "processTelemetry",
+      ],
+      requiredInspectionsBeforeActions: [
+        { inspection: "originatingDecisions", action: "user.ask" },
+        { inspection: "currentImplementation", action: "user.ask" },
+        { inspection: "currentDocumentation", action: "user.ask" },
+        { inspection: "coordinatorConversation", action: "user.ask" },
+        { inspection: "subagentConversations", action: "user.ask" },
+        { inspection: "processTelemetry", action: "user.ask" },
+      ],
+      requiredActions: ["file.edit", "user.ask", "forge.createIssue"],
+      requiredActionsBeforeActions: [
+        { before: "user.ask", after: "forge.createIssue" },
+      ],
+      forbiddenActions: ["delegate"],
+      outputPatterns: [
+        "implementation drift",
+        "documentation drift",
+        "settled|ADR-9",
+        "no-value context|added no value",
+        "manual resume",
+        "loaded.*bypass|bypass.*skill",
+        "unavailable|evidence gap",
+      ],
+    },
+  },
+  {
+    id: "retrospective-selected-immediate-action",
+    description:
+      "An explicitly selected immediate retro action enters normal issue implementation while the retro stays active.",
+    prompt:
+      "I select the recommended controller correction for implementation before the next cycle. Do it now and continue the retro.",
+    fixture: {
+      evidence: {
+        confirmedAction:
+          "The completed grilling selected the controller correction, its scope, evidence, non-goals, and acceptance criteria. No material decision remains.",
+        issueSearch:
+          "No existing issue tracks this correction, so create one visibility issue before implementation.",
+        implementationRoute:
+          "The normal implement-issue workflow is available with its current investigation, review, black-box testing, project-gate, and PR gates.",
+      },
+      actionResponses: {
+        "forge.createIssue": "Created visibility issue #88.",
+        delegate:
+          "Normal implement-issue delivered issue #88 and returned exact-head validation evidence.",
+      },
+    },
+    expected: {
+      requiredSkills: ["run-retro", "create-issue", "implement-issue"],
+      requiredInspections: ["confirmedAction", "issueSearch", "implementationRoute"],
+      requiredActionSequence: ["forge.createIssue", "delegate", "report"],
+      forbiddenActions: ["user.ask"],
+      outputPatterns: [
+        "explicit|selected",
+        "create-issue|issue #88",
+        "normal implement-issue|implement-issue",
+        "retro.*active|retrospective.*active|continue.*retro",
+        "delivered|blocked",
+      ],
+    },
+  },
+  {
     id: "chained-deliverables-isolate-worker-context",
     description:
       "A conversation coordinating consecutive substantial deliverables keeps decisions while isolated workers return terminal summaries.",
@@ -3288,6 +3386,7 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       requiredSkills: ["milestone-rush"],
+      requiredReferences: ["milestone-rush/references/event-ledger.md"],
       requiredActions: [
         "delegate",
         "validation.run",
@@ -3312,7 +3411,11 @@ export const evalCases: EvalCase[] = [
         "effective.*worker|worker.*capacity",
         "unavailableFields|unavailable fields|silent null",
         "ledger.*valid|valid.*ledger",
+        "event_ledger\.py.*ingest|ingest.*event_ledger\.py",
+        "validate.*summarize|summarize.*validate",
+        "normalized|adapter",
       ],
+      forbiddenOutputPatterns: ["parse.*provider transcript|provider transcript parser"],
     },
   },
   {

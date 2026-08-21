@@ -36,13 +36,18 @@ flowchart TB
         Roadmap["/roadmap-review"]
         Rush["/milestone-rush"]
         Retro["/run-retro"]
+        ImmediateDecision{"Improvement selected<br/>before next cycle?"}
+        Immediate["/create-issue<br/>then normal /implement-issue"]
         ReleaseDecision{"Release now?"}
         Release["/create-release"]
         Next["Next cycle<br/>from fresh evidence"]
 
         Roadmap -->|"confirm milestone and tracked scope"| Rush
         Rush -->|"approve retrospective"| Retro
-        Retro --> ReleaseDecision
+        Retro --> ImmediateDecision
+        ImmediateDecision -->|"yes: explicit selection"| Immediate
+        Immediate -->|"delivered or blocked"| Retro
+        ImmediateDecision -->|"no"| ReleaseDecision
         ReleaseDecision -->|"yes: invoke manually"| Release
         ReleaseDecision -->|"no"| Next
         Release --> Next
@@ -94,6 +99,10 @@ flowchart TB
   the milestone, `/milestone-rush` offers the retrospective after integrated
   completion, and `/create-release` is an optional manual step after
   `/run-retro`; none starts the next stage automatically.
+- `/run-retro` may recommend an improvement before the next cycle, but only an
+  explicit user selection enters `/create-issue` and normal
+  `/implement-issue`. The retrospective remains active until that selected
+  action is delivered or genuinely blocked.
 - While `/milestone-rush` is active, let it own the nested delivery loop. It
   delegates implementation through the automatic modes, PR handoff, continuous
   review-axis-lane code review, and merge instead of asking the user to invoke
@@ -120,7 +129,7 @@ flowchart TB
 | [`implement-issue`](implement-issue/SKILL.md) | Validate an issue, present viable options from one evidence packet in a temporary interactive HTML impact review, use `grilling` for selection, then implement and repeat code review plus black-box testing until both pass unchanged before the project gate and `/create-pr`. Automatic mode skips the report and grill. |
 | [`implement-idea`](implement-idea/SKILL.md) | Turn an unfiled idea into a confirmed mini-spec, present viable options from one evidence packet in a temporary interactive HTML impact review, use `grilling` for selection, then implement and repeat code review plus black-box testing until both pass unchanged before the project gate and `/create-pr`. Automatic mode skips the report and grill. |
 | [`render-html`](render-html/SKILL.md) | Render validated, self-contained interactive reports from one flexible structured schema with evidence classifications, Before/After states, option tradeoffs, weighted scores, copy status, and optional diagrams. |
-| [`run-retro`](run-retro/SKILL.md) | Review a completed workstream and use `render-html` to produce a durable impact report with per-item summaries of at most 300 characters, evidence-backed Before/After states, copyable or app-linked deep dives, and optional animated mechanism diagrams. |
+| [`run-retro`](run-retro/SKILL.md) | Review a completed workstream after tracing process origins, current implementation and docs, and the complete available agent record; use `render-html` for a durable impact report and route only explicitly selected immediate improvements through normal issue implementation. |
 | [`create-pr`](create-pr/SKILL.md) | Publish a completed change as a templated draft PR or verified native GitHub stack, reconcile PR-only metadata, wait for exact-head CI, and mark each complete layer ready without testing or fixing implementation behavior. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and update the current PR, merging ordinary baselines or using guarded native stack synchronization, then refresh stale metadata. |
 | [`address-pr-feedback`](address-pr-feedback/SKILL.md) | Address feedback on one PR, repeat `/code-review fix-all` and black-box specification testing before substantive pushes, require exact-final-head CI and review evidence, reply in originating threads, and wait deterministically. Normal mode never merges; `automatic-merge` merges only an ordinary ready PR. |
@@ -129,7 +138,7 @@ flowchart TB
 | [`test-against-spec`](test-against-spec/SKILL.md) | Test externally observable behavior against explicit requirements through real interfaces, preferring an exact-revision preview deployment when available. Report by default; the exact `fix` qualifier authorizes in-scope fixes and black-box retesting. |
 | [`create-release`](create-release/SKILL.md) | Prepare a changelog-first release PR, then publish only when authorized and through exactly one evidence-backed path. Existing workflows own publication when configured; the agent never double-publishes with `gh release create`. |
 | [`roadmap-review`](roadmap-review/SKILL.md) | Review a project's roadmap from freshly-pulled data: assess current state and release cadence, measure delivery velocity from history, verify candidate work against the source, produce a parallelized throughput-anchored version plan, and (optionally, on confirmation) create milestones and issues. |
-| [`milestone-rush`](milestone-rush/SKILL.md) | Complete a confirmed milestone through repository-owned preflights, isolated worker packets, focused remediation, one terminal complete gate, event-driven waits, native stacks or ordinary PRs, and a closure-validated timing/token ledger; verify integrated completion and offer an explicitly approved retrospective. |
+| [`milestone-rush`](milestone-rush/SKILL.md) | Complete a confirmed milestone through repository-owned preflights, isolated worker packets, focused remediation, one terminal complete gate, event-driven waits, native stacks or ordinary PRs, and a one-shot validated normalized event ledger; verify integrated completion and offer an explicitly approved retrospective. |
 
 ### One-off project setup, guidance, and audit skills
 
@@ -273,9 +282,10 @@ that evidence.
   standalone implementations remain unchanged. It never creates a release and
   invokes `/run-retro` only after explicit approval.
 - `run-retro` consumes Milestone Rush's ignored JSONL event ledger when present,
-  reconciles it with issue, pull-request, and repository evidence, and keeps
+  validates and summarizes normalized delta or snapshot measurements,
+  reconciles them with issue, pull-request, and repository evidence, and keeps
   exclusive elapsed bottlenecks separate from overlapping and aggregate
-  resource consumption. It
+  resource consumption. Host integrations own provider-specific adapters. It
   always produces a local HTML impact report with concise Before/After cards
   through `render-html` and offers card-level deep dives through `grilling`.
 - `create-issue` invokes `/grill-with-docs` or `/grill-me` for thoroughness when
@@ -295,7 +305,11 @@ that evidence.
 - `implement-idea` borrows `/create-issue`'s good-issue components when formulating the idea.
 - `run-retro` requires `grilling` for the retrospective interview and final
   confirmation, then applies only user-selected documentation edits and ticket
-  actions.
+  actions. It traces originating decisions, executable behavior, documentation,
+  and complete available coordinator/subagent evidence before recommending a
+  correction. An explicitly selected implement-before-next-cycle action passes
+  through `/create-issue` and normal `/implement-issue` while the retrospective
+  remains active.
 - `typescript-stack`, `react-stack`, and `native-nostalgia-stack` defer to
   `project-structure` for language-neutral repository policy. `react-stack`
   delegates TypeScript language policy to `typescript-stack` and Convex
