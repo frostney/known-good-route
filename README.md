@@ -63,6 +63,7 @@ flowchart TB
         CreatePR["/create-pr"]
         ExistingPR["Existing PR"]
         AddressPRFeedback["/address-pr-feedback"]
+        AddressStackFeedback["/address-stack-feedback"]
         Integrated["Integrated change"]
 
         Track --> Issue
@@ -75,6 +76,9 @@ flowchart TB
         CreatePR --> AddressPRFeedback
         ExistingPR --> AddressPRFeedback
         AddressPRFeedback --> Integrated
+        CreatePR --> AddressStackFeedback
+        ExistingPR --> AddressStackFeedback
+        AddressStackFeedback --> Integrated
     end
 
     Audit["Optional diagnostic side path<br/>/codebase-audit when evidence justifies it"]
@@ -110,7 +114,8 @@ flowchart TB
 - For ad-hoc or already-started work, enter the delivery loop at the matching
   state: record an idea with `/create-issue`, implement a ready issue or unfiled
   idea, hand off a completed branch with `/create-pr`, or continue an existing
-  PR with `/address-pr-feedback`.
+  PR with `/address-pr-feedback`, or converge one native stack with
+  `/address-stack-feedback <stack-number>`.
 - `/codebase-audit` is a diagnostic side path when repository evidence warrants
   a whole-codebase assessment, not a mandatory checkpoint.
 - Supporting mechanics stay underneath the loop: `git-workflow` governs git
@@ -133,6 +138,7 @@ flowchart TB
 | [`create-pr`](create-pr/SKILL.md) | Publish a completed change as a templated draft PR or verified native GitHub stack, reconcile PR-only metadata, wait for exact-head CI, and mark each complete layer ready without testing or fixing implementation behavior. |
 | [`update-pr`](update-pr/SKILL.md) | Commit and update the current PR, merging ordinary baselines or using guarded native stack synchronization, then refresh stale metadata. |
 | [`address-pr-feedback`](address-pr-feedback/SKILL.md) | Address feedback on one PR, repeat `/code-review fix-all` and black-box specification testing before substantive pushes, require exact-final-head CI and review evidence, reply in originating threads, and wait deterministically. Normal mode never merges; `automatic-merge` merges only an ordinary ready PR. |
+| [`address-stack-feedback`](address-stack-feedback/SKILL.md) | Converge feedback across one native GitHub stack: review each initial exact-head layer once, freeze it, accumulate validated fixes in one new top layer per round, and return only whole-stack readiness. It never merges or buys review capacity. |
 | [`delivery-wait`](delivery-wait/SKILL.md) | Internal deterministic GitHub transition waits for exact-head checks, workflows, merges, tags, release assets, and time-based wakes. |
 | [`code-review`](code-review/SKILL.md) | Review a bounded change against its claim using behavioral and revert-clean falsification probes, churn-backed risk, four-layer de-duplication, calibrated findings through non-blocking Nitpicks, and discoverability checks when public web surfaces change. Additive inputs support evidence lanes, exact files, and prior-finding revalidation; fix modes remain local. |
 | [`test-against-spec`](test-against-spec/SKILL.md) | Test externally observable behavior against explicit requirements through real interfaces, preferring an exact-revision preview deployment when available. Report by default; the exact `fix` qualifier authorizes in-scope fixes and black-box retesting. |
@@ -252,6 +258,12 @@ that evidence.
   invokes `/update-pr`. It owns review inspection, deterministic waiting,
   replies, and thread resolution through its bundled helper. Read-only mode
   remains non-mutating.
+- `address-stack-feedback` owns one repository-scoped native stack identity. It
+  reviews initial exact-head layers once, freezes them, puts all validated live
+  fixes in one new top layer per round, reviews only that new layer, and returns
+  `ready` only for the complete unchanged stack. Lower layers covered by a top
+  fix layer cannot be merged as a prefix. Read-only mode disables every
+  mutation, and the skill never merges or purchases review capacity.
 - `test-against-spec` proves externally observable behavior without using source
   as evidence. It prefers an exact-revision preview deployment when available,
   falls back to the local environment, reports by default, and fixes only with
@@ -277,7 +289,9 @@ that evidence.
   automatically.
 - `milestone-rush` parallelizes independent nodes through `/implement-issue
   automatic` or confirmed `/implement-idea automatic`, then uses `/address-pr-feedback
-  automatic-merge` for rolling integration. Each implementation's bounded
+  automatic-merge` for ordinary rolling integration or invokes
+  `/address-stack-feedback <stack-number>` once per native stack before the
+  coordinator atomically merges the complete ready stack. Each implementation's bounded
   pre-PR pass uses `/code-review subagents fix-all` by default, while ordinary
   standalone implementations remain unchanged. It never creates a release and
   invokes `/run-retro` only after explicit approval.

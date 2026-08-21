@@ -63,8 +63,10 @@ only after the same exact-head readiness contract passes.
   Reply-only and metadata-only updates do not need this loop. Explicit read-only
   mode never invokes a mutating review operation.
 - Own no label routing, milestone scheduling, stack scheduling, cross-PR
-  admission, or project-specific CI policy. If the PR is a native stack member,
-  make this layer ready and return its state to the stack owner without merging.
+  admission, or project-specific CI policy. Route stack-wide review and
+  remediation to `/address-stack-feedback <stack-number>`. When explicitly
+  asked to handle only one native-stack layer, make that exact layer ready and
+  return its state to the stack owner without merging.
 
 Read [references/readiness.md](references/readiness.md) before deciding that
 a PR is ready, pending, blocked, or merged.
@@ -166,4 +168,5 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
     default branch, remove only clean worktrees owned by this run, and report
     the merged PR, final head, validation, reviews, and cleanup. For a native
     stack member, return `ready` without merging so the stack owner can recheck
-    its selected prefix and invoke the atomic stack merge.
+    it. Use `/address-stack-feedback` when findings or readiness must be
+    reconciled across the stack.
