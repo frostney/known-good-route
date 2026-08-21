@@ -40,7 +40,7 @@ not release publication.
 - Before planning or spawning, read and validate repository-root
   `ORCHESTRATION.md` under
   [references/orchestration.md](references/orchestration.md), then initialize the
-  ignored event ledger under
+  ignored event ledger with the bundled one-shot command under
   [references/event-ledger.md](references/event-ledger.md).
 
 ## Reconcile and plan
@@ -136,13 +136,15 @@ unavailable after bounded retry, or return incomplete evidence, the
 implementation worker completes those lanes directly and records the fallback
 for the milestone report.
 
-Append every material lifecycle, decision, wait, gate, usage, retry, rework, and
-integration transition to `.agent/milestone-rush-events.jsonl`. Inner delivery
-and review loops launch the bundled deterministic foreground waits; the outer
-milestone loop passively awaits worker or command completion and reconciles its
-checkpoint after each returned transition. Notify the coordinator only on
-changed, terminal, or exceptional state. Unsupported passive waiting required
-by repository policy blocks spawning; never substitute model heartbeats.
+Normalize every material lifecycle, decision, wait, gate, usage, retry, rework,
+and integration transition, then pass it to the event-ledger `ingest` command.
+Host adapters own translation from native events; never add provider transcript
+parsers to this skill. Inner delivery and review loops launch the bundled
+deterministic foreground waits; the outer milestone loop passively awaits
+worker or command completion and reconciles its checkpoint after each returned
+transition. Notify the coordinator only on changed, terminal, or exceptional
+state. Unsupported passive waiting required by repository policy blocks
+spawning; never substitute model heartbeats.
 
 ## Blockers and completion
 
@@ -157,10 +159,11 @@ by repository policy blocks spawning; never substitute model heartbeats.
   delivered and closed with evidence; no milestone PR, required check, review
   thread, or active review-tool pass remains pending; and the synced default
   branch passes the applicable full project gate. A failure resumes execution.
-- Validate the current run's event ledger against the event-ledger reference
-  before closure. Missing required event classes, unclosed spans, silent null
-  usage/resource fields, or absent command/CI identities block closure until
-  corrected or explicitly marked unavailable under the schema.
+- Run the event-ledger `validate` and `summarize` commands for the current
+  `runId` before closure. Missing required event classes, unclosed spans,
+  ambiguous counter streams, silent null usage/resource fields, or absent
+  command/CI identities block closure until corrected or explicitly marked
+  unavailable under the schema.
 - Close the milestone only after that integrated gate passes. Remove only clean,
   merged worktrees created by this run; preserve and report every other
   worktree.

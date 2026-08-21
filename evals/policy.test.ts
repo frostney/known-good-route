@@ -44,6 +44,34 @@ describe("cross-skill policy", () => {
     expect(source).not.toContain("render_retro.py");
   });
 
+  test("retrospectives trace process origins and gate immediate implementation", async () => {
+    const source = await skill("run-retro");
+
+    expect(source).toMatch(/originating\s+decision/);
+    expect(source).toContain("implementation drift");
+    expect(source).toContain("documentation drift");
+    expect(source).toContain("complete available coordinator and subagent record");
+    expect(source).toContain("no-value context separately");
+    expect(source).toContain("explicit user selection");
+    expect(source).toContain("normal `implement-issue`");
+    expect(source).toContain("retrospective active");
+  });
+
+  test("milestone telemetry stays normalized, one-shot, and provider neutral", async () => {
+    const source = await skill("milestone-rush");
+    const reference = await Bun.file(
+      resolve(repositoryRoot, "milestone-rush/references/event-ledger.md"),
+    ).text();
+
+    expect(source).toContain("event-ledger `ingest` command");
+    expect(source).toContain("event-ledger `validate` and `summarize` commands");
+    expect(source).toMatch(/never add provider transcript\s+parsers/);
+    expect(reference).toContain("one-shot command");
+    expect(reference).toContain('"mode": "delta | snapshot"');
+    expect(reference).toContain("Schema-v1 lifecycle events remain readable");
+    expect(reference).toMatch(/contains no provider\s+transcript parser/);
+  });
+
   test("GitHub prose uses exact attributed Notes", async () => {
     const note = "> [!NOTE]\n   > Created on behalf of @username using ModelName.";
     const createIssue = await skill("create-issue");

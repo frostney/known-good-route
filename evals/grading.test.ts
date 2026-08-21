@@ -1301,6 +1301,68 @@ describe("eval grading", () => {
     ).toBeTrue();
   });
 
+  test("traces retro process evidence before correction and preserves selected action routing", () => {
+    const traceCase = evalCases.find(
+      ({ id }) => id === "retrospective-traces-process-before-correction",
+    );
+    const immediateCase = evalCases.find(
+      ({ id }) => id === "retrospective-selected-immediate-action",
+    );
+    expect(traceCase).toBeDefined();
+    expect(immediateCase).toBeDefined();
+    if (!traceCase || !immediateCase) {
+      return;
+    }
+
+    const inspections = [
+      "originatingDecisions",
+      "currentImplementation",
+      "currentDocumentation",
+      "coordinatorConversation",
+      "subagentConversations",
+      "processTelemetry",
+    ];
+    const traceActions: RunLedger["actions"] = [
+      { action: "user.ask", details: "Use grilling after the evidence trace" },
+      { action: "file.edit", details: "Correct the selected documentation drift" },
+      { action: "forge.createIssue", details: "Create the selected implementation ticket" },
+    ];
+    expect(
+      gradeRun(
+        traceCase,
+        ledger({
+          loadedSkills: ["run-retro", "render-html"],
+          registeredSkillCalls: ["grilling"],
+          inspections,
+          actions: traceActions,
+          events: [
+            ...inspections.map((name) => ({ kind: "inspection" as const, name })),
+            ...traceActions.map(({ action }) => ({ kind: "action" as const, name: action })),
+          ],
+        }),
+        "ADR-9 is settled. The controller has implementation drift and the guide has documentation drift, so the choice is not re-grilled. Separate no-value context includes a manual resume, repeated evidence, and a loaded but bypassed skill; one subagent transcript is an unavailable evidence gap.",
+      ).passed,
+    ).toBeTrue();
+
+    const immediateActions: RunLedger["actions"] = [
+      { action: "forge.createIssue", details: "Create visibility issue #88" },
+      { action: "delegate", details: "Invoke normal implement-issue for #88" },
+      { action: "report", details: "Continue the active retro after delivery" },
+    ];
+    expect(
+      gradeRun(
+        immediateCase,
+        ledger({
+          loadedSkills: ["run-retro", "create-issue", "implement-issue"],
+          inspections: ["confirmedAction", "issueSearch", "implementationRoute"],
+          actions: immediateActions,
+          events: immediateActions.map(({ action }) => ({ kind: "action", name: action })),
+        }),
+        "The explicitly selected action created issue #88 through create-issue, then normal implement-issue delivered it. The retrospective remains active and continues with delivered or blocked evidence.",
+      ).passed,
+    ).toBeTrue();
+  });
+
   test("requires reviewer convergence before automatic merge", () => {
     const evalCase = evalCases.find(
       ({ id }) => id === "address-pr-feedback-automatic-merge-retries-active-reviewer",
@@ -1679,12 +1741,16 @@ describe("eval grading", () => {
       { action: "report", details: "Report the lean completed run" },
     ];
     const output =
-      "The path-budget preflight rejected the long worktree and relocated the lane to a short worktree. Focused remediation passed before review convergence, then one complete local gate and terminal full CI promotion ran. Superseded diagnostics were cancelled. A non-LLM watcher observed completion. Ledger validation recorded effective worker capacity and corrected the silent null through unavailableFields before closure.";
+      "The path-budget preflight rejected the long worktree and relocated the lane to a short worktree. Focused remediation passed before review convergence, then one complete local gate and terminal full CI promotion ran. Superseded diagnostics were cancelled. A non-LLM watcher observed completion. The normalized host adapter called event_ledger.py ingest; validate and summarize recorded effective worker capacity and corrected the silent null through unavailableFields before closure.";
 
     expect(
       gradeRun(
         evalCase,
-        ledger({ loadedSkills: ["milestone-rush"], actions }),
+        ledger({
+          loadedSkills: ["milestone-rush"],
+          loadedReferences: ["milestone-rush/references/event-ledger.md"],
+          actions,
+        }),
         output,
       ).passed,
     ).toBeTrue();
@@ -1692,7 +1758,11 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         evalCase,
-        ledger({ loadedSkills: ["milestone-rush"], actions }),
+        ledger({
+          loadedSkills: ["milestone-rush"],
+          loadedReferences: ["milestone-rush/references/event-ledger.md"],
+          actions,
+        }),
         "The milestone closed after tests and CI passed.",
       ).passed,
     ).toBeFalse();
