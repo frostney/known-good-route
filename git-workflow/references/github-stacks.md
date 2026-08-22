@@ -28,8 +28,12 @@ push with force-with-lease. They are allowed only when all of these are true:
 - the worktree is clean before the operation;
 - `gh stack view --json` confirms the intended local branches and order;
 - GitHub native topology, when PRs exist, agrees with the intended stack;
-- the current remote head of every affected branch is recorded first; and
-- no unrelated branch or worktree is in scope.
+- the current remote head of every affected branch is recorded first;
+- no unrelated branch or worktree is in scope; and
+- the cascade's CI load is accepted: a sync re-fires CI for every rebased layer
+  at once, which on a seven-layer stack meant about 25 concurrent jobs and
+  flaked two surfaces. Prefer a new top layer for fixes; after a sync, rerun
+  flaked surfaces one at a time.
 
 Run the narrowest official command that satisfies the need. Stop on a rebase
 conflict, unexpected divergence, changed topology, lease rejection, partial
