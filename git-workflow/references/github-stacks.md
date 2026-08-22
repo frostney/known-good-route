@@ -17,8 +17,9 @@ routing evidence, not proof of stack membership.
    recorded remote-default head. If it is stale, perform the guarded sync below
    before editing; stop if the trunk or topology cannot be reconciled safely.
 4. Use `gh stack init` for the first layer and `gh stack add` for later layers.
-   Preserve bottom-to-top dependency order. Do not manually imitate a native
-   stack by changing PR bases alone.
+   Preserve bottom-to-top dependency order. When layers are independent, place
+   the layer that shrinks the gate first; every layer above it pays the gate on
+   each push. Do not manually imitate a native stack by changing PR bases alone.
 
 ## Guarded rewrite exception
 
@@ -28,8 +29,12 @@ push with force-with-lease. They are allowed only when all of these are true:
 - the worktree is clean before the operation;
 - `gh stack view --json` confirms the intended local branches and order;
 - GitHub native topology, when PRs exist, agrees with the intended stack;
-- the current remote head of every affected branch is recorded first; and
-- no unrelated branch or worktree is in scope.
+- the current remote head of every affected branch is recorded first;
+- no unrelated branch or worktree is in scope; and
+- the cascade's CI load is accepted: a sync re-fires CI for every rebased layer
+  at once, which on a seven-layer stack meant about 25 concurrent jobs and
+  flaked two surfaces. Prefer a new top layer for fixes; after a sync, rerun
+  flaked surfaces one at a time.
 
 Run the narrowest official command that satisfies the need. Stop on a rebase
 conflict, unexpected divergence, changed topology, lease rejection, partial

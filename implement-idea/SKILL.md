@@ -91,7 +91,9 @@ architecture, security, scope, or vision decision disables automatic mode.
 2. Load the applicable project contracts and specialized skills.
 3. Find the existing extension point, reusable patterns, sibling features,
    tests, and architectural constraints. Always perform current web search and
-   reconcile its results with the checkout. If the idea already exists,
+   reconcile its results with the checkout. Search the issue tracker for the
+   outcome the idea targets, not only its mechanism; an existing issue carries
+   prior decisions and acceptance criteria. If the idea already exists,
    recommend using it; if partial, extend rather than duplicate it.
 4. Build the neutral evidence packet and comparison rubric, derive the options,
    and validate each with equivalent decision-relevant checks. Compare first;

@@ -96,7 +96,10 @@ arguments so the adapter can select the newest edited account-scoped wait.
    remote head, and create exactly one new branch above the current top with
    `gh stack add`. Fix all validated live findings there. Group commits by one
    coherent cause or originating PR where that preserves traceability; every
-   source reply must link the exact landing commit and fix-layer PR.
+   source reply must link the exact landing commit and fix-layer PR. For a
+   documentation finding, search the document and any file that mirrors the
+   same fact for sibling statements, and fix them in the same commit; an
+   incremental review surfaces each missed sibling one round later.
 8. Run focused validation while fixing. Before submitting a substantive fix
    layer, repeat `/code-review fix-all` and `/test-against-spec fix` against the
    complete integrated tree until both pass on the same unchanged content, then

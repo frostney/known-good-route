@@ -18,8 +18,8 @@ repository, then create it after the required review boundary.
 ## Gates
 
 - Investigate before drafting: read the applicable project instructions and
-  vision, search open and closed issues for duplicates, and inspect the affected
-  code, tests, and docs.
+  vision, search open and closed issues for duplicates of the outcome as well
+  as the mechanism, and inspect the affected code, tests, and docs.
 - When `grill-with-docs` or `grill-me` is registered, run its actual
   user-question loop before drafting. Prefer `grill-with-docs`. If neither is
   available, note that once and continue.
