@@ -127,6 +127,9 @@ material outcomes, limitations, and blockers without narrating routine activity.
 Finish with the outcome first and enough evidence for a reader who did not see
 the work trace.
 
+Capture an exit code into a variable before any other command runs; a `$(...)`
+substitution on the same line overwrites `$?`.
+
 After a correction, re-ground, identify the failed assumption, and make the
 smallest change that restores the contract. Do not compensate with broader
 scope, tooling, or framework churn.
