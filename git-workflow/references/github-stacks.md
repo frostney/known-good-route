@@ -17,8 +17,9 @@ routing evidence, not proof of stack membership.
    recorded remote-default head. If it is stale, perform the guarded sync below
    before editing; stop if the trunk or topology cannot be reconciled safely.
 4. Use `gh stack init` for the first layer and `gh stack add` for later layers.
-   Preserve bottom-to-top dependency order. Do not manually imitate a native
-   stack by changing PR bases alone.
+   Preserve bottom-to-top dependency order. When layers are independent, place
+   the layer that shrinks the gate first; every layer above it pays the gate on
+   each push. Do not manually imitate a native stack by changing PR bases alone.
 
 ## Guarded rewrite exception
 
