@@ -74,6 +74,7 @@ def check(
     conclusion: str | None,
     started_at: str = "2026-08-12T08:00:00Z",
     app: str = "automated-review-app",
+    completed_at: str | None = None,
 ) -> dict:
     return {
         "__typename": "CheckRun",
@@ -82,7 +83,7 @@ def check(
         "conclusion": conclusion,
         "detailsUrl": "https://example.invalid/check",
         "startedAt": started_at,
-        "completedAt": started_at if status == "COMPLETED" else None,
+        "completedAt": completed_at or (started_at if status == "COMPLETED" else None),
         "checkSuite": {"app": {"slug": app}},
     }
 
@@ -176,6 +177,38 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(output["state"], "satisfied")
         self.assertEqual(output["metrics"]["observations"], 1)
 
+    def test_completed_check_with_stale_status_satisfies_inspect_and_wait(self) -> None:
+        completed_at = "2026-08-12T08:01:00Z"
+        self.write_scenario(
+            pull=pull(
+                "head-1",
+                [check("CI", "IN_PROGRESS", "SUCCESS", completed_at=completed_at)],
+            )
+        )
+        _, inspected = self.run_json(
+            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
+            "--pr", "7", "--head", "head-1", "--check", "CI",
+        )
+        _, waited = self.run_json(
+            DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
+            "--head", "head-1", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01",
+        )
+        self.assertEqual(inspected["state"], "satisfied")
+        self.assertEqual(waited["state"], "satisfied")
+        self.assertEqual(waited["metrics"]["observations"], 1)
+        self.assertEqual(inspected["observation"]["checks"][0]["status"], "IN_PROGRESS")
+        self.assertEqual(inspected["observation"]["checks"][0]["completedAt"], completed_at)
+
+    def test_success_without_completion_remains_waiting(self) -> None:
+        self.write_scenario(
+            pull=pull("head-1", [check("CI", "IN_PROGRESS", "SUCCESS")])
+        )
+        _, output = self.run_json(
+            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
+            "--pr", "7", "--head", "head-1", "--check", "CI",
+        )
+        self.assertEqual(output["state"], "waiting")
+
     def test_latest_duplicate_check_context_controls_the_gate(self) -> None:
         self.write_scenario(
             pull=pull(
@@ -235,6 +268,25 @@ class WaitCommandsTest(unittest.TestCase):
         )
         self.assertEqual(output["state"], "satisfied")
         self.assertEqual(output["metrics"]["rateLimitFallbacks"], 1)
+
+    def test_rest_fallback_accepts_completed_check_with_stale_status(self) -> None:
+        completed_at = "2026-08-12T08:01:00Z"
+        self.write_scenario(
+            graphqlRateLimited=True,
+            restChecks={"check_runs":[{
+                "name":"CI", "status":"in_progress", "conclusion":"success",
+                "started_at":"2026-08-12T08:00:00Z", "completed_at":completed_at,
+            }]},
+            restStatuses=[],
+        )
+        _, output = self.run_json(
+            DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
+            "--head", "head-1", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01",
+        )
+        self.assertEqual(output["state"], "satisfied")
+        self.assertEqual(output["metrics"]["observations"], 1)
+        self.assertEqual(output["observation"]["checks"][0]["status"], "IN_PROGRESS")
+        self.assertEqual(output["observation"]["checks"][0]["completedAt"], completed_at)
 
     def test_checkpoint_reconciliation_reports_missed_change(self) -> None:
         self.write_scenario(pull=pull("head-1", []))
