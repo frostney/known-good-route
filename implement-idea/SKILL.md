@@ -63,6 +63,11 @@ current repository.
   Include shared structured evidence, the declared rubric, option impacts,
   pros, cons, scores, uncertainties, and copyable discussion prompts. Keep the
   recommendation in the closing section after every neutral option.
+- After option selection or automatic entry, keep the authorized implementation
+  active across status questions, diagnoses, corrections, and failed gates.
+  Return control only when the outcome is complete, safe in-scope progress is
+  exhausted by an external blocker, or continuing requires new authority or a
+  material unresolved decision. A known fix or recommendation is not terminal.
 - For any code or test change, repeat `/code-review fix-all` and black-box
   testing against the confirmed mini-spec until both pass on the same unchanged
   implementation, then complete the project gate and `/create-pr`.
@@ -135,3 +140,6 @@ architecture, security, scope, or vision decision disables automatic mode.
     broad gate inside the behavior-testing step.
 14. Use `/create-pr` and pass forward the current mini-spec, delivered outcome,
     and observed completion evidence for the PR.
+15. Before any earlier return, apply the active-implementation terminal check.
+    Continue with the next safe authorized action when no terminal condition is
+    established.

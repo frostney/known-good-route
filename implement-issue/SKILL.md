@@ -61,6 +61,11 @@ evidence that no implementation is needed.
   recommendation in the closing section after every neutral option.
 - When current evidence conclusively fails a required prototype or readiness
   threshold, report that stop without asking whether to bypass the gate.
+- After option selection or automatic entry, keep the authorized implementation
+  active across status questions, diagnoses, corrections, and failed gates.
+  Return control only when the outcome is complete, safe in-scope progress is
+  exhausted by an external blocker, or continuing requires new authority or a
+  material unresolved decision. A known fix or recommendation is not terminal.
 - For any code or test change, repeat `/code-review fix-all` and black-box
   testing against the issue until both pass on the same unchanged
   implementation, then complete the project gate and `/create-pr`.
@@ -136,3 +141,6 @@ architecture, security, scope, or vision decision disables automatic mode.
     broad gate inside the behavior-testing step.
 15. Use `/create-pr`, include `Closes #<issue>`, pass forward the current
     completion evidence, and report only observed results.
+16. Before any earlier return, apply the active-implementation terminal check.
+    Continue with the next safe authorized action when no terminal condition is
+    established.

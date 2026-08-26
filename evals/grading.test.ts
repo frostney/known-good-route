@@ -1201,6 +1201,67 @@ describe("eval grading", () => {
     expect(result.passed).toBeTrue();
   });
 
+  test("keeps an authorized issue implementation active after diagnosis", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "implement-issue-continues-after-in-scope-diagnosis",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) return;
+
+    const actions: RunLedger["actions"] = [
+      { action: "file.edit", details: "Reuse the complete provenance mapper" },
+      { action: "codeReview.run", details: "Run the bounded fix-all review" },
+      { action: "behaviorTest.run", details: "Exercise checkpoint recovery" },
+      { action: "validation.run", details: "Run the complete project gate" },
+      { action: "git.commit", details: "Commit the correction" },
+      { action: "git.push", details: "Push the focused branch" },
+      { action: "forge.openDraftPr", details: "Open draft PR #391" },
+      { action: "forge.markPrReady", details: "Mark PR #391 ready" },
+    ];
+    const events: RunLedger["events"] = [
+      { kind: "inspection", name: "issue" },
+      { kind: "inspection", name: "activeAuthorization" },
+      { kind: "inspection", name: "failureDiagnosis" },
+      { kind: "inspection", name: "selectedCorrection" },
+      ...actions.map(({ action }) => ({ kind: "action" as const, name: action })),
+    ];
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: ["implement-issue"],
+          inspections: [
+            "issue",
+            "activeAuthorization",
+            "failureDiagnosis",
+            "selectedCorrection",
+          ],
+          actions,
+          events,
+        }),
+        "The gate failed because the mapper dropped provenance. I corrected it with the established mapper, completed validation, and delivered pull request PR #391.",
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: ["implement-issue"],
+          inspections: [
+            "issue",
+            "activeAuthorization",
+            "failureDiagnosis",
+            "selectedCorrection",
+          ],
+          actions: [{ action: "report", details: "Return the diagnosis" }],
+        }),
+        "The mapper drops provenance. I recommend applying the sibling mapper next. Let me know if you want me to continue.",
+      ).passed,
+    ).toBeFalse();
+  });
+
   test("requires isolated delegation for chained substantial deliverables", () => {
     const evalCase = evalCases.find(
       ({ id }) => id === "chained-deliverables-isolate-worker-context",

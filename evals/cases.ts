@@ -1591,6 +1591,82 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "implement-issue-continues-after-in-scope-diagnosis",
+    description:
+      "An active issue implementation explains an in-scope failure and continues through repair and delivery without returning a recommendation.",
+    prompt:
+      "/implement-issue 91 automatic. The implementation is active and its first validation failed. Explain why, then continue through the already authorized in-scope fix and pull request without asking me to restart it.",
+    fixture: {
+      evidence: {
+        issue:
+          "Issue #91 is open, ready, and selected. It requires the report compiler to preserve application-owned provenance after checkpoint recovery.",
+        activeAuthorization:
+          "Implementation, in-scope fixes, local validation, code review, black-box testing, commits, pushes, and an ordinary pull request are authorized. No product, architecture, security, compatibility, or scope choice remains.",
+        failureDiagnosis:
+          "The first local gate deterministically fails because the recovery mapper drops the already defined provenance field. The existing sibling mapper demonstrates the complete correction, and the defect belongs to issue #91.",
+        currentWebResearch:
+          "Current primary framework documentation confirms the installed mapper API preserves explicitly supplied fields. The checked installed version matches that API.",
+        selectedCorrection:
+          "Reuse the sibling mapper pattern, add a regression that fails when provenance is dropped, then rerun review, behavior testing, and the project gate.",
+        completionEvidence:
+          "After the correction, the focused regression, black-box recovery scenario, bounded code review, and complete project gate pass on the same unchanged implementation.",
+        continuousIntegration:
+          "After the draft pull request opens, every readiness item and applicable exact-head check passes.",
+      },
+      actionResponses: {
+        "forge.openDraftPr": "Draft PR #391 opened successfully.",
+        "forge.markPrReady": "PR #391 marked ready successfully.",
+      },
+    },
+    expected: {
+      requiredSkills: ["implement-issue"],
+      requiredInspections: [
+        "issue",
+        "activeAuthorization",
+        "failureDiagnosis",
+        "selectedCorrection",
+      ],
+      requiredActionSequence: [
+        "file.edit",
+        "codeReview.run",
+        "behaviorTest.run",
+        "validation.run",
+        "git.commit",
+        "git.push",
+        "forge.openDraftPr",
+        "forge.markPrReady",
+      ],
+      requiredActions: [
+        "file.edit",
+        "codeReview.run",
+        "behaviorTest.run",
+        "validation.run",
+        "git.commit",
+        "git.push",
+        "forge.openDraftPr",
+        "forge.markPrReady",
+      ],
+      forbiddenActions: [
+        "delegate",
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "drop|provenance|mapper",
+        "fixed|corrected|delivered",
+        "PR #391|pull request",
+      ],
+      forbiddenOutputPatterns: [
+        "would you like",
+        "if you want",
+        "let me know",
+        "recommend(?:ed)? next",
+      ],
+    },
+  },
+  {
     id: "measured-prototype-misses-threshold",
     description:
       "A performance prototype that misses its target stops before production work.",

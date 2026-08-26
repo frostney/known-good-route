@@ -154,6 +154,21 @@ describe("cross-skill policy", () => {
     }
   });
 
+  test("implementation remains active while safe authorized work remains", async () => {
+    for (const name of ["implement-idea", "implement-issue"]) {
+      const source = await skill(name);
+      expect(source).toContain("keep the authorized implementation");
+      expect(source).toContain("A known fix or recommendation is not terminal");
+      expect(source).toContain("active-implementation terminal check");
+      expect(source).toMatch(/Continue with the next safe authorized action/);
+    }
+
+    const excellence = await skill("software-engineering-excellence");
+    expect(excellence).toContain("Active implementation completion");
+    expect(excellence).toContain("A diagnosis, recommended");
+    expect(excellence).toContain("next safe executable action");
+  });
+
   test("behavior testing is black-box, preview-first, and read-only by default", async () => {
     const source = await skill("test-against-spec");
 

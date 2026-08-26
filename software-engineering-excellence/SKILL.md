@@ -53,6 +53,24 @@ solution rather than merely select details within it.
    relevant validation. Pause only for a material product, architecture,
    security, compatibility, or scope choice that evidence cannot resolve.
 
+## Active implementation completion
+
+After a user authorizes implementation, keep that objective active across
+status questions, failure diagnoses, corrections, compaction, and validation
+failures. A narrower constraint, such as prohibiting a paid evaluation, narrows
+the available route without blocking safe offline work.
+
+Before returning control, establish one terminal condition:
+
+- the authorized outcome is complete with observed evidence;
+- an external blocker remains after safe in-scope alternatives are exhausted;
+- the next action requires new authority or a material unresolved decision.
+
+If none applies, take the next safe in-scope action. A diagnosis, recommended
+fix, failed experiment, or known implementation gap is not a terminal result.
+When a handoff is required, record the active outcome, authorized and prohibited
+actions, current evidence, and next safe executable action.
+
 For genuinely multi-layer work, establish a thin runnable path and deepen it in
 increments. Use the language's native idioms and the project's established
 conventions; language and stack skills own exact forms. Follow surrounding
