@@ -259,11 +259,6 @@ Cite the originating requirement or identify the claim as inferred.
 
 - Trace changed inputs, authorization, state transitions, failures, retries,
   concurrency, idempotency, deletions, and side effects where relevant.
-- When an upstream model-facing or serialized schema feeds stricter downstream
-  validation, inspect the actual advertised schema and require offline
-  differential containment plus recorded-payload replay before crediting a
-  production, live, or paid evaluation. An upstream-accepted payload that can
-  fail only downstream is a correctness defect.
 - Search the live repository before accepting new helpers, patterns, formats, or
   abstractions. A second representation or implementation of the same concept
   is a defect unless the repository documents why it exists.

@@ -162,7 +162,3 @@ scope, tooling, or framework churn.
   design evaluation, and source comparisons.
 - [references/barometer.md](references/barometer.md): periodic direction check,
   not a score.
-- [references/contract-containment.md](references/contract-containment.md):
-  model-facing or serialized contracts that feed stricter downstream
-  validation; read it before any production, live, or paid evaluation of that
-  path.

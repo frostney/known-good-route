@@ -66,10 +66,6 @@ evidence that no implementation is needed.
   Return control only when the outcome is complete, safe in-scope progress is
   exhausted by an external blocker, or continuing requires new authority or a
   material unresolved decision. A known fix or recommendation is not terminal.
-- When an upstream model-facing or serialized contract feeds stricter
-  downstream validation, read
-  [contract containment](../software-engineering-excellence/references/contract-containment.md)
-  and pass its offline gate before any production, live, or paid evaluation.
 - For any code or test change, repeat `/code-review fix-all` and black-box
   testing against the issue until both pass on the same unchanged
   implementation, then complete the project gate and `/create-pr`.
@@ -123,9 +119,7 @@ architecture, security, scope, or vision decision disables automatic mode.
    evidence; check accessibility, responsive behavior, themes, and design-system
    consistency; attach the evidence to the PR.
 10. Run targeted checks while developing. Fix failures rather than weakening a
-    check. For an applicable upstream/downstream contract, observe the offline
-    containment counterexample and pass the corrected differential matrix and
-    recorded replays before any production, live, or paid evaluation.
+   check.
 11. Run `/code-review fix-all` against the requirements, Definition of Done,
     project conventions, branch diff, and reproducible behavior. Resolve every
     validated in-scope finding. Stop for a material new decision or unresolved
