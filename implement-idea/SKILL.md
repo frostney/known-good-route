@@ -63,6 +63,15 @@ current repository.
   Include shared structured evidence, the declared rubric, option impacts,
   pros, cons, scores, uncertainties, and copyable discussion prompts. Keep the
   recommendation in the closing section after every neutral option.
+- After option selection or automatic entry, keep the authorized implementation
+  active across status questions, diagnoses, corrections, and failed gates.
+  Return control only when the outcome is complete, safe in-scope progress is
+  exhausted by an external blocker, or continuing requires new authority or a
+  material unresolved decision. A known fix or recommendation is not terminal.
+- When an upstream model-facing or serialized contract feeds stricter
+  downstream validation, read
+  [contract containment](../software-engineering-excellence/references/contract-containment.md)
+  and pass its offline gate before any production, live, or paid evaluation.
 - For any code or test change, repeat `/code-review fix-all` and black-box
   testing against the confirmed mini-spec until both pass on the same unchanged
   implementation, then complete the project gate and `/create-pr`.
@@ -113,7 +122,9 @@ architecture, security, scope, or vision decision disables automatic mode.
    evidence; check accessibility, responsive behavior, themes, and design-system
    consistency; attach the evidence to the PR.
 9. Run targeted checks while developing. Fix failures rather than weakening a
-   check.
+   check. For an applicable upstream/downstream contract, observe the offline
+   containment counterexample and pass the corrected differential matrix and
+   recorded replays before any production, live, or paid evaluation.
 10. Run `/code-review fix-all` against the measures of success, Definition of
    Done, project conventions, branch diff, and reproducible behavior. Resolve
    every validated in-scope finding. Stop for a material new decision or
@@ -135,3 +146,6 @@ architecture, security, scope, or vision decision disables automatic mode.
     broad gate inside the behavior-testing step.
 14. Use `/create-pr` and pass forward the current mini-spec, delivered outcome,
     and observed completion evidence for the PR.
+15. Before any earlier return, apply the active-implementation terminal check.
+    Continue with the next safe authorized action when no terminal condition is
+    established.

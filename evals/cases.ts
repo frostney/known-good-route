@@ -1591,6 +1591,176 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "implement-issue-continues-after-in-scope-diagnosis",
+    description:
+      "An active issue implementation explains an in-scope failure and continues through repair and delivery without returning a recommendation.",
+    prompt:
+      "/implement-issue 91 automatic. The implementation is active and its first validation failed. Explain why, then continue through the already authorized in-scope fix and pull request without asking me to restart it.",
+    fixture: {
+      evidence: {
+        issue:
+          "Issue #91 is open, ready, and selected. It requires the report compiler to preserve application-owned provenance after checkpoint recovery.",
+        activeAuthorization:
+          "Implementation, in-scope fixes, local validation, code review, black-box testing, commits, pushes, and an ordinary pull request are authorized. No product, architecture, security, compatibility, or scope choice remains.",
+        failureDiagnosis:
+          "The first local gate deterministically fails because the recovery mapper drops the already defined provenance field. The existing sibling mapper demonstrates the complete correction, and the defect belongs to issue #91.",
+        currentWebResearch:
+          "Current primary framework documentation confirms the installed mapper API preserves explicitly supplied fields. The checked installed version matches that API.",
+        selectedCorrection:
+          "Reuse the sibling mapper pattern, add a regression that fails when provenance is dropped, then rerun review, behavior testing, and the project gate.",
+        completionEvidence:
+          "After the correction, the focused regression, black-box recovery scenario, bounded code review, and complete project gate pass on the same unchanged implementation.",
+        continuousIntegration:
+          "After the draft pull request opens, every readiness item and applicable exact-head check passes.",
+      },
+      actionResponses: {
+        "forge.openDraftPr": "Draft PR #391 opened successfully.",
+        "forge.markPrReady": "PR #391 marked ready successfully.",
+      },
+    },
+    expected: {
+      requiredSkills: ["implement-issue"],
+      requiredInspections: [
+        "issue",
+        "activeAuthorization",
+        "failureDiagnosis",
+        "selectedCorrection",
+      ],
+      requiredActionSequence: [
+        "file.edit",
+        "codeReview.run",
+        "behaviorTest.run",
+        "validation.run",
+        "git.commit",
+        "git.push",
+        "forge.openDraftPr",
+        "forge.markPrReady",
+      ],
+      requiredActions: [
+        "file.edit",
+        "codeReview.run",
+        "behaviorTest.run",
+        "validation.run",
+        "git.commit",
+        "git.push",
+        "forge.openDraftPr",
+        "forge.markPrReady",
+      ],
+      forbiddenActions: [
+        "delegate",
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "drop|provenance|mapper",
+        "fixed|corrected|delivered",
+        "PR #391|pull request",
+      ],
+      forbiddenOutputPatterns: [
+        "would you like",
+        "if you want",
+        "let me know",
+        "recommend(?:ed)? next",
+      ],
+    },
+  },
+  {
+    id: "implement-idea-proves-contract-containment-before-live-eval",
+    description:
+      "A model-facing schema change proves offline containment against downstream assembly before any live or paid evaluation.",
+    prompt:
+      "/implement-idea automatic. Make model-facing report assembly strict and prove it against the canonical report contract. Do not use production, live, or paid model calls to discover deterministic schema gaps.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "The application accepts a model-authored draft through a generated JSON Schema, then injects trusted identity and validates a canonical persisted report. Recorded sanitized coordinator payloads and canonical transitions are available offline.",
+        projectDefinitions:
+          "Definition of Ready fixes the authority boundary. Definition of Done requires an observed regression, the full offline replay, code review, and the repository gate before a pull request.",
+        upstreamContract:
+          "The actual advertised model schema accepts every category with null or present churn, model-authored fresh status, arbitrary skipped-axis names, and unconstrained location paths.",
+        downstreamContract:
+          "Canonical assembly requires churn only for architecture risk, repository-relative paths, application-owned fresh status and skipped axes, and unique semantic finding identities.",
+        recordedPayloads:
+          "Four sanitized production payloads preserve the expected finding transitions. A finite category/churn matrix, unsafe path cases, duplicate identities, and authority-field cases can run without a model call.",
+        initialOfflineResult:
+          "The red differential matrix finds upstream-accepted payloads that fail canonical assembly at findings.0.churn and coverage.skippedAxes.",
+        selectedCorrection:
+          "Share one structural finding contract, derive application-owned fields, deterministically coalesce duplicate identities, and test the actual generated JSON Schema.",
+        correctedOfflineResult:
+          "Every upstream-accepted matrix case now assembles, invalid cases fail upstream, all four recorded payloads preserve canonical transitions, and no live or paid call runs.",
+        currentWebResearch:
+          "Current official model guidance recommends representative evals and rerunning the same evals after instruction or tool changes. It does not require a live call to test deterministic local schema containment.",
+        reviewAndGate:
+          "The bounded review finds no unresolved material issue and the repository's complete free gate passes on the unchanged correction.",
+        continuousIntegration:
+          "After the draft pull request opens, every readiness item and applicable exact-head check passes.",
+      },
+      actionResponses: {
+        "forge.openDraftPr": "Draft PR #392 opened successfully.",
+        "forge.markPrReady": "PR #392 marked ready successfully.",
+      },
+    },
+    expected: {
+      requiredSkills: [
+        "implement-idea",
+        "software-engineering-excellence",
+      ],
+      requiredReferences: [
+        "software-engineering-excellence/references/contract-containment.md",
+      ],
+      requiredInspections: [
+        "upstreamContract",
+        "downstreamContract",
+        "recordedPayloads",
+        "initialOfflineResult",
+      ],
+      requiredInspectionsBeforeActions: [
+        { inspection: "upstreamContract", action: "file.edit" },
+        { inspection: "downstreamContract", action: "file.edit" },
+        { inspection: "recordedPayloads", action: "file.edit" },
+        { inspection: "initialOfflineResult", action: "file.edit" },
+      ],
+      requiredActionSequence: [
+        "validation.run",
+        "file.edit",
+        "validation.run",
+        "codeReview.run",
+        "git.commit",
+        "git.push",
+        "forge.openDraftPr",
+        "forge.markPrReady",
+      ],
+      requiredActions: [
+        "file.edit",
+        "validation.run",
+        "codeReview.run",
+        "git.commit",
+        "git.push",
+        "forge.openDraftPr",
+        "forge.markPrReady",
+      ],
+      minActionCounts: { "validation.run": 2 },
+      forbiddenActions: [
+        "behaviorTest.run",
+        "delegate",
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+        "user.ask",
+      ],
+      outputPatterns: [
+        "offline",
+        "contain|upstream-accepted|upstream accepted",
+        "model-facing|advertised|generated JSON Schema",
+        "downstream|canonical",
+        "no live|no paid|without a model call",
+        "PR #392|pull request",
+      ],
+    },
+  },
+  {
     id: "measured-prototype-misses-threshold",
     description:
       "A performance prototype that misses its target stops before production work.",

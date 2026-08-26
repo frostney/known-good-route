@@ -154,6 +154,45 @@ describe("cross-skill policy", () => {
     }
   });
 
+  test("implementation remains active while safe authorized work remains", async () => {
+    for (const name of ["implement-idea", "implement-issue"]) {
+      const source = await skill(name);
+      expect(source).toContain("keep the authorized implementation");
+      expect(source).toContain("A known fix or recommendation is not terminal");
+      expect(source).toContain("active-implementation terminal check");
+      expect(source).toMatch(/Continue with the next safe authorized action/);
+    }
+
+    const excellence = await skill("software-engineering-excellence");
+    expect(excellence).toContain("Active implementation completion");
+    expect(excellence).toContain("A diagnosis, recommended");
+    expect(excellence).toContain("next safe executable action");
+  });
+
+  test("model-facing contracts prove offline downstream containment", async () => {
+    for (const name of ["implement-idea", "implement-issue"]) {
+      const source = await skill(name);
+      expect(source).toContain("contract containment");
+      expect(source).toContain("offline gate");
+      expect(source).toMatch(/before any production, live, or paid evaluation/);
+    }
+
+    const review = await skill("code-review");
+    expect(review).toContain("actual advertised schema");
+    expect(review).toMatch(/offline\s+differential containment/);
+
+    const reference = await Bun.file(
+      resolve(
+        repositoryRoot,
+        "software-engineering-excellence/references/contract-containment.md",
+      ),
+    ).text();
+    expect(reference).toContain("every payload accepted");
+    expect(reference).toContain("actual serialized or advertised upstream schema");
+    expect(reference).toContain("sanitized recorded payloads");
+    expect(reference).toContain("Do not use a production, live, or paid model run");
+  });
+
   test("behavior testing is black-box, preview-first, and read-only by default", async () => {
     const source = await skill("test-against-spec");
 

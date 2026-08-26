@@ -1201,6 +1201,152 @@ describe("eval grading", () => {
     expect(result.passed).toBeTrue();
   });
 
+  test("keeps an authorized issue implementation active after diagnosis", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "implement-issue-continues-after-in-scope-diagnosis",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) return;
+
+    const actions: RunLedger["actions"] = [
+      { action: "file.edit", details: "Reuse the complete provenance mapper" },
+      { action: "codeReview.run", details: "Run the bounded fix-all review" },
+      { action: "behaviorTest.run", details: "Exercise checkpoint recovery" },
+      { action: "validation.run", details: "Run the complete project gate" },
+      { action: "git.commit", details: "Commit the correction" },
+      { action: "git.push", details: "Push the focused branch" },
+      { action: "forge.openDraftPr", details: "Open draft PR #391" },
+      { action: "forge.markPrReady", details: "Mark PR #391 ready" },
+    ];
+    const events: RunLedger["events"] = [
+      { kind: "inspection", name: "issue" },
+      { kind: "inspection", name: "activeAuthorization" },
+      { kind: "inspection", name: "failureDiagnosis" },
+      { kind: "inspection", name: "selectedCorrection" },
+      ...actions.map(({ action }) => ({ kind: "action" as const, name: action })),
+    ];
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: ["implement-issue"],
+          inspections: [
+            "issue",
+            "activeAuthorization",
+            "failureDiagnosis",
+            "selectedCorrection",
+          ],
+          actions,
+          events,
+        }),
+        "The gate failed because the mapper dropped provenance. I corrected it with the established mapper, completed validation, and delivered pull request PR #391.",
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: ["implement-issue"],
+          inspections: [
+            "issue",
+            "activeAuthorization",
+            "failureDiagnosis",
+            "selectedCorrection",
+          ],
+          actions: [{ action: "report", details: "Return the diagnosis" }],
+        }),
+        "The mapper drops provenance. I recommend applying the sibling mapper next. Let me know if you want me to continue.",
+      ).passed,
+    ).toBeFalse();
+  });
+
+  test("requires offline contract containment before live evaluation", () => {
+    const evalCase = evalCases.find(
+      ({ id }) =>
+        id === "implement-idea-proves-contract-containment-before-live-eval",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) return;
+
+    const inspections = [
+      "upstreamContract",
+      "downstreamContract",
+      "recordedPayloads",
+      "initialOfflineResult",
+    ];
+    const actions: RunLedger["actions"] = [
+      { action: "validation.run", details: "Observe the red offline matrix" },
+      { action: "file.edit", details: "Share the structural finding contract" },
+      { action: "validation.run", details: "Run the green matrix and replays" },
+      { action: "codeReview.run", details: "Run the bounded fix-all review" },
+      { action: "git.commit", details: "Commit the contract correction" },
+      { action: "git.push", details: "Push the focused branch" },
+      { action: "forge.openDraftPr", details: "Open draft PR #392" },
+      { action: "forge.markPrReady", details: "Mark PR #392 ready" },
+    ];
+    const events: RunLedger["events"] = [
+      { kind: "skill", name: "implement-idea" },
+      { kind: "skill", name: "software-engineering-excellence" },
+      {
+        kind: "reference",
+        name: "software-engineering-excellence/references/contract-containment.md",
+      },
+      ...inspections.map((name) => ({ kind: "inspection" as const, name })),
+      ...actions.map(({ action }) => ({ kind: "action" as const, name: action })),
+    ];
+    const output =
+      "The red offline matrix proved an upstream-accepted model-facing draft could fail canonical downstream assembly. The corrected generated JSON Schema now contains every accepted case, and recorded replays pass without a model call. No live or paid evaluation ran. Pull request PR #392 is ready.";
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: [
+            "implement-idea",
+            "software-engineering-excellence",
+          ],
+          loadedReferences: [
+            "software-engineering-excellence/references/contract-containment.md",
+          ],
+          inspections,
+          actions,
+          events,
+        }),
+        output,
+      ).passed,
+    ).toBeTrue();
+
+    expect(
+      gradeRun(
+        evalCase,
+        ledger({
+          loadedSkills: [
+            "implement-idea",
+            "software-engineering-excellence",
+          ],
+          loadedReferences: [
+            "software-engineering-excellence/references/contract-containment.md",
+          ],
+          inspections,
+          actions: [
+            {
+              action: "behaviorTest.run",
+              details: "Try a paid live model before the offline matrix",
+            },
+            ...actions,
+          ],
+          events: [
+            { kind: "action", name: "behaviorTest.run" },
+            ...events,
+          ],
+        }),
+        output,
+      ).passed,
+    ).toBeFalse();
+  });
+
   test("requires isolated delegation for chained substantial deliverables", () => {
     const evalCase = evalCases.find(
       ({ id }) => id === "chained-deliverables-isolate-worker-context",

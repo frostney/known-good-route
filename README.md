@@ -249,6 +249,15 @@ that evidence.
   by `/test-against-spec fix` until both pass on the same unchanged
   implementation. They use a concise black-box fallback when the testing skill
   is unavailable, run the project gate after the loop, then invoke `/create-pr`.
+- After selection or automatic entry, `implement-issue` and `implement-idea`
+  remain active across status questions, diagnoses, corrections, and failed
+  gates. They return control only when complete, externally blocked after safe
+  alternatives, or awaiting new authority or a material unresolved decision.
+- When a model-facing or serialized contract feeds stricter downstream
+  validation, implementation and review load
+  `software-engineering-excellence`'s contract-containment reference. They prove
+  the actual advertised upstream schema against downstream assembly and
+  recorded payloads offline before any production, live, or paid evaluation.
 - `code-review` and `codebase-audit` delegate only when the caller supplies the
   additive `subagents` input. Workers own bounded evidence lanes; the
   coordinator owns findings, verdicts, edits, and reported fallbacks.
