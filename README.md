@@ -95,10 +95,12 @@ flowchart TB
   delivery cycle.
 - **Ambient** guidance governs every stage: `agent-writing`,
   `software-engineering-excellence`, plus `bleeding-edge` when the project has
-  adopted it. When one conversation coordinates two or more substantial
-  deliverables outside an active orchestrator, it retains decisions and
-  provenance while one context-isolated bounded worker owns each deliverable
-  and returns a terminal summary.
+  adopted it. Software engineering excellence keeps the parent objective active
+  across corrections, questions, partial results, and worker returns. When one
+  conversation coordinates two or more substantial deliverables outside an
+  active orchestrator, it retains decisions and provenance while one
+  context-isolated bounded worker owns each deliverable and returns a result for
+  parent integration.
 - Every outer-loop transition is human-controlled. `/roadmap-review` proposes
   the milestone, `/milestone-rush` offers the retrospective after integrated
   completion, and `/create-release` is an optional manual step after
@@ -156,7 +158,8 @@ flowchart TB
 | [`native-nostalgia-stack`](native-nostalgia-stack/SKILL.md) | FreePascal toolchain: FPC in Delphi mode (compiler flags in a shared include), namespace-based unit naming (flat by default), code-style starting points, build / formatter / codebase-health contracts (implementation is the project's choice), Lefthook pre-commit, InstantFPC for one-off scripts. |
 | [`convex-conventions`](convex-conventions/SKILL.md) | Convex backend rules: shared validators, Clerk JWT bridge, `args` + `returns` on every public function, in-code filtering, `.take()` caps, rate-limited mutations, action/mutation split, schema with soft-delete and audit trails, single re-export module for client types. The live Convex docs override this skill on conflict. |
 | [`codebase-audit`](codebase-audit/SKILL.md) | Audit the repository and delivery surface with a coverage map, conditional technical and discoverability perspectives, revert-clean falsification probes, four-layer de-duplication, and churn-backed architectural risk. Evidence can use bounded lanes; remediation requires a selected coherent batch. |
-| [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Ambient engineering-quality standard for planning, orchestration, development, debugging, review, refactoring, and substantial investigation: ground in reality, solve the full scope, reuse before creating, validate the real behavior, protect product and developer-feedback performance throughout delivery, and keep maintainability as the governor. |
+| [`agent-behavior-audit`](agent-behavior-audit/SKILL.md) | Run the complete monthly cross-device and cross-harness behavior barometer: validate source coverage and freshness, measure objective retention, recovery burden, terminalization, subagent prompting, and efficiency, then route quality-admitted findings without automatic remediation. |
+| [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Ambient engineering-quality standard for planning, orchestration, development, debugging, review, refactoring, and substantial investigation: retain the active objective, ground in reality, solve the full scope, reuse before creating, validate the real behavior, protect product and developer-feedback performance throughout delivery, and keep maintainability as the governor. |
 | [`agent-writing`](agent-writing/SKILL.md) | Ambient harness and engineering-artifact prose contract: product-output voice stays separate; answers, evidence, and lifecycle state come first; prior decisions and existing mechanisms are inspected; numerical revision thresholds trigger a mandatory before-send pass; deterministic wording and 300-character constrained-item limits remain enforced. |
 | [`bleeding-edge`](bleeding-edge/SKILL.md) | Ambient lens favoring the newest viable option, including just-released stable versions and justified pre-release channels, under `software-engineering-excellence`: verify live, pin, keep choices reversible and gate-green, and never silently replace a decided choice. |
 
@@ -337,6 +340,11 @@ that evidence.
   Project-specific instructions and templates take precedence. Issues may
   contain many concise items; each review reply and retro impact item is capped
   at 300 characters.
+- `software-engineering-excellence` preserves the parent objective and settled
+  decisions across added context, corrections, questions, checkpoints, and
+  bounded worker results. It pauses only the exact gated transition and treats
+  completion as a verified parent state rather than the last message's local
+  result.
 - `bleeding-edge` sits beneath `software-engineering-excellence` as a subordinate lens: it tilts the default technology choice toward the newest viable option while SEE remains the governor and maintainability stays the tiebreaker. It reuses the cross-skill "verify versions live" rule, and it applies its bias *within* the choices decided by the stack skills and `AGENTS.md` Hard Constraints rather than silently swapping them.
 
 ## Contributing

@@ -1,11 +1,11 @@
 ---
 name: software-engineering-excellence
 description: >-
-  Applies the user's ambient engineering bar: current evidence, complete
-  in-scope solutions, reuse, real validation, maintainability-governed
-  performance, and fast developer feedback. Use when planning, orchestrating,
-  implementing, debugging, reviewing, refactoring, architecture, release
-  delivery, or substantial technical investigation.
+  Applies the user's ambient engineering bar: objective retention, current
+  evidence, complete in-scope solutions, reuse, real validation,
+  maintainability-governed performance, and fast developer feedback. Use when
+  planning, orchestrating, implementing, debugging, reviewing, refactoring,
+  architecture, release delivery, or substantial technical investigation.
 license: Unlicense OR MIT
 ---
 
@@ -60,6 +60,13 @@ status questions, failure diagnoses, corrections, compaction, and validation
 failures. A narrower constraint, such as prohibiting a paid evaluation, narrows
 the available route without blocking safe offline work.
 
+Treat each later message as a change to the active workstream, not as an
+automatic replacement for it. Added context and answers update the affected
+obligation. A correction replaces only the corrected fact, assumption, method,
+or decision. A question or status request is answered while remaining work
+continues. End or replace scope only when the user does so semantically; route a
+genuinely separate outcome to a separate lane without losing the parent.
+
 Before returning control, establish one terminal condition:
 
 - the authorized outcome is complete with observed evidence;
@@ -69,7 +76,9 @@ Before returning control, establish one terminal condition:
 If none applies, take the next safe in-scope action. A diagnosis, recommended
 fix, failed experiment, or known implementation gap is not a terminal result.
 When a handoff is required, record the active outcome, authorized and prohibited
-actions, current evidence, and next safe executable action.
+actions, current evidence, and next safe executable action. For multi-turn work,
+compaction risk, external waits, or multiple workers, use the lightweight
+[workstream continuity contracts](references/workstream-continuity.md).
 
 For genuinely multi-layer work, establish a thin runnable path and deepen it in
 increments. Use the language's native idioms and the project's established
@@ -134,6 +143,10 @@ output, and logs in the worker context. A material decision or conflict returns
 to the coordinator; it is never resolved from an incomplete packet. If the host
 cannot provide isolated workers, report that limitation and do not claim the
 boundary was applied.
+
+A worker's `complete` state closes only its lane. The coordinator integrates the
+result, recomputes the parent's open obligations, and continues until the parent
+reaches its own terminal condition.
 
 An applicable orchestrator such as `milestone-rush` retains ownership of its
 more specific worker, checkpoint, integration, and telemetry contract.

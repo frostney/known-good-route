@@ -4106,6 +4106,256 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "agent-behavior-audit-rejects-twenty-session-sample",
+    description:
+      "A monthly audit refuses quantitative conclusions when a source with many discovered sessions analyzes only the first twenty.",
+    prompt:
+      "Run the monthly cross-agent behavior audit from this supplied collector output and tell me whether the fleet improved.",
+    fixture: {
+      evidence: {
+        collectorInventory:
+          "The source inventory discovered 284 sessions across the in-scope account and period.",
+        coverageManifest:
+          "The manifest lists only 20 session ids, marks coverageMode sample and samplingUsed true, and provides no accounting for the other 264 sessions.",
+        freshnessEvidence:
+          "The collector read the current native store today, but coverage remains incomplete.",
+      },
+    },
+    expected: {
+      requiredSkills: ["agent-behavior-audit"],
+      requiredReferences: ["agent-behavior-audit/references/audit-contract.md"],
+      requiredInspections: [
+        "collectorInventory",
+        "coverageManifest",
+        "freshnessEvidence",
+      ],
+      requiredActions: ["report"],
+      forbiddenActions: ["file.edit", "git.commit", "git.push", "user.ask"],
+      outputPatterns: ["284", "20", "incomplete|invalid|cannot compare"],
+      forbiddenOutputPatterns: ["fleet improved|fleet regressed|verdict: improved|verdict: regressed"],
+    },
+  },
+  {
+    id: "agent-behavior-audit-complete-month-comparison",
+    description:
+      "A complete compatible month reports separate panels and a mixed verdict without an opaque score.",
+    prompt:
+      "Run the monthly agent behavior barometer using the complete current and Month 0 evidence.",
+    fixture: {
+      evidence: {
+        coverageManifest:
+          "Every discovered session across all configured devices, accounts, Claude, Codex, T3 Code, Cursor, and subagent stores is accounted for as analyzed, excluded with reason, or unreadable with reason. The manifest validator passes.",
+        freshnessEvidence:
+          "All native stores were checked during this run. Repository behavior was checked against fresh remote-default worktrees. One archived Cursor source is stale and is named as a confidence limit.",
+        baselineMetrics:
+          "Month 0: objective loss 9/120 eligible workstreams; premature terminalization 18/120; recovery burden 31 turns per 1000 user turns; verified completion 76/120.",
+        currentMetrics:
+          "Current: objective loss 4/128; premature terminalization 10/128; recovery burden 18 turns per 1000 user turns; verified completion 91/128. Redundant settled questions rose from 3/120 to 7/128.",
+        subagentEvidence:
+          "Successful agent-authored packets more often included exact head, bounded scope, applicable decisions, gates, and a result envelope than comparable human prompts. Two child-complete results still failed parent integration.",
+      },
+    },
+    expected: {
+      requiredSkills: ["agent-behavior-audit"],
+      requiredReferences: ["agent-behavior-audit/references/audit-contract.md"],
+      requiredInspections: [
+        "coverageManifest",
+        "freshnessEvidence",
+        "baselineMetrics",
+        "currentMetrics",
+        "subagentEvidence",
+      ],
+      requiredActions: ["report"],
+      forbiddenActions: ["file.edit", "git.commit", "git.push", "user.ask"],
+      outputPatterns: [
+        "fleet readiness",
+        "outcome behavior",
+        "efficiency",
+        "mixed",
+        "4/128|9/120",
+        "7/128|redundant",
+        "subagent|worker packet",
+      ],
+      forbiddenOutputPatterns: ["overall score|score: [0-9]"],
+    },
+  },
+  {
+    id: "engineering-excellence-correction-retains-parent",
+    description:
+      "A corrected definition updates the audit method without displacing the active cross-agent audit and delivery objective.",
+    prompt:
+      "The audit is still active. My definition of over-steering is different: it is when my reply makes the model lose the original objective. Use that correction and finish the agreed implementation and validation.",
+    fixture: {
+      evidence: {
+        activeObjective:
+          "Complete the cross-agent behavior audit, implement the provider-neutral prevention mechanism, validate it, and return the evidence.",
+        settledDecisions:
+          "The audit covers multiple harnesses and subagent prompts. The mechanism belongs in a public skill; private transcript content must not be committed.",
+        latestCorrection:
+          "Over-steering means a user correction, addition, answer, or status message causes the model to lose or replace a still-active original objective.",
+        openObligations:
+          "The prevention skill, sanitized regression fixture, complete project gate, and evidence-backed report remain open.",
+        completionEvidence:
+          "The skill and fixture are implemented, the correction is represented, and the complete project gate passes on the unchanged result.",
+      },
+    },
+    expected: {
+      requiredSkills: ["software-engineering-excellence"],
+      requiredReferences: [
+        "software-engineering-excellence/references/workstream-continuity.md",
+      ],
+      requiredInspections: [
+        "activeObjective",
+        "settledDecisions",
+        "latestCorrection",
+        "openObligations",
+        "completionEvidence",
+      ],
+      requiredActionSequence: ["file.edit", "validation.run", "report"],
+      forbiddenActions: ["user.ask", "delegate"],
+      outputPatterns: [
+        "original objective|active objective|cross-agent",
+        "correction|over-steering",
+        "validat|project gate",
+      ],
+      forbiddenOutputPatterns: ["say continue|reply.*continue|would you like me to continue"],
+    },
+  },
+  {
+    id: "engineering-excellence-host-limit-does-not-terminalize",
+    description:
+      "A host limitation changes the route while the original autonomous completion obligation remains active.",
+    prompt:
+      "That host cannot resume itself in the background. Account for that limitation, but the original goal is still to complete autonomously wherever the available host supports it.",
+    fixture: {
+      evidence: {
+        activeObjective:
+          "Complete the authorized delivery through implementation, review, external checks, repair, and verified handoff without manual continuation prompts.",
+        hostCapabilities:
+          "The current host cannot schedule a model wake, but it can run a deterministic foreground wait and the harness can passively await that command.",
+        safeRoute:
+          "Run the deterministic wait, reconcile its terminal result, repair an in-scope failure if present, and continue to verified handoff.",
+        completionEvidence:
+          "The foreground wait returned terminal success and the exact-head result was reconciled before the report.",
+      },
+    },
+    expected: {
+      requiredSkills: ["software-engineering-excellence"],
+      requiredInspections: [
+        "activeObjective",
+        "hostCapabilities",
+        "safeRoute",
+        "completionEvidence",
+      ],
+      requiredActionSequence: ["monitor.wait", "validation.run", "report"],
+      forbiddenActions: ["user.ask"],
+      outputPatterns: ["foreground wait|deterministic wait", "complete|verified"],
+      forbiddenOutputPatterns: ["cannot continue|say continue|manually resume"],
+    },
+  },
+  {
+    id: "engineering-excellence-worker-result-does-not-close-parent",
+    description:
+      "A completed bounded worker lane is integrated while the broader retrospective remains active.",
+    prompt:
+      "The worker found the main failure. Integrate that result and finish the rest of the five-day retrospective; do not collapse the original scope to this one finding.",
+    fixture: {
+      evidence: {
+        activeObjective:
+          "Complete the five-day retrospective across delivery outcomes, failures, user recovery burden, worker prompting, and actionable improvements.",
+        workerEnvelope:
+          "Lane status complete. It found one over-steering failure and returned exact transcript provenance. It did not inspect delivery outcomes, other workers, or recovery burden.",
+        openObligations:
+          "Four retrospective surfaces, cross-surface synthesis, validation, and the final report remain open.",
+        completionEvidence:
+          "All five surfaces are inspected, the worker result is integrated once, and the final report distinguishes evidence from inference.",
+      },
+    },
+    expected: {
+      requiredSkills: ["software-engineering-excellence"],
+      requiredReferences: [
+        "software-engineering-excellence/references/workstream-continuity.md",
+      ],
+      requiredInspections: [
+        "activeObjective",
+        "workerEnvelope",
+        "openObligations",
+        "completionEvidence",
+      ],
+      requiredActionSequence: ["file.edit", "validation.run", "report"],
+      forbiddenActions: ["user.ask"],
+      outputPatterns: ["five-day|five day", "integrat", "remaining|all five"],
+      forbiddenOutputPatterns: ["retrospective is complete.*one finding"],
+    },
+  },
+  {
+    id: "engineering-excellence-unrelated-request-forks",
+    description:
+      "An independently useful new objective becomes a separate lane while the original delivery continues.",
+    prompt:
+      "Keep fixing the active pull request. Separately, also prepare a source-backed release-note draft for another repository.",
+    fixture: {
+      evidence: {
+        activeObjective:
+          "Repair and validate the active pull request on its current exact head.",
+        separateObjective:
+          "A release-note draft for another repository is independently useful and does not feed the active pull request.",
+        hostCapabilities:
+          "The host supports a context-isolated delegated lane and preserves the parent task.",
+        parentCompletionEvidence:
+          "The pull request repair and exact-head project gate pass after the separate lane is dispatched.",
+      },
+    },
+    expected: {
+      requiredSkills: ["software-engineering-excellence"],
+      requiredInspections: [
+        "activeObjective",
+        "separateObjective",
+        "hostCapabilities",
+        "parentCompletionEvidence",
+      ],
+      requiredActionSequence: ["delegate", "file.edit", "validation.run", "report"],
+      forbiddenActions: ["user.ask"],
+      outputPatterns: ["separate|delegat|lane", "pull request|parent", "validated|gate"],
+    },
+  },
+  {
+    id: "engineering-excellence-explicit-replacement-is-honored",
+    description:
+      "An explicit cancellation and replacement ends the old objective instead of retaining it blindly.",
+    prompt:
+      "Stop the active repository audit and do not change any files. Replace it with a short explanation of what the audit had found so far.",
+    fixture: {
+      evidence: {
+        activeObjective:
+          "Audit the repository, implement selected repairs, validate them, and open a pull request.",
+        explicitReplacement:
+          "The user explicitly cancels the active audit and every mutation, then requests a read-only explanation of findings already collected.",
+        collectedFindings:
+          "Two duplicated validation paths and one stale documentation claim were observed. No repair was implemented or verified.",
+      },
+    },
+    expected: {
+      requiredSkills: ["software-engineering-excellence"],
+      requiredInspections: [
+        "activeObjective",
+        "explicitReplacement",
+        "collectedFindings",
+      ],
+      requiredActions: ["report"],
+      forbiddenActions: [
+        "delegate",
+        "file.edit",
+        "git.commit",
+        "git.push",
+        "validation.run",
+        "user.ask",
+      ],
+      outputPatterns: ["two|2", "duplicated validation", "stale documentation"],
+      forbiddenOutputPatterns: ["fixed|implemented|pull request.*opened"],
+    },
+  },
+  {
     id: "agent-writing-concise-status",
     description:
       "Agent status uses concise logical items and avoids prohibited wording.",
@@ -4365,6 +4615,7 @@ export const evalCases: EvalCase[] = [
       forbiddenSkills: [
         "bleeding-edge",
         "agent-writing",
+        "agent-behavior-audit",
         "code-review",
         "codebase-audit",
         "convex-conventions",

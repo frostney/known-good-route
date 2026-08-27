@@ -169,6 +169,26 @@ describe("cross-skill policy", () => {
     expect(excellence).toContain("next safe executable action");
   });
 
+  test("engineering excellence retains parent scope and uses bounded contracts", async () => {
+    const source = await skill("software-engineering-excellence");
+    const contracts = await Bun.file(
+      resolve(
+        repositoryRoot,
+        "software-engineering-excellence/references/workstream-continuity.md",
+      ),
+    ).text();
+
+    expect(source).toContain("Treat each later message as a change");
+    expect(source).toContain("A correction replaces only the corrected");
+    expect(source).toContain("route without blocking safe offline work");
+    expect(source).toContain("closes only its lane");
+    expect(source).toContain("take the next safe in-scope action");
+    expect(contracts).toContain("## Workstream record");
+    expect(contracts).toContain("## Worker packet");
+    expect(contracts).toContain("## Result envelope");
+    expect(contracts).toContain("Default to isolated context");
+  });
+
   test("behavior testing is black-box, preview-first, and read-only by default", async () => {
     const source = await skill("test-against-spec");
 
