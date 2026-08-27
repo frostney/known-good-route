@@ -4605,6 +4605,86 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "maintain-project-skills-thin-caller-upgrade",
+    description:
+      "A reusable skills workflow upgrade preserves the thin caller and immutable pin.",
+    prompt:
+      "/maintain-project-skills upgrade the scheduled Agent Skills workflow without copying its jobs.",
+    fixture: {
+      evidence: {
+        currentCaller:
+          "The consumer keeps a Monday schedule, workflow_dispatch, contents: write, pull-requests: write, and one reusable-workflow job. Its project inventory is nested at paddy/ and its automation branch is automation/update-paddy-agent-skills.",
+        proposedRevision:
+          "The reusable workflow is merged on the KGR default branch at full SHA 0123456789abcdef0123456789abcdef01234567. Its diff preserves the inputs used by this caller and pins skills CLI 1.5.17.",
+        projectGate:
+          "actionlint and the repository workflow-contract test validate the edited caller.",
+      },
+    },
+    expected: {
+      requiredSkills: ["maintain-project-skills"],
+      requiredInspections: ["currentCaller", "proposedRevision", "projectGate"],
+      requiredActions: ["file.edit", "validation.run", "report"],
+      forbiddenActions: [
+        "forge.mergePr",
+        "git.amend",
+        "git.commit",
+        "git.forcePush",
+        "git.push",
+      ],
+      maxActionCounts: { "file.edit": 1 },
+      outputPatterns: [
+        "0123456789abcdef0123456789abcdef01234567",
+        "paddy",
+        "schedule|Monday",
+        "contents.*write|write.*contents",
+        "pull-requests.*write|write.*pull-requests",
+        "actionlint|workflow-contract",
+      ],
+      forbiddenOutputPatterns: ["@main|@v[0-9]|global install|copied jobs"],
+    },
+  },
+  {
+    id: "maintain-project-skills-source-backed-rename",
+    description:
+      "A deleted project skill is migrated only after its upstream replacement is proven.",
+    prompt:
+      "/maintain-project-skills diagnose and migrate the deleted review-pr inventory entry.",
+    fixture: {
+      evidence: {
+        projectInventory:
+          "paddy/skills-lock.json records review-pr from frostney/known-good-route at review-pr/SKILL.md. The canonical folder is paddy/.agents/skills/review-pr; both paths are generated and clean.",
+        sourceHistory:
+          "The upstream history proves review-pr was renamed to code-review, and the new entrypoint retains the requested pull-request review capability. No other inventory entry moved.",
+        pinnedCli:
+          "The caller pins skills CLI 1.5.17 and uses paddy as its project root. Project removal plus source-specific add completes successfully without -g; the regenerated inventory and hashes validate afterward.",
+      },
+    },
+    expected: {
+      requiredSkills: ["maintain-project-skills"],
+      requiredInspections: ["projectInventory", "sourceHistory", "pinnedCli"],
+      requiredActions: ["validation.run", "report"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.mergePr",
+        "git.amend",
+        "git.commit",
+        "git.forcePush",
+        "git.push",
+      ],
+      outputPatterns: [
+        "review-pr",
+        "code-review",
+        "source|upstream|history",
+        "1\\.5\\.17",
+        "paddy",
+        "generated",
+        "validat|hash",
+        "without.*-g|never.*-g|project.scoped",
+      ],
+      forbiddenOutputPatterns: ["hand.edit|manual.*hash|force.push"],
+    },
+  },
+  {
     id: "unrelated-prompt-no-skill",
     description: "An unrelated request does not load a repository skill.",
     prompt: "Translate the phrase 'good morning' into French.",
@@ -4627,6 +4707,7 @@ export const evalCases: EvalCase[] = [
         "implement-idea",
         "implement-issue",
         "milestone-rush",
+        "maintain-project-skills",
         "native-nostalgia-stack",
         "project-structure",
         "react-stack",

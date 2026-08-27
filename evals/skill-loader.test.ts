@@ -13,7 +13,7 @@ describe("skill loader", () => {
   test("discovers every top-level skill", async () => {
     const skills = await loadSkills(repositoryRoot);
 
-    expect(skills.size).toBe(27);
+    expect(skills.size).toBe(28);
     expect(skills.has("address-stack-feedback")).toBeTrue();
     expect(skills.has("agent-writing")).toBeTrue();
     expect(skills.has("agent-behavior-audit")).toBeTrue();
@@ -21,6 +21,7 @@ describe("skill loader", () => {
     expect(skills.has("codebase-audit")).toBeTrue();
     expect(skills.has("create-pr")).toBeTrue();
     expect(skills.has("milestone-rush")).toBeTrue();
+    expect(skills.has("maintain-project-skills")).toBeTrue();
     expect(skills.has("delivery-wait")).toBeTrue();
     expect(skills.has("run-retro")).toBeTrue();
     expect(skills.has("render-html")).toBeTrue();

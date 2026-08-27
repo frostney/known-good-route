@@ -1,0 +1,144 @@
+name: Update project Agent Skills
+
+on:
+  workflow_call:
+    inputs:
+      skills-root:
+        description: Project root containing .agents/skills and skills-lock.json.
+        required: false
+        type: string
+        default: "."
+      skills-cli-version:
+        description: Exact skills CLI version.
+        required: false
+        type: string
+        default: "1.5.17"
+      repair-find-skills:
+        description: Repair an isolated find-skills deletion warning using full-depth discovery.
+        required: false
+        type: boolean
+        default: false
+      normalize-lock-hashes:
+        description: Recompute deterministic lock hashes from canonical project skill folders.
+        required: false
+        type: boolean
+        default: false
+      pr-branch:
+        description: Branch owned by the generated skills update.
+        required: false
+        type: string
+        default: "automation/update-agent-skills"
+      pr-title:
+        description: Conventional Commit title for the draft pull request.
+        required: false
+        type: string
+        default: "chore(skills): refresh project Agent Skills"
+      pr-body:
+        description: Body for the draft pull request.
+        required: false
+        type: string
+        default: >-
+          Updates the project-owned Agent Skills inventory from its recorded
+          upstream sources. The generated files remain owned by the skills CLI.
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-skills-update-${{ github.repository }}-${{ inputs.pr-branch }}
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.refresh.outputs.changed }}
+      source_sha: ${{ steps.refresh.outputs.source_sha }}
+    steps:
+      - name: Check out caller repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Install Bun
+        run: npm install --global bun@1.3.14
+
+      - name: Refresh and validate project skills
+        id: refresh
+        uses: $/.github/actions/update-project-skills
+        with:
+          mode: refresh
+          skills-root: ${{ inputs.skills-root }}
+          skills-cli-version: ${{ inputs.skills-cli-version }}
+          repair-find-skills: ${{ inputs.repair-find-skills }}
+          normalize-lock-hashes: ${{ inputs.normalize-lock-hashes }}
+          artifact-directory: ${{ runner.temp }}/project-skills-update
+
+      - name: Upload immutable refresh artifact
+        if: steps.refresh.outputs.changed == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: project-skills-update-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/project-skills-update
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    if: needs.refresh.outputs.changed == 'true'
+    needs: refresh
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Check out exact refresh base
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.refresh.outputs.source_sha }}
+
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Install Bun
+        run: npm install --global bun@1.3.14
+
+      - name: Download immutable refresh artifact
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: project-skills-update-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/project-skills-update
+
+      - name: Publish generated update as a draft pull request
+        id: publish
+        uses: $/.github/actions/update-project-skills
+        with:
+          mode: publish
+          artifact-directory: ${{ runner.temp }}/project-skills-update
+          pr-branch: ${{ inputs.pr-branch }}
+          pr-title: ${{ inputs.pr-title }}
+          pr-body: ${{ inputs.pr-body }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Report draft pull request
+        run: |
+          printf 'Draft PR: %s\nHead: %s\n' \
+            "$KGR_PR_URL" \
+            "$KGR_HEAD_SHA"
+        env:
+          KGR_HEAD_SHA: ${{ steps.publish.outputs.head_sha }}
+          KGR_PR_URL: ${{ steps.publish.outputs.pr_url }}
