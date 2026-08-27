@@ -338,9 +338,11 @@ describe("workflow contracts", () => {
     ).toBe(false);
     expect(workflow.jobs.refresh.permissions).toEqual({ contents: "read" });
     expect(workflow.jobs.publish.permissions).toEqual({
+      actions: "read",
       contents: "write",
       "pull-requests": "write",
     });
+    expect(raw).not.toContain("actions: write");
     expect(raw).toContain("uses: $/.github/actions/update-project-skills");
     expect(raw).not.toContain("uses: ./.github/actions/update-project-skills");
     expect(raw).not.toContain("repository: frostney/known-good-route");
@@ -374,6 +376,14 @@ describe("workflow contracts", () => {
     );
     expect(runtime).not.toContain("force-with-lease");
     expect(runtime).not.toMatch(/\["push",\s*"--force/);
+
+    const callerGuide = await readFile(
+      join(repositoryRoot, "docs/project-skills-updates.md"),
+      "utf8",
+    );
+    expect(callerGuide).toContain(
+      "permissions:\n  actions: read\n  contents: write\n  pull-requests: write",
+    );
   });
 
   test("keeps every third-party workflow action pinned to a full SHA", async () => {

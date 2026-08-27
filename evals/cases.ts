@@ -4613,7 +4613,7 @@ export const evalCases: EvalCase[] = [
     fixture: {
       evidence: {
         currentCaller:
-          "The consumer keeps a Monday schedule, workflow_dispatch, contents: write, pull-requests: write, and one reusable-workflow job. Its project inventory is nested at paddy/ and its automation branch is automation/update-paddy-agent-skills.",
+          "The consumer keeps a Monday schedule, workflow_dispatch, actions: read, contents: write, pull-requests: write, and one reusable-workflow job. Its project inventory is nested at paddy/ and its automation branch is automation/update-paddy-agent-skills.",
         proposedRevision:
           "The reusable workflow is merged on the KGR default branch at full SHA 0123456789abcdef0123456789abcdef01234567. Its diff preserves the inputs used by this caller and pins skills CLI 1.5.17.",
         projectGate:
@@ -4636,6 +4636,7 @@ export const evalCases: EvalCase[] = [
         "0123456789abcdef0123456789abcdef01234567",
         "paddy",
         "schedule|Monday",
+        "actions.*read|read.*actions",
         "contents.*write|write.*contents",
         "pull-requests.*write|write.*pull-requests",
         "actionlint|workflow-contract",

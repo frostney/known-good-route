@@ -98,6 +98,7 @@ jobs:
     needs: refresh
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: write
       pull-requests: write
     steps:

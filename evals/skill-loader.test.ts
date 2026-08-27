@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { resolve } from "node:path";
+import { cp, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import {
   formatSkillCatalog,
   loadSkills,
@@ -50,5 +52,37 @@ describe("skill loader", () => {
     expect(
       readSkillReference(projectStructure, "../README.md"),
     ).rejects.toThrow("escapes");
+  });
+
+  test("keeps the project-skills runbook inside a standalone skill copy", async () => {
+    const installationRoot = await mkdtemp(
+      join(tmpdir(), "kgr-installed-skills-"),
+    );
+    const installedSkill = join(installationRoot, "maintain-project-skills");
+
+    try {
+      await cp(join(repositoryRoot, "maintain-project-skills"), installedSkill, {
+        recursive: true,
+      });
+      const skills = await loadSkills(installationRoot);
+      expect(await validateSkillReferences(skills)).toEqual([
+        "maintain-project-skills/references/project-skills-runbook.md",
+      ]);
+
+      const skill = skills.get("maintain-project-skills");
+      expect(skill).toBeDefined();
+      if (!skill) {
+        return;
+      }
+      expect(skill.body).not.toContain("../docs/");
+      const runbook = await readSkillReference(
+        skill,
+        "references/project-skills-runbook.md",
+      );
+      expect(runbook).toContain("`actions: read`");
+      expect(runbook).toContain("full 40-character SHA");
+    } finally {
+      await rm(installationRoot, { force: true, recursive: true });
+    }
   });
 });

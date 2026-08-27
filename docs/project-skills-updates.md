@@ -9,8 +9,9 @@ marks a pull request ready, or merges it.
 
 Keep the schedule and manual trigger in the consumer repository. Grant the
 maximum token permissions in the caller because GitHub does not let a called
-workflow elevate them; the reusable workflow narrows its refresh job to
-`contents: read` and grants writes only to its publish job.
+workflow elevate them. The reusable workflow narrows its refresh job to
+`contents: read`; its publish job receives `actions: read` plus only the two
+write permissions needed to push the generated branch and manage its draft PR.
 
 ```yaml
 name: Update project Agent Skills
@@ -21,6 +22,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: write
   pull-requests: write
 
@@ -97,7 +99,10 @@ The separately permissioned publish job downloads that artifact, checks out the
 exact base SHA, verifies any existing automation branch owns only the generated
 paths, reapplies and revalidates the generated snapshot, then pushes an
 always-new commit and creates or updates a draft PR. It uses no force push and
-has no merge operation.
+has no merge operation. The publish job declares `actions: read` as its explicit
+artifact-read capability. The default same-run artifact transport also uses
+runtime-scoped credentials; upload therefore does not require `actions: write`,
+and the refresh job remains `contents: read` only.
 
 ## Failure handling
 
@@ -110,9 +115,9 @@ has no merge operation.
   and add the replacement with the same project-scoped CLI before rerunning the
   workflow.
 - `Resource not accessible by integration` in publish usually means the caller
-  omitted `contents: write` or `pull-requests: write`, or repository policy
-  prevents Actions from creating PRs. The called workflow cannot elevate the
-  caller token.
+  omitted `actions: read`, `contents: write`, or `pull-requests: write`, or
+  repository policy prevents Actions from creating PRs. The called workflow
+  cannot elevate the caller token.
 - A branch-ownership failure means the configured automation branch contains
   non-generated changes. Preserve that work and choose a dedicated branch;
   never let the scheduled workflow overwrite it.
