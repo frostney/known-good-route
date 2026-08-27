@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "bun run typecheck && bun test && python3 agent-writing/scripts/check_prose.py && python3 -m unittest discover -s agent-writing/tests && python3 -m unittest discover -s address-stack-feedback/tests && python3 -m unittest discover -s delivery-wait/tests && python3 -m unittest discover -s milestone-rush/tests && python3 -m unittest discover -s render-html/tests && bun run eval:dry",
+    "check": "bun run typecheck && bun test && python3 agent-writing/scripts/check_prose.py && python3 -m unittest discover -s agent-writing/tests && python3 -m unittest discover -s address-stack-feedback/tests && python3 -m unittest discover -s agent-behavior-audit/tests && python3 -m unittest discover -s delivery-wait/tests && python3 -m unittest discover -s milestone-rush/tests && python3 -m unittest discover -s render-html/tests && bun run eval:dry",
     "eval": "bun run evals/run.ts",
     "eval:dry": "bun run evals/run.ts --dry-run",
     "test": "bun test",
