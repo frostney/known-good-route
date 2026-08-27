@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { cp, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { parse } from "yaml";
 import {
   formatSkillCatalog,
   loadSkills,
@@ -81,6 +82,28 @@ describe("skill loader", () => {
       );
       expect(runbook).toContain("`actions: read`");
       expect(runbook).toContain("full 40-character SHA");
+      expect(runbook).toContain(
+        ".github/workflows/update-project-skills.yml",
+      );
+      expect(runbook).toContain('skills-root: "."');
+      expect(runbook).toContain('skills-root: "paddy"');
+      expect(runbook).toContain("repair-find-skills: true");
+      expect(runbook).toMatch(
+        /uses: frostney\/known-good-route\/\.github\/workflows\/update-project-skills\.yml@[a-f0-9]{40}/,
+      );
+      const callerMatch = runbook.match(
+        /Use this complete root-inventory caller[\s\S]*?```yaml\n([\s\S]*?)\n```/,
+      );
+      expect(callerMatch?.[1]).toBeDefined();
+      const caller = parse(callerMatch?.[1] ?? "");
+      expect(caller.on).toHaveProperty("schedule");
+      expect(caller.on).toHaveProperty("workflow_dispatch");
+      expect(caller.permissions).toEqual({
+        actions: "read",
+        contents: "write",
+        "pull-requests": "write",
+      });
+      expect(caller.jobs.update.with["skills-root"]).toBe(".");
     } finally {
       await rm(installationRoot, { force: true, recursive: true });
     }

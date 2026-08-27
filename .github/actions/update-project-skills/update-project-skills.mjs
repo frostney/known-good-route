@@ -20,6 +20,7 @@ const LOCK_FILE = "skills-lock.json";
 const SKILLS_DIRECTORY = ".agents/skills";
 const FIND_SKILLS_SOURCE = "vercel-labs/skills";
 const HASH_PATTERN = /^[a-f0-9]{64}$/;
+const TREE_MANIFEST_DOMAIN = Buffer.from("known-good-route:skill-tree:v1\0");
 const SKILL_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const CLI_VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
 const BRANCH_PATTERN = /^(?!-)(?!.*\.\.)(?!.*\/\/)[A-Za-z0-9][A-Za-z0-9._/-]*$/;
@@ -108,19 +109,55 @@ async function collectSkillFiles(baseDirectory, currentDirectory, files) {
   }
 }
 
-export async function computeSkillDirectoryHash(skillDirectory) {
+async function readSkillFileRecords(skillDirectory) {
   await requireCanonicalDirectory(resolve(skillDirectory), "Skill directory");
   const files = [];
   await collectSkillFiles(resolve(skillDirectory), resolve(skillDirectory), files);
   files.sort((left, right) =>
     left.relativePath.localeCompare(right.relativePath),
   );
-  const hash = createHash("sha256");
+  return Promise.all(
+    files.map(async (file) => ({
+      content: await readFile(file.path),
+      relativePath: file.relativePath,
+    })),
+  );
+}
+
+function updateLengthPrefixedRecord(hash, type, value) {
+  const bytes = Buffer.isBuffer(value) ? value : Buffer.from(value, "utf8");
+  const length = Buffer.alloc(8);
+  length.writeBigUInt64BE(BigInt(bytes.length));
+  hash.update(Buffer.from([type]));
+  hash.update(length);
+  hash.update(bytes);
+}
+
+async function computeSkillHashes(skillDirectory) {
+  const files = await readSkillFileRecords(skillDirectory);
+  const cliCompatibleHash = createHash("sha256");
+  const treeManifestHash = createHash("sha256");
+  treeManifestHash.update(TREE_MANIFEST_DOMAIN);
   for (const file of files) {
-    hash.update(file.relativePath);
-    hash.update(await readFile(file.path));
+    // Keep the upstream CLI's path+content stream only for computedHash
+    // compatibility. KGR's own manifest uses an unambiguous framed encoding.
+    cliCompatibleHash.update(file.relativePath);
+    cliCompatibleHash.update(file.content);
+    updateLengthPrefixedRecord(treeManifestHash, 1, file.relativePath);
+    updateLengthPrefixedRecord(treeManifestHash, 2, file.content);
   }
-  return hash.digest("hex");
+  return {
+    cliCompatibleHash: cliCompatibleHash.digest("hex"),
+    treeManifestHash: treeManifestHash.digest("hex"),
+  };
+}
+
+export async function computeCliCompatibleSkillHash(skillDirectory) {
+  return (await computeSkillHashes(skillDirectory)).cliCompatibleHash;
+}
+
+export async function computeSkillDirectoryHash(skillDirectory) {
+  return (await computeSkillHashes(skillDirectory)).treeManifestHash;
 }
 
 async function loadLock(root) {
@@ -220,7 +257,9 @@ export async function inspectInventory(skillsRoot) {
     );
   }
 
-  const hashes = {};
+  const cliCompatibleHashes = {};
+  const identities = {};
+  const treeManifestHashes = {};
   for (const name of sortedNames) {
     const entry = lock.skills[name];
     validateLockEntry(name, entry);
@@ -236,16 +275,30 @@ export async function inspectInventory(skillsRoot) {
     if (!entrypointMetadata.isFile()) {
       throw new ProjectSkillsError(`Canonical skill ${name} has an invalid SKILL.md`);
     }
-    const hash = await computeSkillDirectoryHash(directory);
-    hashes[name] = hash;
-    if (entry.computedHash !== hash) {
+    const { cliCompatibleHash, treeManifestHash } =
+      await computeSkillHashes(directory);
+    cliCompatibleHashes[name] = cliCompatibleHash;
+    treeManifestHashes[name] = treeManifestHash;
+    identities[name] = Object.fromEntries(
+      Object.entries(entry)
+        .filter(([key]) => key !== "computedHash")
+        .sort(([left], [right]) => left.localeCompare(right)),
+    );
+    if (entry.computedHash !== cliCompatibleHash) {
       throw new ProjectSkillsError(
-        `Canonical content hash mismatch for ${name}: lock=${entry.computedHash} disk=${hash}`,
+        `Canonical content hash mismatch for ${name}: lock=${entry.computedHash} disk=${cliCompatibleHash}`,
       );
     }
   }
 
-  return { root, lockPath, names: sortedNames, hashes };
+  return {
+    cliCompatibleHashes,
+    identities,
+    lockPath,
+    names: sortedNames,
+    root,
+    treeManifestHashes,
+  };
 }
 
 export async function normalizeInventoryHashes(skillsRoot) {
@@ -265,7 +318,7 @@ export async function normalizeInventoryHashes(skillsRoot) {
     await requireCanonicalDirectory(directory, `Canonical skill ${name}`);
     normalizedSkills[name] = {
       ...entry,
-      computedHash: await computeSkillDirectoryHash(directory),
+      computedHash: await computeCliCompatibleSkillHash(directory),
     };
   }
   const normalized = `${JSON.stringify({ version: 1, skills: normalizedSkills }, null, 2)}\n`;
@@ -324,6 +377,19 @@ export function parseDeletedSkillWarnings(output) {
     }
   }
   return [...names].sort();
+}
+
+export function parseDeletionCheckFailures(output) {
+  const sources = new Set();
+  for (const line of stripAnsi(output).split(/\r?\n/)) {
+    const match = line.match(
+      /(?:(?:failed|unable)\s+to|could\s+not)\s+(?:check\s+for|verify)\s+deleted\s+skills\s+(?:from|for)\s+(.+?)\s*$/i,
+    );
+    if (!match) continue;
+    const source = match[1].replace(/[.!]+$/, "").trim();
+    if (source) sources.add(source);
+  }
+  return [...sources].sort();
 }
 
 function defaultSkillsRunner(args, cwd, cliVersion) {
@@ -429,6 +495,14 @@ export async function refreshProjectSkills(options, dependencies = {}) {
       `Project Agent Skills update failed with status ${update.status}`,
     );
   }
+  const deletionCheckFailures = parseDeletionCheckFailures(
+    update.output ?? "",
+  );
+  if (deletionCheckFailures.length > 0) {
+    throw new ProjectSkillsError(
+      `Project Agent Skills update could not verify upstream deletions for: ${deletionCheckFailures.join(", ")}`,
+    );
+  }
   const deletedSkills = parseDeletedSkillWarnings(update.output ?? "");
   if (deletedSkills.length > 0) {
     const repairable =
@@ -466,6 +540,16 @@ export async function refreshProjectSkills(options, dependencies = {}) {
       "Automated refresh changed the project skill inventory; migrate additions, deletions, or renames manually from source evidence",
     );
   }
+  const changedIdentities = before.names.filter(
+    (name) =>
+      JSON.stringify(before.identities[name]) !==
+      JSON.stringify(after.identities[name]),
+  );
+  if (changedIdentities.length > 0) {
+    throw new ProjectSkillsError(
+      `Automated refresh changed source identity for existing skills: ${changedIdentities.join(", ")}`,
+    );
+  }
 
   const changedPaths = parseChangedPaths(repositoryRoot);
   const outsideScope = changedPaths.filter(
@@ -479,11 +563,13 @@ export async function refreshProjectSkills(options, dependencies = {}) {
   const changed = changedPaths.length > 0;
   const baseSha = git(repositoryRoot, ["rev-parse", "HEAD"]).stdout.trim();
   await createPatch(repositoryRoot, scopedPaths, resolve(options.artifactDirectory), {
-    version: 1,
+    version: 2,
     baseSha,
     changed,
+    identities: after.identities,
     skillsRoot: toGitPath(relative(repositoryRoot, skillsRoot)) || ".",
     scopedPaths,
+    treeManifestHashes: after.treeManifestHashes,
   });
   return { baseSha, changed, changedPaths, scopedPaths };
 }
@@ -521,11 +607,15 @@ export async function publishProjectSkills(options) {
     "Artifact metadata",
   );
   if (
-    metadata.version !== 1 ||
+    metadata.version !== 2 ||
     !metadata.changed ||
+    !metadata.identities ||
+    typeof metadata.identities !== "object" ||
     !Array.isArray(metadata.scopedPaths) ||
     typeof metadata.baseSha !== "string" ||
-    typeof metadata.skillsRoot !== "string"
+    typeof metadata.skillsRoot !== "string" ||
+    !metadata.treeManifestHashes ||
+    typeof metadata.treeManifestHashes !== "object"
   ) {
     throw new ProjectSkillsError("Skills update artifact metadata is invalid");
   }
@@ -584,7 +674,19 @@ export async function publishProjectSkills(options) {
     "--binary",
     join(artifactDirectory, "skills-update.patch"),
   ]);
-  await inspectInventory(resolveSkillsRoot(repositoryRoot, metadata.skillsRoot));
+  const publishedInventory = await inspectInventory(
+    resolveSkillsRoot(repositoryRoot, metadata.skillsRoot),
+  );
+  if (
+    JSON.stringify(publishedInventory.identities) !==
+      JSON.stringify(metadata.identities) ||
+    JSON.stringify(publishedInventory.treeManifestHashes) !==
+      JSON.stringify(metadata.treeManifestHashes)
+  ) {
+    throw new ProjectSkillsError(
+      "Published inventory does not match the source identities and framed tree manifests produced by refresh",
+    );
+  }
 
   const hasCommit =
     git(repositoryRoot, ["diff", "--cached", "--quiet", "--"], {

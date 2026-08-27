@@ -75,6 +75,16 @@ Hash normalization is opt-in because `skills-lock.json` is CLI-owned output.
 Use it only for repositories whose existing CLI output is known to contain
 non-canonical hashes, then review the resulting generated-only diff.
 
+The pinned Agent Skills CLI computes `computedHash` by hashing each sorted
+relative path immediately followed by its file bytes. Normalization deliberately
+uses that upstream algorithm so the result remains CLI-compatible; it does not
+replace lock hashes with a KGR-specific format. Because the upstream byte stream
+has no record framing, KGR separately computes a domain-separated,
+length-prefixed tree-manifest hash. Refresh records those manifests in the
+immutable artifact, and publish compares them after applying the patch. This
+independent manifest protects KGR's handoff without changing generated lockfile
+ownership or claiming that the upstream `computedHash` format is unambiguous.
+
 ## Runtime and safety model
 
 The called workflow loads its composite helper with GitHub's `$/` self
@@ -89,8 +99,9 @@ The read-only refresh job:
 2. Verifies that lock entries and `.agents/skills/<name>` directories have the
    same inventory, safe source paths, and exact content hashes.
 3. Runs `skills update --project --yes` at the configured project root.
-4. Rejects inventory additions, deletions, renames, blocked sources, hash
-   mismatches, and changes outside `.agents/skills` plus `skills-lock.json`.
+4. Rejects inventory additions, deletions, renames, same-name source identity
+   changes, degraded upstream-deletion checks, blocked sources, hash mismatches,
+   and changes outside `.agents/skills` plus `skills-lock.json`.
 5. Creates a binary Git patch through an alternate index, so new untracked
    generated files are included without staging the caller checkout.
 6. Uploads the patch and exact base SHA as a one-day artifact.

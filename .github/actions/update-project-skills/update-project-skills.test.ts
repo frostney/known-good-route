@@ -15,8 +15,10 @@ import { parse } from "yaml";
 
 import {
   ProjectSkillsError,
+  computeCliCompatibleSkillHash,
   computeSkillDirectoryHash,
   inspectInventory,
+  parseDeletionCheckFailures,
   parseDeletedSkillWarnings,
   publishProjectSkills,
   refreshProjectSkills,
@@ -62,7 +64,7 @@ async function writeInventory(projectRoot: string, skillName: string, overrides 
         source: "example/skills",
         sourceType: "github",
         skillPath: `skills/${skillName}/SKILL.md`,
-        computedHash: await computeSkillDirectoryHash(skillDirectory),
+        computedHash: await computeCliCompatibleSkillHash(skillDirectory),
         ...overrides,
       },
     },
@@ -134,6 +136,42 @@ describe("project inventory validation", () => {
       "Canonical content hash mismatch",
     );
   });
+
+  test("uses a framed tree manifest without changing CLI-compatible hashes", async () => {
+    const created = await realpath(
+      await mkdtemp(join(tmpdir(), "kgr-hash-framing-test-")),
+    );
+    temporaryDirectories.push(created);
+    const left = join(created, "left");
+    const right = join(created, "right");
+    await mkdir(left);
+    await mkdir(right);
+    await writeFile(join(left, "SKILL.md"), "a");
+    await writeFile(join(left, "z"), "b");
+    await writeFile(join(right, "SKILL.md"), "a");
+    await writeFile(join(right, "zb"), "");
+
+    expect(await computeCliCompatibleSkillHash(left)).toBe(
+      await computeCliCompatibleSkillHash(right),
+    );
+    expect(await computeSkillDirectoryHash(left)).not.toBe(
+      await computeSkillDirectoryHash(right),
+    );
+
+    const fixture = await makeRepository();
+    const inventory = await inspectInventory(fixture.projectRoot);
+    expect(inventory.cliCompatibleHashes[fixture.skillName]).toBe(
+      "e929f5cbe2e15d81c031b6ed74e51e8cf56a0377b6099640045012bdc2c4ea02",
+    );
+    expect(inventory.cliCompatibleHashes[fixture.skillName]).toBe(
+      JSON.parse(
+        await readFile(join(fixture.projectRoot, "skills-lock.json"), "utf8"),
+      ).skills[fixture.skillName].computedHash,
+    );
+    expect(inventory.treeManifestHashes[fixture.skillName]).not.toBe(
+      inventory.cliCompatibleHashes[fixture.skillName],
+    );
+  });
 });
 
 describe("project refresh", () => {
@@ -149,7 +187,16 @@ describe("project refresh", () => {
     const metadata = JSON.parse(
       await readFile(join(options.artifactDirectory, "metadata.json"), "utf8"),
     );
+    expect(metadata.version).toBe(2);
     expect(metadata.changed).toBe(false);
+    expect(metadata.identities[fixture.skillName]).toEqual({
+      skillPath: `skills/${fixture.skillName}/SKILL.md`,
+      source: "example/skills",
+      sourceType: "github",
+    });
+    expect(metadata.treeManifestHashes[fixture.skillName]).toMatch(
+      /^[a-f0-9]{64}$/,
+    );
     expect(await readFile(join(options.artifactDirectory, "skills-update.patch"), "utf8")).toBe("");
   });
 
@@ -260,6 +307,59 @@ describe("project refresh", () => {
     expect(calls[0]).toEqual(["update", "--project", "--yes"]);
     expect(calls[1]).toContain("--full-depth");
     expect(calls[1]).not.toContain("-g");
+  });
+
+  test("fails closed when deletion discovery degrades with status zero", async () => {
+    const degraded =
+      "✗ Failed to check for deleted skills from vercel-labs/skills";
+    const ansiDegraded =
+      "\x1b[2m✗ Failed to check for deleted skills from vercel-labs/skills\x1b[0m";
+    expect(parseDeletionCheckFailures(degraded)).toEqual([
+      "vercel-labs/skills",
+    ]);
+    expect(parseDeletionCheckFailures(ansiDegraded)).toEqual([
+      "vercel-labs/skills",
+    ]);
+    expect(
+      parseDeletionCheckFailures(
+        "Unable to verify deleted skills for example/skills.",
+      ),
+    ).toEqual(["example/skills"]);
+    expect(
+      parseDeletionCheckFailures(
+        "Could not check for deleted skills from example/other",
+      ),
+    ).toEqual(["example/other"]);
+
+    const fixture = await makeRepository();
+    await expect(
+      refreshProjectSkills(await refreshOptions(fixture), {
+        runSkills: () => ({ output: degraded, status: 0 }),
+      }),
+    ).rejects.toThrow("could not verify upstream deletions");
+  });
+
+  test("rejects same-name source identity redirects", async () => {
+    const mutations = [
+      { source: "example/redirected" },
+      { sourceType: "git" },
+      { skillPath: "moved/example-skill/SKILL.md" },
+    ];
+
+    for (const mutation of mutations) {
+      const fixture = await makeRepository();
+      const lockPath = join(fixture.projectRoot, "skills-lock.json");
+      await expect(
+        refreshProjectSkills(await refreshOptions(fixture), {
+          runSkills: async () => {
+            const lock = JSON.parse(await readFile(lockPath, "utf8"));
+            Object.assign(lock.skills[fixture.skillName], mutation);
+            await writeFile(lockPath, `${JSON.stringify(lock, null, 2)}\n`);
+            return { output: "Updated 1 skill", status: 0 };
+          },
+        }),
+      ).rejects.toThrow("changed source identity");
+    }
   });
 
   test("publishes the artifact as an always-new draft branch commit", async () => {

@@ -9,6 +9,9 @@ consumer owns only its thin caller and generated project inventory.
 - Confirm the inventory root from the repository, not from a remembered layout.
   The root is `.` for an ordinary project and may be a nested project such as
   `paddy` in a monorepo.
+- Put the caller at the consumer repository root as
+  `.github/workflows/update-project-skills.yml`. A nested skills root changes an
+  input, not the location of the caller workflow.
 - Keep only `schedule`, `workflow_dispatch`, maximum caller permissions, and one
   reusable-workflow job in the consumer. Do not copy the refresh/publish jobs or
   introduce another updater action.
@@ -23,6 +26,44 @@ consumer owns only its thin caller and generated project inventory.
 - Preserve the caller's chosen schedule, manual trigger, branch, title, body,
   nested root, repair policy, and normalization policy unless the request
   explicitly changes them.
+
+Use this complete root-inventory caller as the authoring shape:
+
+```yaml
+name: Update project Agent Skills
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    uses: frostney/known-good-route/.github/workflows/update-project-skills.yml@0123456789abcdef0123456789abcdef01234567
+    with:
+      skills-root: "."
+      skills-cli-version: "1.5.17"
+      pr-branch: "automation/update-agent-skills"
+```
+
+Replace the placeholder with the merged KGR revision's full 40-character SHA.
+For a nested Paddy inventory, keep the caller at the same root path and replace
+only the relevant `with` block:
+
+```yaml
+    with:
+      skills-root: "paddy"
+      skills-cli-version: "1.5.17"
+      repair-find-skills: true
+      normalize-lock-hashes: true
+      pr-branch: "automation/update-paddy-agent-skills"
+      pr-title: "chore(paddy): refresh project Agent Skills"
+```
 
 The workflow accepts these inputs: `skills-root`, exact `skills-cli-version`,
 `repair-find-skills`, `normalize-lock-hashes`, `pr-branch`, `pr-title`, and
