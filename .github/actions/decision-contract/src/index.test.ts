@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import {
   mkdirSync,
   mkdtempSync,
@@ -128,6 +129,41 @@ describe('trusted decision contract action', () => {
       expect.stringContaining('weakened requiredAbsent'),
     );
   });
+
+  it('executes the committed bundle with base code and an exact head data tree', () => {
+    const base = fixture();
+    git(['init'], base);
+    git(['config', 'user.name', 'Decision Contract Test'], base);
+    git(['config', 'user.email', 'decision-contract@example.test'], base);
+    git(['add', '.'], base);
+    git(['commit', '-m', 'base'], base);
+    const baseSha = git(['rev-parse', 'HEAD'], base).trim();
+    const head = mkdtempSync(path.join(tmpdir(), 'decision-contract-head-'));
+    temporaryDirectories.push(head);
+    rmSync(head, { recursive: true });
+    git(['worktree', 'add', '-b', 'change', head], base);
+    writeFileSync(path.join(head, 'unrelated.md'), 'Head data only.');
+    git(['add', '.'], head);
+    git(['commit', '-m', 'head'], head);
+    const headSha = git(['rev-parse', 'HEAD'], head).trim();
+    const bundle = path.resolve(import.meta.dir, '../dist/index.js');
+
+    const output = execFileSync(process.execPath, [bundle], {
+      cwd: base,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        GITHUB_WORKSPACE: base,
+        'INPUT_BASE-SHA': baseSha,
+        'INPUT_HEAD-PATH': head,
+        'INPUT_HEAD-SHA': headSha,
+        'INPUT_PULL-REQUEST-BODY':
+          '## Decision Contract\n\n- Contract path: docs/decision-contracts/example.json',
+      },
+    });
+
+    expect(output).toContain('PR decision contract matches the exact head.');
+  });
 });
 
 function fixture() {
@@ -175,4 +211,8 @@ function validate(
     changedPaths: [],
     headPath,
   });
+}
+
+function git(args: string[], cwd: string) {
+  return execFileSync('git', args, { cwd, encoding: 'utf8' });
 }
