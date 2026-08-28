@@ -1,0 +1,18 @@
+name: Trusted decision contract
+description: Validate repository decision contracts without executing pull-request code
+inputs:
+  base-sha:
+    description: Exact pull-request base commit
+    required: true
+  head-path:
+    description: Detached worktree containing the exact pull-request head as data
+    required: true
+  head-sha:
+    description: Exact pull-request head commit
+    required: true
+  pull-request-body:
+    description: Pull-request body containing the Decision Contract section
+    required: true
+runs:
+  using: node24
+  main: dist/index.js

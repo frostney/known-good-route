@@ -163,6 +163,12 @@ flowchart TB
 | [`agent-writing`](agent-writing/SKILL.md) | Ambient harness and engineering-artifact prose contract: product-output voice stays separate; answers, evidence, and lifecycle state come first; prior decisions and existing mechanisms are inspected; numerical revision thresholds trigger a mandatory before-send pass; deterministic wording and 300-character constrained-item limits remain enforced. |
 | [`bleeding-edge`](bleeding-edge/SKILL.md) | Ambient lens favoring the newest viable option, including just-released stable versions and justified pre-release channels, under `software-engineering-excellence`: verify live, pin, keep choices reversible and gate-green, and never silently replace a decided choice. |
 
+### Reusable actions
+
+[`Trusted decision contract`](.github/actions/decision-contract/README.md)
+validates typed deletion gates from an immutable commit-pinned action while the
+calling repository's pull-request head remains unexecuted data.
+
 ## Background
 
 Design decisions and conventions shared across every skill in this collection.
