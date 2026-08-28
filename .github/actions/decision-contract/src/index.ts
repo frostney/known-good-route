@@ -47,6 +47,7 @@ export function validateDecisionContracts(input: ValidationInput) {
   const reference = normalizeReference(markdownField(section, 'Contract path'));
   const artifacts = readHeadContracts(cwd, errors);
   validateMergedContracts(input.baseArtifacts, artifacts, errors);
+  validateContractOwnership(artifacts, errors);
   executeContracts(artifacts, cwd, errors);
   const touched = touchedContracts(input.changedPaths, artifacts);
   validateReference({ artifacts, errors, reference, touched });
@@ -131,6 +132,9 @@ function validateMergedContracts(
   current: readonly ArtifactEntry[],
   errors: string[],
 ) {
+  const baseByPath = new Map(
+    base.map((entry) => [entry.path, entry.artifact]),
+  );
   const currentByPath = new Map(
     current.map((entry) => [entry.path, entry.artifact]),
   );
@@ -151,13 +155,110 @@ function validateMergedContracts(
       'rejectedAlternatives',
       'requiredAbsent',
       'requiredPresent',
+      'retainedBoundaries',
     ] as const) {
       const retained = new Set(next[field].map(inventoryKey));
-      if (previous.artifact[field].some((value) => !retained.has(inventoryKey(value)))) {
+      if (
+        previous.artifact[field].some(
+          (value) =>
+            !retained.has(inventoryKey(value)) &&
+            !isSupersededContentHash(field, value, next[field]),
+        )
+      ) {
         errors.push(`Merged decision contract weakened ${field}: ${previous.path}`);
       }
     }
   }
+  for (const entry of current) {
+    validateContentHashPredecessors(
+      baseByPath.get(entry.path),
+      entry,
+      errors,
+    );
+  }
+}
+
+function isSupersededContentHash(
+  field: keyof Pick<
+    DecisionContractArtifact,
+    | 'ownedPaths'
+    | 'rejectedAlternatives'
+    | 'requiredAbsent'
+    | 'requiredPresent'
+    | 'retainedBoundaries'
+  >,
+  previous: unknown,
+  current: readonly unknown[],
+) {
+  return (
+    field === 'requiredPresent' &&
+    isContentHashCheck(previous) &&
+    current.some(
+      (value) =>
+        isContentHashCheck(value) &&
+        value.path === previous.path &&
+        value.predecessorSha256 === previous.sha256,
+    )
+  );
+}
+
+function validateContractOwnership(
+  artifacts: readonly ArtifactEntry[],
+  errors: string[],
+) {
+  const ownership = artifacts.flatMap(({ artifact, path: contractPath }) =>
+    artifact.ownedPaths.map((ownedPath) => ({ contractPath, ownedPath })),
+  );
+  for (const [index, left] of ownership.entries()) {
+    for (const right of ownership.slice(index + 1)) {
+      if (
+        left.contractPath !== right.contractPath &&
+        pathsOverlap(left.ownedPath, right.ownedPath)
+      ) {
+        errors.push(
+          `Decision contract ownership overlaps: ${left.contractPath} (${left.ownedPath}) and ${right.contractPath} (${right.ownedPath})`,
+        );
+      }
+    }
+  }
+}
+
+function pathsOverlap(left: string, right: string) {
+  return ownsPath(left, right) || ownsPath(right, left);
+}
+
+function validateContentHashPredecessors(
+  previous: DecisionContractArtifact | undefined,
+  current: ArtifactEntry,
+  errors: string[],
+) {
+  for (const check of current.artifact.requiredPresent) {
+    if (!(isContentHashCheck(check) && check.predecessorSha256)) {
+      continue;
+    }
+    const matchesBase = previous?.requiredPresent.some(
+      (candidate) =>
+        isContentHashCheck(candidate) &&
+        candidate.path === check.path &&
+        candidate.sha256 === check.predecessorSha256,
+    );
+    if (!matchesBase || check.sha256 === check.predecessorSha256) {
+      errors.push(
+        `Content hash predecessor does not match the merged contract: ${current.path} ${check.path}`,
+      );
+    }
+  }
+}
+
+function isContentHashCheck(
+  value: unknown,
+): value is Extract<DecisionContractCheck, { kind: 'contentHash' }> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'kind' in value &&
+    value.kind === 'contentHash'
+  );
 }
 
 function executeContracts(
@@ -274,9 +375,9 @@ function executeVersionLadder(
   }
   const files = filesAt(resolved, false, check.path, errors)?.filter(
     (file) =>
-      /\.tsx?$/.test(file) &&
-      !/\.(?:test|spec)\.tsx?$/.test(file) &&
-      !file.endsWith('.d.ts'),
+      /\.(?:[cm]?ts|tsx)$/.test(file) &&
+      !/\.(?:test|spec)\.(?:[cm]?ts|tsx)$/.test(file) &&
+      !/\.d\.(?:[cm]?ts|tsx)$/.test(file),
   );
   if (!files) {
     return;
@@ -431,7 +532,10 @@ function scanVersionLadder(source: string) {
     token = scanToken(scanner, previousEnd)
   ) {
     previousEnd = scanner.getTokenEnd();
-    if (token === SyntaxKind.Identifier) {
+    if (
+      token === SyntaxKind.Identifier ||
+      token === SyntaxKind.PrivateIdentifier
+    ) {
       const value = scanner.getTokenText();
       if (/(?:_?[vV]\d+|Version\d+)$/.test(value)) {
         matches.add(`identifier ${value}`);
@@ -441,7 +545,10 @@ function scanVersionLadder(source: string) {
       token === SyntaxKind.NoSubstitutionTemplateLiteral
     ) {
       const value = scanner.getTokenValue();
-      if (!/^https?:\/\//i.test(value) && /(?:^v\d+$|[./_-]v\d+$|Version\d+$)/i.test(value)) {
+      if (
+        !/^https?:\/\//i.test(value) &&
+        /(?:^v\d+$|[._-]v\d+$|[A-Za-z0-9_$]V\d+$|Version\d+$)/.test(value)
+      ) {
         matches.add(`literal ${JSON.stringify(value)}`);
       }
     }
@@ -551,6 +658,10 @@ function git(args: readonly string[], cwd: string) {
   });
 }
 
+export function parseGitChangedPaths(value: string) {
+  return value.split('\0').filter(Boolean);
+}
+
 function requiredInput(name: string) {
   const value = process.env[`INPUT_${name.toUpperCase()}`]?.trim();
   if (!value) {
@@ -573,9 +684,12 @@ export function runAction() {
   const result = validateDecisionContracts({
     baseArtifacts: readBaseContracts(baseSha, workspace),
     body: process.env['INPUT_PULL-REQUEST-BODY'] ?? '',
-    changedPaths: git(['diff', '--name-only', baseSha, headSha, '--'], workspace)
-      .split('\n')
-      .filter(Boolean),
+    changedPaths: parseGitChangedPaths(
+      git(
+        ['diff', '--no-renames', '--name-only', '-z', baseSha, headSha, '--'],
+        workspace,
+      ),
+    ),
     headPath,
   });
   for (const error of result.errors) {

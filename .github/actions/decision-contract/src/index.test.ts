@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import {
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -12,7 +13,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'bun:test';
 
-import { validateDecisionContracts } from './index';
+import { parseGitChangedPaths, validateDecisionContracts } from './index';
 import {
   type DecisionContractArtifact,
   decisionContractArtifactSchema,
@@ -127,6 +128,163 @@ describe('trusted decision contract action', () => {
     );
     expect(validate(cwd, baseArtifacts).errors).toContainEqual(
       expect.stringContaining('weakened requiredAbsent'),
+    );
+  });
+
+  it('rejects quoted version keys in module TypeScript variants', () => {
+    const cwd = fixture();
+    writeFileSync(
+      path.join(cwd, 'src/versioned.mts'),
+      `export const methods = { providerPath: "/v2", "promptV23": true };
+class VersionedMethod { #runV24() {} }`,
+    );
+    writeContract(
+      cwd,
+      contract({
+        requiredAbsent: [
+          { kind: 'sourcePattern', path: 'src', rule: 'versionLadder' },
+        ],
+      }),
+    );
+
+    expect(validate(cwd).errors).toContainEqual(
+      expect.stringContaining('literal "promptV23"'),
+    );
+    expect(validate(cwd).errors).toContainEqual(
+      expect.stringContaining('identifier #runV24'),
+    );
+    expect(validate(cwd).errors.join('\n')).not.toContain('literal "/v2"');
+  });
+
+  it('rejects weakening a merged retained boundary', () => {
+    const cwd = fixture();
+    const artifact = contract({
+      retainedBoundaries: ['Keep the live-data migration boundary.'],
+    });
+    writeContract(cwd, contract());
+
+    expect(
+      validate(cwd, [
+        { artifact, path: 'docs/decision-contracts/example.json' },
+      ]).errors,
+    ).toContainEqual(expect.stringContaining('weakened retainedBoundaries'));
+  });
+
+  it('rejects overlapping ownership between contracts', () => {
+    const cwd = fixture();
+    writeFileSync(
+      path.join(cwd, 'docs/decision-contracts/overlap.json'),
+      JSON.stringify(contract({ ownedPaths: ['src/current.ts'] })),
+    );
+
+    expect(validate(cwd).errors).toContainEqual(
+      expect.stringContaining('ownership overlaps'),
+    );
+  });
+
+  it('rejects non-canonical broad ownership paths', () => {
+    expect(
+      decisionContractArtifactSchema.safeParse({
+        ...contract(),
+        ownedPaths: ['.'],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('parses no-rename changed paths without newline ambiguity', () => {
+    expect(parseGitChangedPaths('src/old.ts\0src/new\nline.ts\0')).toEqual([
+      'src/old.ts',
+      'src/new\nline.ts',
+    ]);
+  });
+
+  it('supersedes a content hash only through its exact merged predecessor', () => {
+    const cwd = fixture();
+    const sealed = path.join(cwd, 'src/current.ts');
+    const predecessorSha256 = createHash('sha256')
+      .update(readFileSync(sealed))
+      .digest('hex');
+    const artifact = contract({
+      requiredPresent: [
+        { kind: 'contentHash', path: 'src/current.ts', sha256: predecessorSha256 },
+      ],
+    });
+    const baseArtifacts = [
+      { artifact, path: 'docs/decision-contracts/example.json' },
+    ];
+    writeFileSync(sealed, 'export const current = false;');
+    const sha256 = createHash('sha256').update(readFileSync(sealed)).digest('hex');
+    writeContract(
+      cwd,
+      contract({
+        requiredPresent: [
+          {
+            kind: 'contentHash',
+            path: 'src/current.ts',
+            predecessorSha256,
+            sha256,
+          },
+        ],
+      }),
+    );
+
+    expect(validate(cwd, baseArtifacts)).toEqual({ errors: [], ok: true });
+
+    writeContract(
+      cwd,
+      contract({
+        requiredPresent: [
+          {
+            kind: 'contentHash',
+            path: 'src/current.ts',
+            predecessorSha256: '0'.repeat(64),
+            sha256,
+          },
+        ],
+      }),
+    );
+    expect(validate(cwd, baseArtifacts).errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('weakened requiredPresent'),
+        expect.stringContaining('predecessor does not match'),
+      ]),
+    );
+  });
+
+  it('rejects silent hash removal and predecessor claims on new contracts', () => {
+    const cwd = fixture();
+    const sha256 = createHash('sha256')
+      .update(readFileSync(path.join(cwd, 'src/current.ts')))
+      .digest('hex');
+    const artifact = contract({
+      requiredPresent: [
+        { kind: 'contentHash', path: 'src/current.ts', sha256 },
+      ],
+    });
+    const baseArtifacts = [
+      { artifact, path: 'docs/decision-contracts/example.json' },
+    ];
+
+    writeContract(cwd, contract());
+    expect(validate(cwd, baseArtifacts).errors).toContainEqual(
+      expect.stringContaining('weakened requiredPresent'),
+    );
+
+    writeContract(
+      cwd,
+      contract({
+        requiredPresent: [
+          {
+            kind: 'contentHash',
+            path: 'src/current.ts',
+            predecessorSha256: sha256,
+            sha256: '1'.repeat(64),
+          },
+        ],
+      }),
+    );
+    expect(validate(cwd).errors).toContainEqual(
+      expect.stringContaining('predecessor does not match'),
     );
   });
 

@@ -3,18 +3,33 @@ import z from 'zod';
 const maximumItems = 256;
 const maximumLength = 4_000;
 const maximumReferenceLength = 512;
+const maximumControlCodePoint = 31;
+const deleteControlCodePoint = 127;
 const repositoryPath = z
   .string()
   .trim()
   .min(1)
   .max(maximumReferenceLength)
-  .refine(
-    (value) =>
+  .refine((value) => {
+    const components = value.split('/');
+    const hasControlCharacter = [...value].some((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return (
+        codePoint <= maximumControlCodePoint ||
+        codePoint === deleteControlCodePoint
+      );
+    });
+    return (
       !value.startsWith('/') &&
-      !value.includes('\0') &&
-      !value.split('/').includes('..'),
-    'must be a safe repository-relative path',
-  );
+      !value.endsWith('/') &&
+      !value.includes('\\') &&
+      !hasControlCharacter &&
+      components.every(
+        (component) =>
+          component.length > 0 && component !== '.' && component !== '..',
+      )
+    );
+  }, 'must be a canonical repository-relative path');
 
 const check = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('path'), path: repositoryPath }),
@@ -37,6 +52,10 @@ const check = z.discriminatedUnion('kind', [
   z.strictObject({
     kind: z.literal('contentHash'),
     path: repositoryPath,
+    predecessorSha256: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
     sha256: z.string().regex(/^[a-f0-9]{64}$/),
   }),
 ]);

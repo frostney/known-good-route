@@ -11,5 +11,9 @@
     "strict": true,
     "types": ["bun"]
   },
-  "include": ["evals/**/*.ts"]
+  "include": [
+    ".github/actions/decision-contract/**/*.ts",
+    "decision-contract-action.test.ts",
+    "evals/**/*.ts"
+  ]
 }
