@@ -76,7 +76,7 @@ inline replies, and thread resolution. Invoke it with `--json`; the harness must
 passively await a running command rather than wake a model to report unchanged
 state. The repository policy defaults to
 `.github/delivery/review-automations.json` and may be overridden explicitly.
-Use a caller-owned checkpoint below gitignored `.agent/waits/`.
+Use a caller-owned `--state` path below gitignored `.agent/waits/`.
 
 ## Automatic merge
 
@@ -152,7 +152,8 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    returns to step 5 before another commit or push.
 9. In normal mode, return the result contract without merging. In
    `automatic-merge` mode, launch the helper's foreground `wait` operation with
-   the exact head, repository policy, checkpoint, and safely derived deadline.
+   the exact head, repository policy, `--state` path, and safely derived
+   deadline.
    Resume this workflow only when the command returns a meaningful transition.
    Use a
    documented retrigger only when current evidence permits it; its required
