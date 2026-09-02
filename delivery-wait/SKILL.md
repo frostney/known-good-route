@@ -37,7 +37,8 @@ requires its own identity flags:
 - `pr-merged`: `--pr <number>` and `--head <sha>`.
 - `workflow-terminal`: `--run-id <id>` and `--head <sha>`.
 - `tag-target`: `--tag <name>` and `--head <sha>`.
-- `release-assets`: `--tag <name>` and one `--asset <name>` per required asset.
+- `release-assets`: `--tag <name>`, `--head <sha>`, and one `--asset <name>` per
+  required asset.
 - `wake-at` (`wait` only): `--deadline` alone.
 
 There is no `--checkpoint` flag. The state path is `--state`, and the command
