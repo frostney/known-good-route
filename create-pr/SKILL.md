@@ -77,8 +77,9 @@ confirmed stack layers owned by the current change, not unrelated branches.
     here. A later caller may update the PR after the appropriate implementation,
     review, behavior-testing, and project-gate loop passes.
 12. Invoke `delivery-wait`'s foreground `wait checks-terminal` operation with
-    the repository, exact head, checkpoint, absolute deadline, and `--json`; the
-    harness passively awaits it without model heartbeats. When it returns,
+    the repository, pull request number, exact head, one `--check` per required
+    check context, absolute deadline, an optional `--state` path, and `--json`;
+    the harness passively awaits it without model heartbeats. When it returns,
     inspect unsuccessful logs. Report a validated code or behavior failure under
     step 11 rather than fixing it.
     If the host cannot passively await a subprocess, report the unsupported
