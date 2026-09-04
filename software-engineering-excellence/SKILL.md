@@ -47,7 +47,9 @@ solution rather than merely select details within it.
    the trigger below applies, and prevent unexplained regressions.
 6. **Make every surface earn its cost.** Add only code, tests, fallbacks,
    abstractions, or tools with a real caller, requirement, or failure mode.
-   Remove unused surfaces.
+   Remove unused surfaces. Inline a non-exported function with one call site
+   unless its name carries a decision the caller reads better with, or its
+   contract is worth testing on its own.
 7. **Respect authority boundaries.** Diagnosis, review, and planning authorize
    assessment; change requests authorize reversible in-scope implementation and
    relevant validation. Pause only for a material product, architecture,
@@ -82,8 +84,13 @@ compaction risk, external waits, or multiple workers, use the lightweight
 
 For genuinely multi-layer work, establish a thin runnable path and deepen it in
 increments. Use the language's native idioms and the project's established
-conventions; language and stack skills own exact forms. Follow surrounding
-comment density and explain non-obvious decisions.
+conventions; language and stack skills own exact forms. Write a comment only for
+what the code cannot state: a constraint, a failure mode, an external behavior,
+or a rejected alternative and why. Never restate a name, signature, type, or
+control flow; when a name fails to carry the fact, improve the name instead of
+commenting. This rule outranks matching the surrounding comment density. Record
+provenance such as issue numbers, dates, or verification notes only where the
+fact would be wrong without it, never to record that a change happened.
 
 ## Performance throughout delivery
 
