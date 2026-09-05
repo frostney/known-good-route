@@ -1,0 +1,100 @@
+name: Update project Agent Skills
+description: Refreshes or publishes one validated project-scoped Agent Skills inventory.
+
+inputs:
+  mode:
+    description: Run the read-only refresh phase or the separately permissioned publish phase.
+    required: true
+  skills-root:
+    description: Project root containing .agents/skills and skills-lock.json.
+    required: false
+    default: "."
+  skills-cli-version:
+    description: Exact skills CLI version to run.
+    required: false
+    default: "1.5.23"
+  repair-find-skills:
+    description: Repair an isolated find-skills deletion warning with full-depth discovery.
+    required: false
+    default: "false"
+  normalize-lock-hashes:
+    description: Recompute deterministic computedHash values from canonical project skill folders.
+    required: false
+    default: "false"
+  artifact-directory:
+    description: Runner-temporary directory for the refresh/publish artifact.
+    required: true
+  pr-branch:
+    description: Draft pull-request branch used by publish mode.
+    required: false
+    default: "automation/update-agent-skills"
+  pr-title:
+    description: Draft pull-request title used by publish mode.
+    required: false
+    default: "chore(skills): refresh project Agent Skills"
+  pr-body:
+    description: Draft pull-request body used by publish mode.
+    required: false
+    default: "Updates the project-owned Agent Skills inventory from its recorded upstream sources."
+
+outputs:
+  changed:
+    description: Whether refresh mode found scoped generated changes.
+    value: ${{ steps.runtime.outputs.changed }}
+  source_sha:
+    description: Exact caller commit used to produce the artifact.
+    value: ${{ steps.runtime.outputs.source_sha }}
+  head_sha:
+    description: Exact published branch head from publish mode.
+    value: ${{ steps.publish_runtime.outputs.head_sha }}
+  pr_url:
+    description: Draft pull-request URL from publish mode.
+    value: ${{ steps.publish_runtime.outputs.pr_url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Validate operation mode
+      if: inputs.mode != 'refresh' && inputs.mode != 'publish'
+      shell: bash
+      run: |
+        printf 'Unsupported project-skills operation: %s\n' "$KGR_MODE" >&2
+        exit 1
+      env:
+        KGR_MODE: ${{ inputs.mode }}
+
+    - name: Refresh project skills
+      id: runtime
+      if: inputs.mode == 'refresh'
+      shell: bash
+      run: |
+        node "$GITHUB_ACTION_PATH/update-project-skills.mjs" refresh \
+          --repository-root "$GITHUB_WORKSPACE" \
+          --skills-root "$KGR_SKILLS_ROOT" \
+          --cli-version "$KGR_SKILLS_CLI_VERSION" \
+          --repair-find-skills "$KGR_REPAIR_FIND_SKILLS" \
+          --normalize-lock-hashes "$KGR_NORMALIZE_LOCK_HASHES" \
+          --artifact-directory "$KGR_ARTIFACT_DIRECTORY"
+      env:
+        KGR_ARTIFACT_DIRECTORY: ${{ inputs.artifact-directory }}
+        KGR_NORMALIZE_LOCK_HASHES: ${{ inputs.normalize-lock-hashes }}
+        KGR_REPAIR_FIND_SKILLS: ${{ inputs.repair-find-skills }}
+        KGR_SKILLS_CLI_VERSION: ${{ inputs.skills-cli-version }}
+        KGR_SKILLS_ROOT: ${{ inputs.skills-root }}
+
+    - name: Publish project skills
+      id: publish_runtime
+      if: inputs.mode == 'publish'
+      shell: bash
+      run: |
+        node "$GITHUB_ACTION_PATH/update-project-skills.mjs" publish \
+          --repository-root "$GITHUB_WORKSPACE" \
+          --skills-root "$KGR_SKILLS_ROOT" \
+          --artifact-directory "$KGR_ARTIFACT_DIRECTORY" \
+          --branch "$KGR_PR_BRANCH"
+      env:
+        KGR_ARTIFACT_DIRECTORY: ${{ inputs.artifact-directory }}
+        KGR_PR_BODY: ${{ inputs.pr-body }}
+        KGR_PR_BRANCH: ${{ inputs.pr-branch }}
+        KGR_PR_TITLE: ${{ inputs.pr-title }}
+        KGR_SKILLS_ROOT: ${{ inputs.skills-root }}

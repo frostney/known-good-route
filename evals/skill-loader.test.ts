@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { resolve } from "node:path";
+import { cp, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { parse } from "yaml";
 import {
   formatSkillCatalog,
   loadSkills,
@@ -13,7 +16,7 @@ describe("skill loader", () => {
   test("discovers every top-level skill", async () => {
     const skills = await loadSkills(repositoryRoot);
 
-    expect(skills.size).toBe(27);
+    expect(skills.size).toBe(28);
     expect(skills.has("address-stack-feedback")).toBeTrue();
     expect(skills.has("agent-writing")).toBeTrue();
     expect(skills.has("agent-behavior-audit")).toBeTrue();
@@ -21,6 +24,7 @@ describe("skill loader", () => {
     expect(skills.has("codebase-audit")).toBeTrue();
     expect(skills.has("create-pr")).toBeTrue();
     expect(skills.has("milestone-rush")).toBeTrue();
+    expect(skills.has("maintain-project-skills")).toBeTrue();
     expect(skills.has("delivery-wait")).toBeTrue();
     expect(skills.has("run-retro")).toBeTrue();
     expect(skills.has("render-html")).toBeTrue();
@@ -49,5 +53,59 @@ describe("skill loader", () => {
     expect(
       readSkillReference(projectStructure, "../README.md"),
     ).rejects.toThrow("escapes");
+  });
+
+  test("keeps the project-skills runbook inside a standalone skill copy", async () => {
+    const installationRoot = await mkdtemp(
+      join(tmpdir(), "kgr-installed-skills-"),
+    );
+    const installedSkill = join(installationRoot, "maintain-project-skills");
+
+    try {
+      await cp(join(repositoryRoot, "maintain-project-skills"), installedSkill, {
+        recursive: true,
+      });
+      const skills = await loadSkills(installationRoot);
+      expect(await validateSkillReferences(skills)).toEqual([
+        "maintain-project-skills/references/project-skills-runbook.md",
+      ]);
+
+      const skill = skills.get("maintain-project-skills");
+      expect(skill).toBeDefined();
+      if (!skill) {
+        return;
+      }
+      expect(skill.body).not.toContain("../docs/");
+      const runbook = await readSkillReference(
+        skill,
+        "references/project-skills-runbook.md",
+      );
+      expect(runbook).toContain("`actions: read`");
+      expect(runbook).toContain("full 40-character SHA");
+      expect(runbook).toContain(
+        ".github/workflows/update-project-skills.yml",
+      );
+      expect(runbook).toContain('skills-root: "."');
+      expect(runbook).toContain('skills-root: "paddy"');
+      expect(runbook).toContain("repair-find-skills: true");
+      expect(runbook).toMatch(
+        /uses: frostney\/known-good-route\/\.github\/workflows\/update-project-skills\.yml@[a-f0-9]{40}/,
+      );
+      const callerMatch = runbook.match(
+        /Use this complete root-inventory caller[\s\S]*?```yaml\n([\s\S]*?)\n```/,
+      );
+      expect(callerMatch?.[1]).toBeDefined();
+      const caller = parse(callerMatch?.[1] ?? "");
+      expect(caller.on).toHaveProperty("schedule");
+      expect(caller.on).toHaveProperty("workflow_dispatch");
+      expect(caller.permissions).toEqual({
+        actions: "read",
+        contents: "write",
+        "pull-requests": "write",
+      });
+      expect(caller.jobs.update.with["skills-root"]).toBe(".");
+    } finally {
+      await rm(installationRoot, { force: true, recursive: true });
+    }
   });
 });
