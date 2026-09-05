@@ -92,7 +92,7 @@ async function makePublication(skillsRoot = ".") {
     await mkdtemp(join(tmpdir(), "kgr-skills-remote-test-")),
   );
   temporaryDirectories.push(bareRemote);
-  runGit(bareRemote, ["init", "--bare"]);
+  runGit(bareRemote, ["init", "--bare", "--initial-branch=main"]);
   runGit(fixture.root, ["remote", "add", "origin", bareRemote]);
   runGit(fixture.root, ["push", "--set-upstream", "origin", "main"]);
 
