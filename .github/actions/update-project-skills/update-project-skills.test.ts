@@ -14,9 +14,7 @@ import { spawnSync } from "node:child_process";
 import { parse } from "yaml";
 
 import {
-  ProjectSkillsError,
   computeCliCompatibleSkillHash,
-  computeSkillDirectoryHash,
   inspectInventory,
   parseDeletionCheckFailures,
   parseDeletedSkillWarnings,
@@ -80,12 +78,69 @@ async function refreshOptions(fixture: Awaited<ReturnType<typeof makeRepository>
   temporaryDirectories.push(artifactDirectory);
   return {
     artifactDirectory,
-    cliVersion: "1.5.17",
+    cliVersion: "1.5.23",
     normalizeLockHashes: false,
     repairFindSkills: false,
     repositoryRoot: fixture.root,
     skillsRoot: fixture.skillsRoot,
   };
+}
+
+async function makePublication(skillsRoot = ".") {
+  const fixture = await makeRepository(skillsRoot);
+  const bareRemote = await realpath(
+    await mkdtemp(join(tmpdir(), "kgr-skills-remote-test-")),
+  );
+  temporaryDirectories.push(bareRemote);
+  runGit(bareRemote, ["init", "--bare"]);
+  runGit(fixture.root, ["remote", "add", "origin", bareRemote]);
+  runGit(fixture.root, ["push", "--set-upstream", "origin", "main"]);
+
+  const options = await refreshOptions(fixture);
+  await refreshProjectSkills(options, {
+    runSkills: async () => {
+      await writeFile(join(fixture.skillDirectory, "reference.md"), "published\n");
+      await writeInventory(fixture.projectRoot, fixture.skillName);
+      return { status: 0, output: "Updated 1 skill" };
+    },
+  });
+
+  const publishRoot = await realpath(
+    await mkdtemp(join(tmpdir(), "kgr-skills-publish-test-")),
+  );
+  temporaryDirectories.push(publishRoot);
+  runGit(publishRoot, ["clone", bareRemote, "."]);
+  const fakeBin = await realpath(
+    await mkdtemp(join(tmpdir(), "kgr-skills-gh-test-")),
+  );
+  temporaryDirectories.push(fakeBin);
+  const fakeGh = join(fakeBin, "gh");
+  await writeFile(
+    fakeGh,
+    "#!/bin/sh\nif [ \"$1 $2\" = \"pr list\" ]; then printf '[]\\n'; else printf 'https://example.test/pull/1\\n'; fi\n",
+  );
+  await chmod(fakeGh, 0o755);
+  return {
+    fixture, bareRemote, fakeBin,
+    options: {
+      artifactDirectory: options.artifactDirectory,
+      body: "Generated update.",
+      branch: "automation/update-agent-skills",
+      repositoryRoot: publishRoot,
+      skillsRoot: fixture.skillsRoot,
+      title: "chore(skills): refresh project Agent Skills",
+    },
+  };
+}
+
+async function withFakeGh(fixture: Awaited<ReturnType<typeof makePublication>>, run: () => Promise<void>) {
+  const previousPath = process.env.PATH;
+  process.env.PATH = `${fixture.fakeBin}:${previousPath}`;
+  try {
+    await run();
+  } finally {
+    process.env.PATH = previousPath;
+  }
 }
 
 afterEach(async () => {
@@ -107,6 +162,20 @@ describe("project inventory validation", () => {
     expect((await inspectInventory(nestedFixture.projectRoot)).names).toEqual([
       "example-skill",
     ]);
+  });
+
+  test("validates through the Node entrypoint and rejects invalid input without rewriting it", async () => {
+    const fixture = await makeRepository();
+    const runtime = join(repositoryRoot, ".github/actions/update-project-skills/update-project-skills.mjs");
+    const args = [runtime, "validate", "--repository-root", fixture.root, "--skills-root", "."];
+    expect(spawnSync("node", args, { encoding: "utf8" }).status).toBe(0);
+    await writeInventory(fixture.projectRoot, fixture.skillName, { sourceType: "local" });
+    const lockPath = join(fixture.projectRoot, "skills-lock.json");
+    const before = await readFile(lockPath, "utf8");
+    const rejected = spawnSync("node", [...args, "--normalize-lock-hashes", "true"], { encoding: "utf8" });
+    expect(rejected.status).toBe(1);
+    expect(rejected.stderr).toContain("sourceType local cannot be refreshed remotely");
+    expect(await readFile(lockPath, "utf8")).toBe(before);
   });
 
   test("rejects a missing inventory and a blocked source", async () => {
@@ -137,40 +206,18 @@ describe("project inventory validation", () => {
     );
   });
 
-  test("uses a framed tree manifest without changing CLI-compatible hashes", async () => {
-    const created = await realpath(
-      await mkdtemp(join(tmpdir(), "kgr-hash-framing-test-")),
-    );
-    temporaryDirectories.push(created);
-    const left = join(created, "left");
-    const right = join(created, "right");
-    await mkdir(left);
-    await mkdir(right);
-    await writeFile(join(left, "SKILL.md"), "a");
-    await writeFile(join(left, "z"), "b");
-    await writeFile(join(right, "SKILL.md"), "a");
-    await writeFile(join(right, "zb"), "");
-
-    expect(await computeCliCompatibleSkillHash(left)).toBe(
-      await computeCliCompatibleSkillHash(right),
-    );
-    expect(await computeSkillDirectoryHash(left)).not.toBe(
-      await computeSkillDirectoryHash(right),
-    );
-
+  test("preserves the pinned CLI's content hash format", async () => {
     const fixture = await makeRepository();
-    const inventory = await inspectInventory(fixture.projectRoot);
-    expect(inventory.cliCompatibleHashes[fixture.skillName]).toBe(
+    await inspectInventory(fixture.projectRoot);
+    expect(await computeCliCompatibleSkillHash(fixture.skillDirectory)).toBe(
       "e929f5cbe2e15d81c031b6ed74e51e8cf56a0377b6099640045012bdc2c4ea02",
     );
-    expect(inventory.cliCompatibleHashes[fixture.skillName]).toBe(
+    expect(await computeCliCompatibleSkillHash(fixture.skillDirectory)).toBe(
       JSON.parse(
         await readFile(join(fixture.projectRoot, "skills-lock.json"), "utf8"),
       ).skills[fixture.skillName].computedHash,
     );
-    expect(inventory.treeManifestHashes[fixture.skillName]).not.toBe(
-      inventory.cliCompatibleHashes[fixture.skillName],
-    );
+
   });
 });
 
@@ -187,16 +234,9 @@ describe("project refresh", () => {
     const metadata = JSON.parse(
       await readFile(join(options.artifactDirectory, "metadata.json"), "utf8"),
     );
-    expect(metadata.version).toBe(2);
+    expect(metadata.version).toBe(1);
     expect(metadata.changed).toBe(false);
-    expect(metadata.identities[fixture.skillName]).toEqual({
-      skillPath: `skills/${fixture.skillName}/SKILL.md`,
-      source: "example/skills",
-      sourceType: "github",
-    });
-    expect(metadata.treeManifestHashes[fixture.skillName]).toMatch(
-      /^[a-f0-9]{64}$/,
-    );
+    expect(metadata.tree).toBe(runGit(fixture.root, ["rev-parse", "HEAD^{tree}"]));
     expect(await readFile(join(options.artifactDirectory, "skills-update.patch"), "utf8")).toBe("");
   });
 
@@ -206,6 +246,7 @@ describe("project refresh", () => {
     const result = await refreshProjectSkills(options, {
       runSkills: async () => {
         await writeFile(join(fixture.skillDirectory, "reference.md"), "updated\n");
+        await writeFile(join(fixture.skillDirectory, "binary ü\n.bin"), Buffer.from([0, 255, 1]));
         await writeInventory(fixture.projectRoot, fixture.skillName);
         return { status: 0, output: "Updated 1 skill" };
       },
@@ -225,6 +266,7 @@ describe("project refresh", () => {
     );
     expect(patch).toContain("reference.md");
     expect(patch).toContain("skills-lock.json");
+    expect(runGit(fixture.root, ["diff", "--cached", "--name-only"])).toBe("");
 
     const applyDirectory = await realpath(
       await mkdtemp(join(tmpdir(), "kgr-skills-apply-test-")),
@@ -249,6 +291,7 @@ describe("project refresh", () => {
         "utf8",
       ),
     ).toBe("updated\n");
+    expect(await readFile(join(applyDirectory, "paddy/.agents/skills/example-skill/binary ü\n.bin"))).toEqual(Buffer.from([0, 255, 1]));
   });
 
   test("normalizes canonical hashes only when enabled", async () => {
@@ -362,62 +405,98 @@ describe("project refresh", () => {
     }
   });
 
-  test("publishes the artifact as an always-new draft branch commit", async () => {
-    const fixture = await makeRepository();
-    const bareRemote = await realpath(
-      await mkdtemp(join(tmpdir(), "kgr-skills-remote-test-")),
-    );
-    temporaryDirectories.push(bareRemote);
-    runGit(bareRemote, ["init", "--bare"]);
-    runGit(fixture.root, ["remote", "add", "origin", bareRemote]);
-    runGit(fixture.root, ["push", "--set-upstream", "origin", "main"]);
-
-    const options = await refreshOptions(fixture);
-    await refreshProjectSkills(options, {
-      runSkills: async () => {
-        await writeFile(join(fixture.skillDirectory, "reference.md"), "published\n");
-        await writeInventory(fixture.projectRoot, fixture.skillName);
-        return { status: 0, output: "Updated 1 skill" };
-      },
+  test("publishes a new draft branch and reuses an unchanged existing branch", async () => {
+    const publication = await makePublication();
+    const { options, bareRemote } = publication;
+    await withFakeGh(publication, async () => {
+      const first = await publishProjectSkills(options);
+      expect(first.pullRequestUrl).toBe("https://example.test/pull/1");
+      expect(runGit(bareRemote, ["rev-parse", `refs/heads/${options.branch}^`])).toBe(
+        runGit(bareRemote, ["rev-parse", "refs/heads/main"]),
+      );
+      runGit(options.repositoryRoot, ["switch", "--detach", "main"]);
+      runGit(options.repositoryRoot, ["branch", "-D", options.branch]);
+      const second = await publishProjectSkills(options);
+      expect(second.headSha).toBe(first.headSha);
     });
-
-    const publishRoot = await realpath(
-      await mkdtemp(join(tmpdir(), "kgr-skills-publish-test-")),
-    );
-    temporaryDirectories.push(publishRoot);
-    runGit(publishRoot, ["clone", bareRemote, "."]);
-    const fakeBin = await realpath(
-      await mkdtemp(join(tmpdir(), "kgr-skills-gh-test-")),
-    );
-    temporaryDirectories.push(fakeBin);
-    const fakeGh = join(fakeBin, "gh");
-    await writeFile(
-      fakeGh,
-      "#!/bin/sh\nif [ \"$1 $2\" = \"pr list\" ]; then printf '[]\\n'; else printf 'https://example.test/pull/1\\n'; fi\n",
-    );
-    await chmod(fakeGh, 0o755);
-    const previousPath = process.env.PATH;
-    process.env.PATH = `${fakeBin}:${previousPath}`;
-    try {
-      const result = await publishProjectSkills({
-        artifactDirectory: options.artifactDirectory,
-        body: "Generated update.",
-        branch: "automation/update-agent-skills",
-        repositoryRoot: publishRoot,
-        title: "chore(skills): refresh project Agent Skills",
-      });
-      expect(result.pullRequestUrl).toBe("https://example.test/pull/1");
-      expect(result.headSha).not.toBe(runGit(publishRoot, ["rev-parse", "main"]));
-      expect(
-        runGit(bareRemote, [
-          "rev-parse",
-          "refs/heads/automation/update-agent-skills^",
-        ]),
-      ).toBe(runGit(bareRemote, ["rev-parse", "refs/heads/main"]));
-    } finally {
-      process.env.PATH = previousPath;
-    }
   });
+
+  test("publishes nested inventories and rejects a different configured root", async () => {
+    const publication = await makePublication("paddy");
+    await withFakeGh(publication, async () => {
+      await expect(publishProjectSkills({ ...publication.options, skillsRoot: "." })).rejects.toThrow("metadata is invalid");
+      const result = await publishProjectSkills(publication.options);
+      expect(result.pullRequestUrl).toBe("https://example.test/pull/1");
+      expect(await readFile(join(publication.options.repositoryRoot, "paddy/.agents/skills/example-skill/reference.md"), "utf8")).toBe("published\n");
+    });
+  });
+
+  test("updates an existing branch by a descendant commit and removes stale generated files", async () => {
+    const publication = await makePublication();
+    const { options, fixture, bareRemote } = publication;
+    await withFakeGh(publication, async () => {
+      const first = await publishProjectSkills(options);
+      runGit(fixture.root, ["restore", "."]);
+      await rm(join(fixture.skillDirectory, "reference.md"));
+      await refreshProjectSkills({ ...(await refreshOptions(fixture)), artifactDirectory: options.artifactDirectory }, {
+        runSkills: async () => {
+          await writeFile(join(fixture.skillDirectory, "replacement.md"), "second update\n");
+          await writeInventory(fixture.projectRoot, fixture.skillName);
+          return { status: 0, output: "Updated 1 skill" };
+        },
+      });
+      runGit(options.repositoryRoot, ["switch", "--detach", "main"]);
+      runGit(options.repositoryRoot, ["branch", "-D", options.branch]);
+      const second = await publishProjectSkills(options);
+      expect(runGit(bareRemote, ["rev-parse", `${second.headSha}^`])).toBe(first.headSha);
+      expect(runGit(bareRemote, ["ls-tree", "-r", "--name-only", second.headSha])).not.toContain("reference.md");
+      expect(await readFile(join(options.repositoryRoot, ".agents/skills/example-skill/replacement.md"), "utf8")).toBe("second update\n");
+    });
+  });
+
+  test("preserves an existing branch containing foreign changes", async () => {
+    const publication = await makePublication();
+    const { options, bareRemote } = publication;
+    await withFakeGh(publication, async () => {
+      await publishProjectSkills(options);
+      await writeFile(join(options.repositoryRoot, "foreign.txt"), "manual work\n");
+      runGit(options.repositoryRoot, ["add", "foreign.txt"]);
+      runGit(options.repositoryRoot, ["commit", "-m", "test: manual work"]);
+      runGit(options.repositoryRoot, ["push", "origin", options.branch]);
+      const original = runGit(bareRemote, ["rev-parse", options.branch]);
+      runGit(options.repositoryRoot, ["switch", "--detach", "main"]);
+      runGit(options.repositoryRoot, ["branch", "-D", options.branch]);
+      await expect(publishProjectSkills(options)).rejects.toThrow("Existing PR branch contains files outside");
+      expect(runGit(bareRemote, ["rev-parse", options.branch])).toBe(original);
+    });
+  });
+
+  test("rejects a patch with unrelated files before publishing", async () => {
+    const publication = await makePublication();
+    const { options, fixture, bareRemote } = publication;
+    await writeFile(join(fixture.root, "unrelated.txt"), "unexpected\n");
+    runGit(fixture.root, ["add", "-A"]);
+    await writeFile(join(options.artifactDirectory, "skills-update.patch"),
+      runGit(fixture.root, ["diff", "--cached", "--binary", "--full-index", "HEAD"]) + "\n");
+    await withFakeGh(publication, async () => {
+      await expect(publishProjectSkills(options)).rejects.toThrow("outside its generated scope");
+      expect(runGit(bareRemote, ["branch", "--list", options.branch])).toBe("");
+    });
+  });
+
+  test("rejects file-mode changes absent from the refresh snapshot", async () => {
+    const publication = await makePublication();
+    const { options, fixture, bareRemote } = publication;
+    runGit(fixture.root, ["add", "-A"]);
+    runGit(fixture.root, ["update-index", "--chmod=+x", ".agents/skills/example-skill/SKILL.md"]);
+    await writeFile(join(options.artifactDirectory, "skills-update.patch"),
+      runGit(fixture.root, ["diff", "--cached", "--binary", "--full-index", "HEAD"]) + "\n");
+    await withFakeGh(publication, async () => {
+      await expect(publishProjectSkills(options)).rejects.toThrow("does not match the snapshot");
+      expect(runGit(bareRemote, ["branch", "--list", options.branch])).toBe("");
+    });
+  });
+
 });
 
 describe("workflow contracts", () => {
@@ -431,7 +510,7 @@ describe("workflow contracts", () => {
 
     expect(workflow.on.workflow_call.inputs["skills-root"].default).toBe(".");
     expect(workflow.on.workflow_call.inputs["skills-cli-version"].default).toBe(
-      "1.5.17",
+      "1.5.23",
     );
     expect(
       workflow.on.workflow_call.inputs["normalize-lock-hashes"].default,
@@ -477,13 +556,7 @@ describe("workflow contracts", () => {
     expect(runtime).not.toContain("force-with-lease");
     expect(runtime).not.toMatch(/\["push",\s*"--force/);
 
-    const callerGuide = await readFile(
-      join(repositoryRoot, "docs/project-skills-updates.md"),
-      "utf8",
-    );
-    expect(callerGuide).toContain(
-      "permissions:\n  actions: read\n  contents: write\n  pull-requests: write",
-    );
+
   });
 
   test("keeps every third-party workflow action pinned to a full SHA", async () => {

@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 import { createHash } from "node:crypto";
 import {
@@ -20,18 +20,9 @@ const LOCK_FILE = "skills-lock.json";
 const SKILLS_DIRECTORY = ".agents/skills";
 const FIND_SKILLS_SOURCE = "vercel-labs/skills";
 const HASH_PATTERN = /^[a-f0-9]{64}$/;
-const TREE_MANIFEST_DOMAIN = Buffer.from("known-good-route:skill-tree:v1\0");
 const SKILL_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const CLI_VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
-const BRANCH_PATTERN = /^(?!-)(?!.*\.\.)(?!.*\/\/)[A-Za-z0-9][A-Za-z0-9._/-]*$/;
 const REMOTE_SOURCE_TYPES = new Set(["git", "github", "gitlab", "well-known"]);
-
-class ProjectSkillsError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = "ProjectSkillsError";
-  }
-}
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -42,7 +33,7 @@ function run(command, args, options = {}) {
     stdio: options.stdio ?? "pipe",
   });
   if (result.error) {
-    throw new ProjectSkillsError(
+    throw new Error(
       `Could not run ${command}: ${result.error.message}`,
     );
   }
@@ -51,7 +42,7 @@ function run(command, args, options = {}) {
       .filter(Boolean)
       .join("\n")
       .trim();
-    throw new ProjectSkillsError(
+    throw new Error(
       `${command} ${args.join(" ")} failed with status ${result.status}${detail ? `:\n${detail}` : ""}`,
     );
   }
@@ -76,13 +67,13 @@ async function requireCanonicalDirectory(path, label) {
   try {
     metadata = await lstat(path);
   } catch {
-    throw new ProjectSkillsError(`${label} is missing: ${path}`);
+    throw new Error(`${label} is missing: ${path}`);
   }
   if (!metadata.isDirectory() || metadata.isSymbolicLink()) {
-    throw new ProjectSkillsError(`${label} must be a real directory: ${path}`);
+    throw new Error(`${label} must be a real directory: ${path}`);
   }
   if ((await realpath(path)) !== path) {
-    throw new ProjectSkillsError(`${label} is not a canonical path: ${path}`);
+    throw new Error(`${label} is not a canonical path: ${path}`);
   }
 }
 
@@ -93,14 +84,14 @@ async function collectSkillFiles(baseDirectory, currentDirectory, files) {
     if (entry.name === ".git" || entry.name === "node_modules") continue;
     const path = join(currentDirectory, entry.name);
     if (entry.isSymbolicLink()) {
-      throw new ProjectSkillsError(`Skill payload contains a symlink: ${path}`);
+      throw new Error(`Skill payload contains a symlink: ${path}`);
     }
     if (entry.isDirectory()) {
       await collectSkillFiles(baseDirectory, path, files);
       continue;
     }
     if (!entry.isFile()) {
-      throw new ProjectSkillsError(`Skill payload contains a non-file entry: ${path}`);
+      throw new Error(`Skill payload contains a non-file entry: ${path}`);
     }
     files.push({
       path,
@@ -109,55 +100,19 @@ async function collectSkillFiles(baseDirectory, currentDirectory, files) {
   }
 }
 
-async function readSkillFileRecords(skillDirectory) {
-  await requireCanonicalDirectory(resolve(skillDirectory), "Skill directory");
-  const files = [];
-  await collectSkillFiles(resolve(skillDirectory), resolve(skillDirectory), files);
-  files.sort((left, right) =>
-    left.relativePath.localeCompare(right.relativePath),
-  );
-  return Promise.all(
-    files.map(async (file) => ({
-      content: await readFile(file.path),
-      relativePath: file.relativePath,
-    })),
-  );
-}
-
-function updateLengthPrefixedRecord(hash, type, value) {
-  const bytes = Buffer.isBuffer(value) ? value : Buffer.from(value, "utf8");
-  const length = Buffer.alloc(8);
-  length.writeBigUInt64BE(BigInt(bytes.length));
-  hash.update(Buffer.from([type]));
-  hash.update(length);
-  hash.update(bytes);
-}
-
-async function computeSkillHashes(skillDirectory) {
-  const files = await readSkillFileRecords(skillDirectory);
-  const cliCompatibleHash = createHash("sha256");
-  const treeManifestHash = createHash("sha256");
-  treeManifestHash.update(TREE_MANIFEST_DOMAIN);
-  for (const file of files) {
-    // Keep the upstream CLI's path+content stream only for computedHash
-    // compatibility. KGR's own manifest uses an unambiguous framed encoding.
-    cliCompatibleHash.update(file.relativePath);
-    cliCompatibleHash.update(file.content);
-    updateLengthPrefixedRecord(treeManifestHash, 1, file.relativePath);
-    updateLengthPrefixedRecord(treeManifestHash, 2, file.content);
-  }
-  return {
-    cliCompatibleHash: cliCompatibleHash.digest("hex"),
-    treeManifestHash: treeManifestHash.digest("hex"),
-  };
-}
-
 export async function computeCliCompatibleSkillHash(skillDirectory) {
-  return (await computeSkillHashes(skillDirectory)).cliCompatibleHash;
-}
-
-export async function computeSkillDirectoryHash(skillDirectory) {
-  return (await computeSkillHashes(skillDirectory)).treeManifestHash;
+  const root = resolve(skillDirectory);
+  await requireCanonicalDirectory(root, "Skill directory");
+  const files = [];
+  await collectSkillFiles(root, root, files);
+  files.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
+  const hash = createHash("sha256");
+  // Match the pinned CLI's computedHash; artifact integrity uses Git's tree ID.
+  for (const file of files) {
+    hash.update(file.relativePath);
+    hash.update(await readFile(file.path));
+  }
+  return hash.digest("hex");
 }
 
 async function loadLock(root) {
@@ -166,13 +121,13 @@ async function loadLock(root) {
   try {
     raw = await readFile(lockPath, "utf8");
   } catch {
-    throw new ProjectSkillsError(`Project inventory is missing: ${lockPath}`);
+    throw new Error(`Project inventory is missing: ${lockPath}`);
   }
   let lock;
   try {
     lock = JSON.parse(raw);
   } catch (error) {
-    throw new ProjectSkillsError(
+    throw new Error(
       `Project inventory is not valid JSON: ${error.message}`,
     );
   }
@@ -183,25 +138,25 @@ async function loadLock(root) {
     typeof lock.skills !== "object" ||
     Array.isArray(lock.skills)
   ) {
-    throw new ProjectSkillsError(
+    throw new Error(
       "Project inventory must be a version 1 skills-lock.json object",
     );
   }
   return { lock, lockPath, raw };
 }
 
-function validateLockEntry(name, entry) {
+function validateLockEntry(name, entry, normalizeHashes) {
   if (!SKILL_NAME_PATTERN.test(name)) {
-    throw new ProjectSkillsError(`Inventory contains a non-canonical skill name: ${name}`);
+    throw new Error(`Inventory contains a non-canonical skill name: ${name}`);
   }
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-    throw new ProjectSkillsError(`Inventory entry ${name} must be an object`);
+    throw new Error(`Inventory entry ${name} must be an object`);
   }
   if (typeof entry.source !== "string" || entry.source.length === 0) {
-    throw new ProjectSkillsError(`Inventory entry ${name} is missing source`);
+    throw new Error(`Inventory entry ${name} is missing source`);
   }
   if (!REMOTE_SOURCE_TYPES.has(entry.sourceType)) {
-    throw new ProjectSkillsError(
+    throw new Error(
       `Inventory entry ${name} is blocked: sourceType ${String(entry.sourceType)} cannot be refreshed remotely`,
     );
   }
@@ -212,30 +167,31 @@ function validateLockEntry(name, entry) {
     entry.skillPath.split("/").includes("..") ||
     !entry.skillPath.endsWith("SKILL.md")
   ) {
-    throw new ProjectSkillsError(
+    throw new Error(
       `Inventory entry ${name} is blocked: skillPath is missing or unsafe`,
     );
   }
-  if (typeof entry.computedHash !== "string" || !HASH_PATTERN.test(entry.computedHash)) {
-    throw new ProjectSkillsError(
+  if (!normalizeHashes &&
+      (typeof entry.computedHash !== "string" || !HASH_PATTERN.test(entry.computedHash))) {
+    throw new Error(
       `Inventory entry ${name} has a missing or invalid computedHash`,
     );
   }
 }
 
-export async function inspectInventory(skillsRoot) {
+export async function inspectInventory(skillsRoot, { normalizeHashes = false } = {}) {
   const root = resolve(skillsRoot);
   await requireCanonicalDirectory(root, "Skills root");
   const canonicalDirectory = join(root, SKILLS_DIRECTORY);
   await requireCanonicalDirectory(canonicalDirectory, "Canonical skills inventory");
-  const { lock, lockPath } = await loadLock(root);
+  const { lock, lockPath, raw } = await loadLock(root);
   const names = Object.keys(lock.skills);
   if (names.length === 0) {
-    throw new ProjectSkillsError("Project inventory contains no skills");
+    throw new Error("Project inventory contains no skills");
   }
   const sortedNames = [...names].sort((left, right) => left.localeCompare(right));
-  if (names.some((name, index) => name !== sortedNames[index])) {
-    throw new ProjectSkillsError("Project inventory keys are not in canonical order");
+  if (!normalizeHashes && names.some((name, index) => name !== sortedNames[index])) {
+    throw new Error("Project inventory keys are not in canonical order");
   }
 
   const diskEntries = await readdir(canonicalDirectory, { withFileTypes: true });
@@ -245,24 +201,22 @@ export async function inspectInventory(skillsRoot) {
       (entry) => !entry.isDirectory() || entry.isSymbolicLink(),
     )
   ) {
-    throw new ProjectSkillsError(
+    throw new Error(
       `Canonical skills inventory contains a non-directory entry: ${canonicalDirectory}`,
     );
   }
   if (JSON.stringify(diskNames) !== JSON.stringify(sortedNames)) {
     const missing = sortedNames.filter((name) => !diskNames.includes(name));
     const untracked = diskNames.filter((name) => !sortedNames.includes(name));
-    throw new ProjectSkillsError(
+    throw new Error(
       `Canonical skills inventory does not match skills-lock.json (missing: ${missing.join(", ") || "none"}; untracked: ${untracked.join(", ") || "none"})`,
     );
   }
 
-  const cliCompatibleHashes = {};
   const identities = {};
-  const treeManifestHashes = {};
   for (const name of sortedNames) {
     const entry = lock.skills[name];
-    validateLockEntry(name, entry);
+    validateLockEntry(name, entry, normalizeHashes);
     const directory = join(canonicalDirectory, name);
     await requireCanonicalDirectory(directory, `Canonical skill ${name}`);
     const skillEntrypoint = join(directory, "SKILL.md");
@@ -270,73 +224,45 @@ export async function inspectInventory(skillsRoot) {
     try {
       entrypointMetadata = await stat(skillEntrypoint);
     } catch {
-      throw new ProjectSkillsError(`Canonical skill ${name} is missing SKILL.md`);
+      throw new Error(`Canonical skill ${name} is missing SKILL.md`);
     }
     if (!entrypointMetadata.isFile()) {
-      throw new ProjectSkillsError(`Canonical skill ${name} has an invalid SKILL.md`);
+      throw new Error(`Canonical skill ${name} has an invalid SKILL.md`);
     }
-    const { cliCompatibleHash, treeManifestHash } =
-      await computeSkillHashes(directory);
-    cliCompatibleHashes[name] = cliCompatibleHash;
-    treeManifestHashes[name] = treeManifestHash;
+    const cliCompatibleHash = await computeCliCompatibleSkillHash(directory);
     identities[name] = Object.fromEntries(
       Object.entries(entry)
         .filter(([key]) => key !== "computedHash")
         .sort(([left], [right]) => left.localeCompare(right)),
     );
+    if (normalizeHashes) entry.computedHash = cliCompatibleHash;
     if (entry.computedHash !== cliCompatibleHash) {
-      throw new ProjectSkillsError(
+      throw new Error(
         `Canonical content hash mismatch for ${name}: lock=${entry.computedHash} disk=${cliCompatibleHash}`,
       );
     }
   }
 
-  return {
-    cliCompatibleHashes,
-    identities,
-    lockPath,
-    names: sortedNames,
-    root,
-    treeManifestHashes,
-  };
-}
-
-export async function normalizeInventoryHashes(skillsRoot) {
-  const root = resolve(skillsRoot);
-  await requireCanonicalDirectory(root, "Skills root");
-  const canonicalDirectory = join(root, SKILLS_DIRECTORY);
-  await requireCanonicalDirectory(canonicalDirectory, "Canonical skills inventory");
-  const { lock, lockPath, raw } = await loadLock(root);
-  const names = Object.keys(lock.skills).sort((left, right) => left.localeCompare(right));
-  const normalizedSkills = {};
-  for (const name of names) {
-    const entry = lock.skills[name];
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-      throw new ProjectSkillsError(`Inventory entry ${name} must be an object`);
-    }
-    const directory = join(canonicalDirectory, name);
-    await requireCanonicalDirectory(directory, `Canonical skill ${name}`);
-    normalizedSkills[name] = {
-      ...entry,
-      computedHash: await computeCliCompatibleSkillHash(directory),
-    };
+  if (normalizeHashes) {
+    lock.skills = Object.fromEntries(sortedNames.map((name) => [name, lock.skills[name]]));
+    const normalized = `${JSON.stringify(lock, null, 2)}\n`;
+    if (normalized !== raw) await writeFile(lockPath, normalized, "utf8");
   }
-  const normalized = `${JSON.stringify({ version: 1, skills: normalizedSkills }, null, 2)}\n`;
-  if (normalized !== raw) await writeFile(lockPath, normalized, "utf8");
-  return normalized !== raw;
+  return { identities, names: sortedNames };
 }
 
 function parseChangedPaths(repositoryRoot) {
-  const tracked = git(repositoryRoot, ["diff", "--name-only", "HEAD", "--"]).stdout
-    .split("\n")
+  const tracked = git(repositoryRoot, ["diff", "--name-only", "-z", "HEAD", "--"]).stdout
+    .split("\0")
     .filter(Boolean);
   const untracked = git(repositoryRoot, [
     "ls-files",
+    "-z",
     "--others",
     "--exclude-standard",
     "--",
   ]).stdout
-    .split("\n")
+    .split("\0")
     .filter(Boolean);
   return [...new Set([...tracked, ...untracked])].sort();
 }
@@ -348,7 +274,7 @@ function isScopedPath(path, scopedPaths) {
 function requireCleanRepository(repositoryRoot) {
   const changedPaths = parseChangedPaths(repositoryRoot);
   if (changedPaths.length > 0) {
-    throw new ProjectSkillsError(
+    throw new Error(
       `Caller checkout must be clean before refresh: ${changedPaths.join(", ")}`,
     );
   }
@@ -394,8 +320,8 @@ export function parseDeletionCheckFailures(output) {
 
 function defaultSkillsRunner(args, cwd, cliVersion) {
   const result = run(
-    "bunx",
-    ["--bun", `skills@${cliVersion}`, ...args],
+    "npx",
+    ["--yes", `skills@${cliVersion}`, ...args],
     {
       cwd,
       env: {
@@ -427,9 +353,10 @@ async function createPatch(repositoryRoot, scopedPaths, artifactDirectory, metad
       { encoding: null, env: environment },
     ).stdout;
     await writeFile(join(artifactDirectory, "skills-update.patch"), patch);
+    const tree = git(repositoryRoot, ["write-tree"], { env: environment }).stdout.trim();
     await writeFile(
       join(artifactDirectory, "metadata.json"),
-      `${JSON.stringify(metadata, null, 2)}\n`,
+      `${JSON.stringify({ ...metadata, tree }, null, 2)}\n`,
       "utf8",
     );
   } finally {
@@ -444,11 +371,11 @@ function resolveSkillsRoot(repositoryRoot, skillsRootInput) {
     (skillsRootInput !== "." &&
       skillsRootInput.split(/[\\/]/).some((part) => !part || part === "." || part === ".."))
   ) {
-    throw new ProjectSkillsError("skills-root must be a relative project path");
+    throw new Error("skills-root must be a relative project path");
   }
   const skillsRoot = resolve(repositoryRoot, skillsRootInput);
   if (!isPathInside(skillsRoot, repositoryRoot)) {
-    throw new ProjectSkillsError("skills-root must stay inside the caller repository");
+    throw new Error("skills-root must stay inside the caller repository");
   }
   return skillsRoot;
 }
@@ -468,19 +395,20 @@ export async function refreshProjectSkills(options, dependencies = {}) {
     git(repositoryRoot, ["rev-parse", "--show-toplevel"]).stdout.trim(),
   );
   if (actualRepositoryRoot !== repositoryRoot) {
-    throw new ProjectSkillsError(
+    throw new Error(
       `Repository root must be the Git top level: ${repositoryRoot}`,
     );
   }
   if (!CLI_VERSION_PATTERN.test(options.cliVersion)) {
-    throw new ProjectSkillsError(
+    throw new Error(
       `skills-cli-version must be an exact semver, received ${options.cliVersion}`,
     );
   }
   requireCleanRepository(repositoryRoot);
   const skillsRoot = resolveSkillsRoot(repositoryRoot, options.skillsRoot);
-  if (options.normalizeLockHashes) await normalizeInventoryHashes(skillsRoot);
-  const before = await inspectInventory(skillsRoot);
+  const before = await inspectInventory(skillsRoot, {
+    normalizeHashes: options.normalizeLockHashes,
+  });
   const scopedPaths = scopedPathsFor(repositoryRoot, skillsRoot);
   const runSkills =
     dependencies.runSkills ??
@@ -491,7 +419,7 @@ export async function refreshProjectSkills(options, dependencies = {}) {
     options.cliVersion,
   );
   if (update.status !== 0) {
-    throw new ProjectSkillsError(
+    throw new Error(
       `Project Agent Skills update failed with status ${update.status}`,
     );
   }
@@ -499,7 +427,7 @@ export async function refreshProjectSkills(options, dependencies = {}) {
     update.output ?? "",
   );
   if (deletionCheckFailures.length > 0) {
-    throw new ProjectSkillsError(
+    throw new Error(
       `Project Agent Skills update could not verify upstream deletions for: ${deletionCheckFailures.join(", ")}`,
     );
   }
@@ -511,7 +439,7 @@ export async function refreshProjectSkills(options, dependencies = {}) {
       deletedSkills[0] === "find-skills" &&
       before.names.includes("find-skills");
     if (!repairable) {
-      throw new ProjectSkillsError(
+      throw new Error(
         `Project inventory is blocked by deleted or renamed upstream skills: ${deletedSkills.join(", ")}`,
       );
     }
@@ -528,15 +456,16 @@ export async function refreshProjectSkills(options, dependencies = {}) {
       options.cliVersion,
     );
     if (repair.status !== 0) {
-      throw new ProjectSkillsError(
+      throw new Error(
         `find-skills full-depth repair failed with status ${repair.status}`,
       );
     }
   }
-  if (options.normalizeLockHashes) await normalizeInventoryHashes(skillsRoot);
-  const after = await inspectInventory(skillsRoot);
+  const after = await inspectInventory(skillsRoot, {
+    normalizeHashes: options.normalizeLockHashes,
+  });
   if (JSON.stringify(before.names) !== JSON.stringify(after.names)) {
-    throw new ProjectSkillsError(
+    throw new Error(
       "Automated refresh changed the project skill inventory; migrate additions, deletions, or renames manually from source evidence",
     );
   }
@@ -546,7 +475,7 @@ export async function refreshProjectSkills(options, dependencies = {}) {
       JSON.stringify(after.identities[name]),
   );
   if (changedIdentities.length > 0) {
-    throw new ProjectSkillsError(
+    throw new Error(
       `Automated refresh changed source identity for existing skills: ${changedIdentities.join(", ")}`,
     );
   }
@@ -556,40 +485,26 @@ export async function refreshProjectSkills(options, dependencies = {}) {
     (path) => !isScopedPath(path, scopedPaths),
   );
   if (outsideScope.length > 0) {
-    throw new ProjectSkillsError(
+    throw new Error(
       `Skills refresh changed files outside its generated scope: ${outsideScope.join(", ")}`,
     );
   }
   const changed = changedPaths.length > 0;
   const baseSha = git(repositoryRoot, ["rev-parse", "HEAD"]).stdout.trim();
   await createPatch(repositoryRoot, scopedPaths, resolve(options.artifactDirectory), {
-    version: 2,
+    version: 1,
     baseSha,
     changed,
-    identities: after.identities,
     skillsRoot: toGitPath(relative(repositoryRoot, skillsRoot)) || ".",
-    scopedPaths,
-    treeManifestHashes: after.treeManifestHashes,
   });
   return { baseSha, changed, changedPaths, scopedPaths };
-}
-
-function validateBranch(branch) {
-  if (
-    !BRANCH_PATTERN.test(branch) ||
-    branch.endsWith("/") ||
-    branch.endsWith(".") ||
-    branch.includes("@{")
-  ) {
-    throw new ProjectSkillsError(`PR branch is not a safe Git branch name: ${branch}`);
-  }
 }
 
 function parseJsonOutput(value, label) {
   try {
     return JSON.parse(value);
   } catch (error) {
-    throw new ProjectSkillsError(`${label} returned invalid JSON: ${error.message}`);
+    throw new Error(`${label} returned invalid JSON: ${error.message}`);
   }
 }
 
@@ -597,9 +512,9 @@ export async function publishProjectSkills(options) {
   const repositoryRoot = resolve(options.repositoryRoot);
   await requireCanonicalDirectory(repositoryRoot, "Repository root");
   requireCleanRepository(repositoryRoot);
-  validateBranch(options.branch);
+  git(repositoryRoot, ["check-ref-format", "--branch", options.branch]);
   if (!options.title.trim() || !options.body.trim()) {
-    throw new ProjectSkillsError("PR title and body must not be empty");
+    throw new Error("PR title and body must not be empty");
   }
   const artifactDirectory = resolve(options.artifactDirectory);
   const metadata = parseJsonOutput(
@@ -607,24 +522,38 @@ export async function publishProjectSkills(options) {
     "Artifact metadata",
   );
   if (
-    metadata.version !== 2 ||
-    !metadata.changed ||
-    !metadata.identities ||
-    typeof metadata.identities !== "object" ||
-    !Array.isArray(metadata.scopedPaths) ||
-    typeof metadata.baseSha !== "string" ||
-    typeof metadata.skillsRoot !== "string" ||
-    !metadata.treeManifestHashes ||
-    typeof metadata.treeManifestHashes !== "object"
+    metadata?.version !== 1 || metadata.changed !== true ||
+    !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(metadata.baseSha) ||
+    !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(metadata.tree) ||
+    metadata.skillsRoot !== (options.skillsRoot ?? ".")
   ) {
-    throw new ProjectSkillsError("Skills update artifact metadata is invalid");
+    throw new Error("Skills update artifact metadata is invalid");
   }
+  const skillsRoot = resolveSkillsRoot(repositoryRoot, options.skillsRoot ?? ".");
+  const scopedPaths = scopedPathsFor(repositoryRoot, skillsRoot);
   const currentSha = git(repositoryRoot, ["rev-parse", "HEAD"]).stdout.trim();
   if (currentSha !== metadata.baseSha) {
-    throw new ProjectSkillsError(
+    throw new Error(
       `Publish checkout does not match refresh base: expected ${metadata.baseSha}, received ${currentSha}`,
     );
   }
+  git(repositoryRoot, [
+    "apply", "--index", "--binary", join(artifactDirectory, "skills-update.patch"),
+  ]);
+  const outsideScope = parseChangedPaths(repositoryRoot).filter(
+    (path) => !isScopedPath(path, scopedPaths),
+  );
+  if (outsideScope.length > 0) {
+    throw new Error(`Artifact changed files outside its generated scope: ${outsideScope.join(", ")}`);
+  }
+  if (git(repositoryRoot, ["write-tree"]).stdout.trim() !== metadata.tree) {
+    throw new Error("Published tree does not match the snapshot produced by refresh");
+  }
+  await inspectInventory(skillsRoot);
+  // The verified tree is now a local Git object. Restore the base before switching branches.
+  git(repositoryRoot, [
+    "restore", "--source=HEAD", "--staged", "--worktree", "--", ...scopedPaths,
+  ]);
   const remoteBranchRef = `refs/remotes/origin/${options.branch}`;
   const branchExists =
     git(
@@ -641,52 +570,27 @@ export async function publishProjectSkills(options) {
     ]);
     const ownedPaths = git(repositoryRoot, [
       "diff",
-      "--name-only",
+      "--name-only", "-z",
       `${metadata.baseSha}...${remoteBranchRef}`,
       "--",
     ]).stdout
-      .split("\n")
+      .split("\0")
       .filter(Boolean);
     const foreignPaths = ownedPaths.filter(
-      (path) => !isScopedPath(path, metadata.scopedPaths),
+      (path) => !isScopedPath(path, scopedPaths),
     );
     if (foreignPaths.length > 0) {
-      throw new ProjectSkillsError(
+      throw new Error(
         `Existing PR branch contains files outside the generated scope: ${foreignPaths.join(", ")}`,
       );
     }
     git(repositoryRoot, ["switch", "--create", options.branch, "--track", remoteBranchRef]);
-    git(repositoryRoot, [
-      "restore",
-      `--source=${metadata.baseSha}`,
-      "--staged",
-      "--worktree",
-      "--",
-      ...metadata.scopedPaths,
-    ]);
-    git(repositoryRoot, ["clean", "-fd", "--", ...metadata.scopedPaths]);
   } else {
     git(repositoryRoot, ["switch", "--create", options.branch, metadata.baseSha]);
   }
   git(repositoryRoot, [
-    "apply",
-    "--index",
-    "--binary",
-    join(artifactDirectory, "skills-update.patch"),
+    "restore", `--source=${metadata.tree}`, "--staged", "--worktree", "--", ...scopedPaths,
   ]);
-  const publishedInventory = await inspectInventory(
-    resolveSkillsRoot(repositoryRoot, metadata.skillsRoot),
-  );
-  if (
-    JSON.stringify(publishedInventory.identities) !==
-      JSON.stringify(metadata.identities) ||
-    JSON.stringify(publishedInventory.treeManifestHashes) !==
-      JSON.stringify(metadata.treeManifestHashes)
-  ) {
-    throw new ProjectSkillsError(
-      "Published inventory does not match the source identities and framed tree manifests produced by refresh",
-    );
-  }
 
   const hasCommit =
     git(repositoryRoot, ["diff", "--cached", "--quiet", "--"], {
@@ -726,7 +630,7 @@ export async function publishProjectSkills(options) {
     "gh pr list",
   );
   if (!Array.isArray(existingPullRequests) || existingPullRequests.length > 1) {
-    throw new ProjectSkillsError(
+    throw new Error(
       `Expected at most one open PR for ${options.branch}`,
     );
   }
@@ -767,12 +671,12 @@ function parseArguments(argv) {
   for (let index = 1; index < argv.length; index += 1) {
     const token = argv[index];
     if (!token.startsWith("--")) {
-      throw new ProjectSkillsError(`Unexpected argument: ${token}`);
+      throw new Error(`Unexpected argument: ${token}`);
     }
     const key = token.slice(2);
     const value = argv[index + 1];
     if (!value || value.startsWith("--")) {
-      throw new ProjectSkillsError(`Missing value for --${key}`);
+      throw new Error(`Missing value for --${key}`);
     }
     values[key] = value;
     index += 1;
@@ -783,7 +687,7 @@ function parseArguments(argv) {
 function booleanInput(value, label) {
   if (value === "true") return true;
   if (value === "false") return false;
-  throw new ProjectSkillsError(`${label} must be true or false`);
+  throw new Error(`${label} must be true or false`);
 }
 
 function appendOutput(name, value) {
@@ -820,6 +724,7 @@ export async function main(argv = process.argv.slice(2)) {
       body: process.env.KGR_PR_BODY ?? "",
       branch: values.branch,
       repositoryRoot,
+      skillsRoot: values["skills-root"] ?? ".",
       title: process.env.KGR_PR_TITLE ?? "",
     });
     await appendOutput("head_sha", result.headSha);
@@ -828,18 +733,14 @@ export async function main(argv = process.argv.slice(2)) {
   }
   if (command === "validate") {
     const root = resolveSkillsRoot(resolve(repositoryRoot), values["skills-root"]);
-    if (
-      booleanInput(
-        values["normalize-lock-hashes"] ?? "false",
-        "normalize-lock-hashes",
-      )
-    ) {
-      await normalizeInventoryHashes(root);
-    }
-    await inspectInventory(root);
+    await inspectInventory(root, {
+      normalizeHashes: booleanInput(
+        values["normalize-lock-hashes"] ?? "false", "normalize-lock-hashes",
+      ),
+    });
     return;
   }
-  throw new ProjectSkillsError(`Unknown command: ${String(command)}`);
+  throw new Error(`Unknown command: ${String(command)}`);
 }
 
 if (import.meta.main) {
@@ -851,5 +752,3 @@ if (import.meta.main) {
     process.exitCode = 1;
   }
 }
-
-export { ProjectSkillsError };

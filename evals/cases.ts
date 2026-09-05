@@ -4615,7 +4615,7 @@ export const evalCases: EvalCase[] = [
         currentCaller:
           "The consumer keeps a Monday schedule, workflow_dispatch, actions: read, contents: write, pull-requests: write, and one reusable-workflow job. Its project inventory is nested at paddy/ and its automation branch is automation/update-paddy-agent-skills.",
         proposedRevision:
-          "The reusable workflow is merged on the KGR default branch at full SHA 0123456789abcdef0123456789abcdef01234567. Its diff preserves the inputs used by this caller and pins skills CLI 1.5.17.",
+          "The reusable workflow is merged on the KGR default branch at full SHA 0123456789abcdef0123456789abcdef01234567. Its diff preserves the inputs used by this caller and pins skills CLI 1.5.23.",
         projectGate:
           "actionlint and the repository workflow-contract test validate the edited caller.",
       },
@@ -4657,7 +4657,7 @@ export const evalCases: EvalCase[] = [
         sourceHistory:
           "The upstream history proves review-pr was renamed to code-review, and the new entrypoint retains the requested pull-request review capability. No other inventory entry moved.",
         pinnedCli:
-          "The caller pins skills CLI 1.5.17 and uses paddy as its project root. Project removal plus source-specific add completes successfully without -g; the regenerated inventory and hashes validate afterward.",
+          "The caller pins skills CLI 1.5.23 and uses paddy as its project root. Project removal plus source-specific add completes successfully without -g; the regenerated inventory and hashes validate afterward.",
       },
     },
     expected: {
@@ -4676,7 +4676,7 @@ export const evalCases: EvalCase[] = [
         "review-pr",
         "code-review",
         "source|upstream|history",
-        "1\\.5\\.17",
+        "1\\.5\\.23",
         "paddy",
         "generated",
         "validat|hash",

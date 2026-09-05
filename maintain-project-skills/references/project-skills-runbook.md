@@ -47,7 +47,7 @@ jobs:
     uses: frostney/known-good-route/.github/workflows/update-project-skills.yml@0123456789abcdef0123456789abcdef01234567
     with:
       skills-root: "."
-      skills-cli-version: "1.5.17"
+      skills-cli-version: "1.5.23"
       pr-branch: "automation/update-agent-skills"
 ```
 
@@ -58,17 +58,30 @@ only the relevant `with` block:
 ```yaml
     with:
       skills-root: "paddy"
-      skills-cli-version: "1.5.17"
+      skills-cli-version: "1.5.23"
       repair-find-skills: true
       normalize-lock-hashes: true
       pr-branch: "automation/update-paddy-agent-skills"
       pr-title: "chore(paddy): refresh project Agent Skills"
 ```
 
-The workflow accepts these inputs: `skills-root`, exact `skills-cli-version`,
-`repair-find-skills`, `normalize-lock-hashes`, `pr-branch`, `pr-title`, and
-`pr-body`. Treat hash normalization as opt-in generated-file maintenance, not a
-general repair for a manually edited inventory.
+## Inputs
+
+| Input | Default | Contract |
+| --- | --- | --- |
+| `skills-root` | `.` | Relative project root containing `.agents/skills` and `skills-lock.json`. |
+| `skills-cli-version` | `1.5.23` | Exact CLI version; validate lockfile behavior before upgrading. |
+| `repair-find-skills` | `false` | Full-depth repair only when the sole deletion warning names an existing `find-skills`. |
+| `normalize-lock-hashes` | `false` | Recompute `computedHash` from canonical folders before and after refresh, using the CLI's algorithm. |
+| `pr-branch` | `automation/update-agent-skills` | Branch dedicated to generated skill changes. |
+| `pr-title` | `chore(skills): refresh project Agent Skills` | Commit and draft PR title. |
+| `pr-body` | generated ownership summary | Draft PR body. |
+
+Treat hash normalization as opt-in maintenance for known stale CLI hashes, not
+as a general repair for manually edited inventory. A fresh `find-skills` install
+with CLI 1.5.23 still requires this opt-in to reconcile its recorded hash with
+the canonical folder. Other deletions, renames,
+source identity changes, and incomplete upstream checks stop the workflow.
 
 ## Migrate a deleted or renamed skill
 

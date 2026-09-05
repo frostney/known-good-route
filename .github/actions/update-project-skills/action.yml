@@ -12,7 +12,7 @@ inputs:
   skills-cli-version:
     description: Exact skills CLI version to run.
     required: false
-    default: "1.5.17"
+    default: "1.5.23"
   repair-find-skills:
     description: Repair an isolated find-skills deletion warning with full-depth discovery.
     required: false
@@ -68,7 +68,7 @@ runs:
       if: inputs.mode == 'refresh'
       shell: bash
       run: |
-        bun "$GITHUB_ACTION_PATH/update-project-skills.mjs" refresh \
+        node "$GITHUB_ACTION_PATH/update-project-skills.mjs" refresh \
           --repository-root "$GITHUB_WORKSPACE" \
           --skills-root "$KGR_SKILLS_ROOT" \
           --cli-version "$KGR_SKILLS_CLI_VERSION" \
@@ -87,8 +87,9 @@ runs:
       if: inputs.mode == 'publish'
       shell: bash
       run: |
-        bun "$GITHUB_ACTION_PATH/update-project-skills.mjs" publish \
+        node "$GITHUB_ACTION_PATH/update-project-skills.mjs" publish \
           --repository-root "$GITHUB_WORKSPACE" \
+          --skills-root "$KGR_SKILLS_ROOT" \
           --artifact-directory "$KGR_ARTIFACT_DIRECTORY" \
           --branch "$KGR_PR_BRANCH"
       env:
@@ -96,3 +97,4 @@ runs:
         KGR_PR_BODY: ${{ inputs.pr-body }}
         KGR_PR_BRANCH: ${{ inputs.pr-branch }}
         KGR_PR_TITLE: ${{ inputs.pr-title }}
+        KGR_SKILLS_ROOT: ${{ inputs.skills-root }}
