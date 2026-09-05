@@ -6,8 +6,9 @@ description: >-
   when the user runs /create-pr.
 license: Unlicense OR MIT
 compatibility: >-
-  Requires git, Python 3.11 or newer, the GitHub CLI (gh) authenticated to the
-  target repository, the internal `delivery-wait` skill, and network access.
+  Requires git, Python 3.11 or newer, the GitHub CLI (gh) 2.99 or newer
+  authenticated to the target repository with push access, the internal
+  `delivery-wait` skill, and network access.
 ---
 
 # Create PR
@@ -61,6 +62,12 @@ confirmed stack layers owned by the current change, not unrelated branches.
    open and closed issues and recent sibling sessions or adjacent branches when
    available for related findings and duplicates. Put each closing keyword on
    its own line as `Closes #N`, and only on the layer that completes that issue.
+   Upload local screenshots and videos with the GitHub CLI's `--attach` flag
+   (`gh pr create --attach '<file>#<alt text>'`, or `gh pr edit` and
+   `gh pr comment` with the same flag) so the body links the uploaded asset;
+   never commit evidence media to the repository. Put non-media evidence such
+   as probe output or a plan inside a collapsed `<details>` block in the body or
+   a comment.
 9. Only after the publication checks pass, push an ordinary branch normally and
    set its upstream when needed, then open one draft PR against the remote
    default. For a verified native stack, use `gh stack submit` only after every
@@ -77,8 +84,9 @@ confirmed stack layers owned by the current change, not unrelated branches.
     here. A later caller may update the PR after the appropriate implementation,
     review, behavior-testing, and project-gate loop passes.
 12. Invoke `delivery-wait`'s foreground `wait checks-terminal` operation with
-    the repository, exact head, checkpoint, absolute deadline, and `--json`; the
-    harness passively awaits it without model heartbeats. When it returns,
+    the repository, pull request number, exact head, one `--check` per required
+    check context, absolute deadline, an optional `--state` path, and `--json`;
+    the harness passively awaits it without model heartbeats. When it returns,
     inspect unsuccessful logs. Report a validated code or behavior failure under
     step 11 rather than fixing it.
     If the host cannot passively await a subprocess, report the unsupported

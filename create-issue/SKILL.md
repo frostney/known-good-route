@@ -6,8 +6,8 @@ description: >-
   the user runs /create-issue or asks to file a GitHub issue.
 license: Unlicense OR MIT
 compatibility: >-
-  Requires the GitHub CLI (gh) authenticated to the target repository and
-  network access.
+  Requires the GitHub CLI (gh) 2.99 or newer authenticated to the target
+  repository with push access, and network access.
 ---
 
 # Create issue
@@ -53,7 +53,11 @@ approval. Material ambiguity or risk disables automatic mode.
    - user/test impact, likely affected area, and related work where relevant.
 5. For UI/UX work, add the affected states, current and expected visual evidence,
    accessibility expectations, responsive/theme scope, and applicable design
-   system components or tokens.
+   system components or tokens. Upload local screenshots and videos with
+   `gh issue create --attach '<file>#<alt text>'` (or `gh issue edit` and
+   `gh issue comment` with the same flag); never commit evidence media to the
+   repository. Put non-media evidence such as probe output inside a collapsed
+   `<details>` block.
 6. Choose only existing labels unless the user asks to create one.
 7. Show the proposed title, labels, and body unless the user waived review or
    automatic mode applies.
