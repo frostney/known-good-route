@@ -24,6 +24,10 @@ import {
 
 const temporaryDirectories: string[] = [];
 const repositoryRoot = new URL("../../..", import.meta.url).pathname.replace(/\/$/, "");
+// Publication cases use real local clones, fetches and pushes (over 100 Git
+// processes for an update). Their successful runtime approaches Bun's default
+// five-second limit; keep a bounded allowance for process and filesystem load.
+const publicationTimeout = 30_000;
 
 function runGit(root: string, args: string[]) {
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
@@ -419,7 +423,7 @@ describe("project refresh", () => {
       const second = await publishProjectSkills(options);
       expect(second.headSha).toBe(first.headSha);
     });
-  });
+  }, publicationTimeout);
 
   test("publishes nested inventories and rejects a different configured root", async () => {
     const publication = await makePublication("paddy");
@@ -429,7 +433,7 @@ describe("project refresh", () => {
       expect(result.pullRequestUrl).toBe("https://example.test/pull/1");
       expect(await readFile(join(publication.options.repositoryRoot, "paddy/.agents/skills/example-skill/reference.md"), "utf8")).toBe("published\n");
     });
-  });
+  }, publicationTimeout);
 
   test("updates an existing branch by a descendant commit and removes stale generated files", async () => {
     const publication = await makePublication();
@@ -452,7 +456,7 @@ describe("project refresh", () => {
       expect(runGit(bareRemote, ["ls-tree", "-r", "--name-only", second.headSha])).not.toContain("reference.md");
       expect(await readFile(join(options.repositoryRoot, ".agents/skills/example-skill/replacement.md"), "utf8")).toBe("second update\n");
     });
-  });
+  }, publicationTimeout);
 
   test("preserves an existing branch containing foreign changes", async () => {
     const publication = await makePublication();
@@ -469,7 +473,7 @@ describe("project refresh", () => {
       await expect(publishProjectSkills(options)).rejects.toThrow("Existing PR branch contains files outside");
       expect(runGit(bareRemote, ["rev-parse", options.branch])).toBe(original);
     });
-  });
+  }, publicationTimeout);
 
   test("rejects a patch with unrelated files before publishing", async () => {
     const publication = await makePublication();

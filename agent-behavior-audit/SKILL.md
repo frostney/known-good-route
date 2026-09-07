@@ -1,10 +1,8 @@
 ---
 name: agent-behavior-audit
 description: >-
-  Audits complete cross-device Claude, Codex, T3 Code, and Cursor histories for
-  objective retention, user recovery burden, terminalization, subagent
-  prompting, freshness, and fleet propagation. Use for the user's periodic or
-  monthly agent-behavior audit and improvement barometer.
+  Audit agent execution records for instruction compliance, outcome quality,
+  and wasted work using source-backed evidence.
 license: Unlicense OR MIT
 compatibility: >-
   Requires read access to the in-scope harness histories or exported audit

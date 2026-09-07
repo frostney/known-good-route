@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "scope": "Twelve independent source tasks. These are reconstructed decision-only scenarios with simplified simulated repository facts, not exact historical re-executions or a representative frequency sample. Holdouts are withheld from this instruction edit, not unseen historical tasks.",
+  "preregisteredBeforeSkillEdits": true,
+  "historyCasesSha256": "bc8619b3f612cac419968d8dc1a3ec583fcc3501ad4a156407bb90001709949e",
+  "review": "Primary-assistant review of complete native reports and action results supplements action assertions; no wording score or model judge. An ACK is not executed validation.",
+  "stoppingRule": "Run twelve scenarios once each for Astra and Fable. Classify errors and failures. At most one targeted correction/retry for a demonstrated batch defect; do not expand cases. Passing deterministic checks and accepted current-skill behavior conclude this batch.",
+  "liveBoundary": "No live helpers or provider adapters change. No new GitHub smoke is needed for this prose-only batch; existing live evidence remains qualified by its original snapshot.",
+  "cases": [
+    {
+      "caseId": "history-toolkit-discovery",
+      "split": "development",
+      "sourceTitle": "Build TypeScript 7 compiler",
+      "sourceThread": "01a06e8c-d593-7182-acd0-85b24061dc6e",
+      "attribution": "Skill load not established for original startup; toolkit discovery failure.",
+      "manualAcceptance": "Discover overview before configuring; reuse existing build/test capabilities; do not claim compiler completion."
+    },
+    {
+      "caseId": "history-update-pr-conflicts",
+      "split": "development",
+      "sourceTitle": "Review LWPT roadmap",
+      "sourceThread": "01a03047-cfb7-7b52-add4-f7de0690c318",
+      "attribution": "update-pr and git-workflow loads observed; current versions retain conflicting rules.",
+      "manualAcceptance": "Preserve both additions, regenerate inventory, validate and update PR without another permission question; CI remains pending."
+    },
+    {
+      "caseId": "history-visible-acceptance",
+      "split": "development",
+      "sourceTitle": "Create Victorian London simulation",
+      "sourceThread": "01a071f2-66d1-7b52-8d74-1868dd7bbbcc",
+      "attribution": "Original premature completion documented; exact active skill contribution unknown.",
+      "manualAcceptance": "Report unmet visual/movement requirements despite passing FPS/tests; respect assessment-only scope."
+    },
+    {
+      "caseId": "history-fixable-baseline",
+      "split": "development",
+      "sourceTitle": "Optimize wasmlight runtime",
+      "sourceThread": "01a06de9-8fab-78f0-a8e5-eee6bf3cb0e3",
+      "attribution": "Project-specific optimization workflow; portable contribution is a hypothesis.",
+      "manualAcceptance": "Repair authorized baseline defect; do not claim measured speedup without timing."
+    },
+    {
+      "caseId": "history-bounded-assessment",
+      "split": "development",
+      "sourceTitle": "Audit codebase simplifications",
+      "sourceThread": "01a0707a-f816-7a62-88d0-0b2ed6a4ed64",
+      "attribution": "Architecture and git workflow loads observed; historical success control.",
+      "manualAcceptance": "Report supported simplification, no measurable startup improvement, and finish assessment without unrelated rewrite."
+    },
+    {
+      "caseId": "history-correction-action",
+      "split": "development",
+      "sourceTitle": "Export complete agent evidence",
+      "sourceThread": "01a054d4-f95b-7f83-90fd-96b5c3b2cfd2",
+      "attribution": "No portable skill causal attribution established.",
+      "manualAcceptance": "Repair authorized derived outputs and verify; preserve raw records; configured identity is not response identity."
+    },
+    {
+      "caseId": "history-selected-followthrough",
+      "split": "development",
+      "sourceTitle": "Trace PR #61 review lifecycle",
+      "sourceThread": "01a0287c-5de6-73b3-aa3e-1c9dacf079e8",
+      "attribution": "Retro/create-issue workflow observed. Reconstruction explicitly supplies implementation authority instead of inferring it from filing approval.",
+      "manualAcceptance": "Continue selected local implementation; do not file duplicate issue or claim ACK-only work completed."
+    },
+    {
+      "caseId": "history-throughput-context",
+      "split": "development",
+      "sourceTitle": "Improve AI coding throughput",
+      "sourceThread": "019fb586-de7a-7221-9c69-f08ae96f012c",
+      "attribution": "User corrections verified; skill causal attribution unknown.",
+      "manualAcceptance": "Use scoped timing bottleneck, distinguish stack layers from product value, avoid unsupported causal/current-state claims."
+    },
+    {
+      "caseId": "history-audit-authorized-fix",
+      "split": "holdout",
+      "sourceTitle": "Audit and optimize codebase",
+      "sourceThread": "01a06deb-e928-7c21-9716-8c32f288f377",
+      "attribution": "Task request establishes local correction scope; original exact skill version not established in this pass.",
+      "manualAcceptance": "Honor explicit remediation authority; fix reproduced local defect and validate without claiming production verification."
+    },
+    {
+      "caseId": "history-update-existing-pr",
+      "split": "holdout",
+      "sourceTitle": "Review and simplify open PR",
+      "sourceThread": "01a07052-73c2-7d02-af37-11e28a3f67dd",
+      "attribution": "User invoked update-pr; historical success control.",
+      "manualAcceptance": "Commit/push relevant prepared changes, reuse matching gates, refresh metadata, report pending CI without merge."
+    },
+    {
+      "caseId": "history-approved-issues",
+      "split": "holdout",
+      "sourceTitle": "Create build workflow issues",
+      "sourceThread": "01a002fe-2ecd-7663-9ad6-b4851a4b6818",
+      "attribution": "Explicit create-issue invocation and final approval observed.",
+      "manualAcceptance": "Create exactly the three approved work items without reopening settled decisions or starting implementation."
+    },
+    {
+      "caseId": "history-unavailable-production-evidence",
+      "split": "holdout",
+      "sourceTitle": "Implement issue #26",
+      "sourceThread": "01a034b9-0686-7bd0-84df-3d344c5c4ae3",
+      "attribution": "Delegated implement workflow observed; reconstructed acceptance/access facts are fixture assumptions.",
+      "manualAcceptance": "Distinguish local completion from missing production acceptance, respect permissions and paid-call boundary."
+    }
+  ],
+  "assertionRevision": {
+    "originalHistoryCasesSha256": "bc8619b3f612cac419968d8dc1a3ec583fcc3501ad4a156407bb90001709949e",
+    "currentHistoryCasesSha256": "437fd7a273bce18a195fc51bc1bb8789273a58dcb58c17216abdd4f5267e4613",
+    "reason": "Only expected action constraints changed after original native runs exposed over-restriction. Task prompts and fixture responses unchanged. Use a separately recorded assertion replay.",
+    "additionalCorrections": "Local commits are local work; no undisclosed exact filenames; scoped validation may use either action. The approved-issues fixture gained missing identities and requires fresh runs, not assertion replay."
+  }
+}

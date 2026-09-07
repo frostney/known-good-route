@@ -1,11 +1,8 @@
 ---
 name: agent-writing
 description: >-
-  Applies the user's ambient writing rules to agent-authored chat, status,
-  review, issue, pull-request, engineering-documentation, and retrospective
-  prose. Use whenever an agent communicates progress, decisions, findings, or
-  outcomes to a person. Do not use it to govern application-generated or
-  branded product output.
+  Write clear, concise agent replies and engineering artifacts while
+  preserving evidence, decisions, and required detail.
 license: Unlicense OR MIT
 ---
 
@@ -46,6 +43,9 @@ do not follow this guide.
   retrospective, or another durable multi-paragraph artifact, read
   [references/generated-writing-patterns.md](references/generated-writing-patterns.md).
 
+For PR titles and bodies, also read
+[references/pr-descriptions.md](references/pr-descriptions.md).
+
 Use length thresholds as revision triggers, never as targets to fill. There is
 no minimum length.
 
@@ -57,8 +57,8 @@ no minimum length.
 - Revise a final handoff over 250 words. Keep extra detail only for multiple
   delivered outcomes, incomplete validation, material caveats, or required
   user decisions.
-- Keep each review reply and each retrospective impact item at 300 characters
-  or fewer.
+- Keep review replies concise while preserving the disposition, supporting
+  evidence, required attribution, and any unresolved action.
 - Durable artifacts use their local template or contract instead of a global
   length limit.
 
@@ -134,19 +134,12 @@ Never use an em dash or the standalone words `seam`, `seams`, `honest`,
 - Use code formatting for commands, paths, filenames, identifiers, input, and
   literal output.
 
-## Revise before sending
+## Revise where it helps
 
-Before sending any response, answer these questions and revise when one fails:
-
-1. Did I answer or report the outcome first?
-2. Is every factual claim current, source-backed, and limited to what the
-   evidence proves?
-3. Did I preserve the user's argument, settled decisions, and requested scope?
-4. Can I remove jargon, process narration, repetition, or formatting without
-   losing a material surface?
-5. Are validation results, caveats, next actions, and artifact locations exact?
-
-If the applicable length threshold is crossed, revise once more before sending.
+Check substantial or sensitive drafts for unsupported claims, lost decisions,
+unclear wording, and missing validation or artifact locations. Scale revision to
+the response; a short factual answer does not need a separate checklist pass.
+Length thresholds prompt judgment, not an automatic additional revision.
 
 When editing this suite's Markdown, run
 `python3 agent-writing/scripts/check_prose.py` from the repository root.

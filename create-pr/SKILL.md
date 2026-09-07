@@ -18,6 +18,13 @@ metadata updates, one ordinary draft pull request or the confirmed native stack
 layers owned by the change, and their transitions to ready for review. It does
 not authorize implementation fixes or unrelated changes.
 
+Prepare reviewer-facing media from the completed change, following
+[references/walkthroughs.md](references/walkthroughs.md) when there is useful
+behavior to demonstrate. Missing recording, narration, subtitles or upload
+capabilities do not block publication or readiness by themselves. Report each
+gap and its remedy to the user; required behavior evidence and project gates
+still apply.
+
 When the branch belongs to a native GitHub stack, read
 [../git-workflow/references/github-stacks.md](../git-workflow/references/github-stacks.md).
 The request then authorizes submission and metadata reconciliation for the
@@ -44,7 +51,9 @@ confirmed stack layers owned by the current change, not unrelated branches.
 6. Stop when required review or behavior evidence is missing, stale, failed, or
    unverified without explicit acceptance. Stop when the project gate fails.
    Report the exact missing evidence or failure and return the change to its
-   implementation workflow. Do not test delivered behavior, inspect source as a
+   implementation workflow. Recording an already-validated scenario for a
+   walkthrough is allowed; it does not replace missing behavior testing.
+   Do not test delivered behavior to fill an evidence gap, inspect source as a
    substitute, or fix implementation, test, documentation, generated-artifact,
    compatibility, or CI gaps in this workflow. The only publication exception
    is an explicit user request for a draft PR to obtain a preview environment
@@ -56,18 +65,18 @@ confirmed stack layers owned by the current change, not unrelated branches.
    commit for any correction.
 8. Title each pull request with a Conventional Commit subject covering the whole
    change, since the squash merge makes that title the commit subject on the
-   base branch. Fill the matching PR template for each submitted layer and
-   preserve its structure. If none exists, use Summary, Testing, and Linked
-   issues. Keep the body proportional to the change. Before writing it, search
+   base branch. Follow
+   [../agent-writing/references/pr-descriptions.md](../agent-writing/references/pr-descriptions.md)
+   for the body, preserving explicit project-template requirements. Before writing it, search
    open and closed issues and recent sibling sessions or adjacent branches when
    available for related findings and duplicates. Put each closing keyword on
    its own line as `Closes #N`, and only on the layer that completes that issue.
-   Upload local screenshots and videos with the GitHub CLI's `--attach` flag
-   (`gh pr create --attach '<file>#<alt text>'`, or `gh pr edit` and
-   `gh pr comment` with the same flag) so the body links the uploaded asset;
-   never commit evidence media to the repository. Put non-media evidence such
-   as probe output or a plan inside a collapsed `<details>` block in the body or
-   a comment.
+   Use a supported upload path for local screenshots and videos; inspect the
+   installed GitHub CLI's attachment support. With `--attach`, use
+   `'<image>#<alt text>'` for images and a plain file path for videos. Verify
+   the uploaded asset in the actual PR. A partial upload failure can still
+   create the PR: reconcile the returned URL and successful attachments before
+   retrying. Never commit evidence media to the repository.
 9. Only after the publication checks pass, push an ordinary branch normally and
    set its upstream when needed, then open one draft PR against the remote
    default. For a verified native stack, use `gh stack submit` only after every
@@ -105,4 +114,5 @@ confirmed stack layers owned by the current change, not unrelated branches.
     phases and all applicable CI is observed green for its exact head, mark it
     ready for review. Return every affected URL, native stack order when
     applicable, final states, metadata changes, supplied completion evidence,
-    and observed readiness and CI evidence.
+    and observed readiness and CI evidence. Include incomplete walkthrough
+    requirements and actionable remedies, even when the PR is ready.

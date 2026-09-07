@@ -64,8 +64,9 @@ scaffolding layout, observability, generators, hooks, or package scripts.
   target.
 - A single `bun run check` runs the project's format, lint, tests, typecheck,
   dead-code/health checks, and build as applicable.
-- After dependency changes, run a frozen install plus the check and production
-  build on the target runtime.
+- After dependency changes, run a frozen install plus the check on the target
+  runtime. Run a separate production build only when that check does not cover
+  the same build and runtime.
 - If this skill does not prescribe a category, recommend a current
   Vercel-friendly option with its version, fit, and tradeoffs. Wait for the user
   before adding that new product or service.

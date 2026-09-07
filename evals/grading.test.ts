@@ -20,6 +20,196 @@ function ledger(overrides: Partial<RunLedger> = {}): RunLedger {
 }
 
 describe("eval grading", () => {
+  test("consolidated feedback rejects ambiguous writes and cross-mode merge authority", () => {
+    const trajectories = [
+      {
+        id: "address-feedback-ambiguous-number",
+        action: "user.ask" as const,
+        references: [],
+        output: "Does 17 identify a PR or a native stack?",
+      },
+      {
+        id: "address-feedback-stack-automatic-merge-retains-caller-authority",
+        action: "report" as const,
+        references: [
+          "address-feedback/references/stack.md",
+          "address-feedback/references/stack-readiness.md",
+        ],
+        output:
+          "The complete stack is ready; the caller owns its atomic merge.",
+      },
+      {
+        id: "address-feedback-pr-read-only-overrides-automatic-merge",
+        action: "report" as const,
+        references: [
+          "address-feedback/references/pr.md",
+          "address-feedback/references/pr-readiness.md",
+        ],
+        output:
+          "The PR is ready. Read-only mode applies, so no merge was performed.",
+      },
+    ];
+    for (const trajectory of trajectories) {
+      const evalCase = evalCases.find(({ id }) => id === trajectory.id)!;
+      const valid = ledger({
+        loadedSkills: ["address-feedback"],
+        loadedReferences: trajectory.references,
+        inspections:
+          trajectory.id === "address-feedback-ambiguous-number"
+            ? ["targets"]
+            : [],
+        events:
+          trajectory.id === "address-feedback-ambiguous-number"
+            ? [
+                { kind: "inspection", name: "targets" },
+                { kind: "action", name: "user.ask" },
+              ]
+            : [],
+        actions: [{ action: trajectory.action, details: trajectory.output }],
+      });
+      expect(gradeRun(evalCase, valid, trajectory.output).passed).toBeTrue();
+      for (const action of [
+        "file.edit",
+        "forge.mergePr",
+        "git.stackMerge",
+      ] as const) {
+        expect(
+          gradeRun(
+            evalCase,
+            {
+              ...valid,
+              actions: [
+                ...valid.actions,
+                { action, details: "Unauthorized mutation" },
+              ],
+            },
+            trajectory.output,
+          ).passed,
+        ).toBeFalse();
+      }
+      if (trajectory.references.length) {
+        expect(
+          gradeRun(
+            evalCase,
+            {
+              ...valid,
+              loadedReferences: [],
+            },
+            trajectory.output,
+          ).passed,
+        ).toBeFalse();
+      }
+    }
+  });
+
+  test("contextual routing requires evidence and avoids redundant mode questions", () => {
+    const trajectories = [
+      {
+        id: "implement-infers-current-issue",
+        skills: ["implement"],
+        references: [],
+        inspections: ["context", "currentIssue"],
+        output:
+          "Issue #44 is already fixed and covered at 91ce117 by a passing regression test.",
+      },
+      {
+        id: "address-feedback-infers-current-pr-without-expanding-stack",
+        skills: ["address-feedback"],
+        references: [
+          "address-feedback/references/pr.md",
+          "address-feedback/references/pr-readiness.md",
+        ],
+        inspections: ["context", "currentTargets"],
+        output: "PR #622 is ready. Read-only scope remains on this one PR.",
+      },
+      {
+        id: "address-feedback-context-resolves-number-collision",
+        skills: ["address-feedback"],
+        references: [
+          "address-feedback/references/stack.md",
+          "address-feedback/references/stack-readiness.md",
+        ],
+        inspections: ["context", "currentTargets"],
+        output:
+          "Native stack 17, containing PRs #701 and #702, is ready. Read-only inspection made no changes.",
+      },
+    ];
+    for (const trajectory of trajectories) {
+      const evalCase = evalCases.find(({ id }) => id === trajectory.id)!;
+      const valid = ledger({
+        loadedSkills: trajectory.skills,
+        loadedReferences: trajectory.references,
+        inspections: trajectory.inspections,
+        actions: [{ action: "report", details: trajectory.output }],
+      });
+      expect(gradeRun(evalCase, valid, trajectory.output).passed).toBeTrue();
+      expect(
+        gradeRun(evalCase, { ...valid, inspections: [] }, trajectory.output)
+          .passed,
+      ).toBeFalse();
+      expect(
+        gradeRun(
+          evalCase,
+          {
+            ...valid,
+            actions: [
+              ...valid.actions,
+              { action: "user.ask", details: "Choose a mode" },
+            ],
+          },
+          trajectory.output,
+        ).passed,
+      ).toBeFalse();
+      if (trajectory.references.length) {
+        const wrongMode = trajectory.references.map((path) =>
+          path.includes("/pr")
+            ? path.replace("/pr", "/stack")
+            : path.replace("/stack", "/pr"),
+        );
+        expect(
+          gradeRun(
+            evalCase,
+            {
+              ...valid,
+              loadedReferences: wrongMode,
+            },
+            trajectory.output,
+          ).passed,
+        ).toBeFalse();
+      }
+    }
+  });
+
+  test("a report-only retro rejects an unsolicited report file", () => {
+    const evalCase = evalCases.find(
+      ({ id }) => id === "retrospective-no-durable-findings",
+    )!;
+    const output =
+      "Delivery, process, and codebase review found no durable lesson or follow-up action.";
+    const valid = ledger({
+      loadedSkills: ["run-retro"],
+      registeredSkillCalls: ["grilling"],
+      actions: [{ action: "report", details: output }],
+    });
+    expect(gradeRun(evalCase, valid, output).passed).toBeTrue();
+    expect(
+      gradeRun(
+        evalCase,
+        {
+          ...valid,
+          actions: [
+            ...valid.actions,
+            {
+              action: "file.edit",
+              details: "Write an unsolicited report file",
+            },
+          ],
+        },
+        output,
+      ).passed,
+    ).toBeFalse();
+  });
+
   test("accepts a conforming create-pr trajectory", () => {
     const evalCase = evalCases.find(
       ({ id }) => id === "create-pr-already-committed",
@@ -71,7 +261,9 @@ describe("eval grading", () => {
       ledger({
         loadedSkills: ["create-pr"],
         inspections: ["completionEvidence"],
-        actions: [{ action: "report", details: "Return the implementation gap" }],
+        actions: [
+          { action: "report", details: "Return the implementation gap" },
+        ],
       }),
       "The generated docs index is missing, so this returns to implementation. No PR was opened or pushed.",
     );
@@ -124,8 +316,14 @@ describe("eval grading", () => {
           loadedSkills: ["create-pr"],
           inspections: ["specification", "completionEvidence"],
           actions: [
-            { action: "behaviorTest.run", details: "Run the CLI behavior here" },
-            { action: "forge.openDraftPr", details: "Publish despite missing evidence" },
+            {
+              action: "behaviorTest.run",
+              details: "Run the CLI behavior here",
+            },
+            {
+              action: "forge.openDraftPr",
+              details: "Publish despite missing evidence",
+            },
           ],
         }),
         output,
@@ -465,7 +663,7 @@ describe("eval grading", () => {
       "P1 blocking finding: the existing lock file can hide an unwritable directory.";
     const result = gradeRun(
       evalCase,
-      ledger({ loadedSkills: ["address-pr-feedback", "agent-writing"] }),
+      ledger({ loadedSkills: ["address-feedback", "agent-writing"] }),
       finding,
     );
     expect(result.passed).toBeTrue();
@@ -473,7 +671,7 @@ describe("eval grading", () => {
     const mutated = gradeRun(
       evalCase,
       ledger({
-        loadedSkills: ["address-pr-feedback", "agent-writing"],
+        loadedSkills: ["address-feedback", "agent-writing"],
         actions: [{ action: "file.edit", details: "Fix the finding" }],
       }),
       finding,
@@ -497,7 +695,7 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         evalCase,
-        ledger({ loadedSkills: ["address-pr-feedback"], inspections: inspected }),
+        ledger({ loadedSkills: ["address-feedback"], inspections: inspected }),
         output,
       ).passed,
     ).toBeTrue();
@@ -506,7 +704,7 @@ describe("eval grading", () => {
       gradeRun(
         evalCase,
         ledger({
-          loadedSkills: ["address-pr-feedback"],
+          loadedSkills: ["address-feedback"],
           inspections: inspected,
           actions: [
             { action: "file.edit", details: "Remove Open in Editor" },
@@ -519,11 +717,8 @@ describe("eval grading", () => {
     ).toBeFalse();
 
     expect(
-      gradeRun(
-        evalCase,
-        ledger({ loadedSkills: ["address-pr-feedback"] }),
-        output,
-      ).passed,
+      gradeRun(evalCase, ledger({ loadedSkills: ["address-feedback"] }), output)
+        .passed,
     ).toBeFalse();
   });
 
@@ -584,7 +779,7 @@ describe("eval grading", () => {
         evalCase,
         ledger({
           loadedSkills: [
-            "address-pr-feedback",
+            "address-feedback",
             "code-review",
             "test-against-spec",
           ],
@@ -615,7 +810,7 @@ describe("eval grading", () => {
         evalCase,
         ledger({
           loadedSkills: [
-            "address-pr-feedback",
+            "address-feedback",
             "code-review",
             "test-against-spec",
           ],
@@ -685,36 +880,31 @@ describe("eval grading", () => {
       {
         id: "agent-writing-direct-api-explanation",
         inspections: ["apiDefinition"],
-        good:
-          "AsyncLocalStorage is a built-in Node.js API from `node:async_hooks`. It carries context through asynchronous callbacks without a third-party package.",
+        good: "AsyncLocalStorage is a built-in Node.js API from `node:async_hooks`. It carries context through asynchronous callbacks without a third-party package.",
         bad: "Great question. I'll investigate the third-party dependency and explain the implementation afterward.",
       },
       {
         id: "agent-writing-correction-trace",
         inspections: ["earlierClaim", "currentValidation"],
-        good:
-          "`bun run check` failed 2 tests on the current branch. My earlier claim reused a result from the previous commit, so the branch is not ready. Fix the failures and rerun the gate.",
+        good: "`bun run check` failed 2 tests on the current branch. My earlier claim reused a result from the previous commit, so the branch is not ready. Fix the failures and rerun the gate.",
         bad: "Sorry. The check result may have changed, but everything is probably still ready.",
       },
       {
         id: "agent-writing-preserves-settled-term",
         inspections: ["projectDecision", "genericGuidance"],
-        good:
-          "Keep North Star. It is a defined, settled project term for improvement beyond the minimum engineering bar.",
+        good: "Keep North Star. It is a defined, settled project term for improvement beyond the minimum engineering bar.",
         bad: "Remove North Star because the generic guidance rejects metaphors.",
       },
       {
         id: "agent-writing-introduces-finding-label",
         inspections: ["outcome", "validation", "nextAction"],
-        good:
-          "All six fixes pass. The bytecode constructor-write defect (P1) remains: interpreted mode passed 329/330 tests and bytecode passed 328/330. Fix P1 before bare-specifier resolution.",
+        good: "All six fixes pass. The bytecode constructor-write defect (P1) remains: interpreted mode passed 329/330 tests and bytecode passed 328/330. Fix P1 before bare-specifier resolution.",
         bad: "## P1\n\nThe real story is the crown jewel. R1, G1, and N1 are done.",
       },
       {
         id: "agent-writing-byte-identical-context",
         inspections: ["proseComparison", "compilerComparison"],
-        good:
-          "`README.md` and `docs/overview.md` contain identical text. The compiler outputs are byte-identical.",
+        good: "`README.md` and `docs/overview.md` contain identical text. The compiler outputs are byte-identical.",
         bad: "`README.md` and `docs/overview.md` are byte-identical. The compiler outputs match.",
       },
     ];
@@ -737,9 +927,7 @@ describe("eval grading", () => {
   });
 
   test("accepts a local bounded code-review fix-all trajectory", () => {
-    const evalCase = evalCases.find(
-      ({ id }) => id === "code-review-fix-all",
-    );
+    const evalCase = evalCases.find(({ id }) => id === "code-review-fix-all");
     expect(evalCase).toBeDefined();
     if (!evalCase) {
       return;
@@ -749,6 +937,7 @@ describe("eval grading", () => {
       evalCase,
       ledger({
         loadedSkills: ["code-review"],
+        inspections: ["projectGate", "operations", "behavioralQa"],
         actions: [
           {
             action: "file.edit",
@@ -780,6 +969,7 @@ describe("eval grading", () => {
       evalCase,
       ledger({
         loadedSkills: ["code-review"],
+        inspections: ["projectGate", "operations", "behavioralQa"],
         actions: [
           { action: "file.edit", details: "Fix CR-1" },
           { action: "validation.run", details: "Run the probes" },
@@ -804,6 +994,7 @@ describe("eval grading", () => {
       evalCase,
       ledger({
         loadedSkills: ["codebase-audit"],
+        inspections: ["projectGate", "operations", "behavioralQa"],
         actions: [
           {
             action: "validation.run",
@@ -835,6 +1026,7 @@ describe("eval grading", () => {
       evalCase,
       ledger({
         loadedSkills: ["codebase-audit"],
+        inspections: ["projectGate", "operations", "behavioralQa"],
         actions: [
           { action: "validation.run", details: "Run local probes" },
           { action: "file.edit", details: "Fix CA-1 without selection" },
@@ -864,6 +1056,7 @@ describe("eval grading", () => {
         reviewCase,
         ledger({
           loadedSkills: ["code-review"],
+          inspections: ["projectGate", "operations", "behavioralQa"],
           actions: [
             {
               action: "validation.run",
@@ -881,6 +1074,7 @@ describe("eval grading", () => {
         auditCase,
         ledger({
           loadedSkills: ["codebase-audit"],
+          inspections: ["projectGate", "operations", "behavioralQa"],
           actions: [
             {
               action: "validation.run",
@@ -910,6 +1104,7 @@ describe("eval grading", () => {
       review,
       ledger({
         loadedSkills: ["code-review"],
+        inspections: ["projectGate", "operations", "behavioralQa"],
         actions: [
           {
             action: "delegate",
@@ -933,6 +1128,7 @@ describe("eval grading", () => {
       review,
       ledger({
         loadedSkills: ["code-review"],
+        inspections: ["projectGate", "operations", "behavioralQa"],
         actions: [
           {
             action: "file.edit",
@@ -952,6 +1148,7 @@ describe("eval grading", () => {
       audit,
       ledger({
         loadedSkills: ["codebase-audit"],
+        inspections: ["projectGate", "operations", "behavioralQa"],
         actions: [
           {
             action: "delegate",
@@ -981,6 +1178,13 @@ describe("eval grading", () => {
       evalCase,
       ledger({
         loadedSkills: ["code-review"],
+        inspections: [
+          "priorArtifact",
+          "comparisonBoundary",
+          "laneMap",
+          "workerResult",
+          "coordinatorValidation",
+        ],
         actions: [
           {
             action: "delegate",
@@ -1024,14 +1228,23 @@ describe("eval grading", () => {
         evalCase,
         ledger({
           loadedSkills: [item.skill],
+          inspections: ["projectGate", "operations", "behavioralQa"],
           actions: [
             {
               action: "validation.run",
-              details: "Run the relevant local behavioral probe and project gate",
+              details:
+                "Run the relevant local behavioral probe and project gate",
             },
             {
               action: "file.edit",
               details: "Write and parse the requested JSON findings artifact",
+              data: {
+                content: { schemaVersion: 2, kind: item.skill, findings: [] },
+                path:
+                  item.skill === "code-review"
+                    ? "artifacts/review-findings.json"
+                    : "artifacts/audit-findings.json",
+              },
             },
           ],
         }),
@@ -1043,6 +1256,7 @@ describe("eval grading", () => {
         evalCase,
         ledger({
           loadedSkills: [item.skill],
+          inspections: ["projectGate", "operations", "behavioralQa"],
           actions: [
             {
               action: "validation.run",
@@ -1081,6 +1295,7 @@ describe("eval grading", () => {
       fileScope,
       ledger({
         loadedSkills: ["code-review"],
+        inspections: ["projectGate", "operations", "behavioralQa"],
         actions: [
           {
             action: "validation.run",
@@ -1096,6 +1311,7 @@ describe("eval grading", () => {
       fileScope,
       ledger({
         loadedSkills: ["code-review"],
+        inspections: ["projectGate", "operations", "behavioralQa"],
         actions: [
           {
             action: "validation.run",
@@ -1111,6 +1327,13 @@ describe("eval grading", () => {
       revalidation,
       ledger({
         loadedSkills: ["code-review"],
+        inspections: [
+          "priorArtifact",
+          "comparisonBoundary",
+          "requestedFiles",
+          "behavioralQa",
+          "sourceArtifact",
+        ],
         actions: [
           {
             action: "validation.run",
@@ -1120,6 +1343,14 @@ describe("eval grading", () => {
             action: "file.edit",
             details:
               "Write and parse distinct code-review-revalidation JSON without mutating its source",
+            data: {
+              path: "artifacts/revalidation.json",
+              content: {
+                schemaVersion: 2,
+                kind: "code-review-revalidation",
+                findings: [],
+              },
+            },
           },
         ],
       }),
@@ -1131,6 +1362,7 @@ describe("eval grading", () => {
       revalidation,
       ledger({
         loadedSkills: ["code-review"],
+        inspections: ["projectGate", "operations", "behavioralQa"],
         actions: [
           {
             action: "validation.run",
@@ -1164,6 +1396,13 @@ describe("eval grading", () => {
       evalCase,
       ledger({
         loadedSkills: ["code-review"],
+        inspections: [
+          "priorArtifact",
+          "comparisonBoundary",
+          "currentCode",
+          "behavioralQa",
+          "projectGate",
+        ],
         actions: [
           {
             action: "validation.run",
@@ -1223,14 +1462,17 @@ describe("eval grading", () => {
       { kind: "inspection", name: "activeAuthorization" },
       { kind: "inspection", name: "failureDiagnosis" },
       { kind: "inspection", name: "selectedCorrection" },
-      ...actions.map(({ action }) => ({ kind: "action" as const, name: action })),
+      ...actions.map(({ action }) => ({
+        kind: "action" as const,
+        name: action,
+      })),
     ];
 
     expect(
       gradeRun(
         evalCase,
         ledger({
-          loadedSkills: ["implement-issue"],
+          loadedSkills: ["implement"],
           inspections: [
             "issue",
             "activeAuthorization",
@@ -1248,7 +1490,7 @@ describe("eval grading", () => {
       gradeRun(
         evalCase,
         ledger({
-          loadedSkills: ["implement-issue"],
+          loadedSkills: ["implement"],
           inspections: [
             "issue",
             "activeAuthorization",
@@ -1276,8 +1518,16 @@ describe("eval grading", () => {
       ledger({
         loadedSkills: ["software-engineering-excellence"],
         actions: [
-          { action: "delegate", details: "Run the bounded release worker" },
-          { action: "delegate", details: "Run the bounded repair worker" },
+          {
+            action: "delegate",
+            details:
+              "Run the isolated release worker; return only a terminal summary",
+          },
+          {
+            action: "delegate",
+            details:
+              "Run the isolated repair worker; return only a terminal summary",
+          },
           { action: "report", details: "Consolidate terminal summaries" },
         ],
       }),
@@ -1320,12 +1570,9 @@ describe("eval grading", () => {
       gradeRun(
         critical,
         ledger({
-          loadedSkills: ["run-retro", "render-html"],
+          loadedSkills: ["run-retro"],
           registeredSkillCalls: ["grilling"],
-          actions: [
-            { action: "file.edit", details: "Write the HTML impact report" },
-            { action: "report", details: "Report timing analysis" },
-          ],
+          actions: [{ action: "report", details: "Report timing analysis" }],
         }),
         "Elapsed was 120 minutes. Exclusive decision wait contributed 10 minutes and CI contributed 15; the rest of CI and review cooldown were masked. Aggregate resources were 150 agent-minutes and 80 runner-minutes. The duplicate pull-request check and ledger record is coalesced as one CI event.",
       ).passed,
@@ -1335,12 +1582,9 @@ describe("eval grading", () => {
       gradeRun(
         web,
         ledger({
-          loadedSkills: ["run-retro", "render-html", "agent-writing"],
+          loadedSkills: ["run-retro", "agent-writing"],
           registeredSkillCalls: ["grilling"],
-          actions: [
-            { action: "file.edit", details: "Write the HTML impact report" },
-            { action: "report", details: "Report web timing planes" },
-          ],
+          actions: [{ action: "report", details: "Report web timing planes" }],
         }),
         "Delivery build took 74 seconds. Browser automated interaction included a 9-second retry. Product runtime remains separate, with LCP 2.1 seconds, INP 140 ms, and CLS 0.03 rather than delivery duration.",
       ).passed,
@@ -1350,12 +1594,9 @@ describe("eval grading", () => {
       gradeRun(
         partial,
         ledger({
-          loadedSkills: ["run-retro", "render-html"],
+          loadedSkills: ["run-retro"],
           registeredSkillCalls: ["grilling"],
-          actions: [
-            { action: "file.edit", details: "Write the HTML impact report" },
-            { action: "report", details: "Report CLI timings" },
-          ],
+          actions: [{ action: "report", details: "Report CLI timings" }],
         }),
         "CLI tooling timings: compile 14 seconds, startup 120 ms, subprocess 1.9 seconds, and tests 31 seconds. Confidence is partial because review attribution is missing and token fields are unavailable.",
       ).passed,
@@ -1385,20 +1626,32 @@ describe("eval grading", () => {
     ];
     const traceActions: RunLedger["actions"] = [
       { action: "user.ask", details: "Use grilling after the evidence trace" },
-      { action: "file.edit", details: "Correct the selected documentation drift" },
-      { action: "forge.createIssue", details: "Create the selected implementation ticket" },
+      {
+        action: "file.edit",
+        details: "Correct the selected documentation drift",
+      },
+      {
+        action: "forge.createIssue",
+        details: "Create the selected implementation ticket",
+      },
     ];
     expect(
       gradeRun(
         traceCase,
         ledger({
-          loadedSkills: ["run-retro", "render-html"],
+          loadedSkills: ["run-retro"],
           registeredSkillCalls: ["grilling"],
           inspections,
           actions: traceActions,
           events: [
-            ...inspections.map((name) => ({ kind: "inspection" as const, name })),
-            ...traceActions.map(({ action }) => ({ kind: "action" as const, name: action })),
+            ...inspections.map((name) => ({
+              kind: "inspection" as const,
+              name,
+            })),
+            ...traceActions.map(({ action }) => ({
+              kind: "action" as const,
+              name: action,
+            })),
           ],
         }),
         "ADR-9 is settled. The controller has implementation drift and the guide has documentation drift, so the choice is not re-grilled. Separate no-value context includes a manual resume, repeated evidence, and a loaded but bypassed skill; one subagent transcript is an unavailable evidence gap.",
@@ -1407,26 +1660,34 @@ describe("eval grading", () => {
 
     const immediateActions: RunLedger["actions"] = [
       { action: "forge.createIssue", details: "Create visibility issue #88" },
-      { action: "delegate", details: "Invoke normal implement-issue for #88" },
-      { action: "report", details: "Continue the active retro after delivery" },
+      { action: "delegate", details: "Invoke normal implement for #88", data: { workflow: "/implement" } },
+      { action: "report", details: "Keep the retro open pending a verified worker result" },
     ];
     expect(
       gradeRun(
         immediateCase,
         ledger({
-          loadedSkills: ["run-retro", "create-issue", "implement-issue"],
-          inspections: ["confirmedAction", "issueSearch", "implementationRoute"],
+          loadedSkills: ["run-retro", "create-issue"],
+          inspections: [
+            "confirmedAction",
+            "issueSearch",
+            "implementationRoute",
+          ],
           actions: immediateActions,
-          events: immediateActions.map(({ action }) => ({ kind: "action", name: action })),
+          events: immediateActions.map(({ action }) => ({
+            kind: "action",
+            name: action,
+          })),
         }),
-        "The explicitly selected action created issue #88 through create-issue, then normal implement-issue delivered it. The retrospective remains active and continues with delivered or blocked evidence.",
+        "The explicitly selected action created visibility issue #88 in the fixture, then requested normal implement. The retrospective remains active; delivery is unverified because no worker result was returned.",
       ).passed,
     ).toBeTrue();
   });
 
   test("requires reviewer convergence before automatic merge", () => {
     const evalCase = evalCases.find(
-      ({ id }) => id === "address-pr-feedback-automatic-merge-retries-active-reviewer",
+      ({ id }) =>
+        id === "address-pr-feedback-automatic-merge-retries-active-reviewer",
     );
     expect(evalCase).toBeDefined();
     if (!evalCase) {
@@ -1438,8 +1699,13 @@ describe("eval grading", () => {
     const converged = gradeRun(
       evalCase,
       ledger({
-        loadedSkills: ["address-pr-feedback", "code-review"],
+        loadedSkills: ["address-feedback", "code-review"],
         actions: [
+          {
+            action: "monitor.wait",
+            details: "Wait for documented availability",
+            data: { retry_at: "2026-08-10T10:16:00Z" },
+          },
           {
             action: "forge.commentPr",
             details: "Post the documented reviewer retrigger",
@@ -1462,6 +1728,7 @@ describe("eval grading", () => {
           },
         ],
         events: [
+          { kind: "action", name: "monitor.wait" },
           { kind: "action", name: "forge.commentPr" },
           { kind: "action", name: "file.edit" },
           { kind: "action", name: "validation.run" },
@@ -1480,7 +1747,7 @@ describe("eval grading", () => {
     const premature = gradeRun(
       evalCase,
       ledger({
-        loadedSkills: ["address-pr-feedback"],
+        loadedSkills: ["address-feedback"],
         actions: [
           {
             action: "forge.mergePr",
@@ -1495,7 +1762,8 @@ describe("eval grading", () => {
 
   test("requires the finding snapshot before accepting a review conclusion", () => {
     const evalCase = evalCases.find(
-      ({ id }) => id === "address-pr-feedback-terminal-check-does-not-hide-finding",
+      ({ id }) =>
+        id === "address-pr-feedback-terminal-check-does-not-hide-finding",
     );
     expect(evalCase).toBeDefined();
     if (!evalCase) {
@@ -1508,7 +1776,7 @@ describe("eval grading", () => {
       gradeRun(
         evalCase,
         ledger({
-          loadedSkills: ["address-pr-feedback"],
+          loadedSkills: ["address-feedback"],
           inspections: ["reviewInspection"],
         }),
         output,
@@ -1516,17 +1784,15 @@ describe("eval grading", () => {
     ).toBeTrue();
 
     expect(
-      gradeRun(
-        evalCase,
-        ledger({ loadedSkills: ["address-pr-feedback"] }),
-        output,
-      ).passed,
+      gradeRun(evalCase, ledger({ loadedSkills: ["address-feedback"] }), output)
+        .passed,
     ).toBeFalse();
   });
 
   test("keeps unanswered, stale, and stacked PR states outside merge", () => {
     const unanswered = evalCases.find(
-      ({ id }) => id === "address-pr-feedback-unanswered-inline-automation-thread",
+      ({ id }) =>
+        id === "address-pr-feedback-unanswered-inline-automation-thread",
     );
     const stale = evalCases.find(
       ({ id }) => id === "address-pr-feedback-stale-verdict-ambiguous-retry",
@@ -1544,7 +1810,7 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         unanswered,
-        ledger({ loadedSkills: ["address-pr-feedback"] }),
+        ledger({ loadedSkills: ["address-feedback"] }),
         "At exact head 620beef there are zero unresolved threads but one unanswered automation thread. The PR is not ready until the maintainer inline reply exists.",
       ).passed,
     ).toBeTrue();
@@ -1552,7 +1818,7 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         stale,
-        ledger({ loadedSkills: ["address-pr-feedback"] }),
+        ledger({ loadedSkills: ["address-feedback"] }),
         "Exact head 621cafe is pending: the terminal verdict belongs to stale previous head 621old0 and the current timing statements conflict, so retry_at is null.",
       ).passed,
     ).toBeTrue();
@@ -1560,7 +1826,7 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         stack,
-        ledger({ loadedSkills: ["address-pr-feedback"] }),
+        ledger({ loadedSkills: ["address-feedback"] }),
         "Exact head 622feed is ready and returned to the stack owner without merging; atomic merge remains outside this single-PR workflow.",
       ).passed,
     ).toBeTrue();
@@ -1569,7 +1835,7 @@ describe("eval grading", () => {
       gradeRun(
         stack,
         ledger({
-          loadedSkills: ["address-pr-feedback"],
+          loadedSkills: ["address-feedback"],
           actions: [
             { action: "git.stackMerge", details: "Merge the stack directly" },
           ],
@@ -1585,10 +1851,12 @@ describe("eval grading", () => {
     );
     const converged = evalCases.find(
       ({ id }) =>
-        id === "address-stack-feedback-adds-one-fix-layer-and-returns-whole-ready",
+        id ===
+        "address-stack-feedback-adds-one-fix-layer-and-returns-whole-ready",
     );
     const invalidated = evalCases.find(
-      ({ id }) => id === "address-stack-feedback-invalidates-drifted-descendants",
+      ({ id }) =>
+        id === "address-stack-feedback-invalidates-drifted-descendants",
     );
     expect(readOnly).toBeDefined();
     expect(converged).toBeDefined();
@@ -1601,22 +1869,43 @@ describe("eval grading", () => {
       gradeRun(
         readOnly,
         ledger({
-          loadedSkills: ["address-stack-feedback"],
-          loadedReferences: ["address-stack-feedback/references/readiness.md"],
+          loadedSkills: ["address-feedback"],
+          loadedReferences: ["address-feedback/references/stack-readiness.md"],
         }),
         "Read-only stack 17 is pending: #701 at 701aaaa has a live finding in an unresolved unanswered thread; #702 at 702bbbb is reviewed. No mutation occurred.",
       ).passed,
     ).toBeTrue();
 
     const convergenceActions = [
-      { action: "file.edit" as const, details: "Fix both live findings in one top layer" },
+      {
+        action: "file.edit" as const,
+        details: "Fix both live findings in one top layer",
+      },
       { action: "git.commit" as const, details: "Commit the coherent fixes" },
-      { action: "codeReview.run" as const, details: "Review the integrated top" },
-      { action: "behaviorTest.run" as const, details: "Test the complete stack behavior" },
-      { action: "validation.run" as const, details: "Run the declared project gate" },
-      { action: "git.stackSubmit" as const, details: "Submit only top fix PR #713" },
-      { action: "forge.replyInline" as const, details: "Reply with exact fix evidence" },
-      { action: "forge.resolveThread" as const, details: "Resolve accepted fixed threads" },
+      {
+        action: "codeReview.run" as const,
+        details: "Review the integrated top",
+      },
+      {
+        action: "behaviorTest.run" as const,
+        details: "Test the complete stack behavior",
+      },
+      {
+        action: "validation.run" as const,
+        details: "Run the declared project gate",
+      },
+      {
+        action: "git.stackSubmit" as const,
+        details: "Submit only top fix PR #713",
+      },
+      {
+        action: "forge.replyInline" as const,
+        details: "Reply with exact fix evidence",
+      },
+      {
+        action: "forge.resolveThread" as const,
+        details: "Resolve accepted fixed threads",
+      },
       { action: "report" as const, details: "Return whole-stack readiness" },
     ];
     const convergenceOutput =
@@ -1627,11 +1916,11 @@ describe("eval grading", () => {
         converged,
         ledger({
           loadedSkills: [
-            "address-stack-feedback",
+            "address-feedback",
             "code-review",
             "test-against-spec",
           ],
-          loadedReferences: ["address-stack-feedback/references/readiness.md"],
+          loadedReferences: ["address-feedback/references/stack-readiness.md"],
           actions: convergenceActions,
         }),
         convergenceOutput,
@@ -1643,11 +1932,11 @@ describe("eval grading", () => {
         converged,
         ledger({
           loadedSkills: [
-            "address-stack-feedback",
+            "address-feedback",
             "code-review",
             "test-against-spec",
           ],
-          loadedReferences: ["address-stack-feedback/references/readiness.md"],
+          loadedReferences: ["address-feedback/references/stack-readiness.md"],
           actions: [
             ...convergenceActions,
             { action: "git.stackMerge", details: "Merge the covered prefix" },
@@ -1661,8 +1950,8 @@ describe("eval grading", () => {
       gradeRun(
         invalidated,
         ledger({
-          loadedSkills: ["address-stack-feedback"],
-          loadedReferences: ["address-stack-feedback/references/readiness.md"],
+          loadedSkills: ["address-feedback"],
+          loadedReferences: ["address-feedback/references/stack-readiness.md"],
         }),
         "Stack 19 is blocked: #722 now has head 722new0, invalidating position 1 and descendant #723.",
       ).passed,
@@ -1700,7 +1989,8 @@ describe("eval grading", () => {
           },
           {
             action: "monitor.wait",
-            details: "Wait for changed or terminal GitHub state without inference",
+            details:
+              "Wait for changed or terminal GitHub state without inference",
           },
           {
             action: "telemetry.append",
@@ -1733,7 +2023,8 @@ describe("eval grading", () => {
           },
           {
             action: "monitor.wait",
-            details: "Wait for changed or terminal GitHub state without inference",
+            details:
+              "Wait for changed or terminal GitHub state without inference",
           },
           {
             action: "telemetry.append",
@@ -1764,7 +2055,10 @@ describe("eval grading", () => {
       { action: "delegate", details: "Run independent implementation nodes" },
       { action: "file.edit", details: "Implement the ready milestone work" },
       { action: "forge.openDraftPr", details: "Open the focused PRs" },
-      { action: "forge.mergePr", details: "Squash-merge current reviewed heads" },
+      {
+        action: "forge.mergePr",
+        details: "Squash-merge current reviewed heads",
+      },
       { action: "git.merge", details: "Merge updated default into open work" },
       {
         action: "validation.run",
@@ -1844,6 +2138,19 @@ describe("eval grading", () => {
       ).passed,
     ).toBeTrue();
 
+    // This fixture cannot observe delegated completion. An honest unresolved
+    // administrative attempt is an allowed blocked outcome, not a filed issue.
+    const delegatedPrerequisite = {
+      action: "delegate" as const,
+      details: "File the prerequisite through create-issue automatic",
+      data: { workflow: "/create-issue automatic" },
+    };
+    const unresolved = "The repository-owned stack-prefix CI prerequisite remains unverified: delegation returned no issue URL. The recommendation does not implement infrastructure; no safe fallback is available.";
+    expect(gradeRun(missingCapability,ledger({loadedSkills:["milestone-rush"],actions:[delegatedPrerequisite]}),unresolved).passed).toBeTrue();
+    expect(gradeRun(missingCapability,ledger({loadedSkills:["milestone-rush"],actions:[]}),unresolved).passed).toBeFalse();
+    expect(gradeRun(missingCapability,ledger({loadedSkills:["milestone-rush"],actions:[{...delegatedPrerequisite,data:{workflow:"/implement"}}]}),unresolved).passed).toBeFalse();
+    expect(gradeRun(missingCapability,ledger({loadedSkills:["milestone-rush"],actions:[delegatedPrerequisite,{action:"file.edit",details:"Create CI controller",data:{path:".github/workflows/controller.yml"}}]}),unresolved).passed).toBeFalse();
+
     expect(
       gradeRun(
         checkpoint,
@@ -1884,6 +2191,13 @@ describe("eval grading", () => {
       {
         action: "telemetry.append",
         details: "Correct silent nulls and record effective workers",
+        data: {
+          commands: [
+            "event_ledger.py ingest",
+            "event_ledger.py validate",
+            "event_ledger.py summarize",
+          ],
+        },
       },
       {
         action: "forge.closeMilestone",
@@ -1978,13 +2292,16 @@ describe("eval grading", () => {
     }
 
     const output =
-      "The existing review skill is authoritative. A Bun executable compatibility probe passed. The first run is an initial full review; later updates are deltas, and a manual full review is explicit. The temporary HTML impact report compares the options. I recommend the contract-preserving option.";
+      "The existing review skill is authoritative. A Bun executable compatibility probe passed. The first run is an initial full review; later updates are deltas, and a manual full review is explicit. These paths are mutually exclusive. The conversation comparison explains the options. I recommend the contract-preserving option.";
     const actions = [
       { action: "report" as const, details: "Render the impact report" },
-      { action: "user.ask" as const, details: "Ask for the architecture choice" },
+      {
+        action: "user.ask" as const,
+        details: "Ask for the architecture choice",
+      },
     ];
     const base = {
-      loadedSkills: ["implement-idea", "render-html", "agent-writing"],
+      loadedSkills: ["implement", "agent-writing"],
       registeredSkillCalls: ["grilling"],
       inspections: ["existingContract", "runtimeCompatibility"],
       actions,
@@ -2036,6 +2353,7 @@ describe("eval grading", () => {
       "At fixed point 51ca1ab..62db2bc, a cross-tenant credential rotates before the forbidden response, so the side effect bypasses tenant authorization.";
     const base = {
       loadedSkills: ["code-review"],
+      inspections: ["projectGate", "operations", "behavioralQa"],
       actions: [
         {
           action: "validation.run" as const,
@@ -2049,9 +2367,7 @@ describe("eval grading", () => {
         evalCase,
         ledger({
           ...base,
-          loadedReferences: [
-            "code-review/references/adversarial-review.md",
-          ],
+          loadedReferences: ["code-review/references/adversarial-review.md"],
         }),
         output,
       ).passed,

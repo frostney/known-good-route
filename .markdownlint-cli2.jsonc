@@ -22,6 +22,8 @@
     "MD046": { "style": "fenced" }         // code-block style: ``` not indent
   },
   "ignores": [
-    "node_modules/"
+    "**/node_modules/**",
+    ".eval-results/**",
+    ".agent/**"
   ]
 }

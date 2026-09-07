@@ -1,10 +1,8 @@
 ---
 name: maintain-project-skills
 description: >-
-  Maintains thin callers for the reusable project Agent Skills update workflow,
-  migrates deleted or renamed skills from source evidence, and diagnoses update
-  failures without taking ownership away from generated files. Use when adding
-  or upgrading project-scoped skills automation or repairing its inventory.
+  Install, update, or migrate project-local skills from their verified
+  upstream source while preserving local ownership and pins.
 license: Unlicense OR MIT
 ---
 

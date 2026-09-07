@@ -30,7 +30,7 @@ not release publication.
   direct invocation, verify current scope, direction, readiness, dependencies,
   and measures of success before executing. Stop for material replanning rather
   than silently changing the milestone.
-- Treat a confirmed roadmap item as the mini-spec for `/implement-idea
+- Treat a confirmed roadmap item as the mini-spec for `/implement
   automatic` only when it states the outcome, scope and non-goals, and
   testable measures of success.
 - Respect project instructions, Definitions of Ready and Done, branch
@@ -67,7 +67,14 @@ not release publication.
    a plan artifact, not authority to change workflows, labels, rulesets,
    controllers, credentials, or provider configuration. Make a required missing
    capability an explicit repository-owned prerequisite; otherwise document the
-   safe current-CI fallback and its cost.
+   safe current-CI fallback and its cost. File prerequisite issues through
+   `/create-issue automatic`, retaining its evidence and attribution gates in
+   any delegated packet. If those gates block posting, record the prerequisite
+   in the ignored checkpoint without claiming an issue was created. A delegation
+   request is not completion: inspect the returned result and verify the issue
+   URL, repository and intended prerequisite before reporting it as filed. If
+   the worker stops or its result is uncertain, reconcile GitHub and the
+   checkpoint before retrying so an accepted write is not duplicated.
 6. Build a dependency and likely-conflict graph. A native stack may represent a
    true dependency chain or a confirmed logical decomposition of one large
    issue, provided each layer is independently reviewable. Prioritize the
@@ -88,8 +95,8 @@ not release publication.
    integration, merge, and milestone closure. Detailed investigation,
    implementation, remediation, and validation belong to bounded workers.
 2. Give each worker one context-isolated task packet and its dependencies. Use
-   `/implement-issue automatic` for an issue or `/implement-idea automatic` for
-   a confirmed unfiled roadmap item. In either workflow, replace its required
+   `/implement automatic` with the issue or confirmed roadmap item in the
+   packet so the worker can resolve its target. Replace its required
    pre-PR review with `/code-review subagents fix-all`; this is a milestone-rush
    default, not a change to standalone implementation workflows. Automatic mode
    selects the evidence-backed recommendation but never resolves material
@@ -98,9 +105,10 @@ not release publication.
    relevant local state only when its ownership and scope are clear; preserve
    ambiguous, dirty, pre-existing, or unrelated state and report it.
 4. Let the implementation workflow validate, review, and hand off through
-   `/create-pr`. As each ordinary PR becomes ready, run `/address-pr-feedback
-   automatic-merge`. For a native stack, invoke `/address-stack-feedback
-   <stack-number>` once for the stack identity. Accept only its exact-topology,
+   `/create-pr`. As each ordinary PR becomes ready, run `/address-feedback
+   automatic-merge` with that PR in context. For a native stack, invoke
+   `/address-feedback` once with the verified stack identity and complete-stack
+   scope in the context. Accept only its exact-topology,
    exact-head whole-stack `ready` result; then recheck that same snapshot and
    atomically merge the complete ready stack through `git-workflow`. Never
    merge a prefix beneath a required top fix layer.
