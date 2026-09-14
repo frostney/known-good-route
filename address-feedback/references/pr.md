@@ -73,9 +73,9 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    and append the required Note to every substantive reply.
 5. Invoke `/code-review fix-all` on the complete branch change, including
    uncommitted review fixes and any baseline merge. Apply every validated
-   in-scope finding. Stop for a material product, architecture, security,
-   compatibility, or scope decision, or for an unresolved Blocking or Important
-   finding. If `/code-review` is unavailable, perform the same bounded review
+   in-scope requirement gap. Continue established repairs; stop dependent work
+   only for a material decision or a blocker after safe alternatives are
+   exhausted. An unresolved required finding prevents readiness. If `/code-review` is unavailable, perform the same bounded review
    and fix pass directly.
 6. Run `/test-against-spec fix` when it is available. Otherwise perform the same
    black-box test directly against the explicit PR specification. Do not use
@@ -83,7 +83,9 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    available, then use the local environment. Record each requirement,
    environment, setup, action or command, input, expected result, observed
    result, and limitation. If neither environment can reproduce required
-   behavior, stop before pushing and report it as unverified.
+   behavior, report it as unverified. When testing requires a preview containing
+   the fix, publish a draft update through `/update-pr`, test that exact revision,
+   and resume the loop before claiming readiness.
 7. If step 5 or 6 changes the implementation or reports incomplete work,
    continue fixing and restart at step 5. Repeat until code review and behavior
    testing pass on the same unchanged implementation. Then establish the

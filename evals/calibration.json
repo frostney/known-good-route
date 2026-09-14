@@ -96,21 +96,37 @@
       "caseId": "create-pr-reports-implementation-gap",
       "status": "updated",
       "rationale": [
-        "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate."
+        "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
+        "September 14 approved contract: preserve the generated-artifact gap but require scoped repair, renewed gates and completed PR readiness rather than stopping with a recommendation. Stable historical case ID retained; no fresh native replay of this legacy case claimed."
       ],
       "beforeSha256": "1e13eeaacecd3480d97f492a0d7664d8e3e377972ec61502c44054d8ebe772a2",
-      "afterSha256": "24b9d9ece4c466950859f056df296e2ed89547d0c5a45916c11e1b1484ecb69d",
-      "frozenCaseSha256": "24b9d9ece4c466950859f056df296e2ed89547d0c5a45916c11e1b1484ecb69d"
+      "afterSha256": "43e4e72a80b0ed6e9721fdf544d3764f559d4d995cd68b1157ab8827efeb9fe0",
+      "frozenCaseSha256": "24b9d9ece4c466950859f056df296e2ed89547d0c5a45916c11e1b1484ecb69d",
+      "revisions": [
+        {
+          "previousAfterSha256": "24b9d9ece4c466950859f056df296e2ed89547d0c5a45916c11e1b1484ecb69d",
+          "afterSha256": "43e4e72a80b0ed6e9721fdf544d3764f559d4d995cd68b1157ab8827efeb9fe0",
+          "rationale": "September 14 approved contract: preserve the generated-artifact gap but require scoped repair, renewed gates and completed PR readiness rather than stopping with a recommendation. Stable historical case ID retained; no fresh native replay of this legacy case claimed."
+        }
+      ]
     },
     {
       "caseId": "create-pr-missing-behavior-evidence-stops",
       "status": "updated",
       "rationale": [
-        "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate."
+        "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
+        "September 14 approved contract: exercise available built-CLI acceptance before publication, reusing still-current review and project evidence. Stopping solely because evidence has not yet been gathered is no longer correct. Stable historical case ID retained; no fresh native replay of this legacy case claimed."
       ],
       "beforeSha256": "03876ae847924f02646bb679f92337260de80c8dac92ed88f62a4a57ff36136a",
-      "afterSha256": "4a568ae0c66b032f1eff5d0c2f2bdbf4e04d0fb238b9132c7a36b8d03441e6af",
-      "frozenCaseSha256": "4a568ae0c66b032f1eff5d0c2f2bdbf4e04d0fb238b9132c7a36b8d03441e6af"
+      "afterSha256": "cd231078bae6f304ef9fea988a35404dd0cde1dd3b792f19ac133a4e73cb06bf",
+      "frozenCaseSha256": "4a568ae0c66b032f1eff5d0c2f2bdbf4e04d0fb238b9132c7a36b8d03441e6af",
+      "revisions": [
+        {
+          "previousAfterSha256": "4a568ae0c66b032f1eff5d0c2f2bdbf4e04d0fb238b9132c7a36b8d03441e6af",
+          "afterSha256": "cd231078bae6f304ef9fea988a35404dd0cde1dd3b792f19ac133a4e73cb06bf",
+          "rationale": "September 14 approved contract: exercise available built-CLI acceptance before publication, reusing still-current review and project evidence. Stopping solely because evidence has not yet been gathered is no longer correct. Stable historical case ID retained; no fresh native replay of this legacy case claimed."
+        }
+      ]
     },
     {
       "caseId": "create-pr-no-relevant-work",
@@ -146,11 +162,19 @@
       "caseId": "create-pr-ci-failure-returns-to-implementation",
       "status": "updated",
       "rationale": [
-        "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate."
+        "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
+        "September 14 approved contract: preserve the in-scope CI null-guard failure and require repair, affected validation and readiness on the same PR instead of a draft-only handoff. No fresh native replay of this legacy case claimed."
       ],
       "beforeSha256": "b336b011fba067009cbb5532a434b71eb593fbae7f7b4e2f0b4b3e3fea35b194",
-      "afterSha256": "8433343c51ba54b7cfed1a28c999f6be274776ab82e9ac99d4194279065ef9d3",
-      "frozenCaseSha256": "8433343c51ba54b7cfed1a28c999f6be274776ab82e9ac99d4194279065ef9d3"
+      "afterSha256": "b692f77981f0dd68e85566a418cde6d93bec82f7059e42a35b22f05e9f5a2905",
+      "frozenCaseSha256": "8433343c51ba54b7cfed1a28c999f6be274776ab82e9ac99d4194279065ef9d3",
+      "revisions": [
+        {
+          "previousAfterSha256": "8433343c51ba54b7cfed1a28c999f6be274776ab82e9ac99d4194279065ef9d3",
+          "afterSha256": "b692f77981f0dd68e85566a418cde6d93bec82f7059e42a35b22f05e9f5a2905",
+          "rationale": "September 14 approved contract: preserve the in-scope CI null-guard failure and require repair, affected validation and readiness on the same PR instead of a draft-only handoff. No fresh native replay of this legacy case claimed."
+        }
+      ]
     },
     {
       "caseId": "create-pr-pending-ci-keeps-draft",
@@ -614,18 +638,26 @@
     },
     {
       "caseId": "implement-issue-continues-after-in-scope-diagnosis",
-      "status": "corrected",
+      "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Remove pre-edit future success so the required post-edit gate sequence has a coherent fixture.",
-        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading."
+        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
+        "September 14 approved hierarchy: route the already-authorized fix-and-PR request through deliver with a ready-to-merge endpoint while retaining implement for development. Preserve sustained repair and publication intent; no new deployment authority or fresh native replay of this legacy case claimed."
       ],
       "beforeSha256": "f1fe1a06f4316d9040a8805b6b585149bbc3b8c130dfe220e63e1e2d38817993",
-      "afterSha256": "1ad3f29e76e6aadc1c098e891c0b8b903bda82ad7f2b24f88b6291bb692182df",
+      "afterSha256": "81b54e666a7495ff78b401d5facdcee00e48d5e97831216e5f0f076476513e5e",
       "postFreezeChangedFields": [
         "expected"
       ],
-      "frozenCaseSha256": "e1ff86ca00c691c67c566cc25876d2e7cd6fe3e89f791bbce595fb95cee6a3e1"
+      "frozenCaseSha256": "e1ff86ca00c691c67c566cc25876d2e7cd6fe3e89f791bbce595fb95cee6a3e1",
+      "revisions": [
+        {
+          "previousAfterSha256": "1ad3f29e76e6aadc1c098e891c0b8b903bda82ad7f2b24f88b6291bb692182df",
+          "afterSha256": "81b54e666a7495ff78b401d5facdcee00e48d5e97831216e5f0f076476513e5e",
+          "rationale": "September 14 approved hierarchy: route the already-authorized fix-and-PR request through deliver with a ready-to-merge endpoint while retaining implement for development. Preserve sustained repair and publication intent; no new deployment authority or fresh native replay of this legacy case claimed."
+        }
+      ]
     },
     {
       "caseId": "measured-prototype-misses-threshold",
@@ -1136,18 +1168,26 @@
     },
     {
       "caseId": "implement-idea-automatic-happy-path",
-      "status": "corrected",
+      "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Provide an explicit validation result for this successful fixture path.",
-        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading."
+        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
+        "September 14 approved hierarchy: standalone implement ends after development, independent review and observed behavior/project gates. Remove the old implicit PR publication requirement while preserving the additive JSON CLI task. No fresh native replay of this legacy case claimed."
       ],
       "beforeSha256": "cf6f0ac2b9b8fc6ce6fa0f3a37e699e23558be4e2497e2b3babfca6d0ac810c9",
-      "afterSha256": "1b58d59188875dbe655b4f61470df6342c0b9da01d5ab3d15bc5b064d1eb3350",
+      "afterSha256": "0900d6672e4601b5fe2a44fddb0088b6bfa270e65781388f887602867f64513f",
       "postFreezeChangedFields": [
         "expected"
       ],
-      "frozenCaseSha256": "07d9475c5458675a30f2a0ead3c9f0e217add526d575817afbd58865d50daaf0"
+      "frozenCaseSha256": "07d9475c5458675a30f2a0ead3c9f0e217add526d575817afbd58865d50daaf0",
+      "revisions": [
+        {
+          "previousAfterSha256": "1b58d59188875dbe655b4f61470df6342c0b9da01d5ab3d15bc5b064d1eb3350",
+          "afterSha256": "0900d6672e4601b5fe2a44fddb0088b6bfa270e65781388f887602867f64513f",
+          "rationale": "September 14 approved hierarchy: standalone implement ends after development, independent review and observed behavior/project gates. Remove the old implicit PR publication requirement while preserving the additive JSON CLI task. No fresh native replay of this legacy case claimed."
+        }
+      ]
     },
     {
       "caseId": "release-no-releasable-commits",
@@ -1271,18 +1311,26 @@
     },
     {
       "caseId": "milestone-rush-parallel-rolling-integration",
-      "status": "corrected",
+      "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Worker-owned PR creation must not require the coordinator to open duplicate PRs.",
-        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading."
+        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
+        "September 14 approved release ownership: preserve parallel rolling integration and add an explicit configured milestone release plan, create-release invocation and verified release before closure. No fresh native replay of this legacy case claimed."
       ],
       "beforeSha256": "4a77e31e0e86343d1e4e0f72ba1a2f18f4e13d4645feb94c336ef87f43123791",
-      "afterSha256": "a70321b47753f67802a810c419fcdfb7fe7ec0f18ff14005297c7dbfb0870887",
+      "afterSha256": "17b0e762a9bb892433bb97309cf52c95fc1b4a8cfac5e16b17e539434df5c8b7",
       "postFreezeChangedFields": [
         "expected"
       ],
-      "frozenCaseSha256": "721a3f5eacebada83cd2011e0d5e40fab735cefdd9e8951d3bac5d272f6164f8"
+      "frozenCaseSha256": "721a3f5eacebada83cd2011e0d5e40fab735cefdd9e8951d3bac5d272f6164f8",
+      "revisions": [
+        {
+          "previousAfterSha256": "a70321b47753f67802a810c419fcdfb7fe7ec0f18ff14005297c7dbfb0870887",
+          "afterSha256": "17b0e762a9bb892433bb97309cf52c95fc1b4a8cfac5e16b17e539434df5c8b7",
+          "rationale": "September 14 approved release ownership: preserve parallel rolling integration and add an explicit configured milestone release plan, create-release invocation and verified release before closure. No fresh native replay of this legacy case claimed."
+        }
+      ]
     },
     {
       "caseId": "milestone-rush-continues-around-blocker",
@@ -1342,17 +1390,25 @@
     },
     {
       "caseId": "milestone-rush-enforces-lean-terminal-gates",
-      "status": "corrected",
+      "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Supply concrete lane identity and separate focused/local/remote validation results.",
-        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading."
+        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
+        "September 14 approved release ownership: preserve lean validation and telemetry requirements while completing the configured milestone release before closure. No fresh native replay of this legacy case claimed."
       ],
       "beforeSha256": "943af6b3de1021d9805c46450689b5242d9da8937edd9833eb9306d54106d718",
-      "afterSha256": "d44f72c1afd59be601f696c6e6788c8f6478539816a7effb72c8fc1bd2b1171e",
+      "afterSha256": "b34e6bd35bb487b0b2b4e2bfd7dc1cbadf5234241300f489e299a261a5eeb39f",
       "frozenCaseSha256": "e39277968a2796b5b740996fd10c54547b15ad26e16a6ab0767deb57ace61b4d",
       "postFreezeChangedFields": [
         "expected"
+      ],
+      "revisions": [
+        {
+          "previousAfterSha256": "d44f72c1afd59be601f696c6e6788c8f6478539816a7effb72c8fc1bd2b1171e",
+          "afterSha256": "b34e6bd35bb487b0b2b4e2bfd7dc1cbadf5234241300f489e299a261a5eeb39f",
+          "rationale": "September 14 approved release ownership: preserve lean validation and telemetry requirements while completing the configured milestone release before closure. No fresh native replay of this legacy case claimed."
+        }
       ]
     },
     {
@@ -1789,11 +1845,19 @@
       "caseId": "unrelated-prompt-no-skill",
       "status": "updated",
       "rationale": [
-        "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate."
+        "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
+        "Add the new deliver entrypoint to the explicitly forbidden skill inventory for an unrelated translation request; retain the original task and behavior contract."
       ],
       "beforeSha256": "7392229307507c5e62642c1e943a25a9909556fd8ec17af83e1030906aa54b26",
-      "afterSha256": "b4acb34e99f4b4b1776b88fca5a90b492839a07fa97d2f5988bb723989e7377b",
-      "frozenCaseSha256": "b4acb34e99f4b4b1776b88fca5a90b492839a07fa97d2f5988bb723989e7377b"
+      "afterSha256": "b5e499719c0015f13a9971de4c2c0cfaedad6c5d143ad4ac1c47df79157a6de5",
+      "frozenCaseSha256": "b4acb34e99f4b4b1776b88fca5a90b492839a07fa97d2f5988bb723989e7377b",
+      "revisions": [
+        {
+          "previousAfterSha256": "b4acb34e99f4b4b1776b88fca5a90b492839a07fa97d2f5988bb723989e7377b",
+          "afterSha256": "b5e499719c0015f13a9971de4c2c0cfaedad6c5d143ad4ac1c47df79157a6de5",
+          "rationale": "Add the new deliver entrypoint to the explicitly forbidden skill inventory for an unrelated translation request; retain the original task and behavior contract."
+        }
+      ]
     },
     {
       "caseId": "prompting-claude-native-agent",
@@ -2135,6 +2199,134 @@
       "beforeSha256": null,
       "afterSha256": "2653170bc86e1cb418561c3629e84c27c7d61b9d6b29b104a6d087bd1e519b5d",
       "frozenCaseSha256": "2653170bc86e1cb418561c3629e84c27c7d61b9d6b29b104a6d087bd1e519b5d"
+    },
+    {
+      "caseId": "delivery-implement-development-only",
+      "status": "new",
+      "rationale": [
+        "New bounded September 14 synthetic decision fixture, declared before native execution: Standalone implementation completes the specified development and fidelity work without entering publication. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "96d1d32138708f283be9d14f9dbfc002fac053ca15b86c64d3c1ba296105b6c7",
+      "frozenCaseSha256": "96d1d32138708f283be9d14f9dbfc002fac053ca15b86c64d3c1ba296105b6c7"
+    },
+    {
+      "caseId": "delivery-create-pr-missing-gates-repair",
+      "status": "updated",
+      "rationale": [
+        "New bounded September 14 synthetic decision fixture, declared before native execution: PR creation obtains missing independent gates, repairs a discovered requirement gap and finishes ready for review. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md.",
+        "Bounded correction after original native batch: observed a contradictory pre-edit CLI success. Initial review and behavior now report the real gap; the repair transition makes subsequent results successful. Allow either discovery order, preserve required current review/spec/project evidence. Original Fable skipped post-edit review; keep that substantive failure. Fresh native replay required; preserve original frozen fixtures and outputs.",
+        "Post-v2 helper guard: only the actual src/import.ts file.edit argument enables corrected review/behavior responses. Matching-path occurrences permit checkpoints before the repair; handoff-only and regression-only edits remain failing. Frozen v2 requests were deterministically replayed with frozen skills: all 71 returned responses and both event/action ledgers were unchanged, and both current grades passed. This is exact-request replay, not a third native batch; original native artifacts remain preserved."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "dbb95d7f813ed72f51cc6397fe3c8bdb06d2e69d10d6d9e169e49b4d362645b8",
+      "frozenCaseSha256": "401cc269a75174343ba427b8a39b768907f2de94e60ff6023ae5c8254bc417a9",
+      "revisions": [
+        {
+          "previousAfterSha256": "401cc269a75174343ba427b8a39b768907f2de94e60ff6023ae5c8254bc417a9",
+          "afterSha256": "92b31e1f90a012f099a5983ad2e4c0b6f81a511f83439b4badcbdd2fcebca05a",
+          "rationale": "Bounded correction after original native batch: observed a contradictory pre-edit CLI success. Initial review and behavior now report the real gap; the repair transition makes subsequent results successful. Allow either discovery order, preserve required current review/spec/project evidence. Original Fable skipped post-edit review; keep that substantive failure. Fresh native replay required; preserve original frozen fixtures and outputs."
+        },
+        {
+          "previousAfterSha256": "92b31e1f90a012f099a5983ad2e4c0b6f81a511f83439b4badcbdd2fcebca05a",
+          "afterSha256": "dbb95d7f813ed72f51cc6397fe3c8bdb06d2e69d10d6d9e169e49b4d362645b8",
+          "rationale": "Post-v2 helper guard: only the actual src/import.ts file.edit argument enables corrected review/behavior responses. Matching-path occurrences permit checkpoints before the repair; handoff-only and regression-only edits remain failing. Frozen v2 requests were deterministically replayed with frozen skills: all 71 returned responses and both event/action ledgers were unchanged, and both current grades passed. This is exact-request replay, not a third native batch; original native artifacts remain preserved."
+        }
+      ]
+    },
+    {
+      "caseId": "delivery-existing-pr-ci-recovery",
+      "status": "updated",
+      "rationale": [
+        "New bounded September 14 synthetic decision fixture, declared before native execution: Delivery resumes an existing draft, repairs an in-scope CI failure and reaches the selected merge-ready endpoint. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md.",
+        "Original Astra and Fable inspected current stored evidence and avoided redundant initial gates without requesting validation.reuse. Replace that ceremonial action requirement with completion-evidence inspection before the first wait; preserve failure-repair-publication order and captured renewed gates. Assertion-only reassessment of original outputs is recorded separately from native runs.",
+        "Original Astra and Fable inspected current stored evidence and avoided redundant initial gates without requesting validation.reuse. Replace that ceremonial action requirement with completion-evidence inspection before the first wait; preserve failure-repair-publication order and captured renewed gates. Assertion-only reassessment of original outputs is recorded separately from native runs."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "f3c2684a51af23f9ebc4dd00b7430da8f8f9a2a8ecc0bcc589221938d5f6b05a",
+      "frozenCaseSha256": "7310a7d77d1db3a54ec1b5bd544c2acf4595438e4203e14590eaf19be1e6455e",
+      "revisions": [
+        {
+          "previousAfterSha256": "7310a7d77d1db3a54ec1b5bd544c2acf4595438e4203e14590eaf19be1e6455e",
+          "afterSha256": "03548ed980db15c0bcff2453df1eab131ac7db9c7b60728f110c4964cc009ed3",
+          "rationale": "Original Astra and Fable inspected current stored evidence and avoided redundant initial gates without requesting validation.reuse. Replace that ceremonial action requirement with completion-evidence inspection before the first wait; preserve failure-repair-publication order and captured renewed gates. Assertion-only reassessment of original outputs is recorded separately from native runs."
+        },
+        {
+          "previousAfterSha256": "03548ed980db15c0bcff2453df1eab131ac7db9c7b60728f110c4964cc009ed3",
+          "afterSha256": "f3c2684a51af23f9ebc4dd00b7430da8f8f9a2a8ecc0bcc589221938d5f6b05a",
+          "rationale": "Original Astra and Fable inspected current stored evidence and avoided redundant initial gates without requesting validation.reuse. Replace that ceremonial action requirement with completion-evidence inspection before the first wait; preserve failure-repair-publication order and captured renewed gates. Assertion-only reassessment of original outputs is recorded separately from native runs."
+        }
+      ]
+    },
+    {
+      "caseId": "delivery-default-integration-current-revision",
+      "status": "updated",
+      "rationale": [
+        "New bounded September 14 synthetic decision fixture, declared before native execution: Default delivery reuses current gates and verifies the merged change at the configured nightly destination rather than trusting a stale green deployment. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md.",
+        "Original native trajectories place correct target/revision in structured probe arguments and may abbreviate the final SHA. Grade exact target/revision from action details plus selected structured fields, not a final-output spelling minimum. Retain state/acceptance ordering and manual final-probe/report grounding; Fable cleanup claims from acknowledgment-only results remain a substantive reporting limitation, not excused by this assertion correction."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "ad6b8f670a7c7b216591da05e08efafaf295e72452b511e4d81a9796fb4fd6dc",
+      "frozenCaseSha256": "57d73e895e48d9634e34041f4c578ed2f1c4e98c75c4b389b165cf5abb2bf4db",
+      "revisions": [
+        {
+          "previousAfterSha256": "57d73e895e48d9634e34041f4c578ed2f1c4e98c75c4b389b165cf5abb2bf4db",
+          "afterSha256": "ad6b8f670a7c7b216591da05e08efafaf295e72452b511e4d81a9796fb4fd6dc",
+          "rationale": "Original native trajectories place correct target/revision in structured probe arguments and may abbreviate the final SHA. Grade exact target/revision from action details plus selected structured fields, not a final-output spelling minimum. Retain state/acceptance ordering and manual final-probe/report grounding; Fable cleanup claims from acknowledgment-only results remain a substantive reporting limitation, not excused by this assertion correction."
+        }
+      ]
+    },
+    {
+      "caseId": "delivery-missing-integration-decision",
+      "status": "new",
+      "rationale": [
+        "New bounded September 14 synthetic decision fixture, declared before native execution: An unresolved integration destination does not stop independent PR preparation or justify guessed hosting and false deployment claims. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "e843cae16695caf4ae161cabe10079010403e2d9f4169146a3130e7a8cf7865a",
+      "frozenCaseSha256": "e843cae16695caf4ae161cabe10079010403e2d9f4169146a3130e7a8cf7865a"
+    },
+    {
+      "caseId": "delivery-milestone-release-boundary",
+      "status": "updated",
+      "rationale": [
+        "New bounded September 14 synthetic decision fixture, declared before native execution: Milestone completion invokes the release workflow and the existing single publisher after work-item integration is verified. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md.",
+        "Original fixtures wrongly published on a pre-tag wait, omitted required ledger-validation results and forbade ignored checkpoints. Keep releases absent until tag submission changes subsequent monitor responses; supply persisted-and-validated telemetry results, require captured publication/ledger success before closure, allow only the ignored handoff, and accept structured tag/head evidence. Original incomplete/contradictory trajectories are preserved; fresh native replay required.",
+        "Original fixtures wrongly published on a pre-tag wait, omitted required ledger-validation results and forbade ignored checkpoints. Keep releases absent until tag submission changes subsequent monitor responses; supply persisted-and-validated telemetry results, require captured publication/ledger success before closure, allow only the ignored handoff, and accept structured tag/head evidence. Original incomplete/contradictory trajectories are preserved; fresh native replay required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "6cc8ce26e3c1c973fea0a134a469eb51a9d12b36dec57c0495ed2e86aba14eac",
+      "frozenCaseSha256": "046409fe4ee390ed149924e35c79a2622d0d43f4d0cdde115e0453d9e5743e92",
+      "revisions": [
+        {
+          "previousAfterSha256": "046409fe4ee390ed149924e35c79a2622d0d43f4d0cdde115e0453d9e5743e92",
+          "afterSha256": "75c4efb0bd295281008a69afa0bddfc6cb577871b29fafd9182a319fde1b9228",
+          "rationale": "Original fixtures wrongly published on a pre-tag wait, omitted required ledger-validation results and forbade ignored checkpoints. Keep releases absent until tag submission changes subsequent monitor responses; supply persisted-and-validated telemetry results, require captured publication/ledger success before closure, allow only the ignored handoff, and accept structured tag/head evidence. Original incomplete/contradictory trajectories are preserved; fresh native replay required."
+        },
+        {
+          "previousAfterSha256": "75c4efb0bd295281008a69afa0bddfc6cb577871b29fafd9182a319fde1b9228",
+          "afterSha256": "6cc8ce26e3c1c973fea0a134a469eb51a9d12b36dec57c0495ed2e86aba14eac",
+          "rationale": "Original fixtures wrongly published on a pre-tag wait, omitted required ledger-validation results and forbade ignored checkpoints. Keep releases absent until tag submission changes subsequent monitor responses; supply persisted-and-validated telemetry results, require captured publication/ledger success before closure, allow only the ignored handoff, and accept structured tag/head evidence. Original incomplete/contradictory trajectories are preserved; fresh native replay required."
+        }
+      ]
+    },
+    {
+      "caseId": "delivery-post-merge-integration-repair",
+      "status": "updated",
+      "rationale": [
+        "New bounded September 14 synthetic decision fixture, declared before native execution: A merged work item whose integration reveals a requirement gap completes through a new linked repair PR and verified replacement deployment. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md.",
+        "Normalize a malformed 42-character synthetic repair revision to valid 40-character state/responses. Grade explicit integration probe identity through details/structured fields and fresh default-base branch identity, without requiring the incidental word repair or a final SHA spelling length. Original identity evidence is inconclusive because fixture revisions were malformed; fresh native replay required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "fb060a6af235ab76b9b3ba4bfdfe3eb2e507a9480d8a5c0b03949e9f20d74f8a",
+      "frozenCaseSha256": "863f754d2c7473145a9688ce7e01411e98d19f4e0de61dd2568ef68939437e87",
+      "revisions": [
+        {
+          "previousAfterSha256": "863f754d2c7473145a9688ce7e01411e98d19f4e0de61dd2568ef68939437e87",
+          "afterSha256": "fb060a6af235ab76b9b3ba4bfdfe3eb2e507a9480d8a5c0b03949e9f20d74f8a",
+          "rationale": "Normalize a malformed 42-character synthetic repair revision to valid 40-character state/responses. Grade explicit integration probe identity through details/structured fields and fresh default-base branch identity, without requiring the incidental word repair or a final SHA spelling length. Original identity evidence is inconclusive because fixture revisions were malformed; fresh native replay required."
+        }
+      ]
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

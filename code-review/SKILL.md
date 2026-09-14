@@ -243,7 +243,9 @@ security, operability, test-value, maintainability, simplification, or
 comprehension cost. `IMPROVEMENT` is a verified worthwhile simplification or
 current-practice alignment. `NITPICK` is a small, local polish issue with a
 clear remedy and evidence from repository conventions or current code; it must
-not represent personal taste or block readiness. Omit praise, diff narration,
+not represent personal taste. Optional polish does not block readiness, but a
+verified requirement gap cannot be waived by assigning it a lower severity.
+Omit praise, diff narration,
 subjective style preferences, and findings without concrete impact.
 
 ## Fix follow-up
@@ -262,7 +264,8 @@ For prior-findings input, default to read-only revalidation. An explicit
 findings. Never edit for `resolved`, `not_retestable`, or `skippedOutOfScope`
 findings, and do not turn remediation into a fresh review.
 
-When invoked as `/code-review fix-all` from an implementation workflow, continue
-to PR creation only when no unresolved `BLOCKING` or `IMPORTANT` finding
-remains. Record any intentionally deferred `IMPROVEMENT`.
-Record any intentionally deferred `NITPICK`; it never blocks PR creation.
+Return fixed and unresolved findings to the caller, which owns the development
+or delivery loop. Unresolved `BLOCKING` or `IMPORTANT` findings prevent readiness.
+Every verified gap against the agreed requirements must be resolved regardless
+of severity. Record deferred optional improvements separately; they do not
+extend the agreed work.

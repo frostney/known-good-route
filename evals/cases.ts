@@ -1,11 +1,13 @@
 import { promptingCases } from "./prompting-cases.ts";
 import { prWritingCases } from "./pr-writing-cases.ts";
+import { deliveryCases } from "./delivery-cases.ts";
 import { historyCases } from "./history-cases.ts";
 import { executionCases } from "./execution-cases.ts";
 import type { EvalCase } from "./types.ts";
 export const evalCases: EvalCase[] = [
   ...historyCases,
   ...prWritingCases,
+  ...deliveryCases,
   ...promptingCases,
   ...executionCases,
   {
@@ -91,95 +93,124 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
-    id: "create-pr-reports-implementation-gap",
-    description:
-      "An implementation gap returns to implementation without publication.",
-    prompt: "/create-pr",
-    fixture: {
-      evidence: {
-        repositoryStatus:
-          "Branch feature/docs-index is clean, matches origin/feature/docs-index, and is one commit ahead of origin/main.",
-        recentCommits: "4ac8f21 feat(config): register the docs generator",
-        projectGate: "The declared pre-PR gate passed on the unchanged branch.",
-        projectDefinitions:
-          "DEFINITION_OF_READY.md requires explicit requirements, relevant tests, generated artifacts, and green CI. Comparing it with the complete local branch shows that docs/index.md is missing.",
-        pullRequest: "No pull request exists for this branch.",
-        completionEvidence:
-          "Code review and behavior testing passed, but completion review records docs/index.md as a missing generated artifact.",
+    "id": "create-pr-reports-implementation-gap",
+    "description": "A missing generated artifact is repaired and validated before the PR becomes ready; the stable case ID predates the delivery contract.",
+    "prompt": "/create-pr",
+    "fixture": {
+      "evidence": {
+        "repositoryStatus": "Clean branch feature/docs-index is one commit ahead of synchronized origin/main. No PR or unrelated work exists.",
+        "specification": "The selected change registers the docs generator and must include its generated docs/index.md. The documented local generator is available; no product decision is open.",
+        "projectDefinitions": "Readiness requires the generated artifact, independent review and project gate, then current-head CI. This artifact-only requirement has no additional executable product behavior.",
+        "completionEvidence": "Prior review and gate evidence predates the missing docs/index.md correction. A completion inspection found that required generated file absent.",
+        "projectGate": "The documented generator and aggregate project gate are available locally."
       },
-      actionResponses: {
-        "forge.openDraftPr": "Draft PR #203 opened successfully.",
-      },
+      "actionResponses": {
+        "file.edit": "The documented generator produced docs/index.md; only the required artifact changed.",
+        "codeReview.run": "Independent review confirms the generated artifact satisfies the requirement with no remaining gap.",
+        "validation.run": "The project gate passed on the corrected artifact and unchanged source.",
+        "git.commit": "Committed the relevant artifact correction.",
+        "git.push": "Pushed the focused branch normally.",
+        "forge.openDraftPr": "Draft PR #203 opened at the corrected head.",
+        "monitor.wait": "All required PR #203 checks passed at its current head.",
+        "forge.markPrReady": "PR #203 is ready for review, open and unmerged."
+      }
     },
-    expected: {
-      requiredSkills: ["create-pr"],
-      requiredInspections: ["completionEvidence"],
-      requiredActions: ["report"],
-      forbiddenActions: [
+    "expected": {
+      "requiredSkills": [
+        "create-pr",
+        "code-review",
+        "test-against-spec"
+      ],
+      "requiredInspections": [
+        "completionEvidence",
+        "specification"
+      ],
+      "requiredActions": [
         "file.edit",
-        "forge.mergePr",
-        "forge.openDraftPr",
-        "forge.markPrReady",
-        "git.amend",
-        "git.forcePush",
+        "codeReview.run",
+        "validation.run",
         "git.commit",
         "git.push",
-        "git.rebase",
+        "forge.openDraftPr",
+        "monitor.wait",
+        "forge.markPrReady"
+      ],
+      "requiredActionSequence": [
+        "file.edit",
+        "codeReview.run",
         "validation.run",
+        "forge.openDraftPr",
+        "monitor.wait",
+        "forge.markPrReady"
       ],
-      reportPatterns: [
-        "missing|gap|omit",
-        "generated|index",
-        "implementation",
-        "no.*(?:push|PR)|before.*(?:push|PR)",
-      ],
-    },
+      "maxActionCounts": {
+        "forge.openDraftPr": 1
+      },
+      "forbiddenActions": [
+        "forge.mergePr",
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+        "user.ask"
+      ]
+    }
   },
   {
-    id: "create-pr-missing-behavior-evidence-stops",
-    description:
-      "Missing behavior evidence returns to implementation without testing or publishing.",
-    prompt: "/create-pr for issue #91.",
-    fixture: {
-      evidence: {
-        repositoryStatus:
-          "Branch feature/import-errors has relevant uncommitted implementation and test changes, no unrelated local work, and no remote branch or pull request.",
-        specification:
-          "Issue #91 requires the import CLI to return exit 2 with a stable JSON error when an input file is missing, while preserving the successful import result. DEFINITION_OF_READY.md requires both observable paths to be exercised through the built CLI before publication.",
-        completionEvidence:
-          "The implementation workflow supplied code-review and project-gate results, but no observed black-box result for the built CLI.",
-        projectGate:
-          "The complete declared pre-PR gate passed on the unchanged diff.",
-        pullRequest: "No pull request exists before this workflow starts.",
+    "id": "create-pr-missing-behavior-evidence-stops",
+    "description": "PR creation fills missing CLI behavior evidence while reusing valid review and project results; the stable case ID predates the delivery contract.",
+    "prompt": "/create-pr for issue #91.",
+    "fixture": {
+      "evidence": {
+        "repositoryStatus": "Branch feature/import-errors has relevant uncommitted implementation and tests, no unrelated state, and no remote branch or PR.",
+        "specification": "Issue #91 requires exit 2 and a stable JSON error for a missing file, with successful imports preserved. Both paths must be observed through the built CLI before publication.",
+        "completionEvidence": "Independent code review and the complete project gate passed on the unchanged current diff. No observed black-box CLI result exists.",
+        "projectGate": "The aggregate pre-PR gate passed on unchanged content in the current environment.",
+        "behaviorEnvironment": "The built CLI and disposable valid/missing input paths are available locally. No special access, cost or product decision is needed."
       },
-      actionResponses: {
-        "forge.openDraftPr": "Draft PR #209 opened successfully.",
-      },
+      "actionResponses": {
+        "behaviorTest.run": "Observed built CLI: missing input returns exit 2 with stable JSON error; the valid fixture still imports successfully. Both required paths pass.",
+        "git.commit": "Committed only the relevant completed source and tests.",
+        "git.push": "Pushed the focused branch.",
+        "forge.openDraftPr": "Draft PR #209 opened at the validated head.",
+        "monitor.wait": "All required PR #209 checks passed at that head.",
+        "forge.markPrReady": "PR #209 is ready for review, open and unmerged."
+      }
     },
-    expected: {
-      requiredSkills: ["create-pr"],
-      requiredInspections: ["specification", "completionEvidence"],
-      requiredActions: ["report"],
-      forbiddenActions: [
+    "expected": {
+      "requiredSkills": [
+        "create-pr",
+        "code-review",
+        "test-against-spec"
+      ],
+      "requiredInspections": [
+        "specification",
+        "completionEvidence"
+      ],
+      "requiredActions": [
         "behaviorTest.run",
-        "file.edit",
-        "forge.mergePr",
-        "forge.openDraftPr",
-        "forge.markPrReady",
-        "git.amend",
         "git.commit",
-        "git.forcePush",
         "git.push",
+        "forge.openDraftPr",
+        "monitor.wait",
+        "forge.markPrReady"
+      ],
+      "requiredActionSequence": [
+        "behaviorTest.run",
+        "forge.openDraftPr",
+        "monitor.wait",
+        "forge.markPrReady"
+      ],
+      "forbiddenActions": [
+        "forge.mergePr",
+        "git.amend",
+        "git.forcePush",
         "git.rebase",
-        "validation.run",
-      ],
-      reportPatterns: [
-        "missing|no observed|unverified",
-        "behavior|black.box|built CLI",
-        "implementation",
-        "no.*(?:push|PR)|before.*(?:push|PR)",
-      ],
-    },
+        "user.ask",
+        "file.edit",
+        "codeReview.run",
+        "validation.run"
+      ]
+    }
   },
   {
     id: "create-pr-no-relevant-work",
@@ -297,44 +328,85 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
-    id: "create-pr-ci-failure-returns-to-implementation",
-    description:
-      "An in-scope CI failure keeps the PR draft and returns to implementation.",
-    prompt: "/create-pr",
-    fixture: {
-      evidence: {
-        completionEvidence:
-          "Independent review and the local real-interface acceptance checks passed at 6ce22b0 before publication. The later CI integration failure is new evidence for the implementation workflow.",
-        repositoryStatus:
-          "Branch feature/null-cache is clean, matches origin/feature/null-cache, and is one commit ahead of origin/main.",
-        recentCommits: "6ce22b0 fix(cache): accept nullable cache entries",
-        projectGate: "The declared pre-PR gate passed on the unchanged branch.",
-        projectDefinitions:
-          "DEFINITION_OF_READY.md exists and the actual PR satisfies every requirement.",
-        continuousIntegration:
-          "After the draft opens, a required cache integration test fails on a null entry. Its log reproduces an in-scope missing null guard in the changed code.",
-        pullRequest: "No pull request exists before this workflow starts.",
+    "id": "create-pr-ci-failure-returns-to-implementation",
+    "description": "An in-scope CI failure resumes development and updates the same PR through readiness.",
+    "prompt": "/create-pr",
+    "fixture": {
+      "evidence": {
+        "repositoryStatus": "Clean synchronized branch feature/null-cache is one commit ahead of origin/main. No PR exists.",
+        "specification": "The cache must accept a nullable entry through its public API on every supported platform.",
+        "completionEvidence": "Independent review, local API acceptance and aggregate gate passed before publication. Current content has not changed.",
+        "continuousIntegration": "The Linux integration check will run after publication. Use the available foreground wait for its result.",
+        "projectGate": "The local aggregate gate and disposable cache API probe are available.",
+        "pullRequest": "No PR exists."
       },
-      actionResponses: {
-        "forge.openDraftPr": "Draft PR #206 opened successfully.",
+      "actionResponses": {
+        "forge.openDraftPr": "Draft PR #206 opened at the current head.",
+        "monitor.wait": [
+          "PR #206 Linux integration failed: a null entry reaches the changed dereference without a guard. The log isolates src/cache.ts and its existing regression file; an in-scope fix is available.",
+          "All required PR #206 checks passed at the corrected head."
+        ],
+        "file.edit": "Applied the null guard and regression correction.",
+        "codeReview.run": "Independent review confirms the corrected change satisfies the nullable-entry requirement.",
+        "behaviorTest.run": "The real cache API accepts a null entry and preserves populated entries.",
+        "validation.run": "Aggregate gate passed on the corrected unchanged content.",
+        "git.commit": "Committed the null-guard correction.",
+        "git.push": "Updated the same PR #206 with the correction.",
+        "forge.updatePrMetadata": "PR #206 metadata reflects the full corrected change.",
+        "forge.markPrReady": "PR #206 is ready for review, open and unmerged."
       },
+      "transitions": [
+        {
+          "after": "forge.openDraftPr",
+          "evidence": {
+            "pullRequest": "Draft PR #206 exists on the selected branch; checks queued."
+          }
+        },
+        {
+          "after": "monitor.wait",
+          "evidence": {
+            "continuousIntegration": "Linux integration failed on null dereference in the current change."
+          }
+        },
+        {
+          "after": "monitor.wait",
+          "occurrence": 2,
+          "evidence": {
+            "continuousIntegration": "All current-head CI passed for corrected PR #206."
+          }
+        }
+      ]
     },
-    expected: {
-      requiredSkills: ["create-pr"],
-      requiredActions: ["forge.openDraftPr", "report"],
-      forbiddenActions: [
-        "file.edit",
-        "forge.mergePr",
-        "forge.markPrReady",
-        "git.amend",
-        "git.commit",
-        "git.forcePush",
-        "git.push",
-        "git.rebase",
-        "validation.run",
+    "expected": {
+      "requiredSkills": [
+        "create-pr",
+        "update-pr",
+        "code-review",
+        "test-against-spec"
       ],
-      reportPatterns: ["null|cache", "CI|check", "draft", "implementation"],
-    },
+      "requiredActionSequence": [
+        "forge.openDraftPr",
+        "monitor.wait",
+        "file.edit",
+        "codeReview.run",
+        "behaviorTest.run",
+        "validation.run",
+        "git.commit",
+        "git.push",
+        "monitor.wait",
+        "forge.markPrReady"
+      ],
+      "maxActionCounts": {
+        "forge.openDraftPr": 1
+      },
+      "forbiddenActions": [
+        "forge.mergePr",
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+        "user.ask"
+      ]
+    }
   },
   {
     id: "create-pr-pending-ci-keeps-draft",
@@ -1884,7 +1956,7 @@ export const evalCases: EvalCase[] = [
     description:
       "An active issue implementation explains an in-scope failure and continues through repair and delivery without returning a recommendation.",
     prompt:
-      "/implement 91 automatic. The implementation is active and its first validation failed. Explain why, then continue through the already authorized in-scope fix and pull request without asking me to restart it.",
+      "/deliver issue #91 ready-to-merge. The implementation is active and its first validation failed. Explain why, then continue through the already authorized in-scope fix and pull request without asking me to restart it.",
     fixture: {
       evidence: {
         issue:
@@ -1910,7 +1982,7 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["implement"],
+      requiredSkills: ["deliver", "implement"],
       requiredInspections: [
         "issue",
         "activeAuthorization",
@@ -3668,7 +3740,7 @@ export const evalCases: EvalCase[] = [
   {
     id: "implement-idea-automatic-happy-path",
     description:
-      "An automatic idea follows research, sync, implementation, review, and PR gates without an interactive report or grill.",
+      "An automatic idea follows research, sync, development, review, and behavior gates without an interactive report or grill.",
     prompt:
       "/implement automatic. Provisional mini-spec: add --json to inspect, keep text as default, reject --json with --quiet, and test success plus the invalid combination.",
     fixture: {
@@ -3676,7 +3748,7 @@ export const evalCases: EvalCase[] = [
         projectContext:
           "VISION.md supports scriptable inspection. AGENTS.md requires additive CLI changes and reuse of typed command results.",
         projectDefinitions:
-          "DEFINITION_OF_READY.md requires confirmed requirements and an existing seam; both are present. DEFINITION_OF_DONE.md requires focused tests, the repository gate, a bounded fix-all review, and PR evidence.",
+          "DEFINITION_OF_READY.md requires confirmed requirements and an existing seam; both are present. DEFINITION_OF_DONE.md requires focused tests, the repository gate, a bounded fix-all review, and verified development evidence. Publication is outside this standalone implementation request.",
         affectedCode:
           "inspect already returns a typed InspectionResult before rendering. A sibling status command provides the repository's JSON rendering pattern.",
         tests:
@@ -3710,12 +3782,15 @@ export const evalCases: EvalCase[] = [
         "git.merge",
         "file.edit",
         "validation.run",
+        "codeReview.run",
+        "behaviorTest.run",
+      ],
+      forbiddenActions: [
         "git.commit",
         "git.push",
         "forge.openDraftPr",
         "forge.markPrReady",
-      ],
-      forbiddenActions: [
+        "forge.mergePr",
         "delegate",
         "git.amend",
         "git.forcePush",
@@ -3726,7 +3801,7 @@ export const evalCases: EvalCase[] = [
         "--json|JSON",
         "official|current.*source|web",
         "test|gate",
-        "PR|pull request",
+        "implemented|development|complete",
       ],
     },
   },
@@ -4025,6 +4100,8 @@ export const evalCases: EvalCase[] = [
       "/milestone-rush 2.0.0. The confirmed milestone scope is authorized for autonomous implementation and merge.",
     fixture: {
       evidence: {
+        integrationConfiguration: "The default integration destination follows the merged default branch automatically; its delivered revision and required behavior are verified when the final integrated gate completes.",
+        releasePlan: "Milestone release 2.0.0 uses the existing manual publisher. Its release PR and changelog already landed on the verified integrated revision. The agreed tag/version is 2.0.0; no other publisher exists and no release remains to prepare.",
         projectContracts:
           "The project direction, Definitions of Ready and Done, branch protection, squash-merge policy, and full integrated gate are present and unambiguous.",
         orchestrationPolicy:
@@ -4053,6 +4130,8 @@ export const evalCases: EvalCase[] = [
           "Repository example/project. PR #341 head 341aaaa is the existing open issue #41 implementation. All listed worktrees and permissions belong to this project; no unavailable identity or capacity question.",
       },
       actionResponses: {
+        "git.pushTag": "Published the settled tag on the verified integrated revision.",
+        "forge.createRelease": "The single configured publisher created the settled release with the required artifacts.",
         "forge.openDraftPr": "The focused issue PR was opened.",
         "forge.mergePr":
           "The current-head PR was squash-merged and its source branch deleted.",
@@ -4065,18 +4144,19 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["milestone-rush"],
+      requiredSkills: ["milestone-rush", "create-release"],
       requiredActions: [
         "delegate",
         "file.edit",
         "forge.mergePr",
         "git.merge",
         "telemetry.append",
+        "git.pushTag",
+        "forge.createRelease",
         "forge.closeMilestone",
         "report",
       ],
       forbiddenActions: [
-        "forge.createRelease",
         "git.amend",
         "git.forcePush",
         "git.rebase",
@@ -4281,6 +4361,8 @@ export const evalCases: EvalCase[] = [
       "/milestone-rush 7.0.0. The confirmed milestone is authorized; keep the run lean and measurable.",
     fixture: {
       evidence: {
+        integrationConfiguration: "The default integration destination follows the merged default branch automatically; its delivered revision and required behavior are verified when the final integrated gate completes.",
+        releasePlan: "Milestone release 7.0.0 uses the existing manual publisher. Its release PR and changelog already landed on the verified integrated revision. The agreed tag/version is 7.0.0; no other publisher exists and no release remains to prepare.",
         projectContracts:
           "The repository policy declares a 220-character compiler path budget and a focused-test command. The first candidate worktree is 241 characters; a short project-owned worktree is available.",
         orchestrationPolicy:
@@ -4299,6 +4381,8 @@ export const evalCases: EvalCase[] = [
           "Repository example/project, milestone 7.0.0, approved issue #700 and PR #770 head 770aaaa. One implementation lane; no unresolved product decisions. Validated short worktree /tmp/kgr-700. Full integrated gate and full CI are distinct from focused checks.",
       },
       actionResponses: {
+        "git.pushTag": "Published the settled tag on the verified integrated revision.",
+        "forge.createRelease": "The single configured publisher created the settled release with the required artifacts.",
         "forge.closeMilestone":
           "Milestone 7.0.0 closed after ledger validation.",
         delegate:
@@ -4312,12 +4396,14 @@ export const evalCases: EvalCase[] = [
       },
     },
     expected: {
-      requiredSkills: ["milestone-rush"],
+      requiredSkills: ["milestone-rush", "create-release"],
       requiredReferences: ["milestone-rush/references/event-ledger.md"],
       requiredActions: [
         "validation.run",
         "monitor.wait",
         "telemetry.append",
+        "git.pushTag",
+        "forge.createRelease",
         "forge.closeMilestone",
         "report",
       ],
@@ -5601,6 +5687,7 @@ export const evalCases: EvalCase[] = [
         "create-issue",
         "create-pr",
         "create-release",
+        "deliver",
         "delivery-wait",
         "git-workflow",
         "implement",

@@ -4,6 +4,29 @@ The outcome is an agent completing the user's authorized task with less steering
 waiting and rework, while preserving quality. Source integrity and helper tests
 support that outcome; passing more fixtures is not itself success.
 
+## What a test establishes
+
+Use externally visible decisions and resulting state as the acceptance contract.
+For delivery, check whether the intended change reaches the selected endpoint,
+required review and behavior evidence is current, fixable failures are repaired,
+and the reported integration revision matches what is actually available. A
+queued action, successful helper call or fluent completion message is not that
+outcome. Release coordination belongs to the milestone, not an individual delivery.
+
+Helper regressions should exercise real inputs and consequential failure paths.
+Assert fixture preconditions, including requested filesystem mutations, before
+testing the result. Structural tests may validate schemas, skill discovery and
+reference integrity. They do not establish model behavior. Do not assert skill
+sentences, paragraph order, private implementation calls or source-code tokens
+as substitutes for the behavior they describe. Equivalent prose and correct
+refactors should remain valid.
+
+Keep candidate prompts separate from grading expectations. Supply the request,
+requirements and initial environment; let tool results expose consequences. Use
+manual review to assess requirement coverage, qualitative fidelity and unsupported
+claims beyond the deterministic grader. A simulated deployment remains simulated
+even when every action is recorded correctly.
+
 ## Fixed case set
 
 `history-acceptance.json` records twelve independent source tasks, their known
@@ -43,8 +66,9 @@ bun run eval -- --model codex:gpt-6-astra --model claude:claude-fable-5-1 \
   --case history-update-pr-conflicts --case history-update-existing-pr
 ```
 
-The first reset batch runs all twelve cases once per parent model, plus the
-single Fable-to-Opus compatibility case. The unchanged extended runtime and
+The original reset batch selected all twelve cases once per parent model, plus
+the Fable-to-Opus compatibility case. That is historical coverage for its source
+snapshot, not a requirement to repeat the batch. The extended runtime and
 publication suites remain available for targeted investigation.
 
 ## Decide and stop

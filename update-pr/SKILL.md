@@ -32,8 +32,13 @@ When the current PR belongs to a native GitHub stack, read
    For a verified native stack, capture remote heads and use the guarded
    `gh stack sync` or narrower official stack operation; never use raw rebase or
    force-push commands.
-4. Run the missing or invalidated parts of the declared PR gate. Reuse passing
-   evidence only when content, command, environment and coverage still match.
+4. Apply `/code-review fix-all` and `/test-against-spec fix` to the changed
+   behavior, including any baseline integration. Reuse matching current evidence;
+   run missing or invalidated checks. Repair every verified in-scope requirement
+   gap through `/implement`'s development loop, then establish the declared PR
+   gate. Preserve content, command, environment and coverage bindings. A preview
+   needed to test an unpublished fix permits its draft update; resume testing
+   on that exact revision before claiming readiness.
 5. Stage only relevant files and commit them with a concise Conventional Commit
    subject. Never amend and never skip hooks.
 6. Push an ordinary branch normally, setting upstream when needed. Push a
@@ -49,6 +54,8 @@ When the current PR belongs to a native GitHub stack, read
    [../create-pr/references/walkthroughs.md](../create-pr/references/walkthroughs.md).
 8. Report the updated PR, commit, metadata changes and observed validation.
    Include stack position and rewritten branches when applicable. Distinguish
-   passed local checks from pending current-head CI. Updating a PR does not
+   passed local checks from pending current-head CI. Return the exact new head
+   and next transition to the active publication or delivery caller; that caller
+   continues through CI and feedback. Updating a PR does not
    authorize merging it. Report missing walkthrough requirements with remedies;
    media tooling gaps alone do not block the update.

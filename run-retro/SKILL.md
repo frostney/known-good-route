@@ -8,7 +8,7 @@ compatibility: >-
   Requires the registered grilling skill and access to
   the workstream's available conversation, repository, issue, pull-request, and
   CI evidence. Selected tickets also require create-issue and access to the Git
-  hosting service; selected immediate implementations require implement. Timing
+  hosting service; selected immediate deliveries require deliver. Timing
   ledger analysis uses Python 3 when available telemetry calls for it.
 ---
 
@@ -76,7 +76,7 @@ file edits and other mutations require the selection described below.
 - **Implement before next cycle:** recommend this route when a selected
   improvement should be delivered before another cycle begins. Recommendation
   alone authorizes nothing. After explicit user selection, reuse or create its
-  visibility issue through `create-issue`, enter the normal `/implement`
+  visibility issue through `create-issue`, enter the normal `/deliver`
   workflow, and keep this retrospective active until the action is delivered or
   genuinely blocked. The delegated workflows retain all of their gates.
 - **Report only:** useful evidence warrants neither an edit nor a ticket.
@@ -120,7 +120,7 @@ selects its exact proposed contents.
 9. Apply only selected documentation changes, preserving structure and avoiding
    duplication. Run only selected ticket actions through `create-issue`. For
    each explicitly selected implement-before-next-cycle action, reuse or create
-   the visibility issue, invoke normal `/implement`, and remain in the
+   the visibility issue, invoke normal `/deliver`, and remain in the
    retrospective until it is delivered or genuinely blocked.
 10. Compare the result with the confirmed action set, reread edited sections,
     and run declared documentation checks.

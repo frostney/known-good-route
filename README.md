@@ -22,113 +22,62 @@ Installs into your skills-compatible agent(s): Cursor, Claude Code, Codex, GitHu
 
 ## Usage
 
-These are [Agent Skills](https://agentskills.io): any skills-compatible agent loads each skill's `name` and `description` at startup and reads the full `SKILL.md` when a task matches. Several are invoked directly as slash commands (e.g. `/create-pr`, `/implement`); the rest activate from ambient context. The skills split into recurring workflow skills and one-off setup, guidance, and audit skills.
+These are [Agent Skills](https://agentskills.io): any skills-compatible agent loads each skill's `name` and `description` at startup and reads the full `SKILL.md` when a task matches. Several are invoked directly as slash commands (e.g. `/deliver`, `/implement`, `/create-pr`); the rest activate from ambient context. The skills split into recurring workflow skills and one-off setup, guidance, and audit skills.
 
 ### Operating loop
 
-Establish each repository's **Scaffold** once, keep its **Ambient** guidance
-active throughout, and run the outer loop from fresh project, issue, and
-pull-request evidence.
-Enter at the state the work is actually in; never replay earlier stages merely
-for ceremony.
+Use `/deliver` for one work item: a feature, bug, refactor, issue, or existing PR.
+It infers the target from context and resumes at its current state. No issue/idea
+or PR/stack selector is required, and filing an issue is optional.
+
+The default endpoint is **deployed and verified in the project's configured
+integration destination**. That may be production, staging, a nightly build, or
+another established target. Request **ready to merge** or **merged** for an
+earlier endpoint. Missing integration configuration is an unresolved decision,
+not permission to invent infrastructure or claim deployment succeeded.
 
 ```mermaid
-flowchart TB
-    subgraph Layers["Per-project layers (outside the loop)"]
-        direction LR
-        Scaffold["Scaffold<br/>project-structure + applicable language/stack skills<br/>+ convex-conventions when relevant"]
-        Ambient["Ambient<br/>agent-writing + software-engineering-excellence<br/>+ bleeding-edge when adopted"]
-    end
-
-    subgraph Outer["Outer loop"]
-        Roadmap["/roadmap-review"]
-        Rush["/milestone-rush"]
-        Retro["/run-retro"]
-        ImmediateDecision{"Improvement selected<br/>before next cycle?"}
-        Immediate["/create-issue<br/>then normal /implement"]
-        ReleaseDecision{"Release now?"}
-        Release["/create-release"]
-        Next["Next cycle<br/>from fresh evidence"]
-
-        Roadmap -->|"confirm milestone and tracked scope"| Rush
-        Rush -->|"approve retrospective"| Retro
-        Retro --> ImmediateDecision
-        ImmediateDecision -->|"yes: explicit selection"| Immediate
-        Immediate -->|"delivered or blocked"| Retro
-        ImmediateDecision -->|"no"| ReleaseDecision
-        ReleaseDecision -->|"yes: invoke manually"| Release
-        ReleaseDecision -->|"no"| Next
-        Release --> Next
-    end
-
-    subgraph Delivery["Delivery loop (owned by /milestone-rush during a rush)"]
-        Track["Idea to track<br/>/create-issue"]
-        Ready["Ready issue"]
-        Implement["/implement"]
-        Idea["Unfiled idea"]
-        ReviewAndTest["Complete implementation<br/>/code-review fix-all<br/>+ /test-against-spec fix"]
-        Branch["Completed branch"]
-        CreatePR["/create-pr"]
-        ExistingPR["Existing PR"]
-        AddressFeedback["/address-feedback"]
-        Integrated["Integrated change"]
-
-        Track --> Implement
-        Ready --> Implement
-        Implement --> ReviewAndTest
-        Idea --> Implement
-        ReviewAndTest -->|"both pass unchanged"| CreatePR
-        ReviewAndTest -->|"incomplete: continue implementation"| ReviewAndTest
-        Branch --> CreatePR
-        CreatePR --> AddressFeedback
-        ExistingPR --> AddressFeedback
-        AddressFeedback --> Integrated
-    end
-
-    Audit["Optional diagnostic side path<br/>/codebase-audit when evidence justifies it"]
-
-    Scaffold -. "establishes the project" .-> Roadmap
-    Ambient -. "governs every stage" .-> Roadmap
-    Rush -. "orchestrates with automatic modes" .-> Implement
-    Audit -. "informs planning when warranted" .-> Roadmap
+flowchart TD
+    Roadmap["/roadmap-review"] -->|"confirmed milestone"| Rush["/milestone-rush"]
+    Rush -->|"multiple work items"| Deliver["/deliver"]
+    Item["Feature, bug, issue, branch or PR"] --> Deliver
+    Deliver --> Development["/implement: development loop"]
+    Development --> Inspect["Run and inspect against requirements"]
+    Inspect --> Review["/code-review + /test-against-spec"]
+    Review -->|"verified gaps"| Development
+    Review -->|"accepted change"| PR["/create-pr or /update-pr"]
+    PR --> Feedback["CI and /address-feedback"]
+    Feedback -->|"in-scope fixes"| Development
+    Feedback -->|"ready; selected endpoint permits"| Merge["Merge"]
+    Merge --> Integration["Configured integration destination<br/>and live verification"]
+    Integration -->|"verified gaps"| Development
+    Rush -->|"milestone delivery complete"| Release["/create-release"]
+    Rush -->|"retrospective accepted"| Retro["/run-retro"]
 ```
 
-- **Scaffold** is the repository's structural and stack foundation:
-  `project-structure`, the applicable language and stack skills, and
-  `convex-conventions` when Convex is in scope. It is not another step in every
-  delivery cycle.
-- **Ambient** guidance governs every stage: `agent-writing`,
-  `software-engineering-excellence`, plus `bleeding-edge` when the project has
-  adopted it. Software engineering excellence keeps the parent objective active
-  across corrections, questions, partial results, and worker returns. For
-  substantial deliverables, use bounded workers when the task and host support
-  delegation; keep small ordinary work local. The coordinator retains decisions,
-  verifies returned evidence and completes the parent outcome.
-- Every outer-loop transition is human-controlled. `/roadmap-review` proposes
-  the milestone, `/milestone-rush` offers the retrospective after integrated
-  completion, and `/create-release` is an optional manual step after
-  `/run-retro`; none starts the next stage automatically.
-- `/run-retro` may recommend an improvement before the next cycle, but only an
-  explicit user selection enters `/create-issue` and normal
-  `/implement`. The retrospective remains active until that selected
-  action is delivered or genuinely blocked.
-- While `/milestone-rush` is active, let it own the nested delivery loop. It
-  delegates implementation through the automatic modes, PR handoff, continuous
-  review-axis-lane code review, and merge instead of asking the user to invoke
-  those child commands.
-- For ad-hoc or already-started work, enter the delivery loop at the matching
-  state: record an idea with `/create-issue`, implement a ready issue or unfiled
-  idea, hand off a completed branch with `/create-pr`, or continue an existing
-  PR or native stack with `/address-feedback`. Both consolidated skills resolve
-  and check the target from context; numbers, URLs, and descriptions are optional
-  aids, and no mode selector is required.
-- `/codebase-audit` is a diagnostic side path when repository evidence warrants
-  a whole-codebase assessment, not a mandatory checkpoint.
-- Supporting mechanics stay underneath the loop: `git-workflow` governs git
-  operations, `/code-review fix-all` is the ordinary bounded pre-PR review,
-  `/test-against-spec fix` performs black-box behavior testing after review,
-  milestone rush uses `/code-review subagents fix-all`, and `/update-pr` handles
-  reviewed and behaviorally tested commits and pushes.
+`deliver` owns continuation through CI failures, feedback and integration checks.
+It updates the same open PR; a gap found after merge uses a linked repair PR and
+keeps the original work item active until integration verification succeeds.
+`implement` owns development: implement, run and inspect, review, test, and fix
+until every verified requirement gap is resolved. Visual quality is judged
+against agreed references and affected states, not inferred from passing tests.
+Optional improvements do not expand the task. Current evidence is reused;
+changes invalidate only the checks they affect.
+
+Individual skills retain their endpoints. `/create-issue` files an issue;
+`/implement` completes development; `/create-pr` fills required review and
+behavior evidence, repairs in-scope failures and reaches a ready PR. These
+commands do not silently start merge or deployment. `/deliver` connects them.
+
+`milestone-rush` coordinates multiple `/deliver` work items and triggers
+`create-release` for the milestone. Integration delivery and release are distinct:
+`deliver` follows the configured integration workflow; it does not initiate
+milestone versioning, changelog, tagging or release publication.
+
+Use `project-structure` and applicable stack skills when establishing a project.
+`software-engineering-excellence` and `agent-writing` supply relevant shared
+standards. `/roadmap-review`, `/run-retro` and `/codebase-audit` remain deliberate
+planning or assessment work, not mandatory stages for every delivery.
 
 ### Recurring workflow skills
 
@@ -137,17 +86,18 @@ flowchart TB
 | [`git-workflow`](git-workflow/SKILL.md) | Applies the user's git defaults: branch from the remote default, merge rather than rebase for ordinary branches, use native GitHub stacks when selected, never amend, and squash-merge pull requests. Use when branching, syncing, committing, pushing, or merging in the user's repos. |
 | [`status-report`](status-report/SKILL.md) | Builds a read-only current-repository Kanban from live pull-request, CI, review, branch, and worktree evidence. Use when the user asks for a status report, PR board, review-readiness board, or local-work overview. |
 | [`create-issue`](create-issue/SKILL.md) | Investigates and creates a project-aligned GitHub issue from a tagline or short description, using the repository's template, evidence, and labels. Use when the user runs /create-issue or asks to file a GitHub issue. |
-| [`implement`](implement/SKILL.md) | Implements a GitHub issue or unfiled idea through investigation, approach selection, validation, and PR handoff. Use when asked to implement an issue or build a feature, or when the user runs /implement. |
+| [`deliver`](deliver/SKILL.md) | Carries one feature, bug, issue, branch, or PR through verified delivery. Use when asked to deliver a work item or run /deliver. |
+| [`implement`](implement/SKILL.md) | Develops a GitHub issue or idea until its requirements and fidelity criteria are verified. Use when asked to implement a change or run /implement. |
 | [`run-retro`](run-retro/SKILL.md) | Review a workstream and agree process improvements when the user requests or accepts a retrospective. Apply only selected follow-up actions. |
-| [`create-pr`](create-pr/SKILL.md) | Publishes a completed change as a templated draft pull request, reconciles PR-only metadata and readiness state, waits for CI, and marks it ready. Use when the user runs /create-pr. |
+| [`create-pr`](create-pr/SKILL.md) | Validates and repairs an in-scope change, publishes its draft pull request, reconciles metadata and CI, and marks it ready for review. Use when the user runs /create-pr. |
 | [`update-pr`](update-pr/SKILL.md) | Commits relevant changes, merges the remote default when needed, pushes the current pull-request branch, and refreshes stale PR metadata. Use when the user runs /update-pr or asks to update a pull request. |
 | [`address-feedback`](address-feedback/SKILL.md) | Resolves review feedback on one pull request or native GitHub stack. Use when asked to address PR or stack feedback, or when the user runs /address-feedback. |
 | [`delivery-wait`](delivery-wait/SKILL.md) | Provides deterministic, resumable GitHub transition waits used internally by delivery workflows. Use when another workflow must await CI, merge, tag, or release state without model heartbeats. |
 | [`code-review`](code-review/SKILL.md) | Review a PR, branch, or worktree for evidence-backed findings. Supports scoped revalidation and explicitly requested fixes or review workers. |
-| [`test-against-spec`](test-against-spec/SKILL.md) | Tests delivered behavior against explicit requirements through real product interfaces, preferring an exact-revision preview deployment when available. Use when the user runs /test-against-spec or a workflow needs black-box evidence; add the exact `fix` qualifier to authorize in-scope fixes. |
-| [`create-release`](create-release/SKILL.md) | Prepares a changelog-first release and, only when explicitly requested, publishes it through the repository's single established release path. Use when the user asks to prepare, cut, tag, or publish a release, bump the version, or generate release notes. |
+| [`test-against-spec`](test-against-spec/SKILL.md) | Test observable behavior against explicit requirements when requested or when a delivery workflow needs real-interface acceptance evidence. |
+| [`create-release`](create-release/SKILL.md) | Prepare or publish a release when requested or handed off by milestone-rush, using the repository's established versioning and publication workflow. |
 | [`roadmap-review`](roadmap-review/SKILL.md) | Reviews a roadmap from fresh project evidence and produces a verified, throughput-anchored version plan, with execution gated on confirmation. Use when reviewing a roadmap, planning releases, or sequencing a backlog. |
-| [`milestone-rush`](milestone-rush/SKILL.md) | Autonomously completes a confirmed milestone by reconciling existing work, parallelizing independent implementation, converging and merging pull requests, and closing the verified milestone. Use when the user runs /milestone-rush for an exact milestone or selects it after /roadmap-review. |
+| [`milestone-rush`](milestone-rush/SKILL.md) | Autonomously completes a confirmed milestone by reconciling existing work, coordinating work-item delivery and the configured milestone release, and closing the verified milestone. Use when the user runs /milestone-rush for an exact milestone or selects it after /roadmap-review. |
 
 ### One-off project setup, guidance, and audit skills
 
@@ -203,7 +153,10 @@ behavior. The current baseline is the official guidance for
 [Claude Fable 5.1](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1),
 and
 [Claude Opus 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5),
-checked on September 7, 2026.
+checked on September 7, 2026. The September 14 review also applies OpenAI's
+[Rethinking skills and prompts for GPT-6 Astra](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra):
+keep discovery descriptions precise, load supporting detail only when relevant,
+and remove stopping rules that interrupt the authorized completion contract.
 
 - Lead with the owned outcome, why it matters, completion evidence, boundaries,
   and stop rules. Prescribe exact mechanics only when the route is load-bearing.
@@ -264,112 +217,26 @@ owns provider-specific controls and evaluates them on the intended workload.
   preserve the required outcome directly without depending on its internal
   files or copying its full procedure.
 
-### Cross-skill references
+### Cross-skill ownership
 
-- `implement` invokes `/create-pr` at handoff.
-- `implement` applies `git-workflow`'s clean-worktree
-  and freshly fetched remote-default synchronization gate after selecting a
-  branch/worktree and before editing.
-- `implement` repeats `/code-review fix-all` followed
-  by `/test-against-spec fix` until both pass on the same unchanged
-  implementation. It uses a concise black-box fallback when the testing skill
-  is unavailable, runs the project gate after the loop, then invokes `/create-pr`.
-- After selection or automatic entry, `implement`
-  remains active across status questions, diagnoses, corrections, and failed
-  gates. It returns control only when complete, externally blocked after safe
-  alternatives, or awaiting new authority or a material unresolved decision.
-- `code-review` and `codebase-audit` delegate only when the caller supplies the
-  additive `subagents` input. Workers own bounded evidence lanes; the
-  coordinator owns findings, verdicts, edits, and reported fallbacks.
-- `address-feedback` in PR scope repeats `/code-review fix-all` followed by
-  `/test-against-spec fix` or its black-box fallback before each substantive
-  code push. It runs the project gate only after both pass unchanged, then
-  invokes `/update-pr`. It owns review inspection, deterministic waiting,
-  replies, and thread resolution through its bundled helper. Read-only mode
-  remains non-mutating.
-- `address-feedback` in stack scope owns one repository-scoped native stack
-  identity. It reviews initial exact-head layers once, freezes them, puts all validated live
-  fixes in one new top layer per round, reviews only that new layer, and returns
-  `ready` only for the complete unchanged stack. Lower layers covered by a top
-  fix layer cannot be merged as a prefix. Read-only mode disables every
-  mutation, and the skill never merges or purchases review capacity.
-- `test-against-spec` proves externally observable behavior without using source
-  as evidence. It prefers an exact-revision preview deployment when available,
-  falls back to the local environment, reports by default, and fixes only with
-  the exact `fix` qualifier. It never owns the broad project gate.
-- `create-pr` publishes a completed branch. It verifies that completion evidence
-  and the project gate apply to the exact change, reuses current gate evidence,
-  corrects PR-only metadata and waits for CI. It may record an already-validated
-  scenario for a walkthrough, but missing behavior testing or implementation
-  fixes return to the implementation workflow.
-- `create-pr` and `update-pr` use `agent-writing`'s PR description contract.
-  `update-pr` refreshes affected walkthrough segments and removes stale summaries
-  or intermediate development history.
-- `address-feedback automatic-merge` in PR scope discovers active review automation,
-  treats incomplete verdicts as pending, and owns one ordinary PR's exact-head
-  fix-watch-squash-merge loop. Stack scheduling and atomic merge stay outside
-  it.
-- `status-report` reuses the current-head CI and reviewer-readiness semantics of
-  `address-feedback` in PR scope and `milestone-rush`, but remains strictly
-  read-only and never invokes either workflow.
-- `create-release` invokes `/create-pr` to open the release PR, follows
-  `git-workflow` for branching and push rules, and defers to `project-structure`
-  for changelog tooling. Its publication gate re-reads merged workflows and
-  chooses exactly one tag/release publisher before acting.
-- `roadmap-review` defers to `software-engineering-excellence` for the general engineering bar, to `project-structure` for `VISION.md` / docs and milestone conventions, recommends (but never performs) release cuts via `/create-release`, and delegates issue creation in the Execute phase to `/create-issue`.
-- `roadmap-review` offers `/milestone-rush` only after the user confirms the
-  milestone and tracked scope; it never starts the execution engine
-  automatically.
-- `milestone-rush` parallelizes independent nodes through `/implement automatic`,
-  passing the issue or confirmed roadmap item in each worker packet. It uses
-  `/address-feedback automatic-merge` with the ordinary PR in context, or
-  `/address-feedback` once with the complete native stack in context before the
-  coordinator atomically merges the complete ready stack. Each implementation's bounded
-  pre-PR pass uses `/code-review subagents fix-all` by default, while ordinary
-  standalone implementations remain unchanged. It never creates a release and
-  invokes `/run-retro` only after explicit approval.
-- `run-retro` consumes Milestone Rush's ignored JSONL event ledger when present,
-  validates and summarizes normalized delta or snapshot measurements,
-  reconciles them with issue, pull-request, and repository evidence, and keeps
-  exclusive elapsed bottlenecks separate from overlapping and aggregate
-  resource consumption. Host integrations own provider-specific adapters. It
-  presents outcomes and proposed improvements in conversation and uses
-  `grilling` to select actions.
-- `create-issue` invokes `/grill-with-docs` or `/grill-me` for thoroughness when
-  registered. `implement` reuses a settled approach; unresolved non-automatic
-  comparisons use the registered `grilling` skill.
-- When an approach comparison is needed, `implement` derives viable options
-  from shared evidence and uses equivalent decision-relevant checks before
-  recommending. Current external evidence is required only for decisions that
-  depend on it; unavailable evidence stops that dependent work.
-- `create-issue` and `implement` read `VISION.md` when present and stop for
-  clarification when the request conflicts with it.
-- `create-issue` and `implement` support an explicit `automatic` mode where the
-  agent selects the project-context recommendation after completing the
-  required investigation and gates. Implementation automatic mode skips
-  `grilling`.
-- `run-retro` requires `grilling` for the retrospective interview and final
-  confirmation, then applies only user-selected documentation edits and ticket
-  actions. It traces originating decisions, executable behavior, documentation,
-  and complete available coordinator/subagent evidence before recommending a
-  correction. An explicitly selected implement-before-next-cycle action passes
-  through `/create-issue` and normal `/implement` while the retrospective
-  remains active.
-- `typescript-stack`, `react-stack`, and `native-nostalgia-stack` defer to
-  `project-structure` for language-neutral repository policy. `react-stack`
-  delegates TypeScript language policy to `typescript-stack` and Convex
-  specifics to `convex-conventions`.
-- `agent-writing` applies to agent-authored communication and engineering
-  artifacts, but not application-generated or branded product output.
-  Project-specific instructions and templates take precedence. Issues may
-  contain many concise items; review replies preserve complete dispositions,
-  evidence, and attribution without a fixed character cap.
-- `software-engineering-excellence` preserves the parent objective and settled
-  decisions across added context, corrections, questions, checkpoints, and
-  bounded worker results. It pauses only the exact gated transition and treats
-  completion as a verified parent state rather than the last message's local
-  result.
-- `bleeding-edge` sits beneath `software-engineering-excellence` as a subordinate lens: it tilts the default technology choice toward the newest viable option while SEE remains the governor and maintainability stays the tiebreaker. It reuses the cross-skill "verify versions live" rule, and it applies its bias *within* the choices decided by the stack skills and `AGENTS.md` Hard Constraints rather than silently swapping them.
+| Owner | Responsibilities and collaborators |
+| --- | --- |
+| `deliver` | Owns one work item through its selected endpoint; resumes existing work, invokes development, publication and feedback skills, and verifies integration delivery. |
+| `implement` | Investigates unresolved choices, implements the agreed requirements and fixes every verified gap through code review, real-interface testing and the project gate. |
+| `create-pr`, `update-pr` | Apply required review, behavior and project gates, reuse valid evidence, publish relevant changes and maintain accurate PR metadata. `create-pr` waits for readiness; `update-pr` returns current publication status to its caller. |
+| `address-feedback` | Validates and fixes review findings. PR mode can merge only with that authority; native stack mode returns complete-stack readiness to its coordinator. |
+| `milestone-rush` | Coordinates several deliveries, dependencies and aggregate integration checks, then invokes `create-release` for the milestone. |
+| `create-release` | Owns milestone versioning, changelog, release PR and the repository's single established release publisher. It remains directly invocable for an explicit release request. |
+| `test-against-spec` | Tests externally observable behavior against explicit requirements. Reports by default; `fix` authorizes in-scope repairs. It does not replace source review or own the aggregate project gate. |
+| `code-review`, `codebase-audit` | Retain assessment-only defaults and use review workers when requested. `fix-all` permits in-scope remediation under the caller's acceptance criteria. |
+| `git-workflow`, `delivery-wait` | Own Git rules, guarded native stacks and deterministic waits underneath the delivery skills. |
+| `run-retro` | Proposes improvements and applies only selected actions. An explicitly selected immediate delivery enters `deliver`; the retrospective remains active until that action is delivered or blocked. |
+| `status-report` | Reads current PR, CI, review and worktree evidence without invoking delivery or mutating state. |
+
+Repository requirements and commands stay in the repository. Stack conventions
+route to the relevant language, framework and upstream tooling guidance; they do
+not duplicate execution mechanics. A missing companion skill permits a concise
+direct equivalent of the required outcome, not omission of its quality gate.
 
 ## Contributing
 
@@ -386,61 +253,16 @@ For behavioral changes, follow the bounded [acceptance strategy](evals/ACCEPTANC
 and select relevant scenarios and models. The table describes expected behavior,
 not a required full-matrix run or a claim that every scenario currently passes:
 
-| Scenario | Expected invariant |
+| Scenario | Expected outcome |
 | --- | --- |
-| Clear implementation with one selected option | Completes without another permission prompt or unrelated cleanup |
-| Materially ambiguous architecture | Surfaces the decision and recommendation before editing |
-| Already-fixed issue | Reports source/test evidence instead of inventing a change |
-| Branch with committed work and a clean tree | Reuses current completion evidence, then opens the PR without creating an empty commit |
-| Dirty focused branch with unrelated local state | Commits only the completed relevant work, excludes secrets, and marks the PR ready only after publication requirements and CI pass |
-| Implementation misses required behavior | Runs code review, reproduces and fixes the gap through the delivered interface, then repeats review and black-box testing until both pass unchanged |
-| Draft PR missing a Definition of Ready item | Reports missing implementation evidence without publishing, or corrects PR-only metadata and then waits for green CI before marking ready |
-| Draft PR missing only required metadata | Corrects the PR body or links without creating an empty commit |
-| Definition of Ready requires a material decision | Keeps the PR draft and reports the exact unresolved decision |
-| Code, behavior, pending, or external CI failure | Keeps the PR draft and returns code or behavior failures to implementation; pending or external failures remain pending |
-| PR update with additive merge conflicts | Preserves both feature paths, validates the merge, and pushes normally |
-| Explicitly read-only PR review | Reports validated findings without editing or changing PR state |
-| Mixed actionable and invalid inline findings | Fixes validated findings, rebuts invalid ones inline, and never posts a top-level comment |
-| Review fixes ready to push | Repeats `/code-review fix-all` and black-box testing until both pass unchanged, then passes the project gate before committing and pushing |
-| Read-only behavior check with a current preview | Prefers the exact-revision preview, exercises every observable requirement, and reports results without reading source or editing |
-| Behavior fix lacks a reproducible environment | Fixes and retests as far as available access permits, then reports the remaining behavior as unverified without claiming completion |
-| Required behavior needs a preview that does not exist | Opens a draft only when the user explicitly requests it to obtain the preview, keeps it draft, and returns to behavior testing on the exact deployed revision |
-| Issue draft awaiting approval | Investigates, grills, and presents the project-aligned draft without filing it |
-| Automatic issue creation and exact duplicate | Completes every investigation/grill gate before filing, but stops immediately for the existing issue |
-| Artifact-assisted implementation grill | Derives all viable options from one evidence packet and compares them with a predeclared rubric plus equivalent decision-relevant checks before selection |
-| Existing-contract implementation grill | Inspects the embedded behavioral contract and runs an executable compatibility probe before architecture or option selection |
-| Required current web research unavailable | Stops before presenting implementation options or editing |
-| Default code review and repository-wide audit | Reproduces safe boundary behavior and reports evidence without remediating in read-only mode |
-| File-scoped code review | Reports findings only in the exact requested files while disclosing any supporting context needed to validate them |
-| Prior-findings revalidation | Rechecks selected review or audit findings against current committed and dirty state without silently performing a fresh review |
-| Churn-backed review with JSON output | Measures symbol/file history, requires a concrete architectural co-signal, and writes only the requested machine-readable findings artifact |
-| Audit probe requires production mutation | Marks the path static-only and unreached instead of creating an external side effect |
-| Measured prototype misses its required target | Stops before production migration, publication, or speculative follow-on work |
-| Slow command, hook, local environment, or CI path | Measures the critical feedback path and improves it under the maintainability governor instead of postponing speed until handoff |
-| Stale audit with missing evidence | Separates confirmed gaps, corrected claims, and unsupported measurements before planning |
-| Rate-limited review bot | Reports the review as unavailable or incomplete, never passed |
-| Automatic merge with active review tooling | Retriggers incomplete reviews, evaluates inline and summary findings, and merges only the fully reviewed current head |
-| Automatic idea with a provisional mini-spec | Researches, adds the appropriate artifact, confirms the final mini-spec, implements, validates, reviews, and completes the PR handoff |
-| Tag-triggered release workflow | Pushes the tag once, monitors automation, and never calls `gh release create` |
-| No releasable commits or ambiguous publisher | Stops without manufacturing a version change, tag, or release |
-| New branch, Git sync, dirty worktree, and divergent push | Starts focused work at the fetched remote-default tip without tracking it, merges updates without rebasing, stops before syncing dirty work, and never forces a rejected push |
-| Sparse or mutation-ready roadmap review | Lowers confidence when evidence is thin and asks before document, issue, or pull-request changes |
-| Parallel milestone rush with mixed existing state | Reuses delivered, PR, branch, worktree, and issue state; rolls independent merges forward; and closes only after integrated validation |
-| Explicit sub-agent review or audit | Maps bounded evidence lanes, keeps verdicts and edits with the coordinator, and reports any single-agent fallback |
-| Milestone rush with a blocked dependency chain | Completes independent work, records replacement and deferred scope, and leaves the blocked milestone open |
-| Project structure and stack conventions | Repairs real drift while preserving valid ecosystem layouts and recorded toolchain pins |
-| React profile mismatch | Uses the applicable web profile, but does not force web or universal defaults onto an Electron-only project |
-| Convex function boundaries | Enforces public validation/auth/rate limits and keeps external I/O in actions with persistence in internal mutations |
-| Stable dependency and competing tool choice | Selects the live-verified newest stable version but preserves an authoritative recorded tool decision |
-| Retrospective with no durable lesson | Completes all three lenses and reports no action instead of inventing documentation or tickets |
-| Long autonomous run | Grounds every progress/completion claim in current evidence and does not end on a promise |
-| Chained substantial deliverables | Keeps decisions and provenance with the coordinator, uses bounded workers where appropriate and supported, and verifies each result before completing the parent task |
-| Small local change | Runs the real project gate without generic re-checks or verifier subagents |
-| Local convention differs from a generic default | Follows the surrounding code and project gate instead of imposing a blanket style rule |
-| Pascal identifier contains a standard initialism | Preserves forms such as `HTTP` and `GC` unless an external API or project rule requires another spelling |
-| Written issue, PR, roadmap, or retrospective | Leads with the outcome and omits filler, boilerplate, and repeated summaries |
-| PR description and useful behavior walkthrough | Describes the final change, preserves explicit templates, shows comparable evidence, and reports incomplete narration, subtitles or media tooling without inventing assets or adding a media-only readiness blocker |
-| Agent-authored response or engineering artifact | Uses project terminology, evidence sources, templates, and exact required text without importing product voice; leads with current evidence and preserves quoted source and code exactly |
+| Existing work item, branch or PR | Infers the target, preserves settled scope and resumes without replaying completed stages. |
+| Missing or stale PR review/behavior evidence | Runs the required missing checks and fixes verified gaps before readiness; reuses valid evidence. |
+| CI or review exposes an in-scope defect | Repairs it, revalidates affected behavior and updates the same PR instead of stopping at diagnosis. |
+| Requested visual or interaction fidelity | Compares the actual result with requirements and references; does not treat a test count as acceptance. |
+| Configured integration delivery | Verifies the intended revision and behavior at the configured target; does not trigger milestone release or mistake a queued job for deployment. |
+| Material decision or unavailable required access | Completes independent work and reports the specific unresolved requirement without claiming completion. |
+| Explicit read-only review or an earlier delivery endpoint | Preserves that boundary; does not infer edit, merge, deployment or release authority. |
+| Test helper rejects invalid evidence | Changes real inputs/state and checks the observable rejection; does not search source for implementation tokens. |
 
 The [behavioral eval harness](evals/README.md) runs isolated fixture scenarios
 through the native Codex and Claude CLIs using their saved local logins.

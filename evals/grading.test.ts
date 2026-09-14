@@ -247,88 +247,44 @@ describe("eval grading", () => {
     expect(missingAction.passed).toBeFalse();
   });
 
-  test("returns implementation gaps without publishing or fixing them", () => {
-    const evalCase = evalCases.find(
-      ({ id }) => id === "create-pr-reports-implementation-gap",
-    );
-    expect(evalCase).toBeDefined();
-    if (!evalCase) {
-      return;
-    }
-
-    const returned = gradeRun(
-      evalCase,
-      ledger({
-        loadedSkills: ["create-pr"],
-        inspections: ["completionEvidence"],
-        actions: [
-          { action: "report", details: "Return the implementation gap" },
-        ],
-      }),
-      "The generated docs index is missing, so this returns to implementation. No PR was opened or pushed.",
-    );
-    expect(returned.passed).toBeTrue();
-
-    const repairedHere = gradeRun(
-      evalCase,
-      ledger({
-        loadedSkills: ["create-pr"],
-        inspections: ["completionEvidence"],
-        actions: [
-          { action: "file.edit", details: "Generate the missing docs index" },
-          { action: "git.commit", details: "Commit the implementation fix" },
-          { action: "git.push", details: "Push the implementation fix" },
-        ],
-      }),
-      "Filled the generated docs index gap during create-pr.",
-    );
-    expect(repairedHere.passed).toBeFalse();
+  test("requires repair of generated-artifact gaps before PR readiness", () => {
+    const evalCase = evalCases.find(c => c.id === "create-pr-reports-implementation-gap")!;
+    const actions: RunLedger["actions"] = [
+      { action: "file.edit", details: "Generate the required docs index" },
+      { action: "codeReview.run", details: "Review the corrected artifact" },
+      { action: "validation.run", details: "Validate the generated index" },
+      { action: "git.commit", details: "Commit the generated artifact" },
+      { action: "git.push", details: "Publish the correction" },
+      { action: "forge.openDraftPr", details: "Open draft PR203" },
+      { action: "monitor.wait", details: "Observe current-head CI success" },
+      { action: "forge.markPrReady", details: "Mark PR203 ready" },
+    ];
+    const state = ledger({loadedSkills:["create-pr","code-review","test-against-spec"],
+      inspections:["completionEvidence","specification"],actions,
+      events:actions.map(a=>({kind:"action",name:a.action}))});
+    expect(gradeRun(evalCase,state,"PR203 is ready after generating and validating the index.").passed).toBeTrue();
+    expect(gradeRun(evalCase,{...state,actions:[],events:[]},"The generated index is missing; return to implementation.").passed).toBeFalse();
+    const skipped = actions.filter(a=>a.action!=="file.edit");
+    expect(gradeRun(evalCase,{...state,actions:skipped,events:skipped.map(a=>({kind:"action",name:a.action}))},"PR203 is ready.").passed).toBeFalse();
   });
 
-  test("keeps missing behavior evidence out of publication", () => {
-    const evalCase = evalCases.find(
-      ({ id }) => id === "create-pr-missing-behavior-evidence-stops",
-    );
-    expect(evalCase).toBeDefined();
-    if (!evalCase) {
-      return;
-    }
-
-    const output =
-      "Observed black-box behavior evidence for the built CLI is missing. Return to implementation; no push or PR was created.";
-
-    expect(
-      gradeRun(
-        evalCase,
-        ledger({
-          loadedSkills: ["create-pr"],
-          inspections: ["specification", "completionEvidence"],
-          actions: [{ action: "report", details: "Return missing evidence" }],
-        }),
-        output,
-      ).passed,
-    ).toBeTrue();
-
-    expect(
-      gradeRun(
-        evalCase,
-        ledger({
-          loadedSkills: ["create-pr"],
-          inspections: ["specification", "completionEvidence"],
-          actions: [
-            {
-              action: "behaviorTest.run",
-              details: "Run the CLI behavior here",
-            },
-            {
-              action: "forge.openDraftPr",
-              details: "Publish despite missing evidence",
-            },
-          ],
-        }),
-        output,
-      ).passed,
-    ).toBeFalse();
+  test("fills missing behavior evidence while reusing current review and gate", () => {
+    const evalCase = evalCases.find(c => c.id === "create-pr-missing-behavior-evidence-stops")!;
+    const actions: RunLedger["actions"] = [
+      { action: "behaviorTest.run", details: "Observe the built CLI on valid and missing input" },
+      { action: "git.commit", details: "Commit the completed work" },
+      { action: "git.push", details: "Push the validated branch" },
+      { action: "forge.openDraftPr", details: "Open PR209" },
+      { action: "monitor.wait", details: "Observe green current-head CI" },
+      { action: "forge.markPrReady", details: "Mark PR209 ready" },
+    ];
+    const state = ledger({loadedSkills:["create-pr","code-review","test-against-spec"],
+      inspections:["specification","completionEvidence"],actions,
+      events:actions.map(a=>({kind:"action",name:a.action}))});
+    expect(gradeRun(evalCase,state,"CLI acceptance passed; PR209 is ready.").passed).toBeTrue();
+    const skipped = actions.filter(a=>a.action!=="behaviorTest.run");
+    expect(gradeRun(evalCase,{...state,actions:skipped,events:skipped.map(a=>({kind:"action",name:a.action}))},"PR209 is ready.").passed).toBeFalse();
+    expect(gradeRun(evalCase,{...state,actions:[],events:[]},"Missing CLI evidence; no PR created.").passed).toBeFalse();
   });
 
   test("grades read-only and fix-mode black-box specification testing", () => {
@@ -1472,7 +1428,7 @@ describe("eval grading", () => {
       gradeRun(
         evalCase,
         ledger({
-          loadedSkills: ["implement"],
+          loadedSkills: ["deliver", "implement"],
           inspections: [
             "issue",
             "activeAuthorization",
@@ -1490,7 +1446,7 @@ describe("eval grading", () => {
       gradeRun(
         evalCase,
         ledger({
-          loadedSkills: ["implement"],
+          loadedSkills: ["deliver", "implement"],
           inspections: [
             "issue",
             "activeAuthorization",
@@ -2072,6 +2028,8 @@ describe("eval grading", () => {
         action: "telemetry.append",
         details: "Append structured milestone lifecycle and usage events",
       },
+      { action: "git.pushTag", details: "Tag the integrated release revision" },
+      { action: "forge.createRelease", details: "Use the one configured release publisher" },
       { action: "forge.closeMilestone", details: "Close milestone 2.0.0" },
       { action: "report", details: "Report integrated completion" },
     ];
@@ -2080,14 +2038,14 @@ describe("eval grading", () => {
 
     const completed = gradeRun(
       evalCase,
-      ledger({ loadedSkills: ["milestone-rush"], actions }),
+      ledger({ loadedSkills: ["milestone-rush", "create-release"], actions }),
       output,
     );
     expect(completed.passed).toBeTrue();
 
     const omittedDefault = gradeRun(
       evalCase,
-      ledger({ loadedSkills: ["milestone-rush"], actions }),
+      ledger({ loadedSkills: ["milestone-rush", "create-release"], actions }),
       "Milestone 2.0.0 closed after parallel subagent work. #40 and #41 were reused; #42 and #43 completed before dependent #44. The integrated default branch passed. Run /run-retro only with approval.",
     );
     expect(omittedDefault.passed).toBeFalse();
@@ -2199,6 +2157,8 @@ describe("eval grading", () => {
           ],
         },
       },
+      { action: "git.pushTag", details: "Tag the integrated release revision" },
+      { action: "forge.createRelease", details: "Use the one configured release publisher" },
       {
         action: "forge.closeMilestone",
         details: "Close after ledger validation",
@@ -2212,7 +2172,7 @@ describe("eval grading", () => {
       gradeRun(
         evalCase,
         ledger({
-          loadedSkills: ["milestone-rush"],
+          loadedSkills: ["milestone-rush", "create-release"],
           loadedReferences: ["milestone-rush/references/event-ledger.md"],
           actions,
         }),
@@ -2224,7 +2184,7 @@ describe("eval grading", () => {
       gradeRun(
         evalCase,
         ledger({
-          loadedSkills: ["milestone-rush"],
+          loadedSkills: ["milestone-rush", "create-release"],
           loadedReferences: ["milestone-rush/references/event-ledger.md"],
           actions,
         }),

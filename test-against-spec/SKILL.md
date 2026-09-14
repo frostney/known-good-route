@@ -1,10 +1,8 @@
 ---
 name: test-against-spec
 description: >-
-  Tests delivered behavior against explicit requirements through real product
-  interfaces, preferring an exact-revision preview deployment when available.
-  Use when the user runs /test-against-spec or a workflow needs black-box
-  evidence; add the exact `fix` qualifier to authorize in-scope fixes.
+  Test observable behavior against explicit requirements when requested or when
+  a delivery workflow needs real-interface acceptance evidence.
 license: Unlicense OR MIT
 ---
 

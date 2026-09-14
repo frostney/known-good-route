@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
-import { chmod, mkdir, mkdtemp, readdir, rename, rm, symlink } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, readdir, readlink, rename, rm, stat, symlink } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { allocateRepairAttempt, claimRepairFixture, repairAttemptConfiguration, repairAttemptPlan, repairConfigurationOwner, repairProtocol, repairSnapshotTreeDigest, verifyRepairConfiguration, verifyRepairExecutionConfiguration, verifyRepairSnapshot } from "./repair-resume.ts";
@@ -80,23 +81,47 @@ test("racing fresh runs have one fixture owner", async () => {
   expect(results.filter(r => r.status === "fulfilled").length).toBe(1);
 });
 
-test("full snapshot binding rejects source modes, empty directories and internal aliases", async () => {
-  const mutations = [
-    (root: string) => chmod(join(root, "source.ts"), 0o711),
-    (root: string) => chmod(join(root, "source.ts"), 0o4644),
-    (root: string) => chmod(root, 0o711),
-    (root: string) => mkdir(join(root, "empty-extra-directory")),
-    (root: string) => symlink("source.ts", join(root, "extra-alias.ts")),
-  ];
-  for (const mutate of mutations) {
+const snapshotMutations: { name: string; mutate(root: string): Promise<void> }[] = [
+  { name: "source executable mode", async mutate(root) {
+    const path = join(root, "source.ts");
+    await chmod(path, 0o711);
+    expect((await stat(path)).mode & 0o7777).toBe(0o711);
+  } },
+  { name: "source special permission bit", async mutate(root) {
+    const path = join(root, "source.ts");
+    // Bun 1.3.14's chmod drops special bits; verify the actual OS mutation.
+    const result = spawnSync("chmod", ["4644", path], { encoding: "utf8" });
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(0);
+    expect((await stat(path)).mode & 0o7777).toBe(0o4644);
+  } },
+  { name: "root directory mode", async mutate(root) {
+    await chmod(root, 0o711);
+    expect((await stat(root)).mode & 0o7777).toBe(0o711);
+  } },
+  { name: "added empty directory", async mutate(root) {
+    const path = join(root, "empty-extra-directory");
+    await mkdir(path);
+    expect((await lstat(path)).isDirectory()).toBeTrue();
+    expect(await readdir(path)).toEqual([]);
+  } },
+  { name: "internal source alias", async mutate(root) {
+    const path = join(root, "extra-alias.ts");
+    await symlink("source.ts", path);
+    expect((await lstat(path)).isSymbolicLink()).toBeTrue();
+    expect(await readlink(path)).toBe("source.ts");
+  } },
+];
+for (const { name, mutate } of snapshotMutations) {
+  test(`full snapshot binding rejects ${name}`, async () => {
     const f = await frozen(), tree = await repairSnapshotTreeDigest(f.root);
     await expect(verifyRepairSnapshot(f.root, f.hash, tree)).resolves.toBeUndefined();
     await mutate(f.root);
     // These changes retain the old file-content manifest and were previously missed.
     await expect(verifyRepairSnapshot(f.root, f.hash)).resolves.toBeUndefined();
     await expect(verifyRepairSnapshot(f.root, f.hash, tree)).rejects.toThrow("topology or permissions changed");
-  }
-});
+  });
+}
 test("the snapshot root cannot be replaced by a symlink to identical bytes", async () => {
   const parent = await directory(), f = await frozen(join(parent, "snapshot")), tree = await repairSnapshotTreeDigest(f.root);
   await rename(f.root, join(parent, "moved")); await symlink("moved", f.root);

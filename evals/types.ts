@@ -52,11 +52,20 @@ export interface EvalFixture {
   transitions?: Array<{
     after: ActionName;
     occurrence?: number;
+    // For file.edit, match this exact data.path; only matching edits count.
+    editPath?: string;
     evidence: Record<string, string>;
+    // Scalar overrides affect subsequent calls, without resetting array counters.
+    actionResponses?: Partial<Record<ActionName, string>>;
   }>;
 }
 
 export interface EvalExpectations {
+  requiredCurrentGates?: {
+    before: ActionName[];
+    gates: Array<{ action: ActionName; result: string }>;
+    ignoreEditPaths?: string[];
+  };
   requiredSkillCitations?: Array<import("./skill-citation.ts").SkillCitationRequirement>;
   decisionPacket?: boolean;
   allowedDelegateWorkflows?: string[];

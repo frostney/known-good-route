@@ -56,6 +56,29 @@ The media and publication observations are simulated; the runs do not capture,
 synthesize or upload a video. Inspect the complete reports as well as automated
 grades: a correct workflow can still contain an unsupported environment claim.
 
+For the development and delivery contracts, select the seven focused cases:
+
+```bash
+bun run eval -- --model codex:gpt-6-astra --model claude:claude-fable-5-1 \
+  --case delivery-implement-development-only \
+  --case delivery-create-pr-missing-gates-repair \
+  --case delivery-existing-pr-ci-recovery \
+  --case delivery-default-integration-current-revision \
+  --case delivery-missing-integration-decision \
+  --case delivery-milestone-release-boundary \
+  --case delivery-post-merge-integration-repair
+```
+
+These exercise development-only scope, mandatory PR review and behavior gates,
+repair of existing-PR CI failures, configured integration revision verification,
+a necessary destination decision after independent work, milestone-owned
+release publication, and a linked repair after integration finds a post-merge gap. They use simulated repository and external state. They do
+not establish a real deployment, production readiness, or release publication.
+Review the complete actions and final reports against the requirements; assess
+unsupported claims and qualitative coverage beyond the automatic checks. When
+changing delegation, also select `prompting-claude-native-agent-blocked` with
+Fable to exercise its actual Opus worker contract.
+
 Unavailable authentication, unsupported models, and incomplete runs are errors;
 no fallback model is configured. Native host behavior is part of this evaluation.
 

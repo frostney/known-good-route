@@ -18,6 +18,7 @@ export function createEvalTools(
   ledger: RunLedger,
 ) {
   const evidence = { ...evalCase.fixture.evidence };
+  const actionResponses = { ...evalCase.fixture.actionResponses };
   return {
     loadSkill: tool({
       description:
@@ -120,13 +121,18 @@ export function createEvalTools(
         const occurrence = ledger.actions.filter(
           (a) => a.action === action,
         ).length;
-        const response = evalCase.fixture.actionResponses?.[action];
+        // A transition changes future responses, not the result of its trigger.
+        const response = actionResponses[action];
         for (const transition of evalCase.fixture.transitions ?? []) {
-          if (
-            transition.after === action &&
-            (transition.occurrence ?? 1) === occurrence
-          )
+          if (transition.after !== action ||
+              (transition.editPath !== undefined &&
+               (action !== "file.edit" || data?.path !== transition.editPath))) continue;
+          const matchingOccurrence = transition.editPath === undefined ? occurrence :
+            ledger.actions.filter(a => a.action === "file.edit" && a.data?.path === transition.editPath).length;
+          if ((transition.occurrence ?? 1) === matchingOccurrence) {
             Object.assign(evidence, transition.evidence);
+            Object.assign(actionResponses, transition.actionResponses);
+          }
         }
         return {
           ok: true,

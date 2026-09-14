@@ -73,6 +73,13 @@ Keep independent review judgment. Never weaken coverage or hide a failure to
 obtain a pass. Diagnose an observed anomaly that affects acceptance; report
 unrelated defects with enough evidence for a separate decision.
 
+Write regression tests for observable behavior or consequential invariants,
+with expectations derived from requirements. A correct refactor or equivalent
+instruction rewrite should not break them. Avoid copying implementation logic
+or asserting prose, private calls and source tokens as proof of behavior.
+Validate fixture preconditions so a failed setup cannot masquerade as a product
+failure. Keep structural/schema checks distinct from behavioral acceptance.
+
 A requested check or recorded action without a returned result remains
 unverified. Keep implementation, local validation, external validation and
 publication status distinct. Read a gate result before performing the dependent

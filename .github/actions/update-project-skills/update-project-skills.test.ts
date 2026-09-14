@@ -10,6 +10,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { parse } from "yaml";
 
@@ -23,7 +24,7 @@ import {
 } from "./update-project-skills.mjs";
 
 const temporaryDirectories: string[] = [];
-const repositoryRoot = new URL("../../..", import.meta.url).pathname.replace(/\/$/, "");
+const repositoryRoot = sourceCheckoutRoot(import.meta.url);
 // Publication cases use real local clones, fetches and pushes (over 100 Git
 // processes for an update). Their successful runtime approaches Bun's default
 // five-second limit; keep a bounded allowance for process and filesystem load.
@@ -35,6 +36,10 @@ function runGit(root: string, args: string[]) {
     throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
   }
   return result.stdout.trim();
+}
+
+function sourceCheckoutRoot(moduleUrl: string) {
+  return runGit(fileURLToPath(new URL(".", moduleUrl)), ["rev-parse", "--show-toplevel"]);
 }
 
 async function makeRepository(skillsRoot = ".", skillName = "example-skill") {
@@ -156,6 +161,19 @@ afterEach(async () => {
 });
 
 describe("project inventory validation", () => {
+  test("locates source checkout from a nested module URL with spaces and a hash", async () => {
+    const parent = await realpath(await mkdtemp(join(tmpdir(), "kgr-source-root-")));
+    temporaryDirectories.push(parent);
+    const root = join(parent, "checkout with spaces #hash");
+    const moduleDirectory = join(root, "fixtures/deeply/nested/action/source");
+    await mkdir(moduleDirectory, { recursive: true });
+    runGit(root, ["init", "--initial-branch=main"]);
+    await writeFile(join(root, "package.json"), '{"name":"source-checkout"}\n');
+    const actual = sourceCheckoutRoot(pathToFileURL(join(moduleDirectory, "update-project-skills.test.ts")).href);
+    expect(actual).toBe(root);
+    expect(JSON.parse(await readFile(join(actual, "package.json"), "utf8"))).toEqual({ name: "source-checkout" });
+  });
+
   test("validates canonical root and nested inventories", async () => {
     const rootFixture = await makeRepository();
     const nestedFixture = await makeRepository("paddy");

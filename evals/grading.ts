@@ -1,4 +1,5 @@
 import { hasSkillCitation } from "./skill-citation.ts";
+import { toolReceiptSchema } from "./tool-receipts.ts";
 import type {
   ActionName,
   EvalCase,
@@ -45,6 +46,50 @@ export function gradeRun(
     };
   const checks: GradeCheck[] = [];
   const expected = evalCase.expected;
+  if (expected.requiredCurrentGates) {
+    const contract = expected.requiredCurrentGates;
+    const current = new Set<ActionName>();
+    let actionIndex = 0;
+    for (const [eventIndex, event] of ledger.events.entries()) {
+      if (event.kind !== "action") continue;
+      const action = ledger.actions[actionIndex++];
+      if (!action || action.action !== event.name) {
+        checks.push({ name: "current gate ledger", passed: false, detail: "Action and event ledgers disagree." });
+        break;
+      }
+      if (action.action === "file.edit" &&
+          !(typeof action.data?.path === "string" && contract.ignoreEditPaths?.includes(action.data.path)))
+        current.clear();
+      const gate = contract.gates.find(g => g.action === action.action);
+      if (gate) {
+        current.delete(gate.action);
+        // Only the fixture's captured successful response renews a gate.
+        // Candidate prose, acknowledgments and requested actions are not results.
+        for (const raw of ledger.toolReceiptVersion === 1 ? ledger.toolReceipts ?? [] : []) {
+          const parsed = toolReceiptSchema.safeParse(raw);
+          if (!parsed.success) continue;
+          const receipt = parsed.data;
+          if (receipt.state !== "completed" || receipt.eventStart !== eventIndex ||
+              receipt.eventEnd !== eventIndex + 1 || receipt.response.isError) continue;
+          const params = receipt.request.params as { name?: string; arguments?: { action?: string } } | undefined;
+          if (receipt.request.method !== "tools/call" || params?.name !== "performAction" ||
+              params.arguments?.action !== gate.action || receipt.response.content.length !== 1) continue;
+          try {
+            const result = JSON.parse(receipt.response.content[0]!.text);
+            if (result.ok === true && result.isolated === true && result.result === gate.result)
+              current.add(gate.action);
+          } catch { /* A malformed response does not establish a gate result. */ }
+        }
+      }
+      if (contract.before.includes(action.action)) {
+        const missing = contract.gates.filter(g => !current.has(g.action)).map(g => g.action);
+        checks.push({ name: `current gates before ${action.action}`, passed: missing.length === 0,
+          detail: `event=${eventIndex}; missing=${missing.join(",")}` });
+      }
+    }
+    if (actionIndex !== ledger.actions.length)
+      checks.push({ name: "current gate event coverage", passed: false, detail: "Some recorded actions have no matching event." });
+  }
   for (const requirement of expected.requiredSkillCitations ?? [])
     checks.push({
       name: `${requirement.skill} source citation`,
@@ -445,6 +490,11 @@ export function validateCases(
   const ids = new Set<string>();
 
   for (const evalCase of cases) {
+    const currentGates = evalCase.expected.requiredCurrentGates;
+    if (currentGates && (!currentGates.before.length || !currentGates.gates.length ||
+        new Set(currentGates.gates.map(g => g.action)).size !== currentGates.gates.length ||
+        currentGates.gates.some(g => !g.result.trim())))
+      throw new Error(`${evalCase.id}: invalid current-gate contract`);
     if (ids.has(evalCase.id)) {
       throw new Error(`Duplicate eval case id: ${evalCase.id}`);
     }
@@ -473,12 +523,16 @@ export function validateCases(
     for (const skill of evalCase.expected.discoverySkills ?? [])
       if (!availableSkills.has(skill))
         throw new Error(`${evalCase.id}: unknown discovery skill ${skill}`);
-    for (const transition of evalCase.fixture.transitions ?? [])
+    for (const transition of evalCase.fixture.transitions ?? []) {
       if (
         !Number.isSafeInteger(transition.occurrence ?? 1) ||
         (transition.occurrence ?? 1) < 1
       )
         throw new Error(`${evalCase.id}: invalid transition occurrence`);
+      if (transition.editPath !== undefined &&
+          (transition.after !== "file.edit" || typeof transition.editPath !== "string" || !transition.editPath.trim()))
+        throw new Error(`${evalCase.id}: invalid transition edit path`);
+    }
     for (const response of Object.values(
       evalCase.fixture.actionResponses ?? {},
     ))

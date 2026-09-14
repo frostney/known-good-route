@@ -6,7 +6,7 @@ import type { EvalCase, RunLedger } from "./types.ts";
 import { evalCases } from "./cases.ts";
 test("synthetic full revisions are valid SHA-1 lengths and do not override concrete case revisions", () => {
   for (const c of evalCases) {
-    const evidence = JSON.stringify(c.fixture.evidence);
+    const evidence = JSON.stringify(c.fixture);
     for (const match of evidence.matchAll(/\b[0-9a-f]{41,}\b/g))
       throw new Error(`${c.id}: malformed synthetic full revision ${match[0]}`);
     expect(evidence).not.toContain("unless another concrete revision");

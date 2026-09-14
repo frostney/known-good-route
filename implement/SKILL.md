@@ -1,131 +1,84 @@
 ---
 name: implement
 description: >-
-  Implements a GitHub issue or unfiled idea through investigation, approach
-  selection, validation, and PR handoff. Use when asked to implement an issue
-  or build a feature, or when the user runs /implement.
+  Develops a GitHub issue or idea until its requirements and fidelity criteria
+  are verified. Use when asked to implement a change or run /implement.
 license: Unlicense OR MIT
 compatibility: >-
-  Requires git and authenticated GitHub CLI access for issues and PR handoff.
-  Network access is needed for forge operations and current external evidence. An unresolved non-automatic comparison requires the
-  registered grilling skill.
+  Requires git and authenticated GitHub access when an issue supplies the scope.
+  Network access is needed for forge operations and current external evidence.
+  An unresolved non-automatic comparison requires the registered grilling skill.
   Verification uses the project's declared commands and completion contracts.
 ---
 
 # Implement
 
-Establish the requested outcome, then deliver the smallest complete change in
-the current repository. Issues and ideas share the same implementation and
-completion workflow; only their starting evidence differs.
+Develop the smallest complete change that satisfies the agreed requirements.
+Reuse settled scope, approach and authorization; ask only for a material
+unresolved choice after completing independent work. User instructions override
+skill defaults. If a skill requires a pause, identify its loaded file and rule.
 
-Reuse settled decisions and authorization. Ask only for a material unresolved
-choice or new authority, after completing independent authorized work. If a
-skill requires a pause, link its loaded file, quote the rule and explain what
-is missing. User instructions override skill defaults.
+## Establish the work
 
-## Resolve the input
+Infer the target from the request, conversation, handoff and repository; no
+issue/idea selector is required. Verify an identified issue's repository,
+requirements, comments, readiness and current state. A failed lookup does not
+make it an unfiled idea. For a described outcome, search for matching work and
+reuse its decisions. Otherwise establish a concise mini-spec with the outcome,
+scope, constraints and testable success measures; do not file an issue merely
+to implement it. Resolve conflicting or ambiguous targets before editing.
 
-Use `/implement` with an optional number, URL, or description. Infer the intended
-work from the request, conversation, handoff, and current repository context;
-no issue/idea selector is required. Reuse an established target without asking
-the user to restate it.
+Read project instructions, relevant code, tests and durable decisions. Use the
+nearest Definitions of Ready and Done; if absent after a real search, use the
+workflow's checks and declared project commands and record the acceptance gap.
+Inspect the selected toolkit's overall capabilities before adding machinery.
+Run the named reproduction or inspect the artifact. If an issue is already
+fixed, verify its current behavior and regression coverage rather than duplicate
+it; add missing coverage when that is the remaining requirement.
 
-- For an issue identified by context, number, or URL, verify its repository and
-  identity in GitHub, fetch comments and labels, and check that it is open,
-  implementation-ready, and not a PR, duplicate, blocked, or rejected item.
-  Use its explicit requirements as the contract. A failed lookup does not
-  establish that the request is unfiled work.
-- For a described outcome, search the issue tracker for that outcome, not just
-  its mechanism. Reuse matching decisions and acceptance criteria; extend
-  partial work instead of duplicating it. When no matching issue exists, draft
-  a concise provisional mini-spec that preserves the complete outcome,
-  scope/non-goals, constraints, and testable success measures. Confirm it after
-  any needed approach selection, reusing an already confirmed spec. Do not file
-  an issue merely to use this skill.
-- Resolve stale or conflicting context against current evidence before editing.
-  Ask only when inspection cannot resolve the intended target or scope; do not
-  guess among multiple plausible outcomes or ask merely for a mode label.
+Reuse a settled approach after checking it against current evidence. Research
+primary sources when a decision depends on current external facts and reconcile
+them with the installed version. For an unresolved material choice or requested
+comparison, read [references/approach-selection.md](references/approach-selection.md).
+It owns comparison evidence and the registered `grilling` loop. Explicit
+`automatic` mode skips that interview while preserving investigation and the
+user's ownership of material product, architecture, security or scope choices.
+Required evidence or a conclusively failed readiness threshold blocks dependent
+work, not independent investigation or an established in-scope correction.
 
-## Establish evidence and select the approach
+## Develop and verify
 
-Read applicable project instructions, vision, contribution guidance, Definitions
-of Ready and Done, relevant domain skills, affected code, tests, and related
-work. Treat the nearest applicable `DEFINITION_OF_READY.md` and
-`DEFINITION_OF_DONE.md` as canonical. If either is absent after a real search,
-use the workflow's built-in checks and the repository's declared commands;
-record any resulting acceptance gap. Resolve a material vision conflict before
-dependent work. Inspect the selected toolkit's overall capabilities and consumer
-guidance before adding build, test or workflow machinery. Reuse existing
-extension points and respect architectural constraints.
+Keep this loop local to development. `/deliver` owns end-to-end delivery;
+`/create-pr` owns publication. Reuse the confirmed requirements and approach.
 
-Trace the behavior from entry point to symptom and run the named reproduction
-or artifact when possible. For an issue that no longer reproduces, report an
-already-fixed and covered result with code/commit and test evidence. If only
-regression coverage is missing, add that test; include still-affected sibling
-paths only when they share the root cause.
+1. Reuse or create a focused branch/worktree under `git-workflow`. Apply its
+   clean-worktree and fresh-base gate before new work; preserve owned in-progress
+   changes when resuming the same implementation.
+2. Implement the smallest complete change, then run and inspect the real result.
+   For UI/UX work, compare affected states with the requested appearance,
+   interactions and fidelity; include relevant accessibility and viewports.
+   Run focused developer checks while fixing observed gaps.
+3. Apply `/code-review fix-all` and `/test-against-spec fix`. Review the actual
+   change against the agreed requirements; test observable behavior against
+   explicit specification sources. Use their direct documented equivalents if
+   unavailable. Reuse matching evidence without repeating already-covered work.
+4. Repair every verified requirement gap, including visual or behavioral fidelity,
+   regardless of a finding's severity. Optional improvements outside the agreed
+   outcome do not become requirements. Any edit invalidates affected evidence:
+   repeat the necessary review, inspection and behavior checks until they agree
+   on the unchanged result. Own the final applicable Definition of Done and
+   project gate; run only its missing or invalidated checks.
 
-When implementation or approach selection depends on current external facts,
-research and record relevant official or primary evidence before making that
-decision. Reconcile it with installed versions; remembered links are only search
-leads. Repository evidence is sufficient when no decision depends on external
-facts. If required external evidence is unavailable, stop the dependent work;
-also stop when a required prototype or readiness threshold conclusively fails.
+A failed check, diagnosis or available fix does not end implementation. Continue
+safe in-scope repair; reconsider an approach that is not advancing acceptance.
+If required behavior needs an unavailable exact-revision preview, return the
+specific publication need to the active delivery or PR caller, which owns that
+operation and resumes testing afterward. A standalone implementation asks only
+for the missing authority or environment after completing independent work.
 
-Reuse the user's settled scope and approach, including a selected retrospective
-action or durable decision. Check it against current evidence, then implement
-without reopening the choice. When a material choice remains or the user asks
-to explore alternatives, read
-[references/approach-selection.md](references/approach-selection.md). It owns
-the shared comparison evidence and actual `grilling` loop. Present the
-comparison directly in conversation.
-
-Automatic mode applies when the user explicitly requests `automatic`. It skips
-the `grilling` loop, but does not waive investigation or other gates. When a
-comparison is needed, select its evidence-backed recommendation after completing
-the decision-relevant checks. A material product, architecture, security, scope, or vision decision requires
-the user. For an idea, establish its final mini-spec before editing.
-
-## Implement and complete
-
-After selection, keep implementation active through questions, corrections
-and failed checks. Diagnose and repair fixable in-scope blockers. Reconsider
-an ineffective approach without silently changing the agreed outcome.
-
-1. Reuse or create a focused branch/worktree and apply `git-workflow`'s clean
-   worktree and freshly fetched remote-default synchronization gate before
-   editing.
-2. Implement the smallest complete change at the correct layer. Update tests
-   and docs required by the issue or mini-spec and project contracts.
-3. For UI/UX work, inspect the rendered states against the requested appearance
-   and behavior. Cover relevant accessibility, viewports, themes and design
-   conventions; retain useful before/after evidence for review.
-4. Run targeted checks during development. Fix failures without weakening a
-   check.
-5. Run `/code-review fix-all` against the requirements, Definition of Done,
-   project conventions, branch diff, and reproducible behavior. Resolve every
-   validated in-scope finding. If a material decision or unavailable evidence
-   prevents resolution, explain the blocker. If the skill is unavailable,
-   perform the same bounded review and fix pass directly.
-6. Run `/test-against-spec fix`, or its direct black-box equivalent when
-   unavailable. Use explicit requirements, never source as proof. Prefer a
-   preview tied to the exact revision, otherwise use the local environment.
-   Record each requirement and its observed result or limitation.
-7. If step 5 or 6 changes the implementation or reports incomplete work,
-   continue implementing and restart at step 5. Repeat until review and behavior
-   testing pass on the same unchanged implementation. Stop and ask when required
-   behavior remains unverified after exhausting available environments, unless
-   the user accepts the limitation or requests a draft PR to obtain a missing
-   preview.
-8. Own the final applicable Definition of Done and repository gate. Reuse a
-   passing result for the same content, command, environment, and covered
-   requirements; run only missing or invalidated checks. If fixing a gate
-   failure changes the implementation, return to step 5. Do not duplicate a
-   broad gate inside the behavior-testing step.
-9. Invoke `/create-pr` with the current contract, delivered outcome, and
-   observed completion evidence. Include `Closes #<issue>` only for an issue
-   whose requirements the change completes.
-
-Finish when the agreed outcome and applicable gates are satisfied. An earlier
-return needs an external blocker after safe alternatives are exhausted, or a
-material decision or new authority. A diagnosis or available fix alone does not
-end the implementation; unrelated improvements do not extend its scope.
+Return the implemented result and observed requirement evidence to the caller.
+Finish when every verified requirement gap is resolved and applicable gates
+pass. Report unresolved required behavior as incomplete, never waive it because
+its finding is low severity. A material unresolved decision, new authority or
+external blocker after safe alternatives are exhausted can stop dependent work;
+unrelated improvements do not extend the task.

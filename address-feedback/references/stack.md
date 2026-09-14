@@ -81,6 +81,11 @@ arguments so the adapter can select the newest edited account-scoped wait.
    complete integrated tree until both pass on the same unchanged content, then
    establish the project's declared gate using matching current results. Stop for a material product, architecture,
    security, compatibility, or scope decision.
+   If required behavior can only be exercised on a PR preview, complete the
+   available checks and use step 9 to publish the necessary draft fix layer,
+   explicitly retaining the missing preview evidence. Test its exact revision
+   and resume this loop before readiness. Further repairs still respect frozen
+   members; append a new fix layer when the published member is already frozen.
 9. Enforce the native-stack reference's push-boundary checks for the frozen
    prefix and new branch. Use its protected `gh stack push` followed by separate
    PR creation and native append procedure; preserve the frozen PR heads and
