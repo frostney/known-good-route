@@ -67,3 +67,11 @@ Every worker returns:
 `complete` applies only to the lane. The parent reconciles the envelope against
 the parent objective, integrates it, and continues until the parent terminal
 check passes.
+
+Before starting a worker, identify its actual model from host metadata. Deliver
+the applicable role, scope, authority, completion condition, and required skill
+contents or reachable reference paths; naming a skill is not proof of delivery.
+Record the resources the worker actually loaded and any missing capability in
+its result. An isolated worker must not assume parent conversation or loaded
+skills are inherited. Keep model-specific settings at the host boundary and
+apply them only to the actual worker when supported by evidence.

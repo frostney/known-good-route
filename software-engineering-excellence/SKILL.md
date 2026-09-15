@@ -1,184 +1,135 @@
 ---
 name: software-engineering-excellence
 description: >-
-  Applies the user's ambient engineering bar: objective retention, current
-  evidence, complete in-scope solutions, reuse, real validation,
-  maintainability-governed performance, and fast developer feedback. Use when
-  planning, orchestrating, implementing, debugging, reviewing, refactoring,
-  architecture, release delivery, or substantial technical investigation.
+  Apply the user's engineering standards during substantial technical work:
+  preserve scope, use current evidence, and complete authorized outcomes.
 license: Unlicense OR MIT
 ---
 
 # Software engineering excellence
 
-Leave the system more maintainable and the next change easier. Find simple
-solutions for complex problems, but no shortcuts. Maintainability governs
-tradeoffs, including performance work. Lead with questions that reveal the
-problem's real shape before selecting implementation mechanics.
-A better question separates the desired outcome, hard constraints, and observed
-failure from the mechanism currently being discussed; its answer can change the
-solution rather than merely select details within it.
+Carry the user's intent to a verified result with less steering and rework.
+Maintainability governs tradeoffs. Establish the requested outcome, constraints
+and acceptance criteria before choosing implementation mechanics; reuse settled
+answers instead of reopening them.
 
-## Working standard
+## Discover and choose the right layer
 
-1. **Ground in current reality.** Read applicable instructions, source,
-   project-defined commands, primary specifications, and durable decisions.
-   Treat issue text, comments, tests, docs, and prior notes as leads until
-   verified. Run the named reproduction or artifact when possible, then act.
-2. **Reuse by meaning.** Search for existing helpers, patterns, definitions, and
-   vocabulary. Reuse when semantics match; do not abstract merely similar shapes.
-3. **Solve the complete in-scope problem.** Cover real success, failure, and
-   state-transition paths. Fix blockers that invalidate the requested result;
-   report unrelated findings without absorbing them into scope.
-4. **Validate the real bar.** Observe every claimed pass, number, behavior, and
-   action in the current run. Reproduce defects when possible, add meaningful
-   regression coverage, and run the repository's relevant gate. Never weaken a
-   gate to obtain green output. When a gate fails, diagnose the failure, using
-   the registered `diagnosing-bugs` skill when available. Report the diagnosis
-   and evidence before changing code. If the failure blocks the requested result
-   or belongs to its authorized scope, fix it and verify the fix; otherwise
-   report it to the user without absorbing it into the current change. An
-   anomaly observed while validating, such as a flaky line, a one-in-N
-   artifact, or an unexplained timeout, is a defect report rather than a
-   footnote: diagnose it or file it; never resolve it by documenting it.
-5. **Protect performance throughout delivery.** Treat product runtime and the
-   developer feedback loop as design inputs from the first investigation, not
-   as a final optimization pass. Find the relevant critical path, measure when
-   the trigger below applies, and prevent unexplained regressions.
-6. **Make every surface earn its cost.** Add only code, tests, fallbacks,
-   abstractions, or tools with a real caller, requirement, or failure mode.
-   Remove unused surfaces. Inline a non-exported function with one call site
-   unless its name carries a decision the caller reads better with, or its
-   contract is worth testing on its own.
-7. **Respect authority boundaries.** Diagnosis, review, and planning authorize
-   assessment; change requests authorize reversible in-scope implementation and
-   relevant validation. Pause only for a material product, architecture,
-   security, compatibility, or scope choice that evidence cannot resolve.
+Read applicable project instructions, relevant code, tests and durable decisions.
+Run the named reproduction or inspect the requested artifact when possible.
+Treat historical notes and issue descriptions as leads to verify.
 
-## Active implementation completion
+Before replacing a selected toolkit's capabilities, inspect its overview and
+consumer guidance as well as the immediate subcommand. Reuse project build,
+test, formatting and workflow commands. Add an adapter only for a demonstrated
+missing capability. Generic execution mechanics belong in the harness or a
+reusable helper; product-specific contracts belong in the repository.
 
-After a user authorizes implementation, keep that objective active across
-status questions, failure diagnoses, corrections, compaction, and validation
-failures. A narrower constraint, such as prohibiting a paid evaluation, narrows
-the available route without blocking safe offline work.
+Make the smallest complete change at the layer that owns the behavior. Preserve
+required success, failure and transition paths. Include blockers that invalidate
+the requested result; keep unrelated improvements outside its completion bar.
+For multi-layer systems, establish a thin runnable path and deepen it in working
+increments. Follow native language idioms and the project's conventions.
 
-Treat each later message as a change to the active workstream, not as an
-automatic replacement for it. Added context and answers update the affected
-obligation. A correction replaces only the corrected fact, assumption, method,
-or decision. A question or status request is answered while remaining work
-continues. End or replace scope only when the user does so semantically; route a
-genuinely separate outcome to a separate lane without losing the parent.
+## Continue the authorized work
 
-Before returning control, establish one terminal condition:
+Implementation authority persists across questions, corrections, diagnoses,
+worker returns and compaction. Update the affected decision or requirement while
+retaining the parent objective. A question calls for an answer; it does not
+silently cancel the remaining work. Follow an explicit change of direction.
 
-- the authorized outcome is complete with observed evidence;
-- an external blocker remains after safe in-scope alternatives are exhausted;
-- the next action requires new authority or a material unresolved decision.
+When a check fails, diagnose it and fix an established in-scope cause. Use the
+registered `diagnosing-bugs` skill when available and relevant. An unstable
+benchmark blocks accepting a speedup while permitting authorized diagnosis and
+repair. After a correction, revisit the failed assumption and take the practical
+next action; reconsider the strategy if repeated work is not advancing the goal.
 
-If none applies, take the next safe in-scope action. A diagnosis, recommended
-fix, failed experiment, or known implementation gap is not a terminal result.
-When a handoff is required, record the active outcome, authorized and prohibited
-actions, current evidence, and next safe executable action. For multi-turn work,
-compaction risk, external waits, or multiple workers, use the lightweight
-[workstream continuity contracts](references/workstream-continuity.md).
+Return control when the requested outcome is verified, safe in-scope progress
+is exhausted by an external blocker, or a material unresolved decision or new
+authority is needed. A known available fix is not a reason to stop. Complete
+independent authorized work before asking. When a skill requires a pause, link
+the exact loaded file, quote its rule and explain the missing decision or
+permission. User instructions and existing authorization override skill defaults.
 
-For genuinely multi-layer work, establish a thin runnable path and deepen it in
-increments. Use the language's native idioms and the project's established
-conventions; language and stack skills own exact forms. Write a comment only for
-what the code cannot state: a constraint, a failure mode, an external behavior,
-or a rejected alternative and why. Never restate a name, signature, type, or
-control flow; when a name fails to carry the fact, improve the name instead of
-commenting. This rule outranks matching the surrounding comment density. Record
-provenance such as issue numbers, dates, or verification notes only where the
-fact would be wrong without it, never to record that a change happened.
+Assessment-only work can finish with findings; it does not authorize remediation.
+Stop adding work once the agreed acceptance criteria hold. For resumable work,
+record the active outcome, settled decisions, authority, evidence, remaining
+obligations and next executable action. Use
+[references/workstream-continuity.md](references/workstream-continuity.md) when
+multiple turns, external waits or workers require an explicit handoff.
 
-## Performance throughout delivery
+## Verify the requested result
 
-Performance includes the shipped system and the speed of producing trustworthy
-changes.
+Use explicit requirements and the project's declared gates. Inspect the real
+interface or artifact for claimed behavior. Qualitative acceptance requires
+judgment against the user's reference or criteria; test counts, performance
+metrics and a worker's success report do not establish the whole outcome.
 
-- For the product, consider relevant latency, throughput, startup, memory,
-  allocation and garbage collection, I/O, network or FFI work, concurrency, and
-  resource cost.
-- For the feedback loop, consider dependency setup, builds, local startup and
-  reload, code generation, focused checks, tests, typechecks, lint and format
-  checks, pre-commit hooks, CI queue and execution time, and preview or deploy
-  feedback. Measure the full time from making an edit to getting reliable
-  evidence that the change works, not just one fast command in a slow sequence.
-- Keep fast, high-signal checks early. Use correct incremental work, focused
-  commands, caching, parallelism, and shared results where they reduce the
-  critical path. Do not gain speed by weakening coverage, skipping hooks,
-  hiding failures, or making local and CI behavior disagree.
-- Consider these costs on every change. Measure a representative baseline and
-  the changed result when work touches a frequent or latency-sensitive path, a
-  command or hook, local startup or reload, CI structure, concurrency, an
-  external operation, material resource use, or any performance claim.
-- Record the workload, environment, warm or cold state when relevant, samples,
-  and statistic that supports the decision. Compare like with like. A single
-  favorable run or the word `faster` is not evidence.
-- Treat an unexplained material regression in product behavior or developer
-  feedback as a defect. Diagnose flakiness, retries, serialization, duplicated
-  work, and queue delay because unreliable feedback is also slow feedback.
+Use focused checks while editing. The caller owns the final aggregate gate;
+subskills contribute applicable evidence without rerunning it. Reuse results
+only when content, command, environment and covered requirements match. Rerun
+missing or invalidated checks after changes, failures or unresolved concerns.
+Keep independent review judgment. Never weaken coverage or hide a failure to
+obtain a pass. Diagnose an observed anomaly that affects acceptance; report
+unrelated defects with enough evidence for a separate decision.
 
-Maintainability remains the governor. Prefer the clearest simple design that
-meets the measured need. A demonstrated bottleneck may justify contained
-complexity when the gain matters at representative scale and the change has a
-clear contract, regression coverage, and a maintained measurement. Do not add
-complexity for a speculative speedup or a benchmark that does not transfer to
-real use.
+Write regression tests for observable behavior or consequential invariants,
+with expectations derived from requirements. A correct refactor or equivalent
+instruction rewrite should not break them. Avoid copying implementation logic
+or asserting prose, private calls and source tokens as proof of behavior.
+Validate fixture preconditions so a failed setup cannot masquerade as a product
+failure. Keep structural/schema checks distinct from behavioral acceptance.
 
-## Context boundaries
+A requested check or recorded action without a returned result remains
+unverified. Keep implementation, local validation, external validation and
+publication status distinct. Read a gate result before performing the dependent
+action. Capture shell exit status before another command can overwrite it.
 
-When one conversation coordinates a chain of two or more substantial
-deliverables, keep that conversation thin. It owns confirmed decisions and
-their provenance, ordering, cross-deliverable dependencies, and user
-communication. Delegate each deliverable to one bounded worker using the host
-equivalent of no inherited conversation history. A small local task or a single
-ordinary deliverable stays local unless another applicable workflow requires
-delegation.
+## Performance and maintainability
 
-Give a worker only the applicable selected decisions and contracts, repository
-and issue or pull-request identity, exact starting state, owned scope,
-dependencies, required behavior, and gates. Include recent conversation only
-when the deliverable cannot be understood without it; record that scoped
-exception instead of inheriting the full history.
+Consider both product performance and time from an edit to trustworthy feedback.
+Measure representative before/after behavior for performance claims or changes
+to frequent, latency-sensitive or resource-intensive paths, tooling, hooks,
+startup, concurrency or external operations. Include workload, environment,
+warm/cold state, samples and comparison statistic. For a PR, compare the target
+branch baseline with the PR candidate under matching conditions and identify
+both revisions. Do not claim gains where
+measurements overlap or extrapolate a microbenchmark beyond its workload.
 
-Require one terminal summary per worker: outcome, changed repository, issue, or
-pull-request state, exact validation evidence, blockers or contradictory
-evidence, and facts needed by a dependent deliverable. Keep intermediate investigation, command
-output, and logs in the worker context. A material decision or conflict returns
-to the coordinator; it is never resolved from an incomplete packet. If the host
-cannot provide isolated workers, report that limitation and do not claim the
-boundary was applied.
+Reduce duplicate work with correct incremental checks, caching and shared
+results. Preserve coverage and hooks. Diagnose material regressions, including
+flakiness, retries, queue delay and redundant validation. Complexity needs a real
+caller or demonstrated benefit, a clear contract and relevant regression
+coverage. Comments should explain constraints or decisions the code cannot
+express; improve unclear names rather than narrating implementation.
 
-A worker's `complete` state closes only its lane. The coordinator integrates the
-result, recomputes the parent's open obligations, and continues until the parent
-reaches its own terminal condition.
+## Coordinating deliverables
 
-An applicable orchestrator such as `milestone-rush` retains ownership of its
-more specific worker, checkpoint, integration, and telemetry contract.
+For a chain of substantial deliverables, the coordinator owns confirmed
+decisions, dependencies, integration and user communication. Use bounded workers
+when the task and available host support delegation; keep small ordinary work
+local. An applicable orchestrator owns its more specific coordination contract.
 
-## Evidence and communication
+Give each worker the selected decisions, repository and work-item identity,
+starting state, owned scope, dependencies, required behavior and gates. Prefer
+an isolated context; include recent conversation only when needed to understand
+the deliverable. Request an outcome, changed state, observed validation,
+limitations and facts needed by dependent work. Keep investigation logs local
+to the worker. Bring material choices or conflicting evidence to the coordinator.
 
-Ground progress and completion in current source or tool evidence. Report
-material outcomes, limitations, and blockers without narrating routine activity.
-Finish with the outcome first and enough evidence for a reader who did not see
-the work trace.
+Verify and integrate the returned result. Worker completion closes its lane,
+not the parent objective. Continue the parent's remaining authorized work.
+If isolated workers are unavailable, disclose the limitation and use an allowed
+local route; do not claim delegation occurred or invent unavailable telemetry.
 
-Capture an exit code into a variable before any other command runs; a `$(...)`
-substitution on the same line overwrites `$?`. Read a gate's result before
-running the command that depends on it; never batch the read and the dependent
-action in one invocation.
+## Communication and situational depth
 
-After a correction, re-ground, identify the failed assumption, and make the
-smallest change that restores the contract. Do not compensate with broader
-scope, tooling, or framework churn.
-
-## Situational depth
+Lead with the outcome and decision-relevant evidence. Keep uncertainty and
+blockers explicit without narrating routine activity. Choose references by need:
 
 - [references/structural-delivery.md](references/structural-delivery.md):
-  architecture, greenfield, and deciding the correct layer.
+  architecture, greenfield work and selecting the correct layer.
 - [references/investigation.md](references/investigation.md): defect diagnosis,
-  design evaluation, and source comparisons.
-- [references/barometer.md](references/barometer.md): periodic direction check,
-  not a score.
+  design evaluation and source comparisons.
+- [references/barometer.md](references/barometer.md): check direction when the
+  strategy needs reconsideration; it is not a score or mandatory ceremony.

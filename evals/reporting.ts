@@ -6,18 +6,22 @@ function tableCell(value: string): string {
 
 export function renderSummary(records: EvalRunRecord[]): string {
   const passed = records.filter((record) => record.grade.passed).length;
+  const discovery = records.flatMap((r) =>
+    r.grade.checks.filter((c) => c.category === "discovery"),
+  );
   const lines = [
     "# Skill eval results",
     "",
     `Passed **${passed}/${records.length}** rows.`,
+    `Discovery diagnostics: ${discovery.filter((c) => c.passed).length}/${discovery.length}; reported separately from outcome/contract grades.`,
     "",
-    "| Model | Case | Run | Result | Tokens |",
-    "| --- | --- | ---: | --- | ---: |",
+    "| Model | Effort | Case | Run | Result | Tokens |",
+    "| --- | --- | --- | ---: | --- | ---: |",
   ];
 
   for (const record of records) {
     lines.push(
-      `| ${tableCell(record.model)} | ${tableCell(record.caseId)} | ${record.repetition} | ${record.grade.passed ? "PASS" : "FAIL"} | ${record.usage?.totalTokens ?? "n/a"} |`,
+      `| ${tableCell(record.model)} | ${tableCell(record.effort ?? "unspecified")} | ${tableCell(record.caseId)} | ${record.repetition} | ${record.error ? "ERROR" : record.grade.passed ? "PASS" : "FAIL"} | ${record.usage?.totalTokens ?? "n/a"} |`,
     );
   }
 

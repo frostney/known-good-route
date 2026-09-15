@@ -10,6 +10,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { parse } from "yaml";
 
@@ -23,7 +24,11 @@ import {
 } from "./update-project-skills.mjs";
 
 const temporaryDirectories: string[] = [];
-const repositoryRoot = new URL("../../..", import.meta.url).pathname.replace(/\/$/, "");
+const repositoryRoot = sourceCheckoutRoot(import.meta.url);
+// Publication cases use real local clones, fetches and pushes (over 100 Git
+// processes for an update). Their successful runtime approaches Bun's default
+// five-second limit; keep a bounded allowance for process and filesystem load.
+const publicationTimeout = 30_000;
 
 function runGit(root: string, args: string[]) {
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
@@ -31,6 +36,10 @@ function runGit(root: string, args: string[]) {
     throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
   }
   return result.stdout.trim();
+}
+
+function sourceCheckoutRoot(moduleUrl: string) {
+  return runGit(fileURLToPath(new URL(".", moduleUrl)), ["rev-parse", "--show-toplevel"]);
 }
 
 async function makeRepository(skillsRoot = ".", skillName = "example-skill") {
@@ -152,6 +161,19 @@ afterEach(async () => {
 });
 
 describe("project inventory validation", () => {
+  test("locates source checkout from a nested module URL with spaces and a hash", async () => {
+    const parent = await realpath(await mkdtemp(join(tmpdir(), "kgr-source-root-")));
+    temporaryDirectories.push(parent);
+    const root = join(parent, "checkout with spaces #hash");
+    const moduleDirectory = join(root, "fixtures/deeply/nested/action/source");
+    await mkdir(moduleDirectory, { recursive: true });
+    runGit(root, ["init", "--initial-branch=main"]);
+    await writeFile(join(root, "package.json"), '{"name":"source-checkout"}\n');
+    const actual = sourceCheckoutRoot(pathToFileURL(join(moduleDirectory, "update-project-skills.test.ts")).href);
+    expect(actual).toBe(root);
+    expect(JSON.parse(await readFile(join(actual, "package.json"), "utf8"))).toEqual({ name: "source-checkout" });
+  });
+
   test("validates canonical root and nested inventories", async () => {
     const rootFixture = await makeRepository();
     const nestedFixture = await makeRepository("paddy");
@@ -419,7 +441,7 @@ describe("project refresh", () => {
       const second = await publishProjectSkills(options);
       expect(second.headSha).toBe(first.headSha);
     });
-  });
+  }, publicationTimeout);
 
   test("publishes nested inventories and rejects a different configured root", async () => {
     const publication = await makePublication("paddy");
@@ -429,7 +451,7 @@ describe("project refresh", () => {
       expect(result.pullRequestUrl).toBe("https://example.test/pull/1");
       expect(await readFile(join(publication.options.repositoryRoot, "paddy/.agents/skills/example-skill/reference.md"), "utf8")).toBe("published\n");
     });
-  });
+  }, publicationTimeout);
 
   test("updates an existing branch by a descendant commit and removes stale generated files", async () => {
     const publication = await makePublication();
@@ -452,7 +474,7 @@ describe("project refresh", () => {
       expect(runGit(bareRemote, ["ls-tree", "-r", "--name-only", second.headSha])).not.toContain("reference.md");
       expect(await readFile(join(options.repositoryRoot, ".agents/skills/example-skill/replacement.md"), "utf8")).toBe("second update\n");
     });
-  });
+  }, publicationTimeout);
 
   test("preserves an existing branch containing foreign changes", async () => {
     const publication = await makePublication();
@@ -469,7 +491,7 @@ describe("project refresh", () => {
       await expect(publishProjectSkills(options)).rejects.toThrow("Existing PR branch contains files outside");
       expect(runGit(bareRemote, ["rev-parse", options.branch])).toBe(original);
     });
-  });
+  }, publicationTimeout);
 
   test("rejects a patch with unrelated files before publishing", async () => {
     const publication = await makePublication();

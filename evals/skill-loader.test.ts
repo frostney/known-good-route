@@ -16,8 +16,8 @@ describe("skill loader", () => {
   test("discovers every top-level skill", async () => {
     const skills = await loadSkills(repositoryRoot);
 
-    expect(skills.size).toBe(28);
-    expect(skills.has("address-stack-feedback")).toBeTrue();
+    expect(skills.has("deliver")).toBeTrue();
+    expect(skills.has("address-feedback")).toBeTrue();
     expect(skills.has("agent-writing")).toBeTrue();
     expect(skills.has("agent-behavior-audit")).toBeTrue();
     expect(skills.has("code-review")).toBeTrue();
@@ -27,7 +27,16 @@ describe("skill loader", () => {
     expect(skills.has("maintain-project-skills")).toBeTrue();
     expect(skills.has("delivery-wait")).toBeTrue();
     expect(skills.has("run-retro")).toBeTrue();
-    expect(skills.has("render-html")).toBeTrue();
+    expect(skills.has("implement")).toBeTrue();
+    for (const removed of [
+      "implement-issue",
+      "implement-idea",
+      "address-pr-feedback",
+      "address-stack-feedback",
+      "render-html",
+    ]) {
+      expect(skills.has(removed)).toBeFalse();
+    }
     expect(skills.has("status-report")).toBeTrue();
     expect(skills.has("test-against-spec")).toBeTrue();
     expect(skills.has("typescript-stack")).toBeTrue();
@@ -55,6 +64,44 @@ describe("skill loader", () => {
     ).rejects.toThrow("escapes");
   });
 
+  test("consolidated skills retain their procedures in standalone copies", async () => {
+    const installationRoot = await mkdtemp(join(tmpdir(), "kgr-consolidated-"));
+    try {
+      for (const name of ["implement", "address-feedback"]) {
+        await cp(join(repositoryRoot, name), join(installationRoot, name), {
+          recursive: true,
+        });
+      }
+      const skills = await loadSkills(installationRoot);
+      expect(await validateSkillReferences(skills)).toEqual([
+        "address-feedback/references/pr-readiness.md",
+        "address-feedback/references/pr.md",
+        "address-feedback/references/stack-readiness.md",
+        "address-feedback/references/stack.md",
+        "implement/references/approach-selection.md",
+      ]);
+      const feedback = skills.get("address-feedback")!;
+      for (const mode of ["pr", "stack"]) {
+        const procedure = await readSkillReference(
+          feedback,
+          `references/${mode}.md`,
+        );
+        for (const match of procedure.matchAll(/\]\(([^)]+\.md)\)/g)) {
+          expect(
+            await readSkillReference(feedback, `references/${match[1]}`),
+          ).not.toBeEmpty();
+        }
+        for (const match of procedure.matchAll(/`(scripts\/[a-z_]+\.py)/g)) {
+          expect(
+            await Bun.file(join(feedback.directory, match[1]!)).exists(),
+          ).toBeTrue();
+        }
+      }
+    } finally {
+      await rm(installationRoot, { force: true, recursive: true });
+    }
+  });
+
   test("keeps the project-skills runbook inside a standalone skill copy", async () => {
     const installationRoot = await mkdtemp(
       join(tmpdir(), "kgr-installed-skills-"),
@@ -62,9 +109,13 @@ describe("skill loader", () => {
     const installedSkill = join(installationRoot, "maintain-project-skills");
 
     try {
-      await cp(join(repositoryRoot, "maintain-project-skills"), installedSkill, {
-        recursive: true,
-      });
+      await cp(
+        join(repositoryRoot, "maintain-project-skills"),
+        installedSkill,
+        {
+          recursive: true,
+        },
+      );
       const skills = await loadSkills(installationRoot);
       expect(await validateSkillReferences(skills)).toEqual([
         "maintain-project-skills/references/project-skills-runbook.md",
@@ -82,9 +133,7 @@ describe("skill loader", () => {
       );
       expect(runbook).toContain("`actions: read`");
       expect(runbook).toContain("full 40-character SHA");
-      expect(runbook).toContain(
-        ".github/workflows/update-project-skills.yml",
-      );
+      expect(runbook).toContain(".github/workflows/update-project-skills.yml");
       expect(runbook).toContain('skills-root: "."');
       expect(runbook).toContain('skills-root: "paddy"');
       expect(runbook).toContain("repair-find-skills: true");

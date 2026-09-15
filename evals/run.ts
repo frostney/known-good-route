@@ -1,131 +1,118 @@
-import { appendFile, mkdir } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
+import { freezeSnapshot } from "./snapshot.ts";
 import { dirname, resolve } from "node:path";
-import { ToolLoopAgent, stepCountIs } from "ai";
 import { evalCases } from "./cases.ts";
 import { gradeRun, validateCases } from "./grading.ts";
+import {
+  cancelLocalRuns,
+  defaultModels,
+  parseModel,
+  preflight,
+  runLocal,
+} from "./local-runtime.ts";
 import { renderSummary } from "./reporting.ts";
 import {
   formatSkillCatalog,
   loadSkills,
   validateSkillReferences,
 } from "./skill-loader.ts";
-import { createEvalTools } from "./tools.ts";
 import type { EvalRunRecord, RunLedger } from "./types.ts";
 
-const defaultModels = [
-  "openai/gpt-5.6-sol",
-  "anthropic/claude-fable-5",
-  "anthropic/claude-opus-5",
-] as const;
-
-interface CliOptions {
-  dryRun: boolean;
-  skillsRoot: string;
-  models: string[];
-  caseIds: string[];
-  repeat: number;
-  zdr: "enabled" | "disabled" | undefined;
-  output: string | undefined;
-}
-
-function readValues(args: string[], flag: string): string[] {
-  const values: string[] = [];
-  for (let index = 0; index < args.length; index += 1) {
-    if (args[index] === flag && args[index + 1]) {
-      values.push(args[index + 1] as string);
-      index += 1;
+export function parseCli(args: string[]) {
+  const values = new Map<string, string[]>();
+  const flags = new Set(["--dry-run"]);
+  const named = new Set([
+    "--model",
+    "--case",
+    "--effort",
+    "--skills-root",
+    "--repeat",
+    "--concurrency",
+    "--output",
+  ]);
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!;
+    if (arg === "--") continue;
+    if (flags.has(arg)) {
+      values.set(arg, []);
+      continue;
     }
+    if (!named.has(arg) || !args[i + 1] || args[i + 1]!.startsWith("--"))
+      throw new Error(`Invalid argument: ${arg}`);
+    values.set(arg, [...(values.get(arg) ?? []), args[++i]!]);
   }
-  return values;
-}
-
-function readSingleValue(args: string[], flag: string): string | undefined {
-  return readValues(args, flag).at(-1);
-}
-
-function parseCli(args: string[]): CliOptions {
-  const repeatValue = readSingleValue(args, "--repeat");
-  const repeat = repeatValue ? Number.parseInt(repeatValue, 10) : 1;
-  if (!Number.isInteger(repeat) || repeat < 1) {
-    throw new Error("--repeat must be a positive integer");
-  }
-  const zdr = readSingleValue(args, "--zdr");
-  if (zdr !== undefined && zdr !== "enabled" && zdr !== "disabled") {
-    throw new Error("--zdr must be enabled or disabled");
-  }
-
+  const last = (flag: string, fallback: string) =>
+    values.get(flag)?.at(-1) ?? fallback;
+  const positive = (flag: string) => {
+    const raw = last(flag, "1");
+    if (!/^[1-9]\d*$/.test(raw) || !Number.isSafeInteger(Number(raw)))
+      throw new Error(`${flag} must be a positive integer`);
+    return Number(raw);
+  };
+  const models = values.get("--model") ?? defaultModels;
+  models.forEach(parseModel);
+  const efforts = values.get("--effort") ?? ["medium"];
+  if (
+    efforts.some(
+      (effort) => !["low", "medium", "high", "xhigh", "max"].includes(effort),
+    )
+  )
+    throw new Error("Unsupported effort");
   return {
-    dryRun: args.includes("--dry-run"),
-    skillsRoot: resolve(readSingleValue(args, "--skills-root") ?? "."),
-    models: readValues(args, "--model"),
-    caseIds: readValues(args, "--case"),
-    repeat,
-    zdr,
-    output: readSingleValue(args, "--output"),
+    dryRun: values.has("--dry-run"),
+    models,
+    efforts,
+    caseIds: values.get("--case") ?? [],
+    skillsRoot: resolve(last("--skills-root", ".")),
+    repeat: positive("--repeat"),
+    concurrency: positive("--concurrency"),
+    output: resolve(
+      last(
+        "--output",
+        `.eval-results/${new Date().toISOString().replaceAll(":", "-")}.json`,
+      ),
+    ),
   };
 }
-
-function newLedger(): RunLedger {
-  return {
-    actions: [],
-    loadedSkills: [],
-    loadedReferences: [],
-    registeredSkillCalls: [],
-    inspections: [],
-    events: [],
-  };
+export function portableAgentInstructions(catalog: string) {
+  return `You are evaluating portable Agent Skills in an isolated fixture.\n\n${catalog}\n\nOnly the scenario prompt, fixture evidence, and skills loaded through fixture tools define the task and user preferences. Ambient personal or project instructions outside this fixture must not add work. Complete the user's task using only the fixture MCP tools. Their tool results are the authoritative simulated repository and external state. Use behaviorTest.run for real-interface behavior probes, codeReview.run for independent review, validation.focused for targeted developer checks, validation.run for the aggregate project gate, and validation.reuse for accepting recorded results without rerunning. Read-only metadata inspection uses inspectFixture. Every mutation, validation, user question, and delegation must be recorded through performAction; prose alone does not execute them. When requesting a user decision, call performAction with action user.ask and the concrete question before the final response; a final question alone does not enqueue a fixture question. The native final response is automatically observed as a report. Use a report action only for an intermediate decision packet that must precede another action. loadSkill and readSkillReference deliver real skill instructions. Before recording codeReview.run or behaviorTest.run, load the corresponding available code-review or test-against-spec skill unless already loaded; naming it in an action does not load its contract. inspectFixture with an unknown source lists available evidence sources. invokeRegisteredSkill executes a deterministic fixture, not a real external skill. Do not use the real filesystem, shell, network, or forge to act on the simulated task. Load a skill only when the request matches its description; if none applies, answer directly. Respect scoped authority and complete authorized work. Return the user-facing outcome without claiming effects the fixture did not report.`;
 }
-
-function portableAgentInstructions(catalog: string): string {
-  return `You are evaluating portable Agent Skills in an isolated fixture.
-
-${catalog}
-
-Complete authorized in-scope work through the available interfaces and relevant
-loaded guidance. Load a skill only when the request matches its catalog
-description; when none applies, answer directly without loading one. Respect
-approval and stop boundaries. Return the user-facing outcome without claiming
-external effects the tools did not report.`;
-}
-
-function selectedCases(caseIds: string[]) {
-  if (caseIds.length === 0) {
-    return evalCases;
-  }
-  const requested = new Set(caseIds);
-  const selected = evalCases.filter((evalCase) => requested.has(evalCase.id));
-  const missing = caseIds.filter(
-    (caseId) => !selected.some((evalCase) => evalCase.id === caseId),
-  );
-  if (missing.length > 0) {
-    throw new Error(`Unknown case ids: ${missing.join(", ")}`);
-  }
-  return selected;
-}
-
-function usageRecord(usage: {
-  inputTokens: number | undefined;
-  outputTokens: number | undefined;
-  totalTokens: number | undefined;
-}) {
-  return {
-    inputTokens: usage.inputTokens,
-    outputTokens: usage.outputTokens,
-    totalTokens: usage.totalTokens,
-  };
-}
-
-async function run(): Promise<void> {
+const emptyLedger = (): RunLedger => ({
+  actions: [],
+  loadedSkills: [],
+  loadedReferences: [],
+  registeredSkillCalls: [],
+  inspections: [],
+  events: [],
+});
+export async function run() {
   const options = parseCli(Bun.argv.slice(2));
-  const skills = await loadSkills(options.skillsRoot);
+  if (!options.dryRun && (process.env.CI || process.env.GITHUB_ACTIONS))
+    throw new Error(
+      "Live evals require an explicit local run; CI may use --dry-run only.",
+    );
+  let skills = await loadSkills(options.skillsRoot);
   const references = await validateSkillReferences(skills);
-  const cases = selectedCases(options.caseIds);
-  validateCases(cases, new Set(skills.keys()));
-
-  const models =
-    options.models.length > 0 ? options.models : [...defaultModels];
-  const runCount = models.length * cases.length * options.repeat;
-
+  const cases = options.caseIds.length
+    ? evalCases.filter((c) => options.caseIds.includes(c.id))
+    : evalCases;
+  for (const id of options.caseIds)
+    if (!cases.some((c) => c.id === id)) throw new Error(`Unknown case: ${id}`);
+  validateCases(cases, new Set(skills.keys()), evalCases);
+  const jobs = cases.flatMap((evalCase) =>
+    options.efforts.flatMap((effort) =>
+      options.models
+        .filter((model) => !evalCase.models || evalCase.models.includes(model))
+        .flatMap((model) =>
+          Array.from({ length: options.repeat }, (_, i) => ({
+            model,
+            effort,
+            evalCase,
+            repetition: i + 1,
+          })),
+        ),
+    ),
+  );
   if (options.dryRun) {
     console.log(
       JSON.stringify(
@@ -134,11 +121,12 @@ async function run(): Promise<void> {
           skillsRoot: options.skillsRoot,
           skills: [...skills.keys()].sort(),
           references,
-          models,
+          models: options.models,
+          efforts: options.efforts,
           cases: cases.map(({ id, description }) => ({ id, description })),
           repeat: options.repeat,
-          zdr: options.zdr ?? "team-default",
-          paidRuns: runCount,
+          plannedRuns: jobs.length,
+          authentication: "native CLI saved logins; no model calls",
         },
         null,
         2,
@@ -146,114 +134,143 @@ async function run(): Promise<void> {
     );
     return;
   }
-
-  if (!process.env.AI_GATEWAY_API_KEY) {
+  if (await Bun.file(options.output).exists())
     throw new Error(
-      "AI_GATEWAY_API_KEY is required for live evals. Use --dry-run for local validation.",
+      "Evaluation output already exists; choose a new --output path to preserve evidence.",
     );
-  }
-
-  const catalog = formatSkillCatalog(skills);
+  await mkdir(dirname(options.output), { recursive: true });
+  const transcripts = `${options.output}.transcripts`;
+  await mkdir(transcripts);
+  const snapshot = resolve(transcripts, "snapshot");
+  await freezeSnapshot(snapshot, options.skillsRoot);
+  skills = await loadSkills(snapshot);
   const records: EvalRunRecord[] = [];
-
-  for (const model of models) {
-    for (const evalCase of cases) {
-      for (let repetition = 1; repetition <= options.repeat; repetition += 1) {
-        const ledger = newLedger();
-        const tools = createEvalTools(skills, evalCase, ledger);
-        const agent = new ToolLoopAgent({
-          model,
-          instructions: portableAgentInstructions(catalog),
-          tools,
-          stopWhen: stepCountIs(24),
-          ...(options.zdr === undefined
-            ? {}
-            : {
-                providerOptions: {
-                  gateway: {
-                    zeroDataRetention: options.zdr === "enabled",
-                  },
-                },
-              }),
-        });
-
-        try {
-          const result = await agent.generate({ prompt: evalCase.prompt });
-          records.push({
+  const availability = new Map<string, { version?: string; error?: string }>();
+  for (const model of options.models) {
+    try {
+      availability.set(model, { version: await preflight(model) });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      availability.set(model, { error: message });
+      console.log(`UNAVAILABLE ${model}: ${message}`);
+    }
+  }
+  const save = () =>
+    Bun.write(
+      options.output,
+      JSON.stringify(
+        {
+          generatedAt: new Date().toISOString(),
+          skillsRoot: options.skillsRoot,
+          models: options.models,
+          efforts: options.efforts,
+          repeat: options.repeat,
+          authentication: "native-cli-login",
+          snapshot,
+          records,
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+  let cancelled = false;
+  const cancel = () => {
+    cancelled = true;
+    cancelLocalRuns();
+  };
+  process.once("SIGINT", cancel);
+  process.once("SIGTERM", cancel);
+  let next = 0;
+  // Serialize checkpoints so concurrent runs cannot overwrite newer evidence.
+  let checkpoint = Promise.resolve(0);
+  await Promise.all(
+    Array.from(
+      { length: Math.min(options.concurrency, jobs.length) },
+      async () => {
+        while (!cancelled && next < jobs.length) {
+          const index = next++;
+          const job = jobs[index]!;
+          const { model, effort, evalCase, repetition } = job;
+          const record: EvalRunRecord = {
             model,
-            caseId: evalCase.id,
-            repetition,
-            output: result.text,
-            ledger,
-            grade: gradeRun(evalCase, ledger, result.text),
-            usage: usageRecord(result.usage),
-          });
-        } catch (error) {
-          records.push({
-            model,
+            effort,
             caseId: evalCase.id,
             repetition,
             output: "",
-            ledger,
-            grade: {
+            ledger: emptyLedger(),
+            grade: { passed: false, checks: [] },
+          };
+          try {
+            const ready = availability.get(model)!;
+            if (ready.error) throw new Error(ready.error);
+            console.log(`RUN ${model} ${effort} ${evalCase.id} #${repetition}`);
+            const transcript = resolve(
+              transcripts,
+              `${index}-${evalCase.id}.jsonl`,
+            );
+            const result = await runLocal({
+              target: model,
+              effort,
+              skillsRoot: snapshot,
+              runtimeRoot: resolve(snapshot, "evals"),
+              evalCase,
+              instructions: portableAgentInstructions(
+                formatSkillCatalog(skills),
+              ),
+              transcript,
+            });
+            Object.assign(record, result);
+            record.runtime = {
+              cli: parseModel(model).cli,
+              version: ready.version!,
+              requestedModel: parseModel(model).model,
+              observedModels: result.observedModels,
+              responseModels: result.responseModels,
+              transcript,
+            };
+            record.grade = gradeRun(evalCase, result.ledger, result.output);
+            if (result.error) throw new Error(result.error);
+            if (!result.output)
+              throw new Error(
+                "Runtime returned no final response; incomplete evaluation",
+              );
+          } catch (error) {
+            record.error =
+              error instanceof Error ? error.message : String(error);
+            record.grade.passed = false;
+            record.grade.checks.push({
+              name: "run completed",
               passed: false,
-              checks: [
-                {
-                  name: "run completed",
-                  passed: false,
-                  detail: error instanceof Error ? error.message : String(error),
-                },
-              ],
-            },
-            error:
-              error instanceof Error
-                ? (error.stack ?? error.message)
-                : String(error),
-          });
+              detail: record.error,
+            });
+          }
+          records.push(record);
+          console.log(
+            `${record.grade.passed ? "PASS" : record.error ? "ERROR" : "FAIL"} ${model} ${effort} ${evalCase.id} #${repetition}`,
+          );
+          checkpoint = checkpoint.then(save);
+          await checkpoint;
         }
-
-        const latest = records.at(-1);
-        console.log(
-          `${latest?.grade.passed ? "PASS" : "FAIL"} ${model} ${evalCase.id} #${repetition}`,
-        );
-      }
-    }
-  }
-
-  const outputPath = resolve(
-    options.output ??
-      `.eval-results/${new Date().toISOString().replaceAll(":", "-")}.json`,
-  );
-  await mkdir(dirname(outputPath), { recursive: true });
-  await Bun.write(
-    outputPath,
-    `${JSON.stringify(
-      {
-        generatedAt: new Date().toISOString(),
-        skillsRoot: options.skillsRoot,
-        models,
-        repeat: options.repeat,
-        zdr: options.zdr ?? "team-default",
-        records,
       },
-      null,
-      2,
-    )}\n`,
+    ),
   );
-  if (process.env.GITHUB_STEP_SUMMARY) {
-    await appendFile(
-      process.env.GITHUB_STEP_SUMMARY,
-      renderSummary(records),
-      "utf8",
+  process.removeListener("SIGINT", cancel);
+  process.removeListener("SIGTERM", cancel);
+  if (cancelled) {
+    await save();
+    process.exitCode = 130;
+    console.log(
+      "Evaluation cancelled; completed and interrupted rows retained.",
     );
+    return;
   }
-
-  const failed = records.filter((record) => !record.grade.passed);
-  console.log(`Results: ${outputPath}`);
-  console.log(`Passed: ${records.length - failed.length}/${records.length}`);
-  if (failed.length > 0) {
-    process.exitCode = 1;
-  }
+  await Bun.write(
+    options.output.replace(/\.json$/, "") + ".md",
+    renderSummary(records),
+  );
+  console.log(
+    `Results: ${options.output}\nPassed: ${records.filter((r) => r.grade.passed).length}/${records.length}`,
+  );
+  if (records.some((r) => !r.grade.passed)) process.exitCode = 1;
 }
-
-await run();
+if (import.meta.main) await run();

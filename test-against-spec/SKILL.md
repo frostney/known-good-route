@@ -1,14 +1,17 @@
 ---
 name: test-against-spec
 description: >-
-  Tests delivered behavior against explicit requirements through real product
-  interfaces, preferring an exact-revision preview deployment when available.
-  Use when the user runs /test-against-spec or a workflow needs black-box
-  evidence; add the exact `fix` qualifier to authorize in-scope fixes.
+  Test observable behavior against explicit requirements when requested or when
+  a delivery workflow needs real-interface acceptance evidence.
 license: Unlicense OR MIT
 ---
 
 # Test against spec
+
+Reuse recorded real-interface evidence when the implementation, requirement,
+environment, and inputs match. Run missing or invalidated behavior checks after
+changes, failures, or unresolved concerns. The caller owns the aggregate project
+gate; source review and unit-test success alone are not behavior evidence.
 
 Establish whether the delivered behavior matches the explicit specification.
 Report by default. With the exact `fix` qualifier, fix observed in-scope gaps
@@ -23,6 +26,9 @@ full project gate.
 - Test externally observable outcomes. Use the rendered product for user-facing
   behavior and the real API, CLI, library entry point, job, package, migration,
   or deployed service for other behavior.
+  For qualitative requirements, compare the actual artifact and behavior with
+  the user's reference or acceptance criteria; passing metrics alone cannot
+  establish visual fidelity or usability.
 - Do not use implementation source, test source, unit tests, mocks, snapshots,
   or a patch as evidence that behavior works. Requirements with no executable
   behavior are outside this skill's scope and belong to code review or the
@@ -49,7 +55,8 @@ full project gate.
    relevant viewports.
 4. Record the environment, setup, action or command, input, expected result, and
    observed result. A requirement passes only when the expected outcome is
-   observed against the exact content under test.
+   observed against the exact content under test. A submitted check or
+   acknowledgment without a result leaves the requirement unverified.
 5. Without `fix`, make no edits. Report every passed, failed, unverified, and
    out-of-scope requirement.
 6. With `fix`, reproduce a failure through the external interface before

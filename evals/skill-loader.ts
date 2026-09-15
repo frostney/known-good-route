@@ -29,7 +29,9 @@ function splitFrontmatter(source: string): {
   };
 }
 
-export async function loadSkills(root: string): Promise<Map<string, LoadedSkill>> {
+export async function loadSkills(
+  root: string,
+): Promise<Map<string, LoadedSkill>> {
   const rootPath = resolve(root);
   const entries = await readdir(rootPath, { withFileTypes: true });
   const skills = new Map<string, LoadedSkill>();

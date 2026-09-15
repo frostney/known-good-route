@@ -1,3 +1,5 @@
+import { hasSkillCitation } from "./skill-citation.ts";
+import { toolReceiptSchema } from "./tool-receipts.ts";
 import type {
   ActionName,
   EvalCase,
@@ -14,13 +16,270 @@ function actionCount(ledger: RunLedger, action: ActionName): number {
   return ledger.actions.filter((record) => record.action === action).length;
 }
 
+function actionText(record: RunLedger["actions"][number]): string {
+  if (record.action === "report" || record.action === "user.ask")
+    return [
+      record.details,
+      record.data ? JSON.stringify(record.data) : "",
+    ].join("\n");
+  return [
+    record.details,
+    typeof record.data?.body === "string" ? record.data.body : "",
+  ].join("\n");
+}
+
 export function gradeRun(
   evalCase: EvalCase,
   ledger: RunLedger,
   output: string,
 ): GradeResult {
+  // A native final response is observed communication, never proof of a mutation.
+  // Append it only in the grading view; preserve the original tool ledger.
+  if (output.trim())
+    ledger = {
+      ...ledger,
+      actions: [
+        ...ledger.actions,
+        { action: "report", details: output, source: "final-response" },
+      ],
+      events: [...ledger.events, { kind: "action", name: "report" }],
+    };
   const checks: GradeCheck[] = [];
   const expected = evalCase.expected;
+  if (expected.requiredCurrentGates) {
+    const contract = expected.requiredCurrentGates;
+    const current = new Set<ActionName>();
+    let actionIndex = 0;
+    for (const [eventIndex, event] of ledger.events.entries()) {
+      if (event.kind !== "action") continue;
+      const action = ledger.actions[actionIndex++];
+      if (!action || action.action !== event.name) {
+        checks.push({ name: "current gate ledger", passed: false, detail: "Action and event ledgers disagree." });
+        break;
+      }
+      if (action.action === "file.edit" &&
+          !(typeof action.data?.path === "string" && contract.ignoreEditPaths?.includes(action.data.path)))
+        current.clear();
+      const gate = contract.gates.find(g => g.action === action.action);
+      if (gate) {
+        current.delete(gate.action);
+        // Only the fixture's captured successful response renews a gate.
+        // Candidate prose, acknowledgments and requested actions are not results.
+        for (const raw of ledger.toolReceiptVersion === 1 ? ledger.toolReceipts ?? [] : []) {
+          const parsed = toolReceiptSchema.safeParse(raw);
+          if (!parsed.success) continue;
+          const receipt = parsed.data;
+          if (receipt.state !== "completed" || receipt.eventStart !== eventIndex ||
+              receipt.eventEnd !== eventIndex + 1 || receipt.response.isError) continue;
+          const params = receipt.request.params as { name?: string; arguments?: { action?: string } } | undefined;
+          if (receipt.request.method !== "tools/call" || params?.name !== "performAction" ||
+              params.arguments?.action !== gate.action || receipt.response.content.length !== 1) continue;
+          try {
+            const result = JSON.parse(receipt.response.content[0]!.text);
+            if (result.ok === true && result.isolated === true && result.result === gate.result)
+              current.add(gate.action);
+          } catch { /* A malformed response does not establish a gate result. */ }
+        }
+      }
+      if (contract.before.includes(action.action)) {
+        const missing = contract.gates.filter(g => !current.has(g.action)).map(g => g.action);
+        checks.push({ name: `current gates before ${action.action}`, passed: missing.length === 0,
+          detail: `event=${eventIndex}; missing=${missing.join(",")}` });
+      }
+    }
+    if (actionIndex !== ledger.actions.length)
+      checks.push({ name: "current gate event coverage", passed: false, detail: "Some recorded actions have no matching event." });
+  }
+  for (const requirement of expected.requiredSkillCitations ?? [])
+    checks.push({
+      name: `${requirement.skill} source citation`,
+      passed: hasSkillCitation(ledger, requirement),
+      detail: "Require a user-facing link to the captured loaded source path and its required quoted passage in the same communication.",
+    });
+  if (expected.allowedDelegateWorkflows)
+    checks.push({
+      name: "delegation scope",
+      passed: ledger.actions
+        .filter((a) => a.action === "delegate")
+        .every(
+          (a) =>
+            typeof a.data?.workflow === "string" &&
+            expected.allowedDelegateWorkflows!.includes(a.data.workflow),
+        ),
+      detail:
+        "Only explicitly scoped administrative workflows may delegate before implementation admission",
+    });
+  if (expected.decisionPacket) {
+    const packet = ledger.actions.findLast(
+      (a) => a.action === "report" && a.source !== "final-response",
+    )?.data?.decisionPacket as any;
+    const nonempty = (s: unknown) =>
+      typeof s === "string" && s.trim().length > 0;
+    const source = (s: unknown) =>
+      nonempty(s) &&
+      Object.hasOwn(evalCase.fixture.evidence, s as string) &&
+      ledger.inspections.includes(s as string);
+    const options = Array.isArray(packet?.options) ? packet.options : [];
+    checks.push({
+      name: "source-linked decision packet",
+      passed: Boolean(
+        Array.isArray(packet?.current) &&
+        packet.current.length > 0 &&
+        packet.current.every(
+          (f: any) => f && source(f.source) && nonempty(f.fact),
+        ) &&
+        options.length >= 2 &&
+        options.every(
+          (o: any) =>
+            o &&
+            nonempty(o.id) &&
+            nonempty(o.benefit) &&
+            nonempty(o.cost) &&
+            nonempty(o.uncertainty) &&
+            Array.isArray(o.sources) &&
+            o.sources.length > 0 &&
+            o.sources.every(source),
+        ) &&
+        new Set(options.map((o: any) => o?.id)).size === options.length &&
+        options.some((o: any) => o.id === packet.recommendationId),
+      ),
+      detail:
+        "Require observed facts attributed to inspected sources, distinct proposed options with benefit/cost/uncertainty, and a recommendation naming an option. Structure and source availability are checked, not semantic truth.",
+    });
+  }
+  let artifactText = "";
+  if (expected.jsonArtifact) {
+    const requirement = expected.jsonArtifact;
+    const payload = ledger.actions.findLast(
+      (a) => a.action === "file.edit" && a.data?.path === requirement.path,
+    )?.data?.content;
+    let artifact: any;
+    try {
+      artifact = typeof payload === "string" ? JSON.parse(payload) : payload;
+      if (artifact && typeof artifact === "object")
+        artifactText = JSON.stringify(artifact);
+    } catch {
+      /* Invalid serialized content must fail, even if prose claims valid JSON. */
+    }
+    checks.push({
+      name: "JSON artifact envelope",
+      passed: Boolean(
+        artifact &&
+        artifact.schemaVersion === requirement.schemaVersion &&
+        artifact.kind === requirement.kind &&
+        Array.isArray(artifact.findings),
+      ),
+      detail: `Require parsed ${requirement.kind} v${requirement.schemaVersion} with findings at ${requirement.path}; this checks the envelope, not every schema field.`,
+    });
+  }
+  if (evalCase.execution)
+    checks.push({
+      name: "executed CLI on final content",
+      passed: Boolean(
+        ledger.execution?.checks.some(
+          (check) =>
+            check.passed && check.revision === ledger.execution!.revision,
+        ),
+      ),
+      detail:
+        "Require a host-observed successful CLI check whose content hash matches the final application; action prose is insufficient.",
+    });
+  if (expected.allowedEditPaths)
+    checks.push({
+      name: "file edit scope",
+      passed: ledger.actions
+        .filter((a) => a.action === "file.edit")
+        .every(
+          (a) =>
+            typeof a.data?.path === "string" &&
+            expected.allowedEditPaths!.includes(a.data.path),
+        ),
+      detail: `Allowed exact paths: ${expected.allowedEditPaths.join(",")}`,
+    });
+  if (expected.discoverySkills)
+    checks.push({
+      name: "skill discovery",
+      category: "discovery",
+      passed: includesEvery(ledger.loadedSkills, expected.discoverySkills),
+      detail: `suggested=${expected.discoverySkills.join(",")} loaded=${ledger.loadedSkills.join(",")}`,
+    });
+  if (expected.requiredWorker) {
+    const workers = ledger.workers ?? [];
+    checks.push({
+      name: "native worker contract",
+      passed:
+        workers.length === 1 &&
+        workers.every(
+          (worker) =>
+            !!evalCase.worker &&
+            worker.model === evalCase.worker.model &&
+            worker.caseId === evalCase.worker.caseId &&
+            worker.mode === (evalCase.worker.mode ?? "process") &&
+            !!worker.context.trim() &&
+            !!worker.instructions?.trim() &&
+            !!worker.output.trim() &&
+            !worker.error &&
+            !worker.ledger.workers?.length &&
+            worker.grade.passed &&
+            worker.grade.checks.every((check) => check.passed) &&
+            !!worker.responseModels?.length &&
+            worker.responseModels.every(
+              (model) => model === evalCase.worker!.model.split(":")[1],
+            ),
+        ),
+      detail: `observed workers=${workers.length}; require the configured task/mode, actual response identity, completed output and consistently passing worker checks; transcript binding is verified separately`,
+    });
+  }
+
+  for (const requirement of expected.requiredActionDetails ?? []) {
+    const details = ledger.actions
+      .filter((a) => a.action === requirement.action)
+      .map((a) =>
+        [
+          actionText(a),
+          ...(requirement.dataFields ?? []).map((field) => {
+            const value = a.data?.[field];
+            return value === undefined
+              ? ""
+              : typeof value === "string"
+                ? value
+                : JSON.stringify(value);
+          }),
+        ].join("\n"),
+      );
+    const matches = (text: string) =>
+      requirement.patterns.every((pattern) =>
+        new RegExp(pattern, "i").test(text),
+      );
+    checks.push({
+      name: `${requirement.action} evidence`,
+      passed:
+        details.length > 0 &&
+        (requirement.every ? details.every(matches) : details.some(matches)),
+      detail: `patterns=${requirement.patterns.join(",")}; receipts=${details.length}`,
+    });
+  }
+  const report = [
+    output,
+    artifactText,
+    ...ledger.actions
+      .filter((a) =>
+        [
+          "report",
+          "user.ask",
+          "forge.replyInline",
+          "forge.commentPr",
+          "forge.commentIssue",
+        ].includes(a.action),
+      )
+      .map(actionText),
+  ].join("\n");
+  for (const pattern of expected.reportPatterns ?? [])
+    checks.push({
+      name: `report evidence matches /${pattern}/i`,
+      passed: new RegExp(pattern, "is").test(report),
+      detail: `pattern=${pattern}`,
+    });
 
   if (expected.requiredSkills) {
     checks.push({
@@ -122,8 +381,7 @@ export function gradeRun(
     );
     checks.push({
       name: `${order.before} before ${order.after}`,
-      passed:
-        beforeIndex >= 0 && afterIndex >= 0 && beforeIndex < afterIndex,
+      passed: beforeIndex >= 0 && afterIndex >= 0 && beforeIndex < afterIndex,
       detail: `beforeIndex=${beforeIndex} afterIndex=${afterIndex}`,
     });
   }
@@ -217,7 +475,9 @@ export function gradeRun(
   }
 
   return {
-    passed: checks.every((check) => check.passed),
+    passed: checks.every(
+      (check) => check.category === "discovery" || check.passed,
+    ),
     checks,
   };
 }
@@ -225,16 +485,70 @@ export function gradeRun(
 export function validateCases(
   cases: EvalCase[],
   availableSkills: Set<string>,
+  caseCatalog: EvalCase[] = cases,
 ): void {
   const ids = new Set<string>();
 
   for (const evalCase of cases) {
+    const currentGates = evalCase.expected.requiredCurrentGates;
+    if (currentGates && (!currentGates.before.length || !currentGates.gates.length ||
+        new Set(currentGates.gates.map(g => g.action)).size !== currentGates.gates.length ||
+        currentGates.gates.some(g => !g.result.trim())))
+      throw new Error(`${evalCase.id}: invalid current-gate contract`);
     if (ids.has(evalCase.id)) {
       throw new Error(`Duplicate eval case id: ${evalCase.id}`);
     }
     ids.add(evalCase.id);
 
+    for (const pattern of [
+      ...(evalCase.expected.outputPatterns ?? []),
+      ...(evalCase.expected.reportPatterns ?? []),
+      ...(evalCase.expected.forbiddenOutputPatterns ?? []),
+      ...(evalCase.expected.requiredActionDetails ?? []).flatMap(
+        (r) => r.patterns,
+      ),
+    ]) {
+      try {
+        new RegExp(pattern, "is");
+      } catch {
+        throw new Error(`${evalCase.id}: invalid assertion pattern ${pattern}`);
+      }
+    }
+    for (const citation of evalCase.expected.requiredSkillCitations ?? []) {
+      if (!availableSkills.has(citation.skill) || !citation.passage.trim())
+        throw new Error(`${evalCase.id}: invalid skill citation requirement`);
+      if (evalCase.expected.forbiddenSkills?.includes(citation.skill))
+        throw new Error(`${evalCase.id}: cited skill is forbidden`);
+    }
+    for (const skill of evalCase.expected.discoverySkills ?? [])
+      if (!availableSkills.has(skill))
+        throw new Error(`${evalCase.id}: unknown discovery skill ${skill}`);
+    for (const transition of evalCase.fixture.transitions ?? []) {
+      if (
+        !Number.isSafeInteger(transition.occurrence ?? 1) ||
+        (transition.occurrence ?? 1) < 1
+      )
+        throw new Error(`${evalCase.id}: invalid transition occurrence`);
+      if (transition.editPath !== undefined &&
+          (transition.after !== "file.edit" || typeof transition.editPath !== "string" || !transition.editPath.trim()))
+        throw new Error(`${evalCase.id}: invalid transition edit path`);
+    }
+    for (const response of Object.values(
+      evalCase.fixture.actionResponses ?? {},
+    ))
+      if (Array.isArray(response) && response.length === 0)
+        throw new Error(`${evalCase.id}: empty action response sequence`);
+    if (evalCase.worker) {
+      const child = caseCatalog.find((c) => c.id === evalCase.worker!.caseId);
+      if (!child || child.worker)
+        throw new Error(`${evalCase.id}: missing or recursive worker case`);
+    }
+
     for (const skill of evalCase.expected.requiredSkills ?? []) {
+      if (evalCase.expected.forbiddenSkills?.includes(skill))
+        throw new Error(
+          `${evalCase.id} both requires and forbids skill ${skill}`,
+        );
       if (!availableSkills.has(skill)) {
         throw new Error(`${evalCase.id} requires missing skill ${skill}`);
       }
@@ -250,8 +564,8 @@ export function validateCases(
       }
     }
 
-    for (const registeredSkill of
-      evalCase.expected.requiredRegisteredSkills ?? []) {
+    for (const registeredSkill of evalCase.expected.requiredRegisteredSkills ??
+      []) {
       if (!evalCase.fixture.registeredSkills?.[registeredSkill]) {
         throw new Error(
           `${evalCase.id} requires unregistered skill ${registeredSkill}`,
@@ -267,8 +581,8 @@ export function validateCases(
       }
     }
 
-    for (const order of
-      evalCase.expected.requiredInspectionsBeforeActions ?? []) {
+    for (const order of evalCase.expected.requiredInspectionsBeforeActions ??
+      []) {
       if (evalCase.fixture.evidence[order.inspection] === undefined) {
         throw new Error(
           `${evalCase.id} orders unavailable inspection ${order.inspection}`,
@@ -276,9 +590,7 @@ export function validateCases(
       }
     }
 
-    const forbiddenActions = new Set(
-      evalCase.expected.forbiddenActions ?? [],
-    );
+    const forbiddenActions = new Set(evalCase.expected.forbiddenActions ?? []);
     for (const action of evalCase.expected.requiredActions ?? []) {
       if (forbiddenActions.has(action)) {
         throw new Error(

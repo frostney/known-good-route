@@ -55,6 +55,8 @@ language-neutral repository policy.
   public API layout. Keep dependency direction visible and avoid cycles.
 - Test observable runtime behavior and type contracts that can regress. Keep
   compile-time fixtures separate from runtime assertions.
-- Run focused tests, the repository gate, and TypeScript with no emit. If the
+- Run focused tests and the repository gate, reusing passing evidence for the
+  same content and environment. Run TypeScript with no emit only when the gate
+  does not cover that check. If the
   compiler owns production emission, validate the emitted output on its target
   runtime instead.
