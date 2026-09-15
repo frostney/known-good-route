@@ -34,6 +34,15 @@ Consult current help or primary documentation for the chosen tools:
 [Windows speech output](https://learn.microsoft.com/en-us/dotnet/api/system.speech.synthesis.speechsynthesizer.setoutputtowavefile),
 [eSpeak NG](https://github.com/espeak-ng/espeak-ng/blob/master/docs/guide.md).
 
+Record the host and capture backend actually exercised. [Wine](https://www.winehq.org/about)
+can help check whether a Windows media tool runs on the current host, including
+encoding or caption assembly from existing inputs. That result establishes
+compatibility under Wine, not native Windows capture or speech support. Verify
+[Windows capture](https://learn.microsoft.com/en-us/windows/apps/develop/media-authoring-processing/screen-capture)
+in an actual Windows session with a supported graphics device; a Windows VM can
+cover its virtual display, while physical capture devices need their own check.
+Wayland capture needs a Wayland session and its capture backend or portal.
+
 ## Produce and verify the walkthrough
 
 - Choose a representative, already-validated scenario showing the trigger,

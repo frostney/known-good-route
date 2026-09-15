@@ -75,6 +75,14 @@ for reader effort.
   partial, name the evidence and limit the claim.
 - Do not present planned, proposed, partial, or unreleased behavior as shipped.
   Name its actual lifecycle state and owner.
+- Check each completion claim against the returned result or an authoritative
+  state observation. Success of the main operation does not confirm every
+  requested side effect: a merge does not establish branch deletion, and sending
+  a question does not establish queue delivery. Request arguments, defaults and
+  acknowledgments describe intent, not the resulting state. For a required
+  outcome, obtain the missing confirmation; otherwise omit the claim or mark
+  that action unconfirmed. Do not infer that it failed either. Apply this check
+  to summaries, tables and parenthetical remarks as well as the main verdict.
 - Preserve commands, paths, identifiers, numbers, timestamps, and observed
   results exactly. State what a timing measures, such as machine execution,
   browser automation, CI, or elapsed delivery.

@@ -78,6 +78,8 @@ Use `project-structure` and applicable stack skills when establishing a project.
 `software-engineering-excellence` and `agent-writing` supply relevant shared
 standards. `/roadmap-review`, `/run-retro` and `/codebase-audit` remain deliberate
 planning or assessment work, not mandatory stages for every delivery.
+Delivery and milestone reports apply `agent-writing` to each completion claim:
+confirmation of the main operation does not establish its requested side effects.
 
 ### Recurring workflow skills
 
@@ -134,6 +136,8 @@ reuse current media and verify the exported and uploaded result. Missing media
 tools or baseline captures are reported with exact gaps and practical remedies.
 Media tooling gaps alone do not block publication or readiness; required review,
 behavior evidence and CI still apply. Media stays out of source control.
+Wine can exercise compatible Windows media tools; native Windows and Wayland
+capture still require checks in their respective desktop environments.
 
 ## Background
 

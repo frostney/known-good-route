@@ -187,6 +187,16 @@ spawning; never substitute model heartbeats.
 
 ## Report
 
+Match each completion claim to a returned result for that specific action and
+target. Release success does not confirm cleanup or message delivery. Sending a
+retrospective question and receiving an acknowledgment does not establish that
+it was queued: ask it directly in the report or describe it as requested unless
+delivery was confirmed. Verify required outcomes; omit optional unconfirmed
+claims or label them unconfirmed, without implying failure. Apply this to the
+whole report, including tables and
+parenthetical remarks; see [agent-writing](../agent-writing/SKILL.md) for shared
+writing guidance.
+
 Return one audit-style summary covering:
 
 - initial and final scope, including scope drift;

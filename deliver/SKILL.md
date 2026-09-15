@@ -95,6 +95,12 @@ blocker, unresolved material decision or needed authority can leave it
 incomplete; report the exact gap and next transition. Keep resumable state in
 the project's handoff convention. Return the work item, chosen endpoint,
 verified revision and destination when applicable, PR and integration evidence,
-and any remaining limitation. Distinguish confirmed actions from requests or
-acknowledgments that have no observed result. Release publication belongs to a
-separately requested release or the milestone boundary.
+and any remaining limitation. Match each completion claim to a returned result
+for that specific action and target. A successful merge does not confirm branch
+deletion: a deletion flag is a request, and deletion of an earlier branch says
+nothing about the repair branch. An acknowledgment likewise does not confirm
+cleanup or message delivery. Verify required outcomes; omit optional unconfirmed
+claims or label them unconfirmed, without implying failure. Apply this to the
+whole report, including tables and parenthetical remarks; see
+[agent-writing](../agent-writing/SKILL.md) for shared writing guidance. Release
+publication belongs to a separately requested release or the milestone boundary.
