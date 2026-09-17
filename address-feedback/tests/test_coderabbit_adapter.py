@@ -100,6 +100,8 @@ def configured_gh(
     comments: list[dict[str, Any]] | None = None,
     reviews: list[dict[str, Any]] | None = None,
     head: str = "head-7",
+    coderabbit_check_runs: list[dict[str, Any]] | None = None,
+    coderabbit_statuses: list[dict[str, Any]] | None = None,
 ) -> FakeGh:
     gh = FakeGh()
     gh.values.update(
@@ -119,6 +121,12 @@ def configured_gh(
             "repos/owner/repo/pulls/7/reviews?per_page=100": [reviews or []],
             "repos/owner/repo/pulls/7/files?per_page=100": [
                 [{"filename": "src/feature.ts"}]
+            ],
+            f"repos/owner/repo/commits/{head}/check-runs?per_page=100": [
+                {"check_runs": coderabbit_check_runs or []}
+            ],
+            f"repos/owner/repo/commits/{head}/statuses?per_page=100": [
+                coderabbit_statuses or []
             ],
         }
     )
@@ -331,6 +339,111 @@ class CodeRabbitAdapterTest(unittest.TestCase):
         self.assertEqual(ADAPTER.aggregate_status(invalidated)[0], "invalidated")
         self.assertEqual(ADAPTER.aggregate_status(pending)[0], "pending")
         self.assertEqual(ADAPTER.aggregate_status(complete)[0], "satisfied")
+
+    def test_fast_ack_without_coverage_stays_pending_full_unverified(self) -> None:
+        comments = [
+            comment(10, "@coderabbitai full review", START + 60, bot=False),
+            comment(11, "Review finished", START + 65),
+        ]
+        gh = configured_gh(comments=comments)
+        state, _, mode = classify(gh)
+        self.assertEqual(state, "pending-full-unverified")
+        self.assertIsNone(mode)
+
+    def test_fast_ack_verified_coverage_with_coderabbit_check_is_clean_complete(
+        self,
+    ) -> None:
+        comments = [
+            comment(10, "@coderabbitai full review", START + 60, bot=False),
+            comment(11, "Review finished", START + 65),
+            comment(
+                12,
+                "<!-- summarize by coderabbit --> src/feature.ts",
+                START + 66,
+            ),
+        ]
+        gh = configured_gh(
+            comments=comments,
+            coderabbit_statuses=[
+                {
+                    "context": "CodeRabbit",
+                    "state": "success",
+                    "created_at": iso(START + 64),
+                }
+            ],
+        )
+        evidence = ADAPTER.pull_evidence(gh, "owner/repo", 7)
+        self.assertTrue(evidence["codeRabbitCheckSuccess"])
+        self.assertEqual(evidence["codeRabbitCheck"]["state"], "SUCCESS")
+        state, reason, mode = classify(gh)
+        self.assertEqual(state, "clean-complete")
+        self.assertIn("CodeRabbit check SUCCESS", reason)
+        self.assertIsNone(mode)
+
+    def test_fast_ack_verified_coverage_without_coderabbit_check_stays_unverified(
+        self,
+    ) -> None:
+        comments = [
+            comment(10, "@coderabbitai full review", START + 60, bot=False),
+            comment(11, "Review finished", START + 65),
+            comment(
+                12,
+                "<!-- summarize by coderabbit --> src/feature.ts",
+                START + 66,
+            ),
+        ]
+        gh = configured_gh(comments=comments)
+        evidence = ADAPTER.pull_evidence(gh, "owner/repo", 7)
+        self.assertFalse(evidence["codeRabbitCheckSuccess"])
+        state, _, mode = classify(gh)
+        self.assertEqual(state, "pending-full-unverified")
+        self.assertIsNone(mode)
+
+    def test_trusted_latency_ack_with_coverage_is_clean_complete_without_check(
+        self,
+    ) -> None:
+        comments = [
+            comment(10, "@coderabbitai full review", START + 60, bot=False),
+            comment(11, "Review finished", START + 100),
+            comment(
+                12,
+                "<!-- summarize by coderabbit --> src/feature.ts",
+                START + 101,
+            ),
+        ]
+        gh = configured_gh(comments=comments)
+        state, reason, mode = classify(gh)
+        self.assertEqual(state, "clean-complete")
+        self.assertEqual(
+            reason, "finished acknowledgment has current walkthrough coverage"
+        )
+        self.assertIsNone(mode)
+
+    def test_coderabbit_check_run_success_binds_exact_head(self) -> None:
+        comments = [
+            comment(10, "@coderabbitai full review", START + 60, bot=False),
+            comment(11, "Review finished", START + 65),
+            comment(
+                12,
+                "<!-- summarize by coderabbit --> src/feature.ts",
+                START + 66,
+            ),
+        ]
+        gh = configured_gh(
+            comments=comments,
+            coderabbit_check_runs=[
+                {
+                    "name": "CodeRabbit",
+                    "head_sha": "head-7",
+                    "status": "completed",
+                    "conclusion": "success",
+                }
+            ],
+        )
+        state, _, mode = classify(gh)
+        self.assertEqual(state, "clean-complete")
+        self.assertIsNone(mode)
+
 
 
 if __name__ == "__main__":

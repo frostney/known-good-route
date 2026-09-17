@@ -49,6 +49,53 @@ WAIT_BUFFER_SECONDS = 60
 TRUSTED_ACK_SECONDS = 30
 
 
+
+def is_coderabbit_check_name(value: str) -> bool:
+    return "coderabbit" in value.lower()
+
+
+def coderabbit_check_for_head(gh: Gh, repo: str, head: str) -> dict[str, Any]:
+    """Resolve head-scoped CodeRabbit check-run or commit-status SUCCESS."""
+    run_pages = gh.rest_pages(f"repos/{repo}/commits/{head}/check-runs?per_page=100")
+    for page in run_pages:
+        runs = page.get("check_runs", []) if isinstance(page, dict) else []
+        for run in runs:
+            if not isinstance(run, dict):
+                continue
+            name = str(run.get("name") or "")
+            if not is_coderabbit_check_name(name):
+                continue
+            run_head = run.get("head_sha")
+            if isinstance(run_head, str) and run_head and run_head != head:
+                continue
+            if (
+                str(run.get("status") or "").upper() == "COMPLETED"
+                and str(run.get("conclusion") or "").upper() == "SUCCESS"
+            ):
+                return {
+                    "state": "SUCCESS",
+                    "source": "check-run",
+                    "name": name,
+                    "head": head,
+                }
+
+    statuses = rest_items(gh, f"repos/{repo}/commits/{head}/statuses?per_page=100")
+    seen_contexts: set[str] = set()
+    for status in statuses:
+        context = str(status.get("context") or "")
+        if not is_coderabbit_check_name(context) or context in seen_contexts:
+            continue
+        seen_contexts.add(context)
+        state = str(status.get("state") or "").upper()
+        return {
+            "state": state or None,
+            "source": "status",
+            "name": context,
+            "head": head,
+        }
+
+    return {"state": None, "source": None, "name": None, "head": head}
+
 def repo_parts(repo: str) -> tuple[str, str]:
     pieces = repo.split("/", 1)
     if len(pieces) != 2 or not all(pieces):
@@ -227,6 +274,8 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
             if body == str(trigger.get("body") or "").strip().lower()
         )
 
+    code_rabbit_check = coderabbit_check_for_head(gh, repo, head)
+
     return {
         "repo": repo,
         "pr": pr,
@@ -266,6 +315,8 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
             "changed": len(filenames),
             "verified": matched > 0,
         },
+        "codeRabbitCheck": code_rabbit_check,
+        "codeRabbitCheckSuccess": code_rabbit_check.get("state") == "SUCCESS",
     }
 
 
@@ -280,8 +331,22 @@ def classify(
     if evidence["exactHeadReview"]:
         return "review-complete", "exact-head actionable review object observed", None
     ack = evidence["finishedAck"]
-    if ack and evidence["coverage"]["verified"] and ack["latencySeconds"] >= TRUSTED_ACK_SECONDS:
-        return "clean-complete", "finished acknowledgment has current walkthrough coverage", None
+    code_rabbit_ok = bool(evidence.get("codeRabbitCheckSuccess")) or (
+        (evidence.get("codeRabbitCheck") or {}).get("state") == "SUCCESS"
+    )
+    if (
+        ack
+        and evidence["coverage"]["verified"]
+        and (ack["latencySeconds"] >= TRUSTED_ACK_SECONDS or code_rabbit_ok)
+    ):
+        if code_rabbit_ok and ack["latencySeconds"] < TRUSTED_ACK_SECONDS:
+            reason = (
+                "finished acknowledgment has current walkthrough coverage "
+                "and head-scoped CodeRabbit check SUCCESS"
+            )
+        else:
+            reason = "finished acknowledgment has current walkthrough coverage"
+        return "clean-complete", reason, None
     if evidence["skippedAck"]:
         return "pending-skipped", "CodeRabbit reported that review was skipped", None
 
