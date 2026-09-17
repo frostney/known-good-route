@@ -119,8 +119,12 @@ Do not invent adapters for ordinary GitHub review state. Do not copy provider
 commands, comment parsing, timers, or paid options into the core workflow. The
 CodeRabbit adapter is the sole owner of its two permitted trigger commands. Its
 `run` operation serializes triggers with one authenticated-account lock, polls
-through stated waits, escalates untrusted incremental acknowledgments to a full
-review, refuses guessed retry times, and never exposes a paid-review command.
+through stated waits, and treats a finished acknowledgment as `clean-complete`
+only when walkthrough coverage is verified for the exact head and either ack
+latency meets the trusted threshold or that same head has a CodeRabbit check
+SUCCESS. It escalates untrusted incremental acknowledgments to a full review,
+refuses guessed retry times, and never exposes a paid-review command. Keep
+`review-complete` for real exact-head review objects only.
 
 ## Result contract
 
