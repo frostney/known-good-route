@@ -54,8 +54,32 @@ def is_coderabbit_check_name(value: str) -> bool:
     return "coderabbit" in value.lower()
 
 
+def check_text_rate_limited(*parts: Any) -> bool:
+    """True when any supplied check/status text matches RATE_LIMITED."""
+    for part in parts:
+        text = str(part or "")
+        if text and RATE_LIMITED.search(text):
+            return True
+    return False
+
+
+def coderabbit_check_output_texts(run: dict[str, Any]) -> tuple[str, str, str]:
+    output = run.get("output") if isinstance(run.get("output"), dict) else {}
+    return (
+        str(output.get("title") or ""),
+        str(output.get("summary") or ""),
+        str(output.get("text") or ""),
+    )
+
+
 def coderabbit_check_for_head(gh: Gh, repo: str, head: str) -> dict[str, Any]:
-    """Resolve head-scoped CodeRabbit check-run or commit-status SUCCESS."""
+    """Resolve head-scoped CodeRabbit check-run or commit-status SUCCESS.
+
+    A completed SUCCESS conclusion whose output title/summary/text (or commit-
+    status description) matches RATE_LIMITED is not treated as SUCCESS — it
+    surfaces rateLimited so callers do not count a rate-limited pass as
+    codeRabbitCheckSuccess.
+    """
     run_pages = gh.rest_pages(f"repos/{repo}/commits/{head}/check-runs?per_page=100")
     for page in run_pages:
         runs = page.get("check_runs", []) if isinstance(page, dict) else []
@@ -72,6 +96,15 @@ def coderabbit_check_for_head(gh: Gh, repo: str, head: str) -> dict[str, Any]:
                 str(run.get("status") or "").upper() == "COMPLETED"
                 and str(run.get("conclusion") or "").upper() == "SUCCESS"
             ):
+                title, summary, text = coderabbit_check_output_texts(run)
+                if check_text_rate_limited(title, summary, text):
+                    return {
+                        "state": "RATE_LIMITED",
+                        "source": "check-run",
+                        "name": name,
+                        "head": head,
+                        "rateLimited": True,
+                    }
                 return {
                     "state": "SUCCESS",
                     "source": "check-run",
@@ -87,6 +120,15 @@ def coderabbit_check_for_head(gh: Gh, repo: str, head: str) -> dict[str, Any]:
             continue
         seen_contexts.add(context)
         state = str(status.get("state") or "").upper()
+        description = str(status.get("description") or "")
+        if state == "SUCCESS" and check_text_rate_limited(description):
+            return {
+                "state": "RATE_LIMITED",
+                "source": "status",
+                "name": context,
+                "head": head,
+                "rateLimited": True,
+            }
         return {
             "state": state or None,
             "source": "status",
@@ -275,6 +317,7 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
         )
 
     code_rabbit_check = coderabbit_check_for_head(gh, repo, head)
+    check_rate_limited = bool(code_rabbit_check.get("rateLimited"))
 
     return {
         "repo": repo,
@@ -301,7 +344,7 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
             else None
         ),
         "skippedAck": bool(skipped),
-        "rateLimited": bool(limited),
+        "rateLimited": bool(limited) or check_rate_limited,
         "rateLimitedAt": limited.get("created_at") if limited else None,
         "rateLimitedAtEpoch": (
             parse_timestamp(limited.get("created_at"), "rate-limit created_at")
@@ -331,6 +374,23 @@ def classify(
     if evidence["exactHeadReview"]:
         return "review-complete", "exact-head actionable review object observed", None
     ack = evidence["finishedAck"]
+
+    # Rate-limit evidence must win over a SUCCESS check short-circuit: a green
+    # CodeRabbit check whose description is "Review rate limited" is pending,
+    # not clean-complete.
+    if evidence["rateLimited"]:
+        rate_limited_at = evidence.get("rateLimitedAtEpoch")
+        if (
+            wait is None
+            or rate_limited_at is None
+            or wait["updatedAtEpoch"] < rate_limited_at
+        ):
+            return "pending-retry-source", "rate limited without a stated retry time", None
+        desired = evidence["trigger"]["mode"] if evidence["trigger"] else "incremental"
+        if wait["retryAtEpoch"] > now:
+            return "waiting", "account-scoped stated wait has not elapsed", desired
+        return f"trigger-{desired}", f"{desired} review trigger is permitted", desired
+
     code_rabbit_ok = bool(evidence.get("codeRabbitCheckSuccess")) or (
         (evidence.get("codeRabbitCheck") or {}).get("state") == "SUCCESS"
     )
@@ -358,12 +418,6 @@ def classify(
         return "pending-full-unverified", "full-review acknowledgment did not prove current diff coverage", None
     if evidence["alreadyReviewed"] or ack:
         desired = "full"
-    elif evidence["rateLimited"]:
-        if wait is None or wait["updatedAtEpoch"] < evidence["rateLimitedAtEpoch"]:
-            return "pending-retry-source", "rate limited without a stated retry time", None
-        if wait["retryAtEpoch"] > now:
-            return "waiting", "account-scoped stated wait has not elapsed", evidence["trigger"]["mode"] if evidence["trigger"] else "incremental"
-        desired = evidence["trigger"]["mode"] if evidence["trigger"] else "incremental"
     elif evidence["trigger"]:
         return "in-flight", "trigger is awaiting completion evidence", None
     else:

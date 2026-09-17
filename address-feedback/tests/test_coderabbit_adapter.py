@@ -444,6 +444,97 @@ class CodeRabbitAdapterTest(unittest.TestCase):
         self.assertEqual(state, "clean-complete")
         self.assertIsNone(mode)
 
+    def test_check_run_success_with_rate_limited_output_is_not_check_success(
+        self,
+    ) -> None:
+        comments = [
+            comment(10, "@coderabbitai full review", START + 60, bot=False),
+            comment(11, "Review finished", START + 65),
+            comment(
+                12,
+                "<!-- summarize by coderabbit --> src/feature.ts",
+                START + 66,
+            ),
+        ]
+        gh = configured_gh(
+            comments=comments,
+            coderabbit_check_runs=[
+                {
+                    "name": "CodeRabbit",
+                    "head_sha": "head-7",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "output": {
+                        "title": "Review rate limited",
+                        "summary": "Review rate limited",
+                        "text": "Action not completed: review rate limited",
+                    },
+                }
+            ],
+        )
+        evidence = ADAPTER.pull_evidence(gh, "owner/repo", 7)
+        self.assertFalse(evidence["codeRabbitCheckSuccess"])
+        self.assertEqual(evidence["codeRabbitCheck"]["state"], "RATE_LIMITED")
+        self.assertTrue(evidence["rateLimited"])
+        state, reason, mode = classify(gh)
+        self.assertNotEqual(state, "clean-complete")
+        self.assertEqual(state, "pending-retry-source")
+        self.assertIn("rate limited", reason)
+        self.assertIsNone(mode)
+
+    def test_commit_status_success_with_rate_limited_description_is_not_check_success(
+        self,
+    ) -> None:
+        gh = configured_gh(
+            coderabbit_statuses=[
+                {
+                    "context": "CodeRabbit",
+                    "state": "success",
+                    "description": "Review rate limited",
+                    "created_at": iso(START + 64),
+                }
+            ],
+        )
+        evidence = ADAPTER.pull_evidence(gh, "owner/repo", 7)
+        self.assertFalse(evidence["codeRabbitCheckSuccess"])
+        self.assertEqual(evidence["codeRabbitCheck"]["state"], "RATE_LIMITED")
+        self.assertTrue(evidence["codeRabbitCheck"].get("rateLimited"))
+        self.assertTrue(evidence["rateLimited"])
+
+    def test_comment_rate_limit_blocks_clean_complete_despite_success_check(
+        self,
+    ) -> None:
+        comments = [
+            comment(10, "@coderabbitai full review", START + 60, bot=False),
+            comment(11, "Review finished", START + 65),
+            comment(
+                12,
+                "<!-- summarize by coderabbit --> src/feature.ts",
+                START + 66,
+            ),
+            comment(13, "Action not completed: review rate limited", START + 70),
+        ]
+        gh = configured_gh(
+            comments=comments,
+            coderabbit_check_runs=[
+                {
+                    "name": "CodeRabbit",
+                    "head_sha": "head-7",
+                    "status": "completed",
+                    "conclusion": "success",
+                }
+            ],
+        )
+        evidence = ADAPTER.pull_evidence(gh, "owner/repo", 7)
+        self.assertTrue(evidence["codeRabbitCheckSuccess"])
+        self.assertTrue(evidence["rateLimited"])
+        state, reason, mode = ADAPTER.classify(
+            evidence, "head-7", None, START + 180
+        )
+        self.assertEqual(state, "pending-retry-source")
+        self.assertIn("rate limited", reason)
+        self.assertIsNone(mode)
+        self.assertNotEqual(state, "clean-complete")
 
 
 if __name__ == "__main__":
