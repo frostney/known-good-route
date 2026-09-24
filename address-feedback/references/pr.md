@@ -12,8 +12,23 @@ Apply the parent SKILL.md shared authority, attribution, and evidence rules.
   requires a maintainer-workflow reply stating its evidence-backed disposition
   before readiness or merge, including invalid, obsolete, duplicate, and
   out-of-scope findings. Do not post top-level PR summaries or issue comments.
-  In `automatic-merge` mode, a documented automation retrigger command is the
-  only allowed top-level comment.
+  In normal and `automatic-merge` modes, the only allowed top-level comment is
+  an intentionally active automation's documented retrigger command, posted
+  only when all of these hold:
+  - the automation has no completed verdict for the exact current head because
+    its attempt was rate-limited, skipped, or missing;
+  - any availability the provider stated has passed under the `retry_at` rules
+    in [pr-readiness.md](pr-readiness.md); a statement without a derivable
+    `retry_at` keeps the automation `pending`;
+  - no retrigger for that automation was posted on the current head; and
+  - the command does not request a paid or usage-based review.
+
+  For CodeRabbit, retrigger only through `scripts/coderabbit_adapter.py run`
+  with the repository, PR, exact head, an absolute deadline, and a
+  `--scan-repo` for each repository with recent CodeRabbit activity. The
+  adapter owns the account-wide lock, stated waits, and command choice; one
+  `run` per exact head is that head's retrigger. Never type a CodeRabbit
+  command by hand.
 - Mechanical applicability alone does not validate a finding: a symbol existing,
   a patch applying, or compilation succeeding does not establish its factual
   claim or authority. Classify both axes in step 4.
@@ -101,17 +116,16 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    requirement only when the pushed content is identical and its recorded
    dependencies did not change. A validated CI, code, or behavior failure
    returns to step 5 before another commit or push.
-9. In normal mode, return the result contract without merging. In
-   `automatic-merge` mode, launch the helper's foreground `wait` operation with
-   the exact head, repository policy, `--state` path, and safely derived
-   deadline.
+9. In either mode, post a documented retrigger only when the top-level
+   exception in the PR-specific boundaries permits it. In normal mode, a
+   passive helper `wait` may await the retriggered verdict; then return the
+   result contract without merging. In `automatic-merge` mode, launch the
+   helper's foreground `wait` operation with the exact head, repository policy,
+   `--state` path, and safely derived deadline.
    Resume this workflow only when the command returns a meaningful transition.
-   Use a
-   documented retrigger only when current evidence permits it; its required
-   command may use the narrow top-level exception. Never guess a timer, quota,
-   provider policy, or retry count. If the host cannot passively await a
-   subprocess, return `pending` with that unsupported capability instead of
-   using model heartbeats.
+   Never guess a timer, quota, provider policy, or retry count. If the host
+   cannot passively await a subprocess, return `pending` with that unsupported
+   capability instead of using model heartbeats.
 10. Stop without merging for a material product decision, unrelated failure,
    unsafe or divergent PR, unavailable terminal external dependency, or
    unresolved required finding. Report the exact blocker.

@@ -48,9 +48,11 @@ scope, or no identifiable target.
 ## Authority and shared boundaries
 
 Normal PR mode authorizes in-scope fixes, validation, commits, permitted pushes,
-inline replies, thread resolution, and monitoring. `automatic-merge` additionally
-authorizes one ordinary ready PR's squash merge and owned cleanup. A PR that is
-a stack member returns readiness to the stack owner without merging.
+inline replies, thread resolution, monitoring, and the review-automation
+retrigger that the PR procedure permits for an exact head without a completed
+verdict. `automatic-merge` additionally authorizes one ordinary ready PR's
+squash merge and owned cleanup. A PR that is a stack member returns readiness
+to the stack owner without merging.
 
 Normal stack mode additionally authorizes review triggers and new top fix layers,
 but never merge, merge-queue entry, automatic merge, or purchased review capacity.
