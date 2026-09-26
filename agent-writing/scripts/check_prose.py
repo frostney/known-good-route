@@ -36,7 +36,8 @@ INLINE_CODE = re.compile(r"`[^`]*`")
 
 
 def markdown_paths(root: Path) -> list[Path]:
-    paths = [root / "README.md"]
+    readme = root / "README.md"
+    paths = [readme] if readme.is_file() else []
     for skill in sorted(root.iterdir()):
         if skill.is_dir() and (skill / "SKILL.md").is_file():
             paths.extend(sorted(skill.rglob("*.md")))

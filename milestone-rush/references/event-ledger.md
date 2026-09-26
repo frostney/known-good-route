@@ -1,7 +1,10 @@
 # Milestone Rush event ledger
 
 The bundled one-shot command owns normalized event ingestion, validation, and
-aggregation. It never polls, runs as a daemon, or wakes a model:
+aggregation. It never polls, runs as a daemon, or wakes a model. Script paths
+below are relative to the skills root (this repository's root, or
+`.agents/skills/` in a project install); ledger paths are relative to the
+project root:
 
 ```bash
 python3 milestone-rush/scripts/event_ledger.py ingest \
