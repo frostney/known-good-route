@@ -58,11 +58,22 @@ class CheckProseTests(unittest.TestCase):
     def test_skills_root_without_readme_checks_only_skill_markdown(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            skill = root / "sample-skill"
-            skill.mkdir()
-            (skill / "SKILL.md").write_text("# Sample\n")
+            skill_md = root / "sample-skill" / "SKILL.md"
+            skill_md.parent.mkdir()
+            skill_md.write_text("# Sample\n")
 
-            self.assertEqual(CHECK_PROSE.markdown_paths(root), [skill / "SKILL.md"])
+            self.assertEqual(CHECK_PROSE.markdown_paths(root), [skill_md])
+
+    def test_skills_root_readme_is_checked_first(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            readme = root / "README.md"
+            readme.write_text("# Skills\n")
+            skill_md = root / "sample-skill" / "SKILL.md"
+            skill_md.parent.mkdir()
+            skill_md.write_text("# Sample\n")
+
+            self.assertEqual(CHECK_PROSE.markdown_paths(root), [readme, skill_md])
 
 
 if __name__ == "__main__":

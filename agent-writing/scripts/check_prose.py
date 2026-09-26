@@ -81,6 +81,8 @@ def main() -> None:
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
     paths = args.paths or markdown_paths(root)
+    if not paths:
+        raise SystemExit(f"no Markdown files found under {root}")
     findings = check_paths(path.resolve() for path in paths)
     if findings:
         raise SystemExit("\n".join(findings))
