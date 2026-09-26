@@ -316,6 +316,73 @@ describe("project refresh", () => {
     expect(await readFile(join(applyDirectory, "paddy/.agents/skills/example-skill/binary ü\n.bin"))).toEqual(Buffer.from([0, 255, 1]));
   });
 
+  test("keeps the real CLI on the canonical inventory when no agent home exists", async () => {
+    // Stands in for `npx skills@<version> update`, modelled on the CLI's
+    // agent detection: Codex counts as installed when CODEX_HOME (default
+    // ~/.codex) or /etc/codex exists, and with a universal agent detected
+    // the refreshed skill lands in .agents/skills. With nothing detected it
+    // does what the CLI does under `-y` — installs to every agent,
+    // including Eve's agent/skills outside the inventory. HOME points at an
+    // empty directory, as on a hosted runner.
+    const fixture = await makeRepository();
+    const options = await refreshOptions(fixture);
+    const scratch = await realpath(
+      await mkdtemp(join(tmpdir(), "kgr-skills-npx-test-")),
+    );
+    temporaryDirectories.push(scratch);
+    const fakeBin = join(scratch, "bin");
+    const emptyHome = join(scratch, "home");
+    const staged = join(scratch, "staged");
+    await mkdir(fakeBin);
+    await mkdir(emptyHome);
+    const stagedSkill = join(staged, ".agents", "skills", fixture.skillName);
+    await mkdir(stagedSkill, { recursive: true });
+    await writeFile(
+      join(stagedSkill, "SKILL.md"),
+      await readFile(join(fixture.skillDirectory, "SKILL.md"), "utf8"),
+    );
+    await writeFile(join(stagedSkill, "reference.md"), "refreshed\n");
+    await writeInventory(staged, fixture.skillName);
+    const fakeNpx = join(fakeBin, "npx");
+    await writeFile(
+      fakeNpx,
+      [
+        "#!/bin/sh",
+        'if [ -d "${CODEX_HOME:-$HOME/.codex}" ] || [ -d /etc/codex ]; then',
+        `  cp -R '${staged}/.agents' . && cp '${staged}/skills-lock.json' skills-lock.json`,
+        "  echo 'Updated 1 skill(s)'",
+        "else",
+        `  mkdir -p agent/skills/${fixture.skillName}`,
+        `  printf 'stray\\n' > agent/skills/${fixture.skillName}/SKILL.md`,
+        "  echo 'Installing to all agents'",
+        "fi",
+        "",
+      ].join("\n"),
+    );
+    await chmod(fakeNpx, 0o755);
+    const previous = {
+      CODEX_HOME: process.env.CODEX_HOME,
+      HOME: process.env.HOME,
+      PATH: process.env.PATH,
+    };
+    process.env.PATH = `${fakeBin}:${previous.PATH}`;
+    process.env.HOME = emptyHome;
+    delete process.env.CODEX_HOME;
+    try {
+      const result = await refreshProjectSkills(options);
+      expect(result.changed).toBe(true);
+      expect(result.changedPaths.sort()).toEqual([
+        `.agents/skills/${fixture.skillName}/reference.md`,
+        "skills-lock.json",
+      ]);
+    } finally {
+      for (const [name, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
+    }
+  });
+
   test("normalizes canonical hashes only when enabled", async () => {
     const fixture = await makeRepository();
     const lockPath = join(fixture.projectRoot, "skills-lock.json");

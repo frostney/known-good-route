@@ -12,6 +12,7 @@ import {
   stat,
   writeFile,
 } from "node:fs/promises";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -318,23 +319,36 @@ export function parseDeletionCheckFailures(output) {
   return [...sources].sort();
 }
 
+// The CLI refreshes each project skill with `add --skill <name> -y` and no
+// agent selection, so `add` targets the agents it detects from their home
+// directories. A hosted runner has none, and `-y` with nothing detected
+// installs to every agent the CLI knows, including ones whose project
+// directories sit outside the canonical inventory (Eve's agent/skills). An
+// existing, empty CODEX_HOME makes Codex, whose project directory is
+// .agents/skills, a detected agent, so the refresh stays on the inventory.
 function defaultSkillsRunner(args, cwd, cliVersion) {
-  const result = run(
-    "npx",
-    ["--yes", `skills@${cliVersion}`, ...args],
-    {
-      cwd,
-      env: {
-        ...process.env,
-        DISABLE_TELEMETRY: "1",
-        DO_NOT_TRACK: "1",
+  const codexHome = mkdtempSync(join(tmpdir(), "kgr-skills-codex-home-"));
+  try {
+    const result = run(
+      "npx",
+      ["--yes", `skills@${cliVersion}`, ...args],
+      {
+        cwd,
+        env: {
+          ...process.env,
+          CODEX_HOME: codexHome,
+          DISABLE_TELEMETRY: "1",
+          DO_NOT_TRACK: "1",
+        },
+        allowFailure: true,
       },
-      allowFailure: true,
-    },
-  );
-  const output = [result.stdout, result.stderr].filter(Boolean).join("\n");
-  process.stdout.write(output);
-  return { status: result.status ?? 1, output };
+    );
+    const output = [result.stdout, result.stderr].filter(Boolean).join("\n");
+    process.stdout.write(output);
+    return { status: result.status ?? 1, output };
+  } finally {
+    rmSync(codexHome, { force: true, recursive: true });
+  }
 }
 
 async function createPatch(repositoryRoot, scopedPaths, artifactDirectory, metadata) {
