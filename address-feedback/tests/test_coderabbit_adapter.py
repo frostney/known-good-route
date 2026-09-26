@@ -104,6 +104,7 @@ def configured_gh(
     coderabbit_statuses: list[dict[str, Any]] | None = None,
     pushed: int | None = START,
     check_suites_created: list[int] | None = None,
+    check_suite_branch: str = "feature",
 ) -> FakeGh:
     gh = FakeGh()
     gh.values.update(
@@ -149,7 +150,7 @@ def configured_gh(
             f"repos/owner/repo/commits/{head}/check-suites?per_page=100": [
                 {
                     "check_suites": [
-                        {"created_at": iso(created)}
+                        {"created_at": iso(created), "head_branch": check_suite_branch}
                         for created in check_suites_created or []
                     ]
                 }
@@ -531,13 +532,56 @@ class CodeRabbitAdapterTest(unittest.TestCase):
             return gh
 
         evidence = ADAPTER.pull_evidence(
-            failing(ADAPTER.WaitError("HTTP 404")), "owner/repo", 7
+            failing(ADAPTER.WaitError("gh: Not Found (HTTP 404)")), "owner/repo", 7
         )
         self.assertEqual(evidence["headPushSource"], "check-suite")
         with self.assertRaises(ADAPTER.RateLimited):
             ADAPTER.pull_evidence(
                 failing(ADAPTER.RateLimited("rate limit")), "owner/repo", 7
             )
+        with self.assertRaises(ADAPTER.WaitError):
+            ADAPTER.pull_evidence(
+                failing(ADAPTER.WaitError("gh: Server Error (HTTP 500)")), "owner/repo", 7
+            )
+
+    def test_check_suite_from_another_branch_does_not_bound_the_push(self) -> None:
+        # The commit reached another branch at START + 50, before CodeRabbit
+        # finished the previous PR head; its suite says nothing about this push.
+        gh = configured_gh(
+            comments=self.ack_before_push(),
+            pushed=None,
+            check_suites_created=[START + 50],
+            check_suite_branch="scratch",
+        )
+        evidence = ADAPTER.pull_evidence(gh, "owner/repo", 7)
+        self.assertIsNone(evidence["headPushedAt"])
+        state, _, _ = ADAPTER.classify(evidence, "head-7", None, START + 240)
+        self.assertEqual(state, "pending-check-required")
+
+    def test_run_returns_pending_check_required_without_waiting_or_triggering(
+        self,
+    ) -> None:
+        gh = configured_gh(comments=self.ack_before_push(), pushed=None)
+        clock = [float(START + 240)]
+
+        def sleep(seconds: float) -> None:
+            clock[0] += seconds
+
+        state, reason, _ = ADAPTER.run_review(
+            gh,
+            "owner/repo",
+            7,
+            "head-7",
+            ["owner/repo"],
+            START + 900,
+            10,
+            clock=lambda: clock[0],
+            sleeper=sleep,
+        )
+        self.assertEqual(state, "pending")
+        self.assertIn("push time is unknown", reason)
+        self.assertEqual(clock[0], START + 240)
+        self.assertEqual(gh.posts, [])
 
     def test_coderabbit_check_run_success_binds_exact_head(self) -> None:
         comments = [
