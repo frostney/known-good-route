@@ -247,6 +247,40 @@ class EventLedgerTest(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("non-negative number", output["reason"])
 
+    def test_identity_values_must_be_strings_or_issue_numbers(self) -> None:
+        for field, value in (
+            ("sessionId", ["session-1"]),
+            ("sessionId", 7),
+            ("branch", ""),
+            ("issue", True),
+            ("pullRequest", 0),
+        ):
+            with self.subTest(field=field, value=value):
+                self.ledger.unlink(missing_ok=True)
+                result, output = self.ingest(
+                    event("event-1", usage={"inferences": 1}, identity={field: value})
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertEqual(output["state"], "invalid")
+                self.assertIn(f"identity.{field}", output["reason"])
+
+        self.ledger.unlink(missing_ok=True)
+        result, _ = self.ingest(
+            event("event-1", usage={"inferences": 1}, identity={"issue": 48, "pullRequest": 52})
+        )
+        self.assertEqual(result.returncode, 0)
+
+    def test_summarize_reports_a_stored_invalid_identity_as_invalid(self) -> None:
+        self.ledger.write_text(
+            json.dumps(
+                event("event-1", usage={"inferences": 1}, identity={"sessionId": ["session-1"]})
+            ) + "\n"
+        )
+        result, output = self.summarize()
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(output["state"], "invalid")
+        self.assertIn("identity.sessionId", output["reason"])
+
     def test_spans_require_one_matching_start_and_finish(self) -> None:
         start = event(
             "event-1", event_type="span_started", sequence=None,
@@ -336,6 +370,17 @@ class EventLedgerTest(unittest.TestCase):
             {"latest": 4, "max": 4, "min": 2},
         )
         self.assertEqual(output["provenance"][0]["source"], "claude-hooks")
+
+    def test_gauge_latest_follows_time_across_streams(self) -> None:
+        self.ingest(
+            event("event-5", stream_id="a", resources={"effectiveWorkers": 8}),
+            event("event-1", stream_id="b", resources={"effectiveWorkers": 2}),
+        )
+        _, output = self.summarize()
+        self.assertEqual(
+            output["gauges"]["resources.effectiveWorkers"],
+            {"latest": 8, "max": 8, "min": 2},
+        )
 
     def test_concurrent_ingest_serializes_complete_json_lines(self) -> None:
         first = self.write_input(

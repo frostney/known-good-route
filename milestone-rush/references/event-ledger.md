@@ -103,7 +103,8 @@ Every null usage or resource value must appear in its adjacent
 `unavailableFields`; zero is a measured value. `session_started`,
 `manual_resume`, `model_sample`, and `tool_sample` make session boundaries,
 manual continuation, model usage, and tool usage explicit. Their matching
-identity fields are required.
+identity fields are required. Each identity value is a non-empty string or
+null; `issue` and `pullRequest` may also be positive integers.
 
 ## Counter semantics
 
@@ -119,8 +120,8 @@ baseline:
   stream instead;
 - missing baselines, sequence gaps, mixed modes, and changed baselines are
   invalid; and
-- `effectiveWorkers` is a gauge summarized as minimum, maximum, and latest. It
-  is never added to counters.
+- `effectiveWorkers` is a gauge summarized as minimum, maximum, and latest by
+  event timestamp across all streams. It is never added to counters.
 
 The summary reports session and segment identities, manual resumes, usage and
 resource counters, gauges, per-model usage, per-tool and per-wait totals,

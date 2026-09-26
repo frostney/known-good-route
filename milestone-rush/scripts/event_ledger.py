@@ -43,6 +43,7 @@ IDENTITY_FIELDS_V2 = (
     "waitId",
     "model",
 )
+NUMBERED_IDENTITY_FIELDS = ("issue", "pullRequest")
 ENVELOPE_FIELDS = (
     "schemaVersion",
     "runId",
@@ -197,6 +198,23 @@ def validate_event(event: Any) -> dict[str, Any]:
         raise LedgerError(
             f"event {event_id} identity is missing fields: {', '.join(sorted(missing_identity))}"
         )
+    for field in IDENTITY_FIELDS_V2:
+        item = identity.get(field)
+        if item is None or (isinstance(item, str) and item):
+            continue
+        if (
+            field in NUMBERED_IDENTITY_FIELDS
+            and isinstance(item, int)
+            and not isinstance(item, bool)
+            and item > 0
+        ):
+            continue
+        expected = (
+            "a non-empty string, a positive integer or null"
+            if field in NUMBERED_IDENTITY_FIELDS
+            else "a non-empty string or null"
+        )
+        raise LedgerError(f"event {event_id} identity.{field} must be {expected}")
     actor = require_object(value["actor"], f"event {event_id} actor")
     if "kind" not in actor or "capabilityClass" not in actor:
         raise LedgerError(f"event {event_id} actor requires kind and capabilityClass")
@@ -504,6 +522,7 @@ def summarize_run(events: list[dict[str, Any]], run_id: str) -> dict[str, Any]:
     tools: dict[str, dict[str, int | float]] = {}
     waits: dict[str, dict[str, int | float]] = {}
     gauges: dict[str, dict[str, int | float]] = {}
+    gauge_times: dict[str, datetime] = {}
     unavailable: list[dict[str, Any]] = []
     non_aggregatable: list[dict[str, Any]] = []
     provenance: dict[str, set[str]] = {}
@@ -596,13 +615,16 @@ def summarize_run(events: list[dict[str, Any]], run_id: str) -> dict[str, Any]:
 
             gauge = event["resources"]["effectiveWorkers"]
             if gauge is not None:
+                path = "resources.effectiveWorkers"
+                timestamp = parse_timestamp(event["timestamp"], "timestamp")
                 summary = gauges.setdefault(
-                    "resources.effectiveWorkers",
-                    {"min": gauge, "max": gauge, "latest": gauge},
+                    path, {"min": gauge, "max": gauge, "latest": gauge}
                 )
                 summary["min"] = min(summary["min"], gauge)
                 summary["max"] = max(summary["max"], gauge)
-                summary["latest"] = gauge
+                if path not in gauge_times or timestamp >= gauge_times[path]:
+                    summary["latest"] = gauge
+                    gauge_times[path] = timestamp
 
     return {
         **validation,
