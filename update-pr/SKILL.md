@@ -39,8 +39,9 @@ When the current PR belongs to a native GitHub stack, read
    gate. Preserve content, command, environment and coverage bindings. A preview
    needed to test an unpublished fix permits its draft update; resume testing
    on that exact revision before claiming readiness.
-5. Stage only relevant files and commit them with a concise Conventional Commit
-   subject. Never amend and never skip hooks.
+5. When relevant changes exist, stage only those files and commit them with a
+   concise Conventional Commit subject. Never amend and never skip hooks.
+   Otherwise continue to step 6.
 6. Push an ordinary branch normally, setting upstream when needed. Push a
    verified stack only through the guarded official stack workflow.
 7. Reconcile the PR title and body with the complete current diff, scope, linked
