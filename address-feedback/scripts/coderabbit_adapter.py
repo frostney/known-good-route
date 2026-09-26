@@ -12,6 +12,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, TextIO
+from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "delivery-wait" / "scripts"))
 
@@ -211,6 +212,53 @@ def account_wait(gh: Gh, repos: list[str]) -> dict[str, Any] | None:
     return max(candidates, key=lambda item: item["updatedAt"], default=None)
 
 
+def head_push_time(
+    gh: Gh, repo: str, pull: dict[str, Any], head: str
+) -> tuple[str | None, str | None]:
+    """Return when GitHub received the head and which evidence recorded it.
+
+    The committer date is set locally and can precede the push by any amount,
+    so it cannot bound evidence about this head. Prefer the branch activity
+    entry that moved the head ref to this commit, then the earliest check suite
+    GitHub created for the commit. Rate limits and transport failures
+    propagate; a missing or forbidden endpoint only removes that source.
+    """
+    head_info = pull.get("head") or {}
+    head_ref = head_info.get("ref")
+    head_repo = (head_info.get("repo") or {}).get("full_name") or repo
+    if isinstance(head_ref, str) and head_ref:
+        ref = quote(f"refs/heads/{head_ref}", safe="/")
+        try:
+            entries = rest_items(
+                gh, f"repos/{head_repo}/activity?ref={ref}&per_page=100"
+            )
+        except (RateLimited, TransientError):
+            raise
+        except WaitError:
+            entries = []
+        arrival = latest(
+            [entry for entry in entries if entry.get("after") == head], "timestamp"
+        )
+        if arrival:
+            return arrival["timestamp"], "activity"
+    try:
+        pages = gh.rest_pages(f"repos/{repo}/commits/{head}/check-suites?per_page=100")
+    except (RateLimited, TransientError):
+        raise
+    except WaitError:
+        pages = []
+    created = [
+        suite["created_at"]
+        for page in pages
+        if isinstance(page, dict)
+        for suite in page.get("check_suites", [])
+        if isinstance(suite, dict) and isinstance(suite.get("created_at"), str)
+    ]
+    if created:
+        return min(created, key=lambda value: parse_timestamp(value, "check suite created_at")), "check-suite"
+    return None, None
+
+
 def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
     repo_parts(repo)
     pr = positive_pr(pr)
@@ -221,10 +269,15 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
     if not isinstance(head, str) or not head:
         raise WaitError(f"pull request {repo}#{pr} is missing its head SHA")
     commit = gh.rest(f"repos/{repo}/commits/{head}")
-    pushed_at = (
+    committed_at = (
         ((commit or {}).get("commit") or {}).get("committer") or {}
     ).get("date")
-    pushed_epoch = parse_timestamp(pushed_at, "head commit time")
+    committed_epoch = parse_timestamp(committed_at, "head commit time")
+    pushed_at, push_source = head_push_time(gh, repo, pull, head)
+    pushed_epoch = max(
+        committed_epoch,
+        parse_timestamp(pushed_at, "head push time") if pushed_at else committed_epoch,
+    )
 
     comments = rest_items(gh, f"repos/{repo}/issues/{pr}/comments?per_page=100")
     reviews = rest_items(gh, f"repos/{repo}/pulls/{pr}/reviews?per_page=100")
@@ -323,7 +376,9 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
         "repo": repo,
         "pr": pr,
         "head": head,
+        "headCommittedAt": committed_at,
         "headPushedAt": pushed_at,
+        "headPushSource": push_source,
         "trigger": (
             {
                 "id": trigger.get("id"),
@@ -394,12 +449,16 @@ def classify(
     code_rabbit_ok = bool(evidence.get("codeRabbitCheckSuccess")) or (
         (evidence.get("codeRabbitCheck") or {}).get("state") == "SUCCESS"
     )
+    # Without a GitHub-recorded push time, an acknowledgment may belong to the
+    # previous head, so only the head-scoped check can complete the review.
+    push_known = evidence.get("headPushedAt") is not None
+    trusted_latency = bool(ack) and ack["latencySeconds"] >= TRUSTED_ACK_SECONDS
     if (
         ack
         and evidence["coverage"]["verified"]
-        and (ack["latencySeconds"] >= TRUSTED_ACK_SECONDS or code_rabbit_ok)
+        and ((push_known and trusted_latency) or code_rabbit_ok)
     ):
-        if code_rabbit_ok and ack["latencySeconds"] < TRUSTED_ACK_SECONDS:
+        if code_rabbit_ok and not (push_known and trusted_latency):
             reason = (
                 "finished acknowledgment has current walkthrough coverage "
                 "and head-scoped CodeRabbit check SUCCESS"
@@ -409,6 +468,13 @@ def classify(
         return "clean-complete", reason, None
     if evidence["skippedAck"]:
         return "pending-skipped", "CodeRabbit reported that review was skipped", None
+    if ack and evidence["coverage"]["verified"] and trusted_latency:
+        return (
+            "pending-check-required",
+            "head push time is unknown, so clean completion requires the "
+            "head-scoped CodeRabbit check",
+            None,
+        )
 
     desired: str | None = None
     trigger_mode = (evidence.get("trigger") or {}).get("mode")
