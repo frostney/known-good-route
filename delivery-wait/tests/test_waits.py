@@ -28,7 +28,10 @@ counter_path = pathlib.Path(os.environ["FAKE_GH_COUNTER"])
 counter = int(counter_path.read_text()) if counter_path.exists() else 0
 counter_path.write_text(str(counter + 1))
 args = sys.argv[1:]
-stdin = sys.stdin.read()
+stdin = sys.stdin.read() if "--input" in args else ""
+if counter < scenario.get("transientFailures", 0):
+    print("connection reset by peer", file=sys.stderr)
+    sys.exit(1)
 
 def output(value):
     print(json.dumps(value))
@@ -328,51 +331,56 @@ class WaitCommandsTest(unittest.TestCase):
         )
         self.assertEqual(output["state"], "changed")
 
-    def clear_checkpoint_digest(self, state: Path) -> None:
-        checkpoint = json.loads(state.read_text())
-        checkpoint["digest"] = None
-        checkpoint.pop("terminalResult", None)
-        state.write_text(json.dumps(checkpoint))
+    def write_digestless_checkpoint(self, *arguments: str) -> None:
+        """Leave the checkpoint a run writes when GitHub never answered."""
+        self.write_scenario(transientFailures=10**6)
+        deadline = (datetime.now(timezone.utc) + timedelta(seconds=0.3)).isoformat()
+        _, first = self.run_json(*arguments, "--deadline", deadline)
+        self.assertEqual(first["state"], "timed-out")
+        self.assertGreater(first["metrics"]["retries"], 0)
+        self.assertIsNone(json.loads(Path(arguments[-1]).read_text())["digest"])
 
     def test_digestless_checkpoint_does_not_turn_a_satisfied_review_into_changed(self) -> None:
-        self.write_scenario()
         state = self.directory / "review.json"
         arguments = (
             REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
-            "--policy", str(self.policy), "--deadline", self.deadline(), "--interval", "0.01",
-            "--state", str(state),
+            "--policy", str(self.policy), "--interval", "0.01", "--state", str(state),
         )
-        _, first = self.run_json(*arguments)
-        self.assertEqual(first["state"], "satisfied")
-        self.clear_checkpoint_digest(state)
-        _, output = self.run_json(*arguments)
+        self.write_digestless_checkpoint(*arguments)
+        self.write_scenario()
+        _, output = self.run_json(*arguments, "--deadline", self.deadline())
         self.assertEqual(output["state"], "satisfied")
 
     def test_digestless_checkpoint_does_not_turn_a_pending_wait_into_changed(self) -> None:
-        self.write_scenario(pull=pull("head-1", []))
         state = self.directory / "wait.json"
-        deadline = (datetime.now(timezone.utc) + timedelta(seconds=0.3)).isoformat()
         arguments = (
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--check", "CI", "--deadline", deadline, "--interval", "0.01",
-            "--state", str(state),
+            "--head", "head-1", "--check", "CI", "--interval", "0.01", "--state", str(state),
         )
-        _, first = self.run_json(*arguments)
-        self.assertEqual(first["state"], "timed-out")
-        self.clear_checkpoint_digest(state)
-        _, output = self.run_json(*arguments)
+        self.write_digestless_checkpoint(*arguments)
+        self.write_scenario(pull=pull("head-1", []))
+        deadline = (datetime.now(timezone.utc) + timedelta(seconds=0.3)).isoformat()
+        _, output = self.run_json(*arguments, "--deadline", deadline)
         self.assertEqual(output["state"], "timed-out")
 
     def test_wake_at_waits_for_each_deadline_despite_an_earlier_wake(self) -> None:
+        state = self.directory / "wake.json"
         past = (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()
-        _, first = self.run_json(DELIVERY, "wait", "wake-at", "--deadline", past, "--interval", "0.05")
-        self.assertEqual(first["state"], "satisfied")
-        later = datetime.now(timezone.utc) + timedelta(seconds=0.5)
-        _, output = self.run_json(
-            DELIVERY, "wait", "wake-at", "--deadline", later.isoformat(), "--interval", "0.05",
-        )
-        self.assertEqual(output["state"], "satisfied")
-        self.assertGreaterEqual(datetime.now(timezone.utc), later)
+        for arguments in ((), ("--state", str(state))):
+            with self.subTest(arguments=arguments):
+                _, first = self.run_json(
+                    DELIVERY, "wait", "wake-at", "--deadline", past, "--interval", "0.05", *arguments,
+                )
+                self.assertEqual(first["state"], "satisfied")
+                later = datetime.now(timezone.utc) + timedelta(seconds=0.3)
+                _, output = self.run_json(
+                    DELIVERY, "wait", "wake-at", "--deadline", later.isoformat(),
+                    "--interval", "0.05", *arguments,
+                )
+                self.assertEqual(output["state"], "satisfied")
+                self.assertGreaterEqual(datetime.now(timezone.utc), later)
+        self.assertFalse(state.exists())
+        self.assertFalse((self.directory / ".agent" / "waits").exists())
 
     def test_checkpoint_identity_change_invalidates(self) -> None:
         self.write_scenario(pull=pull("head-1", []))
