@@ -317,44 +317,69 @@ describe("project refresh", () => {
   });
 
   test("keeps the real CLI on the canonical inventory when no agent home exists", async () => {
-    // Stands in for `npx skills@<version> update`: with a universal agent
-    // detectable through CODEX_HOME it has nothing to change; otherwise it
-    // does what the CLI does with no detected agent and `-y` — installs to
-    // every agent, including Eve's agent/skills outside the inventory.
+    // Stands in for `npx skills@<version> update`, modelled on the CLI's
+    // agent detection: Codex counts as installed when CODEX_HOME (default
+    // ~/.codex) or /etc/codex exists, and with a universal agent detected
+    // the refreshed skill lands in .agents/skills. With nothing detected it
+    // does what the CLI does under `-y` — installs to every agent,
+    // including Eve's agent/skills outside the inventory. HOME points at an
+    // empty directory, as on a hosted runner.
     const fixture = await makeRepository();
     const options = await refreshOptions(fixture);
-    const fakeBin = await realpath(
+    const scratch = await realpath(
       await mkdtemp(join(tmpdir(), "kgr-skills-npx-test-")),
     );
-    temporaryDirectories.push(fakeBin);
+    temporaryDirectories.push(scratch);
+    const fakeBin = join(scratch, "bin");
+    const emptyHome = join(scratch, "home");
+    const staged = join(scratch, "staged");
+    await mkdir(fakeBin);
+    await mkdir(emptyHome);
+    const stagedSkill = join(staged, ".agents", "skills", fixture.skillName);
+    await mkdir(stagedSkill, { recursive: true });
+    await writeFile(
+      join(stagedSkill, "SKILL.md"),
+      await readFile(join(fixture.skillDirectory, "SKILL.md"), "utf8"),
+    );
+    await writeFile(join(stagedSkill, "reference.md"), "refreshed\n");
+    await writeInventory(staged, fixture.skillName);
     const fakeNpx = join(fakeBin, "npx");
     await writeFile(
       fakeNpx,
       [
         "#!/bin/sh",
-        'if [ -n "$CODEX_HOME" ] && [ -d "$CODEX_HOME" ]; then',
-        "  echo 'All project skills are up to date'",
+        'if [ -d "${CODEX_HOME:-$HOME/.codex}" ] || [ -d /etc/codex ]; then',
+        `  cp -R '${staged}/.agents' . && cp '${staged}/skills-lock.json' skills-lock.json`,
+        "  echo 'Updated 1 skill(s)'",
         "else",
-        "  mkdir -p agent/skills/example-skill",
-        "  printf 'stray\\n' > agent/skills/example-skill/SKILL.md",
+        `  mkdir -p agent/skills/${fixture.skillName}`,
+        `  printf 'stray\\n' > agent/skills/${fixture.skillName}/SKILL.md`,
         "  echo 'Installing to all agents'",
         "fi",
         "",
       ].join("\n"),
     );
     await chmod(fakeNpx, 0o755);
-    const previousPath = process.env.PATH;
-    const previousCodexHome = process.env.CODEX_HOME;
-    process.env.PATH = `${fakeBin}:${previousPath}`;
+    const previous = {
+      CODEX_HOME: process.env.CODEX_HOME,
+      HOME: process.env.HOME,
+      PATH: process.env.PATH,
+    };
+    process.env.PATH = `${fakeBin}:${previous.PATH}`;
+    process.env.HOME = emptyHome;
     delete process.env.CODEX_HOME;
     try {
       const result = await refreshProjectSkills(options);
-      expect(result.changed).toBe(false);
-      expect(result.changedPaths).toEqual([]);
+      expect(result.changed).toBe(true);
+      expect(result.changedPaths.sort()).toEqual([
+        `.agents/skills/${fixture.skillName}/reference.md`,
+        "skills-lock.json",
+      ]);
     } finally {
-      process.env.PATH = previousPath;
-      if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
-      else process.env.CODEX_HOME = previousCodexHome;
+      for (const [name, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
     }
   });
 
