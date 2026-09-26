@@ -231,6 +231,8 @@ def main() -> int:
         "checks": sorted(args.check),
         "assets": sorted(args.asset),
     }
+    if args.kind == "wake-at":
+        identity["wakeAt"] = args.deadline
     try:
         state_path = (
             args.state

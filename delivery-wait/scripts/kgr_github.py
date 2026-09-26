@@ -370,6 +370,7 @@ def wait_for_transition(
                 change_precedes_terminal
                 and prior
                 and prior.get("identity") == identity
+                and prior.get("digest") is not None
                 and prior.get("digest") != digest
             ):
                 result = result_envelope(kind, "changed", identity, observation, metrics, "authoritative state changed")
@@ -381,7 +382,12 @@ def wait_for_transition(
                 checkpoint["terminalResult"] = result
                 write_state(state_path, checkpoint)
                 return result
-            if prior and prior.get("identity") == identity and prior.get("digest") != digest:
+            if (
+                prior
+                and prior.get("identity") == identity
+                and prior.get("digest") is not None
+                and prior.get("digest") != digest
+            ):
                 result = result_envelope(kind, "changed", identity, observation, metrics, "authoritative state changed")
                 checkpoint["terminalResult"] = result
                 write_state(state_path, checkpoint)

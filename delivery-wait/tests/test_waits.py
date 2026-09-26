@@ -328,6 +328,52 @@ class WaitCommandsTest(unittest.TestCase):
         )
         self.assertEqual(output["state"], "changed")
 
+    def clear_checkpoint_digest(self, state: Path) -> None:
+        checkpoint = json.loads(state.read_text())
+        checkpoint["digest"] = None
+        checkpoint.pop("terminalResult", None)
+        state.write_text(json.dumps(checkpoint))
+
+    def test_digestless_checkpoint_does_not_turn_a_satisfied_review_into_changed(self) -> None:
+        self.write_scenario()
+        state = self.directory / "review.json"
+        arguments = (
+            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+            "--policy", str(self.policy), "--deadline", self.deadline(), "--interval", "0.01",
+            "--state", str(state),
+        )
+        _, first = self.run_json(*arguments)
+        self.assertEqual(first["state"], "satisfied")
+        self.clear_checkpoint_digest(state)
+        _, output = self.run_json(*arguments)
+        self.assertEqual(output["state"], "satisfied")
+
+    def test_digestless_checkpoint_does_not_turn_a_pending_wait_into_changed(self) -> None:
+        self.write_scenario(pull=pull("head-1", []))
+        state = self.directory / "wait.json"
+        deadline = (datetime.now(timezone.utc) + timedelta(seconds=0.3)).isoformat()
+        arguments = (
+            DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
+            "--head", "head-1", "--check", "CI", "--deadline", deadline, "--interval", "0.01",
+            "--state", str(state),
+        )
+        _, first = self.run_json(*arguments)
+        self.assertEqual(first["state"], "timed-out")
+        self.clear_checkpoint_digest(state)
+        _, output = self.run_json(*arguments)
+        self.assertEqual(output["state"], "timed-out")
+
+    def test_wake_at_waits_for_each_deadline_despite_an_earlier_wake(self) -> None:
+        past = (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()
+        _, first = self.run_json(DELIVERY, "wait", "wake-at", "--deadline", past, "--interval", "0.05")
+        self.assertEqual(first["state"], "satisfied")
+        later = datetime.now(timezone.utc) + timedelta(seconds=0.5)
+        _, output = self.run_json(
+            DELIVERY, "wait", "wake-at", "--deadline", later.isoformat(), "--interval", "0.05",
+        )
+        self.assertEqual(output["state"], "satisfied")
+        self.assertGreaterEqual(datetime.now(timezone.utc), later)
+
     def test_checkpoint_identity_change_invalidates(self) -> None:
         self.write_scenario(pull=pull("head-1", []))
         state = self.directory / "wait.json"
