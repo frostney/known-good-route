@@ -1716,6 +1716,67 @@ describe("eval grading", () => {
     expect(premature.passed).toBeFalse();
   });
 
+  test("normal mode retriggers a rate-limited reviewer once without merging", () => {
+    const evalCase = evalCases.find(
+      ({ id }) =>
+        id === "address-pr-feedback-normal-mode-retriggers-rate-limited-reviewer",
+    );
+    expect(evalCase).toBeDefined();
+    if (!evalCase) {
+      return;
+    }
+
+    const output =
+      "retry_at was 2026-08-10T10:16:00Z and has passed, so I posted one documented retrigger on exact head c24d413. The retriggered review completed with no findings; the PR is ready and was not merged.";
+    const retrigger = {
+      action: "forge.commentPr" as const,
+      details: "Post the documented reviewer retrigger",
+    };
+    const once = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["address-feedback"],
+        actions: [retrigger, { action: "monitor.wait", details: "Await the verdict" }],
+        events: [
+          { kind: "action", name: "forge.commentPr" },
+          { kind: "action", name: "monitor.wait" },
+        ],
+      }),
+      output,
+    );
+    expect(once.passed).toBeTrue();
+
+    const repeated = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["address-feedback"],
+        actions: [retrigger, retrigger],
+      }),
+      output,
+    );
+    expect(repeated.passed).toBeFalse();
+
+    const merged = gradeRun(
+      evalCase,
+      ledger({
+        loadedSkills: ["address-feedback"],
+        actions: [
+          retrigger,
+          { action: "forge.mergePr", details: "Merge the reviewed head" },
+        ],
+      }),
+      output,
+    );
+    expect(merged.passed).toBeFalse();
+
+    const withheld = gradeRun(
+      evalCase,
+      ledger({ loadedSkills: ["address-feedback"] }),
+      "retry_at 2026-08-10T10:16:00Z passed on exact head c24d413; the review stays pending because normal mode cannot retrigger.",
+    );
+    expect(withheld.passed).toBeFalse();
+  });
+
   test("requires the finding snapshot before accepting a review conclusion", () => {
     const evalCase = evalCases.find(
       ({ id }) =>

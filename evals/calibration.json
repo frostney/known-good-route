@@ -715,6 +715,15 @@
       "frozenCaseSha256": "628e968a8ac80c46e0fd865710181030c1deebc53ee65656be28a28dc8c46fef"
     },
     {
+      "caseId": "address-pr-feedback-normal-mode-retriggers-rate-limited-reviewer",
+      "status": "added",
+      "rationale": [
+        "Normal single-PR mode may post one documented retrigger for a rate-limited active reviewer after its derived retry_at, under the same evidence conditions as automatic-merge, and still never merges."
+      ],
+      "afterSha256": "91f2c0173f31fe3d3ecf17c3ba26fd073eeb1cf21a135c8300e831848128abee",
+      "frozenCaseSha256": "91f2c0173f31fe3d3ecf17c3ba26fd073eeb1cf21a135c8300e831848128abee"
+    },
+    {
       "caseId": "address-pr-feedback-unanswered-inline-automation-thread",
       "status": "updated",
       "rationale": [

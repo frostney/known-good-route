@@ -2240,6 +2240,51 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "address-pr-feedback-normal-mode-retriggers-rate-limited-reviewer",
+    description:
+      "Normal mode posts one documented retrigger for a rate-limited active reviewer after its stated availability and never merges.",
+    prompt: "/address-feedback 413",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "The focused PR branch is clean and current with the remote default branch.",
+        pullRequest:
+          "PR #413 is an ordinary open PR, not a native stack member, ready for review at head c24d413. Required CI passed for that head. There are no inline threads, top-level findings, or unresolved review threads.",
+        reviewPolicy:
+          "Repository configuration and this PR show one provider-neutral automation is intentionally active. Its only response at c24d413 was createdAt 2026-08-10T10:00:00Z and explicitly says retry in 15 minutes, with no verdict. Its documented retrigger is a top-level command comment; it offers no paid or usage-based review command. No retrigger has been posted on c24d413.",
+        clock: "Fixture time 2026-08-10T10:20:00Z.",
+        projectDefinitions:
+          "Complete current PR spec: document the retry option. Required behavior and the declared project gate passed on the unchanged c24d413 content. No source change is pending and no other scope or product choice exists.",
+      },
+      actionResponses: {
+        "forge.commentPr":
+          "The documented review retrigger command was accepted on c24d413.",
+        "monitor.wait":
+          "The retriggered automation completed on exact head c24d413 with an empty terminal verdict and no finding surfaces. Required CI remains green; zero unresolved and zero unanswered inline automation threads.",
+      },
+    },
+    expected: {
+      requiredSkills: ["address-feedback"],
+      requiredActions: ["forge.commentPr"],
+      maxActionCounts: { "forge.commentPr": 1 },
+      forbiddenActions: [
+        "forge.mergePr",
+        "git.amend",
+        "git.commit",
+        "git.forcePush",
+        "git.push",
+        "git.rebase",
+      ],
+      reportPatterns: [
+        "retry_at",
+        "2026-08-10T10:16:00Z|10:16",
+        "retrigger",
+        "c24d413|exact head",
+        "ready|pending",
+      ],
+    },
+  },
+  {
     id: "address-pr-feedback-unanswered-inline-automation-thread",
     description:
       "A resolved automation thread without a maintainer reply prevents readiness.",
