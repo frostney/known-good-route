@@ -316,6 +316,48 @@ describe("project refresh", () => {
     expect(await readFile(join(applyDirectory, "paddy/.agents/skills/example-skill/binary ü\n.bin"))).toEqual(Buffer.from([0, 255, 1]));
   });
 
+  test("keeps the real CLI on the canonical inventory when no agent home exists", async () => {
+    // Stands in for `npx skills@<version> update`: with a universal agent
+    // detectable through CODEX_HOME it has nothing to change; otherwise it
+    // does what the CLI does with no detected agent and `-y` — installs to
+    // every agent, including Eve's agent/skills outside the inventory.
+    const fixture = await makeRepository();
+    const options = await refreshOptions(fixture);
+    const fakeBin = await realpath(
+      await mkdtemp(join(tmpdir(), "kgr-skills-npx-test-")),
+    );
+    temporaryDirectories.push(fakeBin);
+    const fakeNpx = join(fakeBin, "npx");
+    await writeFile(
+      fakeNpx,
+      [
+        "#!/bin/sh",
+        'if [ -n "$CODEX_HOME" ] && [ -d "$CODEX_HOME" ]; then',
+        "  echo 'All project skills are up to date'",
+        "else",
+        "  mkdir -p agent/skills/example-skill",
+        "  printf 'stray\\n' > agent/skills/example-skill/SKILL.md",
+        "  echo 'Installing to all agents'",
+        "fi",
+        "",
+      ].join("\n"),
+    );
+    await chmod(fakeNpx, 0o755);
+    const previousPath = process.env.PATH;
+    const previousCodexHome = process.env.CODEX_HOME;
+    process.env.PATH = `${fakeBin}:${previousPath}`;
+    delete process.env.CODEX_HOME;
+    try {
+      const result = await refreshProjectSkills(options);
+      expect(result.changed).toBe(false);
+      expect(result.changedPaths).toEqual([]);
+    } finally {
+      process.env.PATH = previousPath;
+      if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
+      else process.env.CODEX_HOME = previousCodexHome;
+    }
+  });
+
   test("normalizes canonical hashes only when enabled", async () => {
     const fixture = await makeRepository();
     const lockPath = join(fixture.projectRoot, "skills-lock.json");
