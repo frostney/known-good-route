@@ -122,7 +122,10 @@ CodeRabbit adapter is the sole owner of its two permitted trigger commands. Its
 through stated waits, and treats a finished acknowledgment as `clean-complete`
 only when walkthrough coverage is verified for the exact head and either ack
 latency meets the trusted threshold or that same head has a CodeRabbit check
-SUCCESS. It escalates untrusted incremental acknowledgments to a full review,
+SUCCESS. Latency and walkthrough freshness count from when GitHub recorded the
+head's push (its branch activity, else its earliest check suite on that
+branch), or from the commit time if that is later. Without that record, only
+the head-scoped check completes the review. It escalates untrusted incremental acknowledgments to a full review,
 refuses guessed retry times, and never exposes a paid-review command. Keep
 `review-complete` for real exact-head review objects only.
 
