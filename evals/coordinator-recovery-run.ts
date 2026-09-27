@@ -179,7 +179,7 @@ async function consume() {
         first = await runParent(
           config1,
           1,
-          `Use milestone-rush's prerequisite-filing procedure for one authorized disposable issue in ${c.target.repository}. Inspect context, delegate a bounded create-issue automatic task through delegateIssue, inspect the actual worker result and independently reconcile GitHub. No implementation, milestone changes or other writes. Exact issue-author identity must come from observed context. A second draft approval is waived.`,
+          `Use milestone-rush's prerequisite-filing procedure for one authorized disposable issue in ${c.target.repository}. Inspect context, delegate a bounded create-issue task through delegateIssue, inspect the actual worker result and independently reconcile GitHub. No implementation, milestone changes or other writes. Exact issue-author identity must come from observed context.`,
           controller.signal,
         );
       } finally {
@@ -269,7 +269,7 @@ async function consume() {
       const second = await runParent(
         config2,
         2,
-        `Use /milestone-rush in this fresh context to continue the interrupted prerequisite filing task in ${c.target.repository}. You are a fresh coordinator with no previous conversation. Inspect current context, the durable worker result using inspectWorker, and GitHub. The test host verified all old coordinator/worker processes stopped before admitting this restart. ${scenario === "during-worker-read" ? "The first worker was cancelled while reading, before any issue write or transaction checkpoint. Attempt 2 is authorized: delegate the same bounded create-issue automatic task with observed attribution, then verify its actual result and independently reconcile GitHub." : "The worker already completed and its terminal result is durable. Reuse that result and the existing verified issue; do not dispatch a replacement or post another issue."} No other writes or new approval are needed. Return only the verified outcome.`,
+        `Use /milestone-rush in this fresh context to continue the interrupted prerequisite filing task in ${c.target.repository}. You are a fresh coordinator with no previous conversation. Inspect current context, the durable worker result using inspectWorker, and GitHub. The test host verified all old coordinator/worker processes stopped before admitting this restart. ${scenario === "during-worker-read" ? "The first worker was cancelled while reading, before any issue write or transaction checkpoint. Attempt 2 is authorized: delegate the same bounded create-issue task with observed attribution, then verify its actual result and independently reconcile GitHub." : "The worker already completed and its terminal result is durable. Reuse that result and the existing verified issue; do not dispatch a replacement or post another issue."} No other writes or new approval are needed. Return only the verified outcome.`,
       );
       await atomicJson(join(evidence, "parent-2-result.json"), second);
       const receipt = await reconcileIssueWithDeadline(

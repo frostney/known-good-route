@@ -38,8 +38,8 @@ increments. Follow native language idioms and the project's conventions.
 Treat an action-oriented request, such as "can you…" or "I want…", as an
 instruction to do the work. A plain-language request for a workflow's outcome,
 such as "open a PR" or "file an issue", runs that workflow with its gates. An
-explicit instruction about one choice, such as a label, an endpoint or skipping
-draft review, replaces only that default.
+explicit instruction about one choice, such as a label, an endpoint or showing
+a draft first, replaces only that default.
 
 Implementation authority persists across questions, corrections, diagnoses,
 worker returns and compaction. Update the affected decision or requirement while

@@ -14,12 +14,13 @@
     },
     {
       "caseId": "prompting-later-issue-authorization",
-      "status": "retained",
+      "status": "updated",
       "rationale": [
-        "Retained task, fixture, and assertions; no demonstrated contract mismatch in calibration."
+        "Retained task, fixture, and assertions; no demonstrated contract mismatch in calibration.",
+        "Review CR-4: description and evidence no longer describe the removed draft-first default; the expected creation is unchanged."
       ],
       "beforeSha256": "3e257ba49c09978ff0078c0621a112f15325ad88749a7b156d3a1d9f249c6406",
-      "afterSha256": "831e979c0458a702340e06439f1f4d84875a3863699d87d4bfd2e9726fee5897",
+      "afterSha256": "b3bf71eca3c359193785dc119ec22bded58a2e084745e4721f3af0b63c173cfe",
       "frozenCaseSha256": "831e979c0458a702340e06439f1f4d84875a3863699d87d4bfd2e9726fee5897"
     },
     {
@@ -394,10 +395,11 @@
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Focused probes and matching recorded validation satisfy review evidence without requiring an aggregate rerun.",
         "Supply comparison identity and scope completeness rather than rewarding invented revisions or missing diffs.",
-        "Preflight normalized synthetic full revisions to 40 hexadecimal characters."
+        "Preflight normalized synthetic full revisions to 40 hexadecimal characters.",
+        "September 27 contract change: review lanes are the default for non-trivial scopes, so this case adds no-subagents and remains the local-review opt-out check. Fresh native run required."
       ],
       "beforeSha256": "e88292d48aa30a9cacae4a146c32aa8c8af27769a707bc0104988977978521ef",
-      "afterSha256": "ece1ba8822baa8c266ccd8d97ca9b2fc937e9dcbbd45a056a0c0db1ca0d0a1bb",
+      "afterSha256": "7fd4143f3467f530435a7c63a2f2da5212df4b8bcf8be1e68195aadf0ae0e2e6",
       "frozenCaseSha256": "ece1ba8822baa8c266ccd8d97ca9b2fc937e9dcbbd45a056a0c0db1ca0d0a1bb"
     },
     {
@@ -407,10 +409,11 @@
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Focused probes and matching recorded validation satisfy review evidence without requiring an aggregate rerun.",
         "Accept an explicit inapplicable UI disposition as well as skipped UI. Retain coverage, authority and probe requirements; original failed trajectory retained.",
-        "Make the no-follow-up-question preference explicit in the scenario request; the original assessment-only request did not prohibit offering a later remediation choice. Keep the existing no-question assertion without inventing a universal skill rule. Prompt changed: fresh native run required."
+        "Make the no-follow-up-question preference explicit in the scenario request; the original assessment-only request did not prohibit offering a later remediation choice. Keep the existing no-question assertion without inventing a universal skill rule. Prompt changed: fresh native run required.",
+        "September 27 contract change: review and audit lanes are the default for non-trivial scopes, so this case no longer forbids delegation; it tests its other contracts. Fresh native run required."
       ],
       "beforeSha256": "70d43a5f02a1b6fba9b9c8aed40b18c705d2edba9a191129de8da7ec3b9d801c",
-      "afterSha256": "54532069a34703fde7322ac74fe8caf006d423046cc0e351e809a3a4dbb12bd0",
+      "afterSha256": "2465e72b94c7d79444c97d7c26fbd6683c9029efb6599dacafe8459770b3743b",
       "frozenCaseSha256": "ca15d4cdd8257a649f3149693a079b9198e777414cfd7fd6b939377cdf61fcf5",
       "revisions": [
         {
@@ -427,16 +430,17 @@
     },
     {
       "caseId": "code-review-revert-clean-deduplication",
-      "status": "corrected",
+      "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Focused probes and matching recorded validation satisfy review evidence without requiring an aggregate rerun.",
         "Supply comparison identity and scope completeness rather than rewarding invented revisions or missing diffs.",
         "Preflight normalized synthetic full revisions to 40 hexadecimal characters.",
-        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading."
+        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
+        "September 27 contract change: review and audit lanes are the default for non-trivial scopes, so this case no longer forbids delegation; it tests its other contracts. Fresh native run required."
       ],
       "beforeSha256": "b2fc4c8f13feac7c8b775c464917988b9e0651e0f9aa89038d0617d47ddc9873",
-      "afterSha256": "f8a3749a29b727bdcc30164274f22f1fa0ed10226d489fa249567db90eb715a7",
+      "afterSha256": "3af8e78096719ec6b0f77a2bec193f0064641f8016dfb42b54722205939c5d22",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -444,14 +448,15 @@
     },
     {
       "caseId": "codebase-audit-delivery-dedup-discoverability",
-      "status": "corrected",
+      "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Focused probes and matching recorded validation satisfy review evidence without requiring an aggregate rerun.",
-        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading."
+        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
+        "September 27 contract change: review and audit lanes are the default for non-trivial scopes, so this case no longer forbids delegation; it tests its other contracts. Fresh native run required."
       ],
       "beforeSha256": "f60e2748f5139e840618aeec741020e133553602f0bcd5b7cda4a0d1603aeeb0",
-      "afterSha256": "f439097c21d7af2bd8d8c2b6316aa431e045c710deb04ca1450756b92f1069b4",
+      "afterSha256": "cb7e65c3b893b838c62daeb0c395b72e70be289e50a600dfe85a6bd08b3072ae",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -459,16 +464,17 @@
     },
     {
       "caseId": "code-review-subagents-review-axis-lanes",
-      "status": "corrected",
+      "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Focused probes and matching recorded validation satisfy review evidence without requiring an aggregate rerun.",
         "Supply comparison identity and scope completeness rather than rewarding invented revisions or missing diffs.",
         "Preflight normalized synthetic full revisions to 40 hexadecimal characters.",
-        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading."
+        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
+        "September 27 contract change: the subagents input was removed; a default review of this non-trivial change delegates its lanes. Stable historical case ID retained. Fresh native run required."
       ],
       "beforeSha256": "c5210db2cdf40ad2f2911d7c59075deb3512271f75c6d47e03196594a8b97b8c",
-      "afterSha256": "56af353d4ae914dbc9a808be30dbbe71299d8c0ff7bc22c357e1cce138d310a2",
+      "afterSha256": "b82740df9fce3252f59b4ecef5539cead46e69a8fe0428dc20d52aef2f115d6a",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -481,22 +487,24 @@
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Focused probes and matching recorded validation satisfy review evidence without requiring an aggregate rerun.",
         "Supply comparison identity and scope completeness rather than rewarding invented revisions or missing diffs.",
-        "Preflight normalized synthetic full revisions to 40 hexadecimal characters."
+        "Preflight normalized synthetic full revisions to 40 hexadecimal characters.",
+        "September 27 contract change: review and audit lanes are the default for non-trivial scopes, so this case no longer forbids delegation; it tests its other contracts. Fresh native run required."
       ],
       "beforeSha256": "28c11b297079f276730cb2d7f1e757f5c0e6476602b556095b834da67c4b4205",
-      "afterSha256": "8e38fdd442671928780f317d2c61d5610921e76581881c33771c9cdf65578764",
+      "afterSha256": "fbe7ebf1eb46922f2f725953aa210634f4b4525df28a7c0f12b4a42ee694b31d",
       "frozenCaseSha256": "8e38fdd442671928780f317d2c61d5610921e76581881c33771c9cdf65578764"
     },
     {
       "caseId": "codebase-audit-subagents-fallback",
-      "status": "corrected",
+      "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Focused probes and matching recorded validation satisfy review evidence without requiring an aggregate rerun.",
-        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading."
+        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
+        "September 27 contract change: the subagents input was removed; a default audit of this multi-capability repository delegates its lanes. Stable historical case ID retained. Fresh native run required."
       ],
       "beforeSha256": "4e6dd8aca08f0130e7f41055ca8d5fa90a3aeeb996911786dbb1eda20107522b",
-      "afterSha256": "dc9c5c9d345de88c086cf40d90a749ffed921bb7a9badf8bdcc54b0961b3babb",
+      "afterSha256": "27e70f6ee67d5771cd888ef3d7571044a8c28b049cfb9ee94c1246c772bc2f9e",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -504,17 +512,18 @@
     },
     {
       "caseId": "code-review-churn-json-report",
-      "status": "corrected",
+      "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Focused probes and matching recorded validation satisfy review evidence without requiring an aggregate rerun.",
         "Supply comparison identity and scope completeness rather than rewarding invented revisions or missing diffs.",
         "Require structured output path; source mutation cannot hide inside an artifact-write action.",
         "Preflight normalized synthetic full revisions to 40 hexadecimal characters.",
-        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading."
+        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
+        "September 27 contract change: review and audit lanes are the default for non-trivial scopes, so this case no longer forbids delegation; it tests its other contracts. Fresh native run required."
       ],
       "beforeSha256": "2b3d1efbcfd926e42689776a0891a786630ddd967a502f5776e798010fa8384b",
-      "afterSha256": "66e61949afbab09e7ad9a581c6179ec1e1aaae6210ab27b35617b6fcefdd7cdb",
+      "afterSha256": "f2292c4831712ec3bbb89af259195585fb8cba0212a74bcd04debf0d51b5870d",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -522,16 +531,17 @@
     },
     {
       "caseId": "code-review-exact-file-scope",
-      "status": "corrected",
+      "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Focused probes and matching recorded validation satisfy review evidence without requiring an aggregate rerun.",
         "Supply comparison identity and scope completeness rather than rewarding invented revisions or missing diffs.",
         "Preflight normalized synthetic full revisions to 40 hexadecimal characters.",
-        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading."
+        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
+        "September 27 contract change: review and audit lanes are the default for non-trivial scopes, so this case no longer forbids delegation; it tests its other contracts. Fresh native run required."
       ],
       "beforeSha256": "f7d64f296571e3d490302dab3132e50c32290d4d9dcd5edd4baf0a9b56928d93",
-      "afterSha256": "47fa1a9453a579bb38d1a0bdac6279fdc2d13a1e6ee4e656f2dc3f371587fd0e",
+      "afterSha256": "562a8c07f57338935bbfadddd4c06e850044d13cab246a01fd4cd7bbe47e96c8",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -539,16 +549,17 @@
     },
     {
       "caseId": "code-review-prior-audit-revalidation",
-      "status": "corrected",
+      "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Focused probes and matching recorded validation satisfy review evidence without requiring an aggregate rerun.",
         "Supply comparison identity and scope completeness rather than rewarding invented revisions or missing diffs.",
         "Require structured output path; source mutation cannot hide inside an artifact-write action.",
-        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading."
+        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
+        "September 27 contract change: review and audit lanes are the default for non-trivial scopes, so this case no longer forbids delegation; it tests its other contracts. Fresh native run required."
       ],
       "beforeSha256": "cff9b30d34d16aa63880d722b92966fa6725ac521875df9015e3c0430b733aa8",
-      "afterSha256": "9dbd2a8b2e690201c435ea5e339511bd71839355b88f0292055fe29b9c906965",
+      "afterSha256": "c0e07f667b9f04047906d00720c685cdb4e3473c63505fba148ca0c320627c2f",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -556,14 +567,15 @@
     },
     {
       "caseId": "code-review-prior-review-unavailable-baseline",
-      "status": "corrected",
+      "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Focused probes and matching recorded validation satisfy review evidence without requiring an aggregate rerun.",
-        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading."
+        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
+        "September 27 contract change: review and audit lanes are the default for non-trivial scopes, so this case no longer forbids delegation; it tests its other contracts. Fresh native run required."
       ],
       "beforeSha256": "74b9fa8f39843e816814b29f44933e1147b6755ce4351be8295408b38f91eaa5",
-      "afterSha256": "c88031c2354a201f1034cacfb723c6ec5711721ce86595bf915c67604459e979",
+      "afterSha256": "4fab88ab02025f9bd97037dd40f49dc5364680431e12d9f91a772d909464afd4",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -571,15 +583,16 @@
     },
     {
       "caseId": "code-review-subagents-finding-lanes",
-      "status": "corrected",
+      "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Focused probes and matching recorded validation satisfy review evidence without requiring an aggregate rerun.",
         "Supply comparison identity and scope completeness rather than rewarding invented revisions or missing diffs.",
-        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading."
+        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
+        "September 27 contract change: the subagents input was removed; the user now asks for review subagents in plain language, an explicit instruction about that one choice. Stable historical case ID retained. Fresh native run required."
       ],
       "beforeSha256": "ab7b07eaeeb98afdb80e1e8a8d27b40054ef4a97048441293b468b90ab154587",
-      "afterSha256": "7e1e38c34ea2742fde3989547de5b7a47c29601353fc1a0053b288a2ac5c2bad",
+      "afterSha256": "31d978394089b728de759137a071de4c468e60d2a508c0e9ab85c60ddd43998f",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -587,15 +600,16 @@
     },
     {
       "caseId": "codebase-audit-churn-json-report",
-      "status": "corrected",
+      "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Focused probes and matching recorded validation satisfy review evidence without requiring an aggregate rerun.",
         "Require structured output path; source mutation cannot hide inside an artifact-write action.",
-        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading."
+        "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
+        "September 27 contract change: review and audit lanes are the default for non-trivial scopes, so this case no longer forbids delegation; it tests its other contracts. Fresh native run required."
       ],
       "beforeSha256": "bcd63fa4cd357c8c753c018fb4e1a48e1f2a18cbb71e0386ab07b7d2b26faf9c",
-      "afterSha256": "058fd2e943ad6621e40f63415eb541d8420a1b148655158e1903835354368708",
+      "afterSha256": "6ebcdba939d9bd1067d779c5a4f264a4bf0885202b1ea788ec41a4ea7267cbdd",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -606,10 +620,12 @@
       "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
-        "Writing discovery is diagnostic; this workflow does not mandate loading that skill."
+        "Writing discovery is diagnostic; this workflow does not mandate loading that skill.",
+        "September 27 contract change: create-issue now creates by default, so this case requests a draft explicitly and still expects the draft stop. Fresh native run required.",
+        "Review CR-3: the prompt now asks for the scope interview explicitly, so the required grill-with-docs call tests a stated request rather than a materiality judgment; the draft stop is unchanged."
       ],
       "beforeSha256": "106e037cb0a0130df139a0c77c0c0b1ff1894c1cdfe998440632ee67c7eecb28",
-      "afterSha256": "78c08a586cdeaef0a0314f4aa46d51dce75d724f3ec0facf00c1e8435acc6fe6",
+      "afterSha256": "cfd16e15b4eee0b63905d4c682f5044f7fe0651117c1b710bf500e9e63de79cb",
       "frozenCaseSha256": "78c08a586cdeaef0a0314f4aa46d51dce75d724f3ec0facf00c1e8435acc6fe6"
     },
     {
@@ -1125,10 +1141,11 @@
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Writing discovery is diagnostic; this workflow does not mandate loading that skill.",
         "Automatic settled creation needs no interview; grade required attribution on the created issue body.",
-        "Use explicitly fictional FixtureModel attribution and require that same identity in the actual issue body. Correct the description to preserve settled requirements without a mandatory interview. Fresh fixture run required."
+        "Use explicitly fictional FixtureModel attribution and require that same identity in the actual issue body. Correct the description to preserve settled requirements without a mandatory interview. Fresh fixture run required.",
+        "Issue creation with the no-op automatic keyword keeps its expectations; description updated."
       ],
       "beforeSha256": "5100a553efa0a32948170fcd2417ca3ffe4b0128fb17f073d5a1abbf68c23bc8",
-      "afterSha256": "26ae4cd7738f474bee6ed429f4d0632af509ada8ef5af4baee27c3c2b0364a54",
+      "afterSha256": "40b49317bf509a1853552cdae124b557b50d3a22e2cfb38a2d2a53cfc3be7ee4",
       "frozenCaseSha256": "9f5e020e2ef9977e8a70ce460d26d2bb0c7f97437f33ba6222145cde57f8a27d",
       "revisions": [
         {
@@ -1326,10 +1343,11 @@
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Worker-owned PR creation must not require the coordinator to open duplicate PRs.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
-        "September 14 approved release ownership: preserve parallel rolling integration and add an explicit configured milestone release plan, create-release invocation and verified release before closure. No fresh native replay of this legacy case claimed."
+        "September 14 approved release ownership: preserve parallel rolling integration and add an explicit configured milestone release plan, create-release invocation and verified release before closure. No fresh native replay of this legacy case claimed.",
+        "September 27 contract change: the delegated review default is /code-review fix-all, whose lanes fan out by default. Fresh native run required."
       ],
       "beforeSha256": "4a77e31e0e86343d1e4e0f72ba1a2f18f4e13d4645feb94c336ef87f43123791",
-      "afterSha256": "17b0e762a9bb892433bb97309cf52c95fc1b4a8cfac5e16b17e539434df5c8b7",
+      "afterSha256": "60a5c628d8628080283e4ad35808a932b4514f3bf4be72bd03f4a3b0d61060ef",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1371,10 +1389,11 @@
         "Permit only the ignored handoff by exact structured path; infrastructure mutation remains prohibited.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
         "Batch 2 supplies observed actor/model and explicit prerequisite posting authority. Administrative create-issue delegation is allowed, implementation remains forbidden, and issue creation still requires an action receipt. Native results retain delegation-without-completion failures.",
-        "Frozen Fable and Opus traces attempted the permitted administrative delegation and accurately reported that no issue URL was returned. The loaded contract permits checkpointing uncertain writes when reconciliation evidence is unavailable. Accept either a direct posting request or the permitted administrative attempt for this decision fixture; neither routing assertion proves issue completion. Keep independent native worker and verified live-issue receipt gates, source-bound semantic claim review, and all infrastructure boundaries. Original grades remain unchanged; fresh evaluation required."
+        "Frozen Fable and Opus traces attempted the permitted administrative delegation and accurately reported that no issue URL was returned. The loaded contract permits checkpointing uncertain writes when reconciliation evidence is unavailable. Accept either a direct posting request or the permitted administrative attempt for this decision fixture; neither routing assertion proves issue completion. Keep independent native worker and verified live-issue receipt gates, source-bound semantic claim review, and all infrastructure boundaries. Original grades remain unchanged; fresh evaluation required.",
+        "Review CR-1: `automatic` is a no-op, so the prerequisite is filed through /create-issue and the allowed delegate workflow matches milestone-rush's text. Fresh native run required."
       ],
       "beforeSha256": "c3fbca768f61c78e41ac5b4dbd3d2e0184e325f56080e65ff097aa7715cd2d2a",
-      "afterSha256": "0ec9cbd47af5ecb7576907389c8423f3fe6e0ab920bbf2e2cceb2643cc4dc8f9",
+      "afterSha256": "94cbed2e9be4a26fd9f057c43a6b1cdc204b3a441d7118f139d9c6fd9a98cf0f",
       "frozenCaseSha256": "61fe9fb21d1bf37042808dc9137a0ec6ce73557270fdb9d96915f63bd7f7d07f",
       "postFreezeChangedFields": [
         "fixture",
@@ -1920,9 +1939,10 @@
       "caseId": "milestone-rush-prerequisite-identity-unavailable",
       "status": "added",
       "rationale": [
-        "Batch 2 negative control with unavailable actor/model: forbid issue posting and require an ignored checkpoint. Administrative delegation is permitted but does not prove creation. A native false-completion claim escaped these assertions; manual adjudication is retained separately."
+        "Batch 2 negative control with unavailable actor/model: forbid issue posting and require an ignored checkpoint. Administrative delegation is permitted but does not prove creation. A native false-completion claim escaped these assertions; manual adjudication is retained separately.",
+        "Review CR-1: `automatic` is a no-op, so the prerequisite is filed through /create-issue and the allowed delegate workflow matches milestone-rush's text. Fresh native run required."
       ],
-      "afterSha256": "a3ce838fa0b2720441608ec357588f8b23b749f801e3d2290dce849cc6750405"
+      "afterSha256": "e8f15ca460cfa90449f133d38ac19c06dccefdedba14d3fd09d7066601960570"
     },
     {
       "caseId": "native-stack-missing-unit-contract",
@@ -2370,6 +2390,16 @@
       "beforeSha256": null,
       "afterSha256": "91893c46074cc582cabdea71c3408de3a55124c56d190ed82db2230a85e82173",
       "frozenCaseSha256": "91893c46074cc582cabdea71c3408de3a55124c56d190ed82db2230a85e82173"
+    },
+    {
+      "caseId": "create-issue-default-creates",
+      "status": "new",
+      "rationale": [
+        "September 27 contract change: without a draft request, create-issue creates the issue once its investigation, duplicate and attribution gates pass. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "c0c7fd20005fdaed8d4aac67a0b7cc9aa87496e2c01dfc887f1d44f7a728fda7",
+      "frozenCaseSha256": "c0c7fd20005fdaed8d4aac67a0b7cc9aa87496e2c01dfc887f1d44f7a728fda7"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

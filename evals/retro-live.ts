@@ -100,7 +100,7 @@ export async function retroLiveTools(configPath: string, ledger: RunLedger, life
       return {
         selected: true, grillingCompleted: true, action: retroCorrection,
         boundary: "Only this selected immediate action remains in the retrospective. The previous summary and selection are settled; continue until delivered or genuinely blocked. No documentation edit, other ticket or audit is selected.",
-        issue: "No prior issue has this trial's unique operation marker. Delegate create-issue automatic using delegateIssue, then independently reconcileIssue. This test explicitly authorizes posting with observed worker attribution.",
+        issue: "No prior issue has this trial's unique operation marker. Delegate create-issue using delegateIssue, then independently reconcileIssue. This test explicitly authorizes posting with observed worker attribution.",
         implementation: "After verifying the visibility issue, delegateImplementation through normal /implement. Include the verified issue URL and complete selected scope. The worker reads actual repository instructions and issue, reproduces, fixes, checks, obtains native independent review, publishes a draft with /create-pr, waits for exact-head CI through delivery-wait, and marks ready. This test authorizes those commits/pushes/PR operations only in the disposable repository. No merge.",
         completion: "A worker summary alone is insufficient. Call inspectDelivery after the worker returns and use its independently verified status. Do not claim delivery unless delivered=true. Final JSON status delivered or blocked, issueUrl, prUrl, head and reason.",
       };

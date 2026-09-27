@@ -121,13 +121,13 @@ export const promptingCases: EvalCase[] = [
   {
     id: "prompting-later-issue-authorization",
     description:
-      "An explicit later automatic instruction supersedes the original draft review default.",
+      "A later turn's creation instruction is honored after an earlier draft request.",
     prompt:
       "Earlier I asked you to draft issue text. Now create that issue automatically with the exact settled scope; my draft-review waiver applies to this issue. Use /create-issue.",
     fixture: {
       evidence: {
         conversation:
-          "User authorized automatic issue creation in the latest turn. The agreed scope and acceptance criteria are complete.",
+          "User authorized creating the issue in the latest turn. The agreed scope and acceptance criteria are complete.",
         repository:
           "example/project. Issue template needs problem, expected behavior, scope, acceptance. Existing label: bug.",
         projectVision:

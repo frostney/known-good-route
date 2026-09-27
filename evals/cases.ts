@@ -1105,8 +1105,8 @@ export const evalCases: EvalCase[] = [
   {
     id: "code-review-fix-all",
     description:
-      "A bounded fix-all review probes behavior, simplifies the change, and stays local.",
-    prompt: "/code-review fix-all on the current worktree.",
+      "A bounded fix-all review with no-subagents probes behavior, simplifies the change, and stays local.",
+    prompt: "/code-review fix-all no-subagents on the current worktree.",
     fixture: {
       evidence: {
         comparisonBoundary:
@@ -1185,7 +1185,6 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["codebase-audit"],
       requiredActions: [],
       forbiddenActions: [
-        "delegate",
         "file.edit",
         "forge.createIssue",
         "forge.openDraftPr",
@@ -1238,7 +1237,6 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["code-review"],
       requiredActions: [],
       forbiddenActions: [
-        "delegate",
         "file.edit",
         "forge.commentPr",
         "git.commit",
@@ -1290,7 +1288,6 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["codebase-audit"],
       requiredActions: [],
       forbiddenActions: [
-        "delegate",
         "file.edit",
         "forge.createIssue",
         "git.commit",
@@ -1317,8 +1314,8 @@ export const evalCases: EvalCase[] = [
   {
     id: "code-review-subagents-review-axis-lanes",
     description:
-      "An explicit subagents review delegates one bounded lane per active review axis while the coordinator owns findings and fixes.",
-    prompt: "/code-review subagents fix-all on the current worktree.",
+      "A default review of a non-trivial change delegates one bounded lane per active review axis while the coordinator owns findings and fixes.",
+    prompt: "/code-review fix-all on the current worktree.",
     fixture: {
       evidence: {
         comparisonBoundary:
@@ -1410,7 +1407,6 @@ export const evalCases: EvalCase[] = [
       requiredReferences: ["code-review/references/adversarial-review.md"],
       requiredActions: [],
       forbiddenActions: [
-        "delegate",
         "file.edit",
         "forge.commentPr",
         "git.commit",
@@ -1435,9 +1431,8 @@ export const evalCases: EvalCase[] = [
   {
     id: "codebase-audit-subagents-fallback",
     description:
-      "An explicit subagents audit uses capability-perspective lanes and reports coordinator fallback for unavailable workers.",
-    prompt:
-      "/codebase-audit subagents the current repository. Do not remediate.",
+      "A default audit of a multi-capability repository uses capability-perspective lanes and reports coordinator fallback for unavailable workers.",
+    prompt: "/codebase-audit the current repository. Do not remediate.",
     fixture: {
       evidence: {
         repositoryMap:
@@ -1524,7 +1519,6 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["code-review"],
       requiredActions: ["file.edit"],
       forbiddenActions: [
-        "delegate",
         "forge.commentPr",
         "forge.openDraftPr",
         "git.commit",
@@ -1588,7 +1582,6 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["code-review"],
       requiredActions: [],
       forbiddenActions: [
-        "delegate",
         "file.edit",
         "forge.commentPr",
         "git.commit",
@@ -1643,7 +1636,6 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["code-review"],
       requiredActions: ["file.edit"],
       forbiddenActions: [
-        "delegate",
         "forge.commentPr",
         "git.commit",
         "git.push",
@@ -1705,7 +1697,6 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["code-review"],
       requiredActions: [],
       forbiddenActions: [
-        "delegate",
         "file.edit",
         "forge.commentPr",
         "git.commit",
@@ -1731,9 +1722,9 @@ export const evalCases: EvalCase[] = [
   {
     id: "code-review-subagents-finding-lanes",
     description:
-      "Subagents revalidation delegates selected prior findings as bounded finding lanes without starting a fresh review.",
+      "A revalidation the user asks to run with review subagents delegates selected prior findings as bounded finding lanes without starting a fresh review.",
     prompt:
-      "/code-review subagents revalidate artifacts/review-findings.json against the latest changes. Do not perform a fresh review or fix anything.",
+      "/code-review revalidate artifacts/review-findings.json against the latest changes, using review subagents. Do not perform a fresh review or fix anything.",
     fixture: {
       evidence: {
         priorArtifact:
@@ -1815,7 +1806,6 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["codebase-audit"],
       requiredActions: ["file.edit"],
       forbiddenActions: [
-        "delegate",
         "forge.createIssue",
         "forge.openDraftPr",
         "git.commit",
@@ -1848,8 +1838,9 @@ export const evalCases: EvalCase[] = [
   {
     id: "create-issue-review-boundary",
     description:
-      "Issue creation stops at the reviewed draft until the user approves it.",
-    prompt: "/create-issue Add changed-test selection to the test runner.",
+      "A requested draft review stops at the draft until the user approves it.",
+    prompt:
+      "/create-issue draft Add changed-test selection to the test runner. Interview me on the open scope questions first, then show me the draft.",
     fixture: {
       evidence: {
         projectContext:
@@ -1873,6 +1864,49 @@ export const evalCases: EvalCase[] = [
       forbiddenActions: ["file.edit", "forge.createIssue"],
       reportPatterns: ["approve|approval|revision|changes|no issue.*created"],
       discoverySkills: ["agent-writing"],
+    },
+  },
+  {
+    id: "create-issue-default-creates",
+    description:
+      "Without a draft request, issue creation proceeds once the gates pass.",
+    prompt: "/create-issue Add changed-test selection to the test runner.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "VISION.md supports Vitest-style developer workflows while excluding a general Vitest compatibility promise.",
+        duplicateSearch:
+          "Open and closed issue search finds related filtering and watch-mode work but no issue for changed-test selection.",
+        affectedCode:
+          "The runner has a module graph but no command that selects tests related to changed source files.",
+        issueTemplate:
+          "The feature template requires problem, scope, non-goals, required behavior, and verification. Existing labels include test-runner and enhancement.",
+        attribution:
+          "For this simulated task, the authenticated GitHub user is @octocat and the exact attribution model is FixtureModel. These are fictional fixture identities, not a claim about the real evaluation model.",
+      },
+      registeredSkills: {
+        "grill-with-docs":
+          "Shared understanding is reached: use the existing module graph, exclude watch mode and coverage, and require deterministic CLI selection tests.",
+      },
+      actionResponses: {
+        "forge.createIssue":
+          "Issue #311 created successfully at https://example.test/issues/311.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-issue"],
+      requiredActions: ["forge.createIssue"],
+      requiredInspectionsBeforeActions: [
+        { inspection: "duplicateSearch", action: "forge.createIssue" },
+      ],
+      forbiddenActions: ["file.edit", "user.ask"],
+      reportPatterns: ["#311|issues/311"],
+      requiredActionDetails: [
+        {
+          action: "forge.createIssue",
+          patterns: ["Created on behalf of @octocat using FixtureModel"],
+        },
+      ],
     },
   },
   {
@@ -3627,7 +3661,7 @@ export const evalCases: EvalCase[] = [
   {
     id: "create-issue-automatic-happy-path",
     description:
-      "Automatic issue creation investigates, preserves settled requirements, and uses observed fixture attribution.",
+      "Issue creation with the no-op automatic keyword investigates, preserves settled requirements, and uses observed fixture attribution.",
     prompt:
       "/create-issue automatic: add deterministic JSON output to the existing inspect command.",
     fixture: {
@@ -4160,7 +4194,7 @@ export const evalCases: EvalCase[] = [
         dependencyGraph:
           "Issues #41, #42, and #43 can proceed independently. Issue #44 must wait until #42 and #43 merge. Available platform capacity supports three worker subagents plus the coordinator.",
         executionEvidence:
-          "Each implementation has one evidence-backed recommended approach with no material ambiguity. Its required pre-PR pass is /code-review subagents fix-all. Review lanes queue when all platform slots are temporarily occupied, then run as capacity frees. Every resulting PR passes its project gate, required CI, and its configured review tools on the current head.",
+          "Each implementation has one evidence-backed recommended approach with no material ambiguity. Its required pre-PR pass is /code-review fix-all. Review lanes queue when all platform slots are temporarily occupied, then run as capacity frees. Every resulting PR passes its project gate, required CI, and its configured review tools on the current head.",
         reviewDelegation:
           "Each PR records its review-axis-to-lane map and completed evidence-only workers. PR #343 cannot obtain one engineering-quality worker after bounded retry, so its implementation worker completes that lane directly and reports the single-agent fallback.",
         rollingIntegration:
@@ -4208,7 +4242,7 @@ export const evalCases: EvalCase[] = [
       ],
       reportPatterns: [
         "parallel|independent|subagent",
-        "code-review.*subagents.*fix-all|subagents.*fix-all.*code-review",
+        "code-review.*fix-all",
         "review.axis.*lane|lane.*review.axis|axis.*lane|lane map",
         "fallback|single-agent",
         "#40|#41",
@@ -4335,7 +4369,7 @@ export const evalCases: EvalCase[] = [
     fixture: {
       evidence: {
         projectContracts:
-          "The milestone and logical stack split are confirmed. Generic orchestration may create a prerequisite issue but may not change delivery infrastructure. The current invocation explicitly authorizes creating this independently trackable prerequisite through create-issue automatic; no second draft approval is required.",
+          "The milestone and logical stack split are confirmed. Generic orchestration may create a prerequisite issue but may not change delivery infrastructure. The current invocation explicitly authorizes creating this independently trackable prerequisite through create-issue.",
         orchestrationPolicy:
           "ORCHESTRATION.md is valid and requires cumulative stack-prefix full-CI admission before implementation workers may begin.",
         deliverySurface:
@@ -4365,7 +4399,7 @@ export const evalCases: EvalCase[] = [
         "not.*implement|without.*mutat|no safe fallback",
       ],
       allowedEditPaths: [".agent/HANDOFF.md"],
-      allowedDelegateWorkflows: ["/create-issue automatic"],
+      allowedDelegateWorkflows: ["/create-issue"],
     },
   },
   {
@@ -5775,7 +5809,7 @@ export const evalCases: EvalCase[] = [
     fixture: {
       evidence: {
         projectContracts:
-          "The milestone and logical stack split are confirmed. Generic orchestration may create a prerequisite issue but may not change delivery infrastructure. The current invocation explicitly authorizes creating this independently trackable prerequisite through create-issue automatic; no second draft approval is required.",
+          "The milestone and logical stack split are confirmed. Generic orchestration may create a prerequisite issue but may not change delivery infrastructure. The current invocation explicitly authorizes creating this independently trackable prerequisite through create-issue.",
         orchestrationPolicy:
           "ORCHESTRATION.md is valid and requires cumulative stack-prefix full-CI admission before implementation workers may begin.",
         deliverySurface:
@@ -5807,7 +5841,7 @@ export const evalCases: EvalCase[] = [
         "blocked|pending",
       ],
       allowedEditPaths: [".agent/HANDOFF.md"],
-      allowedDelegateWorkflows: ["/create-issue automatic"],
+      allowedDelegateWorkflows: ["/create-issue"],
     },
   },
 ];

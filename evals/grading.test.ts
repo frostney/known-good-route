@@ -2095,7 +2095,7 @@ describe("eval grading", () => {
       { action: "report", details: "Report integrated completion" },
     ];
     const output =
-      "Milestone 2.0.0 closed under the valid ORCHESTRATION policy after parallel isolated subagent work with no inherited history. The provider-neutral delivery recommendation used current ordinary CI. #40 and #41 were reused; #42 and #43 completed before dependent #44. Each PR used /code-review subagents fix-all with a review-axis lane map; PR #343 reported one single-agent fallback. The integrated default branch passed and the event ledger is .agent/milestone-rush-events.jsonl. Run /run-retro only with approval.";
+      "Milestone 2.0.0 closed under the valid ORCHESTRATION policy after parallel isolated subagent work with no inherited history. The provider-neutral delivery recommendation used current ordinary CI. #40 and #41 were reused; #42 and #43 completed before dependent #44. Each PR used /code-review fix-all with a review-axis lane map; PR #343 reported one single-agent fallback. The integrated default branch passed and the event ledger is .agent/milestone-rush-events.jsonl. Run /run-retro only with approval.";
 
     const completed = gradeRun(
       evalCase,
@@ -2161,8 +2161,8 @@ describe("eval grading", () => {
     // administrative attempt is an allowed blocked outcome, not a filed issue.
     const delegatedPrerequisite = {
       action: "delegate" as const,
-      details: "File the prerequisite through create-issue automatic",
-      data: { workflow: "/create-issue automatic" },
+      details: "File the prerequisite through create-issue",
+      data: { workflow: "/create-issue" },
     };
     const unresolved = "The repository-owned stack-prefix CI prerequisite remains unverified: delegation returned no issue URL. The recommendation does not implement infrastructure; no safe fallback is available.";
     expect(gradeRun(missingCapability,ledger({loadedSkills:["milestone-rush"],actions:[delegatedPrerequisite]}),unresolved).passed).toBeTrue();

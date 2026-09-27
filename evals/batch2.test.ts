@@ -111,14 +111,14 @@ test("live GitHub target requires disposable frostney identity and a bounded bra
 test("administrative delegation cannot admit an implementation worker through the prerequisite exception", () => {
   const c: EvalCase = {
     ...scenario,
-    expected: { allowedDelegateWorkflows: ["/create-issue automatic"] },
+    expected: { allowedDelegateWorkflows: ["/create-issue"] },
   };
   const l = empty();
   expect(gradeRun(c, l, "blocked").passed).toBe(true);
   l.actions.push({
     action: "delegate",
     details: "Prerequisite filing only",
-    data: { workflow: "/create-issue automatic" },
+    data: { workflow: "/create-issue" },
   });
   expect(gradeRun(c, l, "blocked").passed).toBe(true);
   l.actions.push({

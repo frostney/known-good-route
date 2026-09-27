@@ -2,8 +2,9 @@
 name: create-issue
 description: >-
   Investigates and creates a project-aligned GitHub issue from a tagline or short
-  description, using the repository's template, evidence, and labels. Use when
-  the user runs /create-issue or asks to file a GitHub issue.
+  description, using the repository's template, evidence, and labels; shows a
+  draft first only when asked. Use when asked to file, open, or create a GitHub
+  issue, or when the user runs /create-issue.
 license: Unlicense OR MIT
 compatibility: >-
   Requires the GitHub CLI (gh) 2.99 or newer authenticated to the target
@@ -14,12 +15,12 @@ compatibility: >-
 # Create issue
 
 Turn the user's input into an implementation-ready issue grounded in the current
-repository, then create it after the required review boundary.
+repository, then create it. A request to file an issue authorizes creating it
+once the gates below pass.
 
-User instructions override skill defaults. Reuse authorization and settled
-decisions within their scope across turns. Before a required pause, complete
-independent authorized work, then identify the exact skill file and quote the
-rule requiring a new decision or authority.
+Reuse authorization and settled decisions within their scope across turns.
+Before a required pause, complete independent authorized work, then identify
+the exact skill file and quote the rule requiring a new decision or authority.
 
 ## Gates
 
@@ -38,12 +39,15 @@ rule requiring a new decision or authority.
   from the current GitHub account and agent environment. Stop if either is
   unavailable; never guess or substitute a generic label.
 
-## Automatic mode
+## Draft review
 
-Automatic mode applies when the user explicitly requests it, including in a
-later turn. Preserve an existing draft-review waiver within its authorized scope. Complete every gate, then choose the template, title,
-labels, and body from project evidence and create the issue without draft
-approval. Material ambiguity or risk disables automatic mode.
+Choose the template, title, labels, and body from project evidence and create
+the issue without draft approval. Show the draft for approval first only when
+the user asks for it, for example with `/create-issue draft` or "show me the
+draft first", including in a later turn; that request lasts for its stated
+scope. `automatic` is accepted and changes nothing. Resolve a material
+ambiguity by asking about that point under the gates above, not by falling back
+to a full draft review.
 
 ## Workflow
 
@@ -66,8 +70,8 @@ approval. Material ambiguity or risk disables automatic mode.
    repository. Put non-media evidence such as probe output inside a collapsed
    `<details>` block.
 6. Choose only existing labels unless the user asks to create one.
-7. Show the proposed title, labels, and body unless the user waived review or
-   automatic mode applies.
+7. When draft review was requested, show the proposed title, labels, and body
+   and create the issue only after approval.
 8. End the issue body with this visually separate GitHub Note, replacing both
    values with the exact identities resolved for this run:
 

@@ -62,7 +62,7 @@ work-item deliveries and the release at the verified milestone boundary.
    of restarting it.
 4. Verify closed items against source and merge evidence. When required work was
    closed without delivery, comment with the evidence, create a linked
-   replacement through `/create-issue automatic`, add it to the milestone, and
+   replacement through `/create-issue`, add it to the milestone, and
    implement the replacement. Stop when the closure records a material rejected
    or deferred product decision.
 5. Inspect the current delivery surface and include the provider-neutral CI
@@ -71,7 +71,7 @@ work-item deliveries and the release at the verified milestone boundary.
    controllers, credentials, or provider configuration. Make a required missing
    capability an explicit repository-owned prerequisite; otherwise document the
    safe current-CI fallback and its cost. File prerequisite issues through
-   `/create-issue automatic`, retaining its evidence and attribution gates in
+   `/create-issue`, retaining its evidence and attribution gates in
    any delegated packet. If those gates block posting, record the prerequisite
    in the ignored checkpoint without claiming an issue was created. A delegation
    request is not completion: inspect the returned result and verify the issue
@@ -101,7 +101,7 @@ work-item deliveries and the release at the verified milestone boundary.
    Use `/deliver` with the issue or confirmed roadmap item, required endpoint,
    configured integration destination and applicable evidence. Pass the selected
    approach so `/implement` need not reopen it. Retain this workflow's
-   `/code-review subagents fix-all` review default in the packet. A work item
+   `/code-review fix-all` review default in the packet. A work item
    defaults to its
    configured integration delivery; the milestone owns shared sequencing and
    release publication. Material choices remain with the user.
