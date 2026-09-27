@@ -30,8 +30,7 @@ reusable helper; product-specific contracts belong in the repository.
 Make the smallest complete change at the layer that owns the behavior. Preserve
 required success, failure and transition paths. Include blockers that invalidate
 the requested result; keep unrelated improvements outside its completion bar.
-For multi-layer systems, establish a thin runnable path and deepen it in working
-increments. Follow native language idioms and the project's conventions.
+Follow native language idioms and the project's conventions.
 
 ## Continue the authorized work
 
@@ -47,10 +46,9 @@ retaining the parent objective. A question calls for an answer; it does not
 silently cancel the remaining work. Follow an explicit change of direction.
 
 When a check fails, diagnose it and fix an established in-scope cause. Use the
-registered `diagnosing-bugs` skill when available and relevant. An unstable
-benchmark blocks accepting a speedup while permitting authorized diagnosis and
-repair. After a correction, revisit the failed assumption and take the practical
-next action; reconsider the strategy if repeated work is not advancing the goal.
+registered `diagnosing-bugs` skill when available and relevant. After a
+correction, revisit the failed assumption and take the practical next action;
+reconsider the strategy if repeated work is not advancing the goal.
 
 Return control when the requested outcome is verified, safe in-scope progress
 is exhausted by an external blocker, or a material unresolved decision or new
@@ -70,11 +68,9 @@ the missing decision or permission. Risky or irreversible actions keep their
 confirmation gates.
 
 Assessment-only work can finish with findings; it does not authorize remediation.
-Stop adding work once the agreed acceptance criteria hold. For resumable work,
-record the active outcome, settled decisions, authority, evidence, remaining
-obligations and next executable action. Use
-[references/workstream-continuity.md](references/workstream-continuity.md) when
-multiple turns, external waits or workers require an explicit handoff.
+Stop adding work once the agreed acceptance criteria hold. When work spans
+turns, compaction, external waits or workers, keep the record in
+[references/workstream-continuity.md](references/workstream-continuity.md).
 
 ## Verify the requested result
 
@@ -92,22 +88,21 @@ obtain a pass. Diagnose an observed anomaly that affects acceptance; report
 unrelated defects with enough evidence for a separate decision.
 
 Write regression tests for observable behavior or consequential invariants,
-with expectations derived from independent requirements or invariants. Do not
-write tautological tests: never derive expected results from the implementation
-under test or merely assert that a mock returns its configured value. Do not
-couple tests to implementation details. Precise output or interaction assertions
-are valid when they enforce a specified contract. A correct refactor or
-equivalent instruction rewrite should not break tests. Each test should catch
-a relevant incorrect behavior. Do not assert prose, private calls or source
-tokens as proof of behavior.
+with expectations derived from independent requirements, never from the
+implementation under test. Each test should catch a relevant incorrect behavior
+and survive a correct refactor or equivalent instruction rewrite: do not assert
+that a mock returns its configured value, or treat prose, private calls or
+source tokens as proof of behavior. Precise output or interaction assertions
+are valid when they enforce a specified contract.
+
 Commit tests where the task asks for them or the repository already tests that
 kind of change, sized like neighboring tests: about one focused test per stated
 behavior. Remove scratch probes unless one becomes the regression test for a
 defect found. A reversible, low-impact change without a behavioral contract,
 such as copy, a configuration value or documentation, needs no new test; the
-project gate covers it.
-Validate fixture preconditions so a failed setup cannot masquerade as a product
-failure. Keep structural/schema checks distinct from behavioral acceptance.
+project gate covers it. Validate fixture preconditions so a failed setup
+cannot masquerade as a product failure. Keep structural/schema checks distinct
+from behavioral acceptance.
 
 A requested check or recorded action without a returned result remains
 unverified. Keep implementation, local validation, external validation and
@@ -116,21 +111,16 @@ action. Capture shell exit status before another command can overwrite it.
 
 ## Performance and maintainability
 
-Consider both product performance and time from an edit to trustworthy feedback.
-Measure representative before/after behavior for performance claims or changes
-to frequent, latency-sensitive or resource-intensive paths, tooling, hooks,
-startup, concurrency or external operations. Include workload, environment,
-warm/cold state, samples, units and comparison statistic. For a PR, compare the
-target branch baseline with the PR candidate under matching conditions and
-identify both revisions. Do not claim gains where measurements overlap or
-extrapolate a microbenchmark beyond its workload.
+Consider both product performance and time from an edit to trustworthy
+feedback. Read [references/performance.md](references/performance.md) when
+making a performance claim or changing a frequent, latency-sensitive or
+resource-intensive path, tooling, hooks, CI, startup, concurrency or external
+operations.
 
-Reduce duplicate work with correct incremental checks, caching and shared
-results. Preserve coverage and hooks. Diagnose material regressions, including
-flakiness, retries, queue delay and redundant validation. Complexity needs a real
-caller or demonstrated benefit, a clear contract and relevant regression
-coverage. Comments should explain constraints or decisions the code cannot
-express; improve unclear names rather than narrating implementation.
+Complexity needs a real caller or demonstrated benefit, a clear contract and
+relevant regression coverage. Comments should explain constraints or decisions
+the code cannot express; improve unclear names rather than narrating
+implementation.
 
 ## Coordinating deliverables
 
@@ -161,7 +151,8 @@ Lead with the outcome and decision-relevant evidence. Keep uncertainty and
 blockers explicit without narrating routine activity. Choose references by need:
 
 - [references/structural-delivery.md](references/structural-delivery.md):
-  architecture, greenfield work and selecting the correct layer.
+  architecture, greenfield or multi-layer systems, and a symptom that may sit
+  above the real fault.
 - [references/investigation.md](references/investigation.md): defect diagnosis,
   design evaluation and source comparisons.
 - [references/barometer.md](references/barometer.md): check direction when the

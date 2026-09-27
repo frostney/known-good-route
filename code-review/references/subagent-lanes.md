@@ -24,10 +24,10 @@ validation, verdict, and report.
    remedy, and any uncertainty or limitation, verified claims, limitations, and
    `complete` or `incomplete` status. Workers do not apply a severity or
    reporting threshold; the coordinator owns candidate filtering.
-5. Validate every candidate against the current checkout, apply the
-   de-duplication model below, reconcile conflicts across lanes, then assign
-   final IDs, severities, categories, and verdict. Do not repeat a completed
-   lane wholesale.
+5. Validate every candidate against the current checkout, apply the output
+   de-duplication rules in `SKILL.md`, reconcile conflicts across lanes, then
+   assign final IDs, severities, categories, and verdict. Do not repeat a
+   completed lane wholesale.
 6. If sub-agents are unsupported, unavailable after any applicable bounded
    retry, or leave a lane incomplete, complete that lane directly. Report the
    affected lane and reason as a single-agent fallback. Temporary capacity

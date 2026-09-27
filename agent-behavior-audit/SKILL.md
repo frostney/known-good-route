@@ -100,6 +100,12 @@ inventory, normalize, deduplicate, validate coverage, and calculate metrics;
 they must not impersonate a model by assigning semantic labels through keyword
 rules while claiming a model audit.
 
+When the host supports delegation, give independent sources or session batches
+to bounded workers by default, each returning labels keyed to session identities
+with their evidence; `no-subagents` keeps the review local. The coordinator
+reconciles worker labels against the coverage manifest before computing any
+metric.
+
 ## Build the barometer
 
 The first complete, quality-admitted month is `Month 0`. Earlier incomplete or
@@ -128,8 +134,9 @@ Promote each supported finding to the narrowest authoritative home:
    `known-good-route` skill;
 2. project-specific behavior goes to that project's instructions, skills, tests,
    or ADR-backed mechanism;
-3. intentional private work-style or personal context becomes an OKF proposal
-   requiring explicit user approval; and
+3. intentional private work-style or personal context becomes a proposed change
+   to the user's personal knowledge context, requiring explicit user approval;
+   and
 4. evidence stays in the private evidence group and never becomes ambient
    context by default.
 

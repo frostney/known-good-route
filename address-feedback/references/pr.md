@@ -47,7 +47,7 @@ state. The repository policy defaults to
 `.github/delivery/review-automations.json` and may be overridden explicitly.
 Use a caller-owned `--state` path below gitignored `.agent/waits/`.
 
-## Automatic merge
+## Active review automation
 
 An active review automation is a gate when repository policy or the current PR
 shows it was intentionally invoked. Inspect inline threads plus top-level
@@ -65,9 +65,9 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    Done. Label any claim inferred from the current change rather than a source.
 2. If an ordinary branch needs a baseline update, merge the remote base by
    following `/update-pr`'s no-rebase workflow, but defer its commit and push
-   until the pre-push loop in steps 5 through 7 passes. A stack owner must perform any
-   stack-wide synchronization before asking this skill to re-evaluate the
-   affected layer.
+   until the pre-push loop in steps 5 through 7 passes. A stack owner must
+   perform any stack-wide synchronization before asking this skill to
+   re-evaluate the affected layer.
 3. Run the review helper's `inspect` operation for the exact PR head. It returns
    active automation evidence, one explicit `findingSurfaces` collection across
    inline threads, exact-head reviews, and top-level comments from every author,
@@ -84,14 +84,15 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    thread through the helper's idempotent `reply` operation; resolve completed
    threads through its explicit `resolve` operation. Never silently ignore a
    nitpick, and never substitute a top-level comment when an inline comment
-   cannot accept a reply. Resolve attribution identities before the first reply
-   and append the required Note to every substantive reply.
+   cannot accept a reply. Every substantive reply carries the parent skill's
+   attribution Note.
 5. Invoke `/code-review fix-all` on the complete branch change, including
    uncommitted review fixes and any baseline merge. Apply every validated
    in-scope requirement gap. Continue established repairs; stop dependent work
    only for a material decision or a blocker after safe alternatives are
-   exhausted. An unresolved required finding prevents readiness. If `/code-review` is unavailable, perform the same bounded review
-   and fix pass directly.
+   exhausted. An unresolved required finding prevents readiness. If
+   `/code-review` is unavailable, perform the same bounded review and fix pass
+   directly.
 6. Run `/test-against-spec fix` when it is available. Otherwise perform the same
    black-box test directly against the explicit PR specification. Do not use
    source as proof of behavior. Prefer an exact-revision preview deployment when
@@ -105,10 +106,10 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    continue fixing and restart at step 5. Repeat until code review and behavior
    testing pass on the same unchanged implementation. Then establish the
    declared pre-PR gate, reusing its matching passing result. If fixing a gate
-   failure changes the implementation,
-   restart at step 5. Once the complete loop passes unchanged, use `/update-pr`
-   to commit and push without amending or force-pushing. If that skill is
-   unavailable, follow its documented workflow directly.
+   failure changes the implementation, restart at step 5. Once the complete
+   loop passes unchanged, use `/update-pr` to commit and push without amending
+   or force-pushing. If that skill is unavailable, follow its documented
+   workflow directly.
 8. Re-read the exact head, required checks, terminal automation verdicts,
    actionable findings, unresolved threads, and unanswered inline automation
    threads. Apply the readiness and `retry_at` rules in the reference. A new
