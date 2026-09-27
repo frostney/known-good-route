@@ -4293,6 +4293,8 @@ export const evalCases: EvalCase[] = [
           "Commented on #70 with evidence and a link to its replacement.",
         "forge.createIssue":
           "Created linked replacement #74 in milestone 3.0.0.",
+        delegate:
+          "The worker returned its PR at the current head with the project gate, CI and active review tools passing on that head.",
         "forge.mergePr": "The independent current-head PR was squash-merged.",
       },
     },

@@ -193,8 +193,8 @@ dropping it:
 - orchestration policy status, decision IDs and conflicts, worker context
   modes, and any monitoring fallback, named as a fallback;
 - the CI integration recommendation, labelled as a recommendation even when a
-  prerequisite issue carries the same content, with each prerequisite or the
-  current-CI fallback cost;
+  prerequisite issue carries the same content, with each repository-owned
+  prerequisite or the current-CI fallback cost;
 - event-ledger path and completeness, intervention checkpoints, and unavailable
   telemetry fields;
 - validation and reviewer evidence for final PR heads and integrated default;

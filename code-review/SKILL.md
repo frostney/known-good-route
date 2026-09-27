@@ -238,9 +238,10 @@ Include:
   file:line: evidence, impact, smallest remedy`;
 - verified claims, static-only or unreached areas, and retained probe artifacts.
 
-Name review axes and lane statuses with this skill's terms (`de-duplication`,
-`claim and specification`, `engineering quality`, `discoverability`;
-`complete`, `incomplete`) rather than paraphrasing them; callers such as
+Name the lane map, review axes, lane statuses, and roles with this skill's
+terms (`review-axis-to-lane map`; `de-duplication`, `claim and specification`,
+`engineering quality`, `discoverability`; `complete`, `incomplete`;
+`coordinator`, `worker`) rather than paraphrasing them; callers such as
 `milestone-rush` match them against this contract. Add a plain-language gloss
 beside a term when it helps. A short report may compress wording but keeps
 every applicable field above.

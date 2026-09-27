@@ -19,7 +19,7 @@ Reuse settled scope, approach and authorization. A failed check, diagnosis or
 available fix does not end implementation. Only a material unresolved
 decision, new authority or an external blocker after safe alternatives are
 exhausted can stop dependent work; complete independent work before asking. If
-a skill requires a pause, identify its loaded file and rule.
+a skill requires a pause, link its loaded file and quote the rule verbatim.
 
 ## Establish the work
 
