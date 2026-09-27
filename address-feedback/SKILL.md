@@ -1,8 +1,9 @@
 ---
 name: address-feedback
 description: >-
-  Resolves review feedback on one pull request or native GitHub stack. Use when
-  asked to address PR or stack feedback, or when the user runs /address-feedback.
+  Resolves review feedback on one pull request or native GitHub stack. Use
+  when asked to address, fix, or respond to review comments on a PR or stack,
+  or when the user runs /address-feedback.
 license: Unlicense OR MIT
 compatibility: >-
   Requires Python 3.11 or newer, authenticated GitHub CLI access, git, the
@@ -17,10 +18,9 @@ readiness for the exact PR head or complete native stack. When `/deliver` is
 active, return the result and next transition to that caller, which owns the
 selected delivery endpoint.
 
-User instructions override skill defaults. Reuse authorization and settled
-decisions within their scope across turns. Before a required pause, complete
-independent authorized work, then identify the exact skill file and quote the
-rule requiring a new decision or authority.
+Reuse authorization and settled decisions within their scope across turns.
+Before a required pause, complete independent authorized work, then identify
+the exact skill file and quote the rule requiring a new decision or authority.
 
 ## Resolve the scope from context
 

@@ -3,8 +3,9 @@ name: milestone-rush
 description: >-
   Autonomously completes a confirmed milestone by reconciling existing work,
   coordinating work-item delivery and the configured milestone release, and
-  closing the verified milestone. Use when the user runs
-  /milestone-rush for an exact milestone or selects it after /roadmap-review.
+  closing the verified milestone. Use when the user runs /milestone-rush or
+  asks to complete one exact, confirmed milestone, including selecting it
+  after /roadmap-review.
 license: Unlicense OR MIT
 compatibility: >-
   Requires authenticated GitHub access, git worktrees, the internal

@@ -1,8 +1,10 @@
 ---
 name: create-release
 description: >-
-  Prepare or publish a release when requested or handed off by milestone-rush,
-  using the repository's established versioning and publication workflow.
+  Prepares or publishes a release using the repository's established
+  versioning and publication workflow. Use when asked to cut, prepare, or
+  publish a release, when the user runs /create-release, or when
+  milestone-rush hands off a milestone.
 license: Unlicense OR MIT
 compatibility: >-
   Requires git, Python 3.11 or newer, the GitHub CLI (gh) authenticated to the

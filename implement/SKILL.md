@@ -2,7 +2,8 @@
 name: implement
 description: >-
   Develops a GitHub issue or idea until its requirements and fidelity criteria
-  are verified. Use when asked to implement a change or run /implement.
+  are verified. Use when asked to implement, build, or fix a described change
+  or GitHub issue, or when the user runs /implement.
 license: Unlicense OR MIT
 compatibility: >-
   Requires git and authenticated GitHub access when an issue supplies the scope.
@@ -15,8 +16,8 @@ compatibility: >-
 
 Develop the smallest complete change that satisfies the agreed requirements.
 Reuse settled scope, approach and authorization; ask only for a material
-unresolved choice after completing independent work. User instructions override
-skill defaults. If a skill requires a pause, identify its loaded file and rule.
+unresolved choice after completing independent work. If a skill requires a
+pause, identify its loaded file and rule.
 
 ## Establish the work
 

@@ -1,8 +1,9 @@
 ---
 name: agent-writing
 description: >-
-  Write clear, concise agent replies and engineering artifacts while
-  preserving evidence, decisions, and required detail.
+  Writes clear, concise agent replies and engineering artifacts while
+  preserving evidence, decisions, and required detail. Use when drafting a
+  final response, report, PR or issue text, or documentation.
 license: Unlicense OR MIT
 ---
 

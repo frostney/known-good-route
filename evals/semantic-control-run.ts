@@ -14,7 +14,7 @@ const output = resolve(Bun.argv[4]);
 await mkdir(output);
 const snapshot = join(output, "snapshot");
 await freezeSnapshot(snapshot);
-const jobs = ["claude:claude-fable-5-1", "claude:claude-opus-5"].flatMap(target =>
+const jobs = ["claude:claude-fable-5-1", "claude:claude-opus-5-5"].flatMap(target =>
   semanticControls.map(control => ({ target, control })));
 await Bun.write(join(output, "plan.json"), JSON.stringify({
   interpretation: "Authored semantic judge calibration controls, not candidate evaluations or unseen holdouts",

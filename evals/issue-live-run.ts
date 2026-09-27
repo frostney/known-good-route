@@ -87,7 +87,7 @@ async function consume() {
     const evidence = join(output, `${label}-${scenario}`);
     await mkdir(evidence);
     const workerModel = parentModel.includes("fable")
-      ? "claude:claude-opus-5"
+      ? "claude:claude-opus-5-5"
       : parentModel;
     const c: IssueLiveConfig = {
       target: {

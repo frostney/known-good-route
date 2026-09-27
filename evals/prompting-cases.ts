@@ -28,7 +28,7 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "Use software-engineering-excellence and delegate one read-only readiness inspection to fixture-reviewer through the native Agent tool. Target PR #627 at c319e42 in example/project, using address-feedback and its PR/readiness references. Supply the worker's scope and instructions. No mutations or further delegation. Integrate its actual result; report any unresolved evidence honestly.",
     worker: {
-      model: "claude:claude-opus-5",
+      model: "claude:claude-opus-5-5",
       caseId: "prompting-native-worker-blocked",
       mode: "claude-agent",
     },
@@ -222,7 +222,7 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "Use software-engineering-excellence to delegate one bounded readiness inspection to the available delegateWorker tool. The target is PR #622 in example/project, even though it belongs to native stack 17. This is read-only. Supply the worker's task, exact target, no-edit/no-further-delegation boundaries, and address-feedback skill/reference requirements. Return its result; do not merge or expand to the stack.",
     worker: {
-      model: "claude:claude-opus-5",
+      model: "claude:claude-opus-5-5",
       caseId: "prompting-native-worker-pr",
     },
     fixture: {
@@ -245,7 +245,7 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "Use software-engineering-excellence. Delegate one read-only inspection to fixture-reviewer through the native Agent tool: PR #622 at 91ce117 in example/project, using address-feedback and its selected PR/readiness references. This is one PR within stack 17; preserve that scope. No edits, replies, resolves, merges, or further delegation. Integrate the worker result and report readiness.",
     worker: {
-      model: "claude:claude-opus-5",
+      model: "claude:claude-opus-5-5",
       caseId: "prompting-native-worker-pr",
       mode: "claude-agent",
     },
@@ -301,6 +301,95 @@ export const promptingCases: EvalCase[] = [
         "git.stackMerge",
       ],
       outputPatterns: ["ready", "622"],
+    },
+  },
+  {
+    id: "trigger-prose-open-pr",
+    description:
+      "A plain-language request to open a pull request runs create-pr with its gates.",
+    prompt: "Can you open a PR for the parser fix on this branch?",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "Branch feature/parser is clean, tracks origin/feature/parser, and is one commit ahead of origin/main.",
+        recentCommits: "8ab31d2 fix(parser): retain escaped delimiters",
+        completionEvidence:
+          "Independent code review and real CLI behavior testing passed on exact commit 8ab31d2; all claimed requirements are covered.",
+        projectGate: "The declared pre-PR gate passed on this unchanged diff.",
+        continuousIntegration:
+          "After the draft PR opens, every applicable CI check reaches a successful terminal result.",
+        pullRequest: "No pull request exists for this branch.",
+      },
+      actionResponses: {
+        "forge.openDraftPr": "Draft PR #301 opened successfully.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr"],
+      requiredSkillsBeforeActions: [
+        { skill: "create-pr", action: "forge.openDraftPr" },
+      ],
+      requiredActions: ["forge.openDraftPr"],
+      forbiddenActions: ["forge.mergePr", "git.forcePush", "git.rebase"],
+    },
+  },
+  {
+    id: "trigger-prose-file-issue",
+    description:
+      "A plain-language request to file an issue runs create-issue, including its duplicate search.",
+    prompt:
+      "File an issue: the CLI crashes when the configuration file is empty.",
+    fixture: {
+      evidence: {
+        projectContext:
+          "The project is a command-line configuration linter. VISION.md lists robust handling of malformed input as a goal.",
+        duplicateSearch:
+          "Open and closed issue search finds no issue about empty or zero-byte configuration files.",
+        affectedCode:
+          "src/config.ts calls JSON.parse on the file contents without checking for an empty string, which throws on a zero-byte file.",
+        issueTemplate:
+          "The bug template requires summary, reproduction, expected behavior and actual behavior. Existing labels include bug and cli.",
+        identity:
+          "The authenticated GitHub user is fixture-user and the agent environment reports model FixtureModel.",
+      },
+      actionResponses: {
+        "forge.createIssue": "Issue #88 created in example/project.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-issue"],
+      requiredSkillsBeforeActions: [
+        { skill: "create-issue", action: "forge.createIssue" },
+      ],
+      requiredInspectionsBeforeActions: [
+        { inspection: "duplicateSearch", action: "forge.createIssue" },
+      ],
+      forbiddenActions: ["file.edit", "git.commit"],
+    },
+  },
+  {
+    id: "trigger-prose-review-branch",
+    description:
+      "A plain-language review request runs code-review and stays read-only.",
+    prompt: "Can you review the changes on this branch before I open a PR?",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "Branch feature/cache is clean and two commits ahead of origin/main.",
+        diff:
+          "src/cache.ts adds a time-to-live check that compares Date.now() with the stored expiry; tests/cache.test.ts adds one expiry test.",
+        projectGate: "The declared test command passes on the current head.",
+      },
+    },
+    expected: {
+      requiredSkills: ["code-review"],
+      requiredInspections: ["diff"],
+      forbiddenActions: [
+        "file.edit",
+        "git.commit",
+        "git.push",
+        "forge.openDraftPr",
+      ],
     },
   },
 ];

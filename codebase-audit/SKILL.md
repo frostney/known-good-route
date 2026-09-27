@@ -1,8 +1,10 @@
 ---
 name: codebase-audit
 description: >-
-  Audit a repository or subsystem for systemic engineering risks and
-  actionable improvements. Assessment only unless follow-up fixes are selected.
+  Audits a repository or subsystem for systemic engineering risks and
+  actionable improvements; assessment only unless follow-up fixes are
+  selected. Use when asked to audit a codebase, assess its health or technical
+  debt, or find systemic risks.
 license: Unlicense OR MIT
 compatibility: >-
   Requires the project's declared build and test tools plus network access for

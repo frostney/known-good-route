@@ -27,7 +27,7 @@ export const repairReviewSchema = {
   } } }, required: ["verdict", "findings"],
 };
 export const repairModels: Record<string, string> = {
-  "codex:gpt-6-astra": "GPT-6 Astra", "claude:claude-fable-5-1": "Fable 5.1", "claude:claude-opus-5": "Opus 5",
+  "codex:gpt-6-astra": "GPT-6 Astra", "codex:gpt-6-sol": "GPT-6 Sol", "claude:claude-fable-5-1": "Fable 5.1", "claude:claude-opus-5-5": "Opus 5.5",
 };
 export function requireRepairReviewSkills(loadedSkills: string[]) {
   const missing = ["code-review", "test-against-spec"].filter(skill => !loadedSkills.includes(skill));
@@ -173,7 +173,7 @@ export async function stackRepairTools(configPath: string, ledger: RunLedger, ex
     const attempt = crypto.randomUUID();
     const cfg = join(c.evidence, `review-${attempt}-config.json`);
     await atomicJson(cfg, { ...c, reviewScope: scope });
-    const target = c.model === "claude:claude-fable-5-1" ? "claude:claude-opus-5" : c.model;
+    const target = c.model === "claude:claude-fable-5-1" ? "claude:claude-opus-5-5" : c.model;
     const version = await preflight(target);
     const result = await runLocal({ target, effort: "medium", skillsRoot: c.skillsRoot,
       evalCase: { id: "stack-independent-review", description: "", fixture: { evidence: {} }, expected: {},

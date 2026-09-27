@@ -34,8 +34,9 @@ bun run eval -- --model codex:gpt-6-astra --case create-pr-already-committed
 bun run eval -- --model claude:claude-fable-5-1 --case history-update-pr-conflicts
 ```
 
-The default matrix is `codex:gpt-6-astra`, `claude:claude-fable-5-1`, and
-`claude:claude-opus-5`. Select exact models with repeated `--model` flags.
+The default matrix is `codex:gpt-6-astra`, `codex:gpt-6-sol`,
+`claude:claude-fable-5-1`, and `claude:claude-opus-5-5`. Select exact models
+with repeated `--model` flags.
 Use `KGR_CODEX_BIN` or `KGR_CLAUDE_BIN` to select an explicit local CLI
 executable, for example a newer version in a temporary cache. Existing global
 installations and login files are not modified.
@@ -298,7 +299,7 @@ Semantic claim review checks the report; the live prerequisite evaluator below
 requires returned worker receipts and independently verified GitHub state.
 
 `prompting-claude-native-agent` runs only with Fable 5.1. It enables one actual
-Claude Agent configured with the exact Opus 5 model and a separate fixture MCP
+Claude Agent configured with the exact Opus 5.5 model and a separate fixture MCP
 connection. The parent must supply the task packet; the worker must independently
 load its instructions and evidence. The grader connects the Agent call to its
 actual returned result and child response model metadata. Parent prose and the
@@ -712,7 +713,7 @@ These tests do not establish an atomic snapshot against changes after inspection
 ## Native stack repair
 
 `stack-repair-run.ts` accepts a prepared two-layer native fixture and an explicit
-Astra, Fable 5.1 or Opus 5 model. It starts independent native code/spec reviewers for the original
+Astra, Sol, Fable 5.1 or Opus 5.5 model. It starts independent native code/spec reviewers for the original
 members, posts their witness-backed inline findings, creates a new top branch
 through official stack commands, and lets the coordinator repair source through
 bounded edit tools. Publication requires a passing actual CLI gate and matching

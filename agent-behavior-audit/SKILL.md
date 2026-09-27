@@ -1,8 +1,9 @@
 ---
 name: agent-behavior-audit
 description: >-
-  Audit agent execution records for instruction compliance, outcome quality,
-  and wasted work using source-backed evidence.
+  Audits agent execution records for instruction compliance, outcome quality,
+  and wasted work using source-backed evidence. Use when asked to audit or
+  analyze how an agent behaved in past sessions, transcripts, or logs.
 license: Unlicense OR MIT
 compatibility: >-
   Requires read access to the in-scope harness histories or exported audit
