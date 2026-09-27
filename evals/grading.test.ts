@@ -2161,8 +2161,8 @@ describe("eval grading", () => {
     // administrative attempt is an allowed blocked outcome, not a filed issue.
     const delegatedPrerequisite = {
       action: "delegate" as const,
-      details: "File the prerequisite through create-issue automatic",
-      data: { workflow: "/create-issue automatic" },
+      details: "File the prerequisite through create-issue",
+      data: { workflow: "/create-issue" },
     };
     const unresolved = "The repository-owned stack-prefix CI prerequisite remains unverified: delegation returned no issue URL. The recommendation does not implement infrastructure; no safe fallback is available.";
     expect(gradeRun(missingCapability,ledger({loadedSkills:["milestone-rush"],actions:[delegatedPrerequisite]}),unresolved).passed).toBeTrue();

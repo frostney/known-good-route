@@ -14,12 +14,13 @@
     },
     {
       "caseId": "prompting-later-issue-authorization",
-      "status": "retained",
+      "status": "updated",
       "rationale": [
-        "Retained task, fixture, and assertions; no demonstrated contract mismatch in calibration."
+        "Retained task, fixture, and assertions; no demonstrated contract mismatch in calibration.",
+        "Review CR-4: description and evidence no longer describe the removed draft-first default; the expected creation is unchanged."
       ],
       "beforeSha256": "3e257ba49c09978ff0078c0621a112f15325ad88749a7b156d3a1d9f249c6406",
-      "afterSha256": "831e979c0458a702340e06439f1f4d84875a3863699d87d4bfd2e9726fee5897",
+      "afterSha256": "b3bf71eca3c359193785dc119ec22bded58a2e084745e4721f3af0b63c173cfe",
       "frozenCaseSha256": "831e979c0458a702340e06439f1f4d84875a3863699d87d4bfd2e9726fee5897"
     },
     {
@@ -620,10 +621,11 @@
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Writing discovery is diagnostic; this workflow does not mandate loading that skill.",
-        "September 27 contract change: create-issue now creates by default, so this case requests a draft explicitly and still expects the draft stop. Fresh native run required."
+        "September 27 contract change: create-issue now creates by default, so this case requests a draft explicitly and still expects the draft stop. Fresh native run required.",
+        "Review CR-3: the prompt now asks for the scope interview explicitly, so the required grill-with-docs call tests a stated request rather than a materiality judgment; the draft stop is unchanged."
       ],
       "beforeSha256": "106e037cb0a0130df139a0c77c0c0b1ff1894c1cdfe998440632ee67c7eecb28",
-      "afterSha256": "866d363f6c1a4bd5960fa5964dd4d9f39ccfe88c3a114b2ddb6dec8ff89b4e10",
+      "afterSha256": "cfd16e15b4eee0b63905d4c682f5044f7fe0651117c1b710bf500e9e63de79cb",
       "frozenCaseSha256": "78c08a586cdeaef0a0314f4aa46d51dce75d724f3ec0facf00c1e8435acc6fe6"
     },
     {
@@ -1139,10 +1141,11 @@
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Writing discovery is diagnostic; this workflow does not mandate loading that skill.",
         "Automatic settled creation needs no interview; grade required attribution on the created issue body.",
-        "Use explicitly fictional FixtureModel attribution and require that same identity in the actual issue body. Correct the description to preserve settled requirements without a mandatory interview. Fresh fixture run required."
+        "Use explicitly fictional FixtureModel attribution and require that same identity in the actual issue body. Correct the description to preserve settled requirements without a mandatory interview. Fresh fixture run required.",
+        "Issue creation with the no-op automatic keyword keeps its expectations; description updated."
       ],
       "beforeSha256": "5100a553efa0a32948170fcd2417ca3ffe4b0128fb17f073d5a1abbf68c23bc8",
-      "afterSha256": "26ae4cd7738f474bee6ed429f4d0632af509ada8ef5af4baee27c3c2b0364a54",
+      "afterSha256": "40b49317bf509a1853552cdae124b557b50d3a22e2cfb38a2d2a53cfc3be7ee4",
       "frozenCaseSha256": "9f5e020e2ef9977e8a70ce460d26d2bb0c7f97437f33ba6222145cde57f8a27d",
       "revisions": [
         {
@@ -1386,10 +1389,11 @@
         "Permit only the ignored handoff by exact structured path; infrastructure mutation remains prohibited.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
         "Batch 2 supplies observed actor/model and explicit prerequisite posting authority. Administrative create-issue delegation is allowed, implementation remains forbidden, and issue creation still requires an action receipt. Native results retain delegation-without-completion failures.",
-        "Frozen Fable and Opus traces attempted the permitted administrative delegation and accurately reported that no issue URL was returned. The loaded contract permits checkpointing uncertain writes when reconciliation evidence is unavailable. Accept either a direct posting request or the permitted administrative attempt for this decision fixture; neither routing assertion proves issue completion. Keep independent native worker and verified live-issue receipt gates, source-bound semantic claim review, and all infrastructure boundaries. Original grades remain unchanged; fresh evaluation required."
+        "Frozen Fable and Opus traces attempted the permitted administrative delegation and accurately reported that no issue URL was returned. The loaded contract permits checkpointing uncertain writes when reconciliation evidence is unavailable. Accept either a direct posting request or the permitted administrative attempt for this decision fixture; neither routing assertion proves issue completion. Keep independent native worker and verified live-issue receipt gates, source-bound semantic claim review, and all infrastructure boundaries. Original grades remain unchanged; fresh evaluation required.",
+        "Review CR-1: `automatic` is a no-op, so the prerequisite is filed through /create-issue and the allowed delegate workflow matches milestone-rush's text. Fresh native run required."
       ],
       "beforeSha256": "c3fbca768f61c78e41ac5b4dbd3d2e0184e325f56080e65ff097aa7715cd2d2a",
-      "afterSha256": "0ec9cbd47af5ecb7576907389c8423f3fe6e0ab920bbf2e2cceb2643cc4dc8f9",
+      "afterSha256": "94cbed2e9be4a26fd9f057c43a6b1cdc204b3a441d7118f139d9c6fd9a98cf0f",
       "frozenCaseSha256": "61fe9fb21d1bf37042808dc9137a0ec6ce73557270fdb9d96915f63bd7f7d07f",
       "postFreezeChangedFields": [
         "fixture",
@@ -1935,9 +1939,10 @@
       "caseId": "milestone-rush-prerequisite-identity-unavailable",
       "status": "added",
       "rationale": [
-        "Batch 2 negative control with unavailable actor/model: forbid issue posting and require an ignored checkpoint. Administrative delegation is permitted but does not prove creation. A native false-completion claim escaped these assertions; manual adjudication is retained separately."
+        "Batch 2 negative control with unavailable actor/model: forbid issue posting and require an ignored checkpoint. Administrative delegation is permitted but does not prove creation. A native false-completion claim escaped these assertions; manual adjudication is retained separately.",
+        "Review CR-1: `automatic` is a no-op, so the prerequisite is filed through /create-issue and the allowed delegate workflow matches milestone-rush's text. Fresh native run required."
       ],
-      "afterSha256": "a3ce838fa0b2720441608ec357588f8b23b749f801e3d2290dce849cc6750405"
+      "afterSha256": "e8f15ca460cfa90449f133d38ac19c06dccefdedba14d3fd09d7066601960570"
     },
     {
       "caseId": "native-stack-missing-unit-contract",

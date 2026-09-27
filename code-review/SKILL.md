@@ -41,8 +41,11 @@ architecture, security, compatibility, or scope decision.
 - Delegate review lanes by default when the host supports subagents and the
   scope is not trivial. A small change, such as a few lines in one file, stays
   local. `no-subagents` or an equivalent user instruction keeps the whole review
-  local. While lanes run, the coordinator continues its own lane-independent
-  work, such as resolving the boundary and running the project gate.
+  local. When the review delegates lanes, read
+  [references/subagent-lanes.md](references/subagent-lanes.md) before
+  publishing the lane map. While lanes run, the coordinator continues its own
+  lane-independent work, such as resolving the boundary and running the project
+  gate.
 - Default remediation is none. Inspect and run safe local probes, but do not
   edit source, tests, configuration, or documentation.
 - Fix modes authorize local edits and validation, not commits, pushes, PR
@@ -71,8 +74,6 @@ prior findings are supplied, whether or not JSON output is requested.
 
 Read only the references for supplied inputs:
 
-- [references/subagent-lanes.md](references/subagent-lanes.md) whenever the
-  review delegates lanes.
 - [references/file-scope.md](references/file-scope.md) for an exact file list.
 - [references/prior-findings.md](references/prior-findings.md) for prior findings,
   their intersection with a file list, and the targeted result contract.

@@ -1840,7 +1840,7 @@ export const evalCases: EvalCase[] = [
     description:
       "A requested draft review stops at the draft until the user approves it.",
     prompt:
-      "/create-issue draft Add changed-test selection to the test runner. Show me the draft first.",
+      "/create-issue draft Add changed-test selection to the test runner. Interview me on the open scope questions first, then show me the draft.",
     fixture: {
       evidence: {
         projectContext:
@@ -3661,7 +3661,7 @@ export const evalCases: EvalCase[] = [
   {
     id: "create-issue-automatic-happy-path",
     description:
-      "Automatic issue creation investigates, preserves settled requirements, and uses observed fixture attribution.",
+      "Issue creation with the no-op automatic keyword investigates, preserves settled requirements, and uses observed fixture attribution.",
     prompt:
       "/create-issue automatic: add deterministic JSON output to the existing inspect command.",
     fixture: {
@@ -4369,7 +4369,7 @@ export const evalCases: EvalCase[] = [
     fixture: {
       evidence: {
         projectContracts:
-          "The milestone and logical stack split are confirmed. Generic orchestration may create a prerequisite issue but may not change delivery infrastructure. The current invocation explicitly authorizes creating this independently trackable prerequisite through create-issue automatic; no second draft approval is required.",
+          "The milestone and logical stack split are confirmed. Generic orchestration may create a prerequisite issue but may not change delivery infrastructure. The current invocation explicitly authorizes creating this independently trackable prerequisite through create-issue.",
         orchestrationPolicy:
           "ORCHESTRATION.md is valid and requires cumulative stack-prefix full-CI admission before implementation workers may begin.",
         deliverySurface:
@@ -4399,7 +4399,7 @@ export const evalCases: EvalCase[] = [
         "not.*implement|without.*mutat|no safe fallback",
       ],
       allowedEditPaths: [".agent/HANDOFF.md"],
-      allowedDelegateWorkflows: ["/create-issue automatic"],
+      allowedDelegateWorkflows: ["/create-issue"],
     },
   },
   {
@@ -5809,7 +5809,7 @@ export const evalCases: EvalCase[] = [
     fixture: {
       evidence: {
         projectContracts:
-          "The milestone and logical stack split are confirmed. Generic orchestration may create a prerequisite issue but may not change delivery infrastructure. The current invocation explicitly authorizes creating this independently trackable prerequisite through create-issue automatic; no second draft approval is required.",
+          "The milestone and logical stack split are confirmed. Generic orchestration may create a prerequisite issue but may not change delivery infrastructure. The current invocation explicitly authorizes creating this independently trackable prerequisite through create-issue.",
         orchestrationPolicy:
           "ORCHESTRATION.md is valid and requires cumulative stack-prefix full-CI admission before implementation workers may begin.",
         deliverySurface:
@@ -5841,7 +5841,7 @@ export const evalCases: EvalCase[] = [
         "blocked|pending",
       ],
       allowedEditPaths: [".agent/HANDOFF.md"],
-      allowedDelegateWorkflows: ["/create-issue automatic"],
+      allowedDelegateWorkflows: ["/create-issue"],
     },
   },
 ];

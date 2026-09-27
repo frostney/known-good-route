@@ -210,7 +210,7 @@ export async function issueLiveTools(
         identityScope:
           "actor and model are the issue-author identity observed for the isolated worker; coordinatorModel must not be substituted for it",
         request: c.taskRequest ??
-          "File one disposable test prerequisite describing how delegated issue completion must be backed by a returned worker result and verified GitHub issue, including safe reconciliation after a lost response. Do not implement or alter repository infrastructure. This evaluation authorizes create-issue automatic without a second draft approval. Repository vision permits disposable evaluation artifacts. No milestone assignment is requested.",
+          "File one disposable test prerequisite describing how delegated issue completion must be backed by a returned worker result and verified GitHub issue, including safe reconciliation after a lost response. Do not implement or alter repository infrastructure. This evaluation authorizes create-issue. Repository vision permits disposable evaluation artifacts. No milestone assignment is requested.",
         evidence,
         checkpoint: (await Bun.file(checkpoint).exists())
           ? await Bun.file(checkpoint).json()
