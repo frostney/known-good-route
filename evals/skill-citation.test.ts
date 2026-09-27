@@ -37,6 +37,11 @@ test("source citations bind the loaded path and quote while permitting normal qu
   ]) for (const path of ["/fixture/implement/SKILL.md", "</fixture/implement/SKILL.md>", "/fixture/implement/SKILL.md:66", "/fixture/implement/SKILL.md#evidence"]) {
     expect(gradeRun(scenario, ledger, `[rule](${path})\n${quote}`).passed).toBeTrue();
   }
+  // CommonMark allows whitespace inside the link parentheses, and an absolute
+  // destination that normalizes to the loaded source names the same file.
+  for (const link of ["[rule]( /fixture/implement/SKILL.md )", "[rule](/fixture/other/../implement/SKILL.md)",
+    '[rule](/fixture/implement/SKILL.md "implement")', "[rule](\n/fixture/implement/SKILL.md\n)"])
+    expect(gradeRun(scenario, ledger, `${link}\n> ${passage};`).passed).toBeTrue();
   const specialPath = "/fixture/A (work)/my+skill/SKILL.md";
   expect(gradeRun(scenario, await recorded(specialPath), report(`<${specialPath}>`)).passed).toBeTrue();
   expect(gradeRun(scenario, await recorded(specialPath), report(specialPath)).passed).toBeFalse();
@@ -49,6 +54,7 @@ test("bare paths, wrong links, paraphrases, unrelated rules and unquoted text fa
   for (const text of [
     report().replace("[rule](/fixture/implement/SKILL.md)", "implement/SKILL.md"),
     report("snapshot/implement/SKILL.md"), report("/elsewhere/implement/SKILL.md"),
+    report("/fixture/implement/../other/SKILL.md"), report("../fixture/implement/SKILL.md"),
     report().replace(passage, "Pause if documentation is missing"),
     report().replace(passage, "Never force-push."),
     report().replace("> ", ""),

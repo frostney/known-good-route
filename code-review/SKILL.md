@@ -215,6 +215,16 @@ Cite the originating requirement or identify the claim as inferred.
 
 ## Fresh-review report
 
+Report terms are an interface: callers such as `milestone-rush`, review
+tooling and audits match them literally, so a paraphrase breaks the handoff.
+Use these terms verbatim for the lane map, review axes, lane statuses, and
+roles: `review-axis-to-lane map`; `de-duplication`,
+`claim and specification`, `engineering quality`, `discoverability`;
+`complete`, `incomplete`; `coordinator`, `worker`. A plain-language gloss may
+follow a term but never replaces it. When lanes ran, label that section with
+the map's term and describe your own role there as the `coordinator`. A short
+report may compress wording but keeps every applicable field below.
+
 For a fresh review, lead with the verdict: `APPROVE`,
 `APPROVE WITH IMPROVEMENTS`, or `REQUEST CHANGES`.
 
@@ -224,8 +234,10 @@ Include:
 - active and skipped review axes, with the reason for each skip;
 - the material engineering-quality concerns covered and any conditional concern
   skipped because the changed runtime path did not touch it;
-- when the review delegated lanes, the review-axis-to-lane map, completed and
-  incomplete lanes, and every coordinator-completed fallback with its reason;
+- when the review delegated lanes, the review-axis-to-lane map with each
+  lane's `complete` or `incomplete` status, worker candidates the coordinator
+  filtered out with the reason (listed apart from findings), and every
+  coordinator-completed fallback with its reason, or that none was needed;
 - the churn window, symbol/file coverage, and architectural-risk hotspots;
 - exact probes and checks with observed results;
 - de-duplication coverage, coalesced evidence sources, and merged or conflicted

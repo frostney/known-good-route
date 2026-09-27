@@ -19,8 +19,9 @@ active, return the result and next transition to that caller, which owns the
 selected delivery endpoint.
 
 Reuse authorization and settled decisions within their scope across turns.
-Before a required pause, complete independent authorized work, then identify
-the exact skill file and quote the rule requiring a new decision or authority.
+Before a required pause, complete independent authorized work, then link the
+exact skill file as a Markdown link and quote the rule requiring a new decision
+or authority verbatim in a block quote.
 
 ## Resolve the scope from context
 

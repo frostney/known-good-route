@@ -19,7 +19,9 @@ Reuse settled scope, approach and authorization. A failed check, diagnosis or
 available fix does not end implementation. Only a material unresolved
 decision, new authority or an external blocker after safe alternatives are
 exhausted can stop dependent work; complete independent work before asking. If
-a skill requires a pause, identify its loaded file and rule.
+a skill requires a pause, link its loaded file as a Markdown link and quote the
+rule verbatim in a block quote; a paraphrase or a bare path does not let the
+user check the rule.
 
 ## Establish the work
 
@@ -46,8 +48,9 @@ comparison, read [references/approach-selection.md](references/approach-selectio
 It owns comparison evidence and the registered `grilling` loop. Explicit
 `automatic` mode skips that interview while preserving investigation and the
 user's ownership of material product, architecture, security or scope choices.
-Required evidence or a conclusively failed readiness threshold blocks dependent
-work, not independent investigation or an established in-scope correction.
+If required external evidence is unavailable, stop the dependent work; continue
+independent investigation and any established in-scope correction. A
+conclusively failed readiness threshold blocks dependent work the same way.
 
 ## Develop and verify
 
