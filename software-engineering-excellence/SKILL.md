@@ -96,10 +96,10 @@ Consider both product performance and time from an edit to trustworthy feedback.
 Measure representative before/after behavior for performance claims or changes
 to frequent, latency-sensitive or resource-intensive paths, tooling, hooks,
 startup, concurrency or external operations. Include workload, environment,
-warm/cold state, samples and comparison statistic. For a PR, compare the target
-branch baseline with the PR candidate under matching conditions and identify
-both revisions. Do not claim gains where
-measurements overlap or extrapolate a microbenchmark beyond its workload.
+warm/cold state, samples, units and comparison statistic. For a PR, compare the
+target branch baseline with the PR candidate under matching conditions and
+identify both revisions. Do not claim gains where measurements overlap or
+extrapolate a microbenchmark beyond its workload.
 
 Reduce duplicate work with correct incremental checks, caching and shared
 results. Preserve coverage and hooks. Diagnose material regressions, including

@@ -7,7 +7,8 @@ description: >-
 license: Unlicense OR MIT
 compatibility: >-
   Requires the GitHub CLI (gh) 2.99 or newer authenticated to the target
-  repository with push access, and network access.
+  repository with permission to create issues (triage access to apply labels,
+  write access to create one), and network access.
 ---
 
 # Create issue

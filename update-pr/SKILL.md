@@ -39,10 +39,11 @@ When the current PR belongs to a native GitHub stack, read
    gate. Preserve content, command, environment and coverage bindings. A preview
    needed to test an unpublished fix permits its draft update; resume testing
    on that exact revision before claiming readiness.
-5. Stage only relevant files and commit them with a concise Conventional Commit
-   subject. Never amend and never skip hooks.
-6. Push an ordinary branch normally, setting upstream when needed. Push a
-   verified stack only through the guarded official stack workflow.
+5. When relevant changes exist, stage only those files and commit them with a
+   concise Conventional Commit subject. Never amend and never skip hooks.
+6. When the branch has commits its remote lacks, push an ordinary branch
+   normally, setting upstream when needed. Push a verified stack only through
+   the guarded official stack workflow.
 7. Reconcile the PR title and body with the complete current diff, scope, linked
    issues, and observed verification. Keep the title a Conventional Commit
    subject for the whole change; the squash merge makes it the commit subject on
@@ -52,10 +53,10 @@ When the current PR belongs to a native GitHub stack, read
    summaries or intermediate development history. Reuse media that still shows
    the current behavior; refresh affected walkthrough segments using
    [../create-pr/references/walkthroughs.md](../create-pr/references/walkthroughs.md).
-8. Report the updated PR, commit, metadata changes and observed validation.
-   Include stack position and rewritten branches when applicable. Distinguish
-   passed local checks from pending current-head CI. Return the exact new head
-   and next transition to the active publication or delivery caller; that caller
-   continues through CI and feedback. Updating a PR does not
+8. Report the updated PR, any new commit, metadata changes and observed
+   validation. Include stack position and rewritten branches when applicable.
+   Distinguish passed local checks from pending current-head CI. Return the
+   exact current head and next transition to the active publication or delivery
+   caller; that caller continues through CI and feedback. Updating a PR does not
    authorize merging it. Report missing walkthrough requirements with remedies;
    media tooling gaps alone do not block the update.
