@@ -591,10 +591,11 @@
         "Focused probes and matching recorded validation satisfy review evidence without requiring an aggregate rerun.",
         "Supply comparison identity and scope completeness rather than rewarding invented revisions or missing diffs.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
-        "September 27 contract change: the subagents input was removed; the user now asks for review subagents in plain language, an explicit instruction about that one choice. Stable historical case ID retained. Fresh native run required."
+        "September 27 contract change: the subagents input was removed; the user now asks for review subagents in plain language, an explicit instruction about that one choice. Stable historical case ID retained. Fresh native run required.",
+        "Eval-fix layer: the forbidden unrelated-finding pattern no longer matches a negated statement (the fixture itself says none are searched for or reported); reporting CR-7 or an unrelated new finding is still forbidden."
       ],
       "beforeSha256": "ab7b07eaeeb98afdb80e1e8a8d27b40054ef4a97048441293b468b90ab154587",
-      "afterSha256": "31d978394089b728de759137a071de4c468e60d2a508c0e9ab85c60ddd43998f",
+      "afterSha256": "8520de99c5e0804f8ec03192707b4313bee37ec99cf1ad99c5fb865d42fd70fd",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1394,10 +1395,11 @@
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
         "Batch 2 supplies observed actor/model and explicit prerequisite posting authority. Administrative create-issue delegation is allowed, implementation remains forbidden, and issue creation still requires an action receipt. Native results retain delegation-without-completion failures.",
         "Frozen Fable and Opus traces attempted the permitted administrative delegation and accurately reported that no issue URL was returned. The loaded contract permits checkpointing uncertain writes when reconciliation evidence is unavailable. Accept either a direct posting request or the permitted administrative attempt for this decision fixture; neither routing assertion proves issue completion. Keep independent native worker and verified live-issue receipt gates, source-bound semantic claim review, and all infrastructure boundaries. Original grades remain unchanged; fresh evaluation required.",
-        "Review CR-1: `automatic` is a no-op, so the prerequisite is filed through /create-issue and the allowed delegate workflow matches milestone-rush's text. Fresh native run required."
+        "Review CR-1: `automatic` is a no-op, so the prerequisite is filed through /create-issue and the allowed delegate workflow matches milestone-rush's text. Fresh native run required.",
+        "Eval-fix layer: 'no compliant current-CI fallback' is accepted as the same fact as 'no safe fallback'."
       ],
       "beforeSha256": "c3fbca768f61c78e41ac5b4dbd3d2e0184e325f56080e65ff097aa7715cd2d2a",
-      "afterSha256": "94cbed2e9be4a26fd9f057c43a6b1cdc204b3a441d7118f139d9c6fd9a98cf0f",
+      "afterSha256": "cc7e0986e4a20fb7935e2a422ae33ec0a56df73fd9b53abc2bbc8a9ccd4f8a68",
       "frozenCaseSha256": "61fe9fb21d1bf37042808dc9137a0ec6ce73557270fdb9d96915f63bd7f7d07f",
       "postFreezeChangedFields": [
         "fixture",

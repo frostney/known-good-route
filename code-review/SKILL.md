@@ -221,8 +221,9 @@ Use these terms verbatim, in code formatting, for the lane map, review axes,
 lane statuses, and roles: `review-axis-to-lane map`; `de-duplication`,
 `claim and specification`, `engineering quality`, `discoverability`;
 `complete`, `incomplete`; `coordinator`, `worker`. A plain-language gloss may
-follow a term but never replaces it. A short report may compress wording but
-keeps every applicable field below.
+follow a term but never replaces it. When lanes ran, label that section with
+the map's term and describe your own role there as the `coordinator`. A short
+report may compress wording but keeps every applicable field below.
 
 For a fresh review, lead with the verdict: `APPROVE`,
 `APPROVE WITH IMPROVEMENTS`, or `REQUEST CHANGES`.

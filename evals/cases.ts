@@ -1757,7 +1757,7 @@ export const evalCases: EvalCase[] = [
       ],
       forbiddenOutputPatterns: [
         "(?:^|\\n)[#*>`\\s]*(?:verdict\\s*[:—-]\\s*)?(?:APPROVE(?:_WITH_IMPROVEMENTS| WITH IMPROVEMENTS)?|REQUEST[_ ]CHANGES)\\b",
-        "unrelated new finding|CR-7",
+        "CR-7|(?<!\\bno (?:search for )?|\\bnot (?:search for|report) )unrelated new finding",
       ],
       reportPatterns: [
         "FINDINGS_REMAIN",
@@ -4400,7 +4400,7 @@ export const evalCases: EvalCase[] = [
         "stack.*prefix|prefix.*CI",
         "repository.*own|consuming repository",
         "recommend",
-        "not.*implement|without.*mutat|no safe fallback",
+        "not.*implement|without.*mutat|no (?:safe|compliant)(?: current-CI)? fallback",
       ],
       allowedEditPaths: [".agent/HANDOFF.md"],
       allowedDelegateWorkflows: ["/create-issue"],
