@@ -12,9 +12,9 @@ compatibility: >-
 # Convex conventions
 
 These are house-style defaults, not a Convex manual. Use current official Convex
-skills for scaffolding, auth, migrations, performance work, components, and API
-mechanics; this skill adds project policy. Apply only what the requested change
-touches.
+skills, when installed, for scaffolding, auth, migrations, performance work,
+components, and API mechanics; this skill adds project policy. Apply only what
+the requested change touches.
 
 ## Authority
 

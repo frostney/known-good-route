@@ -23,9 +23,10 @@ choices; do not turn a narrow change into a stack or layout migration.
 | Web | Next.js App Router; server-rendered/static web; SEO; Vercel |
 | Universal | Expo Router; mobile-first iOS, Android, and web |
 
-Document the choice in project context. If neither fits, follow the project's
-AGENTS.md instead of forcing this stack. Read the matching profile reference
-before scaffolding, routing, styling, deployment, or a framework upgrade:
+Record a new profile choice in project context. If neither fits, follow the
+project's AGENTS.md instead of forcing this stack. Read the matching profile
+reference when the work touches scaffolding, routing, styling, deployment, or a
+framework upgrade:
 
 - [references/web.md](references/web.md)
 - [references/universal.md](references/universal.md)
@@ -64,11 +65,13 @@ scaffolding layout, observability, generators, hooks, or package scripts.
   target.
 - A single `bun run check` runs the project's format, lint, tests, typecheck,
   dead-code/health checks, and build as applicable.
-- After dependency changes, run a frozen install plus the check on the target
-  runtime. Run a separate production build only when that check does not cover
-  the same build and runtime.
-- If this skill does not prescribe a category, recommend a current
-  Vercel-friendly option with its version, fit, and tradeoffs. Wait for the user
-  before adding that new product or service.
+- Adding a product or service in a category this skill does not prescribe is a
+  user decision: recommend a current Vercel-friendly option with its version,
+  fit, and tradeoffs, and add it once the user chooses.
 
-Do not claim completion without observing the relevant project gate.
+## Completion
+
+- The relevant project gate was observed passing.
+- After dependency changes, a frozen install plus `bun run check` passed on the
+  target runtime; a separate production build ran only when that check does not
+  cover the same build and runtime.

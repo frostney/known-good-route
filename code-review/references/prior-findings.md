@@ -16,8 +16,9 @@ When the user supplies findings JSON from `code-review` or `codebase-audit`:
    locally, continue against current state, mark the baseline unavailable, and
    do not attribute an outcome to a particular change.
 4. Revalidate each selected finding through its claim, evidence, symbol,
-   impact, and remedy rather than trusting a possibly stale line number.
-   Classify it:
+   impact, and remedy rather than trusting a possibly stale line number. Skip
+   the fresh-review setup and review axes; apply the evidence requirements in
+   `SKILL.md` only where they test a selected finding. Classify it:
    - `resolved`: the reported problem no longer exists;
    - `still_present`: the material problem and remedy remain accurate;
    - `changed`: the problem remains but its location, evidence, impact, or

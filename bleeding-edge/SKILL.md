@@ -23,6 +23,11 @@ ties.
 | RC, beta, canary | Only for a concrete need or low-risk reversible trial |
 | Nightly | Only for a documented blocker it resolves |
 
+For an AI model, generally available releases are the stable rung and preview
+or experimental releases are pre-release. Confirm the model identifier,
+availability, and deprecation or retirement schedule from the provider's current
+model documentation; remembered model names go stale quickly.
+
 ## Adoption contract
 
 For every choice:

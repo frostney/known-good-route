@@ -52,33 +52,29 @@ to a full draft review.
 ## Workflow
 
 1. Discover the repository's issue templates and existing label conventions.
-2. Investigate the request using the gates above. Ground any progress claim in
-   evidence gathered this run.
-3. Resolve any remaining material question under the gates above.
-4. Draft against the matching template. Keep only decision-, implementation-,
+2. Investigate the request and resolve any remaining material question using
+   the gates above. Ground any progress claim in evidence gathered this run.
+3. Draft against the matching template. Keep only decision-, implementation-,
    and verification-relevant content:
    - a specific plain-language title;
    - problem, current and expected behavior, scope, constraints, and required
      behavior;
    - reproduction and regression expectations for bugs;
    - user/test impact, likely affected area, and related work where relevant.
-5. For UI/UX work, add the affected states, current and expected visual evidence,
-   accessibility expectations, responsive/theme scope, and applicable design
-   system components or tokens. Upload local screenshots and videos with
-   `gh issue create --attach '<file>#<alt text>'` (or `gh issue edit` and
-   `gh issue comment` with the same flag); never commit evidence media to the
-   repository. Put non-media evidence such as probe output inside a collapsed
-   `<details>` block.
-6. Choose only existing labels unless the user asks to create one.
-7. When draft review was requested, show the proposed title, labels, and body
+4. For UI/UX work or local screenshots and videos, read
+   [references/ui-evidence.md](references/ui-evidence.md); never commit
+   evidence media to the repository. Put non-media evidence such as probe
+   output inside a collapsed `<details>` block.
+5. Choose only existing labels unless the user asks to create one.
+6. When draft review was requested, show the proposed title, labels, and body
    and create the issue only after approval.
-8. End the issue body with this visually separate GitHub Note, replacing both
+7. End the issue body with this visually separate GitHub Note, replacing both
    values with the exact identities resolved for this run:
 
    > [!NOTE]
    > Created on behalf of @username using ModelName.
 
-9. Create the issue with the available GitHub tooling, verify the returned
+8. Create the issue with the available GitHub tooling, verify the returned
    issue's repository and intended content, and return its URL. If the write
    response is lost or interrupted, search for the issue before retrying.
    Report an unresolved write as uncertain; a request being accepted or

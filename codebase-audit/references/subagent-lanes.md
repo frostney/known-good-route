@@ -20,7 +20,7 @@ final findings, remediation batches, and report.
    observed results, candidate findings with evidence, impact, and smallest
    remedy, verified claims, limitations, and `complete` or `incomplete` status.
 4. Validate every candidate against the current checkout, apply the
-   de-duplication model below, reconcile conflicts across lanes, then assign
+   de-duplication checks in `SKILL.md`, reconcile conflicts across lanes, then assign
    final IDs, severities, categories, remediation batches, and conclusions. Do
    not repeat a completed lane wholesale.
 5. If sub-agents are unsupported, unavailable after any applicable bounded
