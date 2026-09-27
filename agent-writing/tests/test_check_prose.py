@@ -76,16 +76,20 @@ class CheckProseTests(unittest.TestCase):
 
             self.assertEqual(CHECK_PROSE.markdown_paths(root), [readme, skill_md])
 
-    def project_install(self, directory: str, sources: dict[str, str]) -> Path:
+    def project_install(self, directory: str, sources: dict[str, str], lock: object = None) -> Path:
         project = Path(directory)
         root = project / ".agents" / "skills"
         for name in sources:
             (root / name).mkdir(parents=True)
             (root / name / "SKILL.md").write_text(f"# {name}\n")
-        (project / "skills-lock.json").write_text(json.dumps({
-            "version": 1,
-            "skills": {name: {"source": source} for name, source in sources.items()},
-        }))
+        if lock is None:
+            lock = {
+                "version": 1,
+                "skills": {name: {"source": source} for name, source in sources.items()},
+            }
+        (project / "skills-lock.json").write_text(
+            lock if isinstance(lock, str) else json.dumps(lock)
+        )
         return root
 
     def test_project_install_checks_only_skills_from_this_suite_source(self):
@@ -95,6 +99,7 @@ class CheckProseTests(unittest.TestCase):
                 "create-pr": "owner/suite",
                 "improve-codebase-architecture": "someone/else",
             })
+            (root / "README.md").write_text("# Project skills\n")
 
             self.assertEqual(
                 CHECK_PROSE.markdown_paths(root),
@@ -115,6 +120,26 @@ class CheckProseTests(unittest.TestCase):
                     root / "improve-codebase-architecture" / "SKILL.md",
                 ],
             )
+
+    def test_unusable_lock_checks_every_skill(self):
+        sources = {"agent-writing": "owner/suite", "other": "", "third": "someone/else"}
+        for lock in (
+            "{not json",
+            {"version": 1, "skills": []},
+            {"version": 1, "skills": None},
+            {"version": 1, "skills": {"agent-writing": "owner/suite"}},
+            {"version": 1, "skills": {"agent-writing": {}}},
+            {"version": 1, "skills": {
+                "agent-writing": {"source": None}, "other": {}, "third": {"source": "someone/else"},
+            }},
+        ):
+            with self.subTest(lock=lock), tempfile.TemporaryDirectory() as directory:
+                root = self.project_install(directory, sources, lock)
+
+                self.assertEqual(
+                    CHECK_PROSE.markdown_paths(root),
+                    [root / name / "SKILL.md" for name in sources],
+                )
 
 
 if __name__ == "__main__":

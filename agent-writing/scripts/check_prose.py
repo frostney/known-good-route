@@ -34,6 +34,7 @@ BANNED_PATTERNS = (
     ),
 )
 INLINE_CODE = re.compile(r"`[^`]*`")
+SKILL_DIR = Path(__file__).resolve().parents[1]
 
 
 def suite_skills(root: Path) -> set[str] | None:
@@ -46,8 +47,10 @@ def suite_skills(root: Path) -> set[str] | None:
     lock = root.parent.parent / "skills-lock.json"
     try:
         skills = json.loads(lock.read_text(encoding="utf-8"))["skills"]
-        source = skills[Path(__file__).resolve().parents[1].name]["source"]
+        source = skills[SKILL_DIR.name]["source"]
     except (OSError, ValueError, KeyError, TypeError):
+        return None
+    if not isinstance(source, str) or not source:
         return None
     return {
         name
@@ -57,15 +60,14 @@ def suite_skills(root: Path) -> set[str] | None:
 
 
 def markdown_paths(root: Path) -> list[Path]:
-    readme = root / "README.md"
-    paths = [readme] if readme.is_file() else []
     suite = suite_skills(root)
+    # In a project install, a README beside the skills is not this suite's.
+    readme = root / "README.md"
+    paths = [readme] if suite is None and readme.is_file() else []
     for skill in sorted(root.iterdir()):
-        if (
-            skill.is_dir()
-            and (skill / "SKILL.md").is_file()
-            and (suite is None or skill.name in suite)
-        ):
+        if suite is not None and skill.name not in suite:
+            continue
+        if skill.is_dir() and (skill / "SKILL.md").is_file():
             paths.extend(sorted(skill.rglob("*.md")))
     return paths
 
@@ -105,7 +107,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("paths", nargs="*", type=Path)
     args = parser.parse_args()
-    root = Path(__file__).resolve().parents[2]
+    root = SKILL_DIR.parent
     paths = args.paths or markdown_paths(root)
     if not paths:
         raise SystemExit(f"no Markdown files found under {root}")
