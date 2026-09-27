@@ -87,7 +87,7 @@ confirmation of the main operation does not establish its requested side effects
 | --- | --- |
 | [`git-workflow`](git-workflow/SKILL.md) | Applies the user's git defaults: branch from the remote default, merge rather than rebase for ordinary branches, use native GitHub stacks when selected, never amend, and squash-merge pull requests. Use when branching, syncing, committing, pushing, or merging in the user's repos. |
 | [`status-report`](status-report/SKILL.md) | Builds a read-only current-repository Kanban from live pull-request, CI, review, branch, and worktree evidence. Use when the user asks for a status report, PR board, review-readiness board, or local-work overview. |
-| [`create-issue`](create-issue/SKILL.md) | Investigates and creates a project-aligned GitHub issue from a tagline or short description, using the repository's template, evidence, and labels. Use when the user runs /create-issue or asks to file a GitHub issue. |
+| [`create-issue`](create-issue/SKILL.md) | Investigates and creates a project-aligned GitHub issue from a tagline or short description, using the repository's template, evidence, and labels; shows a draft first only when asked. Use when asked to file, open, or create a GitHub issue, or when the user runs /create-issue. |
 | [`deliver`](deliver/SKILL.md) | Carries one feature, bug, issue, branch, or PR through verified delivery. Use when asked to deliver or ship a work item end to end, such as getting it merged or deployed, or when the user runs /deliver. |
 | [`implement`](implement/SKILL.md) | Develops a GitHub issue or idea until its requirements and fidelity criteria are verified. Use when asked to implement, build, or fix a described change or GitHub issue, or when the user runs /implement. |
 | [`run-retro`](run-retro/SKILL.md) | Reviews a workstream and agrees process improvements, applying only the selected follow-up actions. Use when the user asks for, runs /run-retro, or accepts a retrospective. |
@@ -248,7 +248,7 @@ and evaluates them on the intended workload.
 | `milestone-rush` | Coordinates several deliveries, dependencies and aggregate integration checks, then invokes `create-release` for the milestone. |
 | `create-release` | Owns milestone versioning, changelog, release PR and the repository's single established release publisher. It remains directly invocable for an explicit release request. |
 | `test-against-spec` | Tests externally observable behavior against explicit requirements. Reports by default; `fix` authorizes in-scope repairs. It does not replace source review or own the aggregate project gate. |
-| `code-review`, `codebase-audit` | Retain assessment-only defaults and use review workers when requested. `fix-all` permits in-scope remediation under the caller's acceptance criteria. |
+| `code-review`, `codebase-audit` | Retain assessment-only defaults and delegate review lanes by default for non-trivial scopes; `no-subagents` keeps them local. `fix-all` permits in-scope remediation under the caller's acceptance criteria. |
 | `git-workflow`, `delivery-wait` | Own Git rules, guarded native stacks and deterministic waits underneath the delivery skills. |
 | `run-retro` | Proposes improvements and applies only selected actions. An explicitly selected immediate delivery enters `deliver`; the retrospective remains active until that action is delivered or blocked. |
 | `status-report` | Reads current PR, CI, review and worktree evidence without invoking delivery or mutating state. |

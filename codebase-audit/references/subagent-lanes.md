@@ -1,6 +1,6 @@
 ## Sub-agent lanes
 
-When the user supplies `subagents`, the coordinating agent still owns the audit
+When the audit delegates lanes, the coordinating agent still owns the audit
 scope, coverage map, capability map, active and skipped perspectives, validation,
 final findings, remediation batches, and report.
 

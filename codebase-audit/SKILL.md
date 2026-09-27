@@ -30,8 +30,9 @@ restoration is not safe. The audit must not leave any edit to repository content
 or create persistent or externally visible side effects. Clean up disposable
 artifacts and report anything retained.
 
-`subagents` is an additive execution input. Without it, do not delegate any part
-of the audit.
+Delegate audit lanes by default when the host supports subagents and the scope
+spans more than one independent capability area; a small subsystem stays local.
+`no-subagents` or an equivalent user instruction keeps the whole audit local.
 
 A request to save JSON authorizes only the named findings artifact; it does not
 authorize remediation. Read
@@ -74,8 +75,9 @@ pushes, publication, issue creation, deployments, or shared-state mutation.
 
 ## Sub-agent lanes
 
-Read [references/subagent-lanes.md](references/subagent-lanes.md) only when
-`subagents` is requested. The coordinator retains coverage and final judgment.
+Read [references/subagent-lanes.md](references/subagent-lanes.md) whenever the
+audit delegates lanes. The coordinator retains coverage and final judgment and
+continues its own lane-independent work while lanes run.
 
 ## Establish current evidence
 
@@ -168,7 +170,7 @@ Lead with the highest-value current conclusion. Include:
 - a coverage map of inspected, executed, sampled, static-only, and unreached
   capabilities;
 - active and skipped perspectives with reasons;
-- when `subagents` was supplied, the capability-and-perspective lane map,
+- when the audit delegated lanes, the capability-and-perspective lane map,
   completed and incomplete lanes, and every coordinator-completed fallback with
   its reason;
 - the churn window, symbol/file coverage, and architectural-risk hotspots;

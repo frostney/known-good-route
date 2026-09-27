@@ -1,6 +1,6 @@
 # Review worker lanes
 
-When the user supplies `subagents`, the coordinating agent still owns the
+When the review delegates lanes, the coordinating agent still owns the
 comparison boundary, claim, finding scope, active and skipped review axes,
 validation, verdict, and report.
 

@@ -72,8 +72,9 @@ file edits and other mutations require the selection described below.
   Prefer tightening or coupling with existing text. Direct edits are limited to
   documentation.
 - **Follow-up ticket:** source, executable configuration, or other implementation
-  is needed. Offer more detail, further grilling, normal or automatic
-  `create-issue`, or skip; the delegated workflow retains its own gates.
+  is needed. Offer more detail, further grilling, `create-issue` (with a draft
+  first if the user wants one), or skip; the delegated workflow retains its own
+  gates.
 - **Implement before next cycle:** recommend this route when a selected
   improvement should be delivered before another cycle begins. Recommendation
   alone authorizes nothing. After explicit user selection, reuse or create its
