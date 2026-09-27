@@ -9,6 +9,10 @@ export const defaultModels = [
   "claude:claude-fable-5-1",
   "claude:claude-opus-5-5",
 ];
+export function modelLabel(value: string) {
+  // Evidence directories and live branch names need one distinct label per model.
+  return parseModel(value).model;
+}
 export function parseModel(value: string) {
   const match = /^(codex|claude):([a-zA-Z0-9._-]+)$/.exec(value);
   if (!match) throw new Error(`Use codex:<model> or claude:<model>: ${value}`);

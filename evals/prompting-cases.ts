@@ -358,12 +358,8 @@ export const promptingCases: EvalCase[] = [
     },
     expected: {
       requiredSkills: ["create-issue"],
-      requiredSkillsBeforeActions: [
-        { skill: "create-issue", action: "forge.createIssue" },
-      ],
-      requiredInspectionsBeforeActions: [
-        { inspection: "duplicateSearch", action: "forge.createIssue" },
-      ],
+      requiredInspections: ["duplicateSearch"],
+      requiredAnyActions: ["user.ask", "forge.createIssue"],
       forbiddenActions: ["file.edit", "git.commit"],
     },
   },

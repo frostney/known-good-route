@@ -4,7 +4,7 @@ import { isDeepStrictEqual } from "node:util";
 import { freezeSnapshot } from "./snapshot.ts";
 import { command, validateTarget, liveCase, type LiveConfig } from "./github-live.ts";
 import { atomicJson } from "./issue-receipt.ts";
-import { defaultModels, parseModel, preflight, runLocal, parseEvents } from "./local-runtime.ts";
+import { defaultModels, modelLabel, parseModel, preflight, runLocal, parseEvents } from "./local-runtime.ts";
 import { loadSkills, formatSkillCatalog } from "./skill-loader.ts";
 import { verifyToolReceiptTranscript } from "./tool-receipts.ts";
 import { verifyIssueToolEvidence } from "./issue-tool-evidence.ts";
@@ -27,7 +27,7 @@ const runId = crypto.randomUUID().slice(0, 8);
 await atomicJson(join(output, "plan.json"), { createdAt: new Date().toISOString(), runId, models, inventory, snapshot, selectedAction: retroCorrection });
 const results: any[] = [];
 for (const model of models) {
-  const label = model.includes("astra") ? "astra" : model.includes("fable") ? "fable" : "opus";
+  const label = modelLabel(model);
   const evidence = join(output, label); await mkdir(evidence);
   const workerModel = model.includes("fable") ? "claude:claude-opus-5-5" : model;
   const delivery: LiveConfig = { ...inventory, model: workerModel, directory: join(evidence, "repository"), evidence, skillsRoot: snapshot, branch: `codex/eval-retro-${runId}-${label}`, nodeBinary: process.env.KGR_NODE_BIN ?? Bun.which("node") ?? "" };

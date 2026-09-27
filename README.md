@@ -114,7 +114,7 @@ confirmation of the main operation does not establish its requested side effects
 | [`codebase-audit`](codebase-audit/SKILL.md) | Audits a repository or subsystem for systemic engineering risks and actionable improvements; assessment only unless follow-up fixes are selected. Use when asked to audit a codebase, assess its health or technical debt, or find systemic risks. |
 | [`agent-behavior-audit`](agent-behavior-audit/SKILL.md) | Audits agent execution records for instruction compliance, outcome quality, and wasted work using source-backed evidence. Use when asked to audit or analyze how an agent behaved in past sessions, transcripts, or logs. |
 | [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Applies the user's engineering standards during substantial technical work: preserve scope, use current evidence, delegate independent parts, and complete authorized outcomes. Use during substantial implementation, debugging, refactoring, or multi-part delivery work. |
-| [`agent-writing`](agent-writing/SKILL.md) | Writes clear, concise agent replies and engineering artifacts while preserving evidence, decisions, and required detail. Use when drafting a final response, report, PR or issue text, or documentation. |
+| [`agent-writing`](agent-writing/SKILL.md) | Writes clear, concise agent replies and engineering artifacts while preserving evidence, decisions, and required detail. Use when drafting a final response or report for engineering work, PR or issue text, or documentation. |
 | [`bleeding-edge`](bleeding-edge/SKILL.md) | Biases technology choices toward the newest viable option while preserving maintainability, live verification, reversibility, and decided constraints. Use when selecting or upgrading a dependency, runtime, tool, language feature, or AI model. |
 
 ### PR descriptions and walkthroughs
@@ -186,8 +186,8 @@ and Anthropic's
   list, and stopping because a turn is long. Status notes go with the next action.
 - A plain-language request for a workflow's outcome runs that workflow with its
   gates; an explicit instruction about one choice replaces only that default.
-  Skills carry no blanket "user instructions override this skill" line, which
-  would invite bypassing the workflow a request should trigger.
+  Do not add a blanket "user instructions override this skill" line; it invites
+  bypassing the workflow a request should trigger.
 - Lead final responses and written artifacts with the outcome. Keep complete,
   readable sentences and decision-relevant evidence; omit filler, boilerplate,
   repeated summaries, and internal-reasoning narration. Never ask the model to

@@ -9,7 +9,7 @@ import {
   validateTarget,
   type LiveConfig,
 } from "./github-live.ts";
-import { runLocal, preflight, defaultModels } from "./local-runtime.ts";
+import { runLocal, preflight, defaultModels, modelLabel } from "./local-runtime.ts";
 import { loadSkills, formatSkillCatalog } from "./skill-loader.ts";
 
 // Separate explicit entrypoint: ordinary eval/check/CI never starts GitHub mutations.
@@ -44,11 +44,7 @@ await Bun.write(
 );
 await Promise.all(
   models.map(async (model) => {
-    const label = model.includes("astra")
-      ? "astra"
-      : model.includes("fable")
-        ? "fable"
-        : "opus";
+    const label = modelLabel(model);
     const evidence = join(output, label);
     await mkdir(evidence);
     const directory = join(evidence, "repository");

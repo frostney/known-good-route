@@ -2354,11 +2354,12 @@
       "caseId": "trigger-prose-file-issue",
       "status": "new",
       "rationale": [
-        "September 27 model refresh: plain-language trigger case. The prompt names no skill or slash command; the skill must be selected from its description and run with its gates. Fresh native run required."
+        "September 27 model refresh: plain-language trigger case. The prompt names no skill or slash command; the skill must be selected from its description and run with its gates. Fresh native run required.",
+        "Review CR-2: expectations are independent of create-issue's draft default; the case requires the skill and its duplicate search, and accepts either creating the issue or asking for draft approval."
       ],
       "beforeSha256": null,
-      "afterSha256": "330a24f6c969d992139176de1f30e6571e8c0c924b890e8168ce6bebde9ee29e",
-      "frozenCaseSha256": "330a24f6c969d992139176de1f30e6571e8c0c924b890e8168ce6bebde9ee29e"
+      "afterSha256": "de67909a1ba2709e58a1ab23885e0b13a7abbaad64e5e40bc18b0ebb80538b14",
+      "frozenCaseSha256": "de67909a1ba2709e58a1ab23885e0b13a7abbaad64e5e40bc18b0ebb80538b14"
     },
     {
       "caseId": "trigger-prose-review-branch",

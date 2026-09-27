@@ -3,7 +3,8 @@ name: agent-writing
 description: >-
   Writes clear, concise agent replies and engineering artifacts while
   preserving evidence, decisions, and required detail. Use when drafting a
-  final response, report, PR or issue text, or documentation.
+  final response or report for engineering work, PR or issue text, or
+  documentation.
 license: Unlicense OR MIT
 ---
 
