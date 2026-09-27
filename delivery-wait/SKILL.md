@@ -39,7 +39,8 @@ requires its own identity flags:
 - `tag-target`: `--tag <name>` and `--head <sha>`.
 - `release-assets`: `--tag <name>`, `--head <sha>`, and one `--asset <name>` per
   required asset.
-- `wake-at` (`wait` only): `--deadline` alone.
+- `wake-at` (`wait` only): `--deadline` alone. It keeps no state file, so
+  `--state` has no effect.
 
 There is no `--checkpoint` flag. The state path is `--state`, and the command
 derives a default path from the kind and identity when it is omitted.
