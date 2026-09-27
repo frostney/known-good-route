@@ -58,7 +58,7 @@ language-neutral repository policy.
 
 - Focused tests and the repository gate pass; passing evidence for the same
   content and environment is reused.
-- The typecheck ran through the gate or the emitting build; a separate no-emit
-  run is needed only when neither covers it.
+- The typecheck ran through the gate or an emitting `tsc` build; a separate
+  no-emit run is needed only when neither covers it.
 - When TypeScript emits production code, the emitted artifact was validated on
   its target runtime.

@@ -62,8 +62,9 @@ changes, failures, or unresolved concerns.
    required behavior, report what was attempted and mark the behavior
    unverified.
 5. Without `fix`, make no edits. With `fix`, read
-   [references/fix-mode.md](references/fix-mode.md) before the first edit and
-   follow it for every failed requirement.
+   [references/fix-mode.md](references/fix-mode.md) as soon as `fix` is
+   present, before inspecting implementation source, and follow it for every
+   failed requirement.
 
 Return a structured summary in the active workflow, not a committed or ignored
 artifact. Include the tested revision, environments, specification sources,

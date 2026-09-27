@@ -149,8 +149,9 @@ record policy-threshold checkpoints and interventions.
 
 Before milestone closure, `validate` must succeed for the current `runId`.
 Missing or conflicting IDs, invalid measurement streams, unclosed spans,
-missing transition classes, silent nulls, and superseded work without a
-terminal cancellation or explicit blocker remain invalid closure evidence.
+missing transition classes, silent nulls, absent command or CI identities the
+host exposes, and superseded work without a terminal cancellation or explicit
+blocker remain invalid closure evidence.
 Command and CI events retain their real command, workflow, run, and job
 identities when the host exposes them. Elapsed wall time stays separate from
 aggregate runner time, concurrent agent time, tool calls, inferences, and

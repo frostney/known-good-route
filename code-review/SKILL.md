@@ -48,8 +48,9 @@ Remediation is independent of the operation:
 - A reporting profile or threshold changes presentation only. Gather and
   validate the complete candidate set across the mapped scope, retain every
   supported severity in the canonical result, and let the caller decide which
-  severities become visible. Do not stop after the first or highest-severity
-  issue.
+  severities become visible.
+- Search the complete mapped scope; do not stop after the first or
+  highest-severity issue.
 - Delegate review lanes by default when the host supports subagents and the
   scope is not trivial. A small change, such as a few lines in one file, stays
   local. `no-subagents` or an equivalent user instruction keeps the whole review

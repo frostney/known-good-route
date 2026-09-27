@@ -56,8 +56,8 @@ service as an incidental fix.
   enlarge scope. Await pending checks and provider transitions through existing
   deterministic helpers. Inspect failures and route fixable causes through the
   development loop, then publish and verify the new exact head.
-- At `ready-to-merge`, require the complete readiness contract that
-  `/address-feedback` returns for the selected PR's exact head: all verified
+- At `ready-to-merge`, require the complete readiness contract defined by
+  `address-feedback`'s readiness references for the selected PR's exact head: all verified
   requirement gaps resolved, current behavior and project evidence, successful
   required CI and reviews, and completed required thread handling. For a native
   stack, require its complete-stack readiness, including every needed fix

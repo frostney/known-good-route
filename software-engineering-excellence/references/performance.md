@@ -2,7 +2,8 @@
 
 Read this when making a performance claim or changing a frequent,
 latency-sensitive or resource-intensive path, tooling, hooks, CI, startup,
-concurrency or external operations.
+concurrency or external operations, or when diagnosing a slow, flaky or
+redundant feedback loop.
 
 ## Measure before claiming
 

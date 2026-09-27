@@ -15,7 +15,7 @@ the reusable workflow owns scheduled refresh mechanics.
 
 Read
 [the project-skills maintenance runbook](references/project-skills-runbook.md)
-when adding or upgrading a caller, migrating a deleted or renamed inventory
+when adding or changing a caller, migrating a deleted or renamed inventory
 entry, or diagnosing a failed run. It holds the caller shape and permissions,
 immutable-pinning rules, migration evidence requirements, and failure branches.
 

@@ -102,7 +102,7 @@ rules while claiming a model audit.
 
 When the host supports delegation, give independent sources or session batches
 to bounded workers by default, each returning labels keyed to session identities
-with their evidence; `no-subagents` keeps the review local. The coordinator
+with their evidence; `no-subagents` keeps the audit local. The coordinator
 reconciles worker labels against the coverage manifest before computing any
 metric.
 

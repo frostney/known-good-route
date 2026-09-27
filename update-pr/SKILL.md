@@ -16,8 +16,9 @@ compatibility: >-
 Update the established PR through integration, relevant commits, a normal push
 and current metadata. The request includes resolving routine conflicts and
 running the declared PR gate; it does not authorize merging. Reuse the selected
-target and prior authorization. Ask only when the intended PR or a material
-conflict-resolution choice remains unclear.
+target and prior authorization. Ask only when the intended PR, a material
+conflict-resolution choice or another material choice within this update
+remains unclear.
 
 When the current PR belongs to a native GitHub stack, read
 [../git-workflow/references/github-stacks.md](../git-workflow/references/github-stacks.md).
@@ -39,8 +40,9 @@ not block the update.
    heads and use the guarded `gh stack sync` or narrower official stack
    operation; never use raw rebase or force-push commands.
 4. Apply `/code-review fix-all` and `/test-against-spec fix` to the changed
-   behavior, including any baseline integration. Reuse matching current evidence;
-   run missing or invalidated checks. Repair every verified in-scope requirement
+   behavior, including any baseline integration. Reuse only evidence whose
+   content, command, environment and coverage still match; a baseline merge or
+   edit invalidates the checks it affects. Run missing or invalidated checks. Repair every verified in-scope requirement
    gap through `/implement`'s development loop, then establish the declared PR
    gate. A preview needed to test an unpublished fix permits its draft update;
    resume testing on that exact revision before claiming readiness.

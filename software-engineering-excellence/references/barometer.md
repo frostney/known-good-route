@@ -41,7 +41,7 @@ Read each as "for the work I am doing right now…"
 
 ## Judgment
 
-- **18.** Where I was uncertain, did I state my assumption and continue, raising a question only when it blocked the work, and where I was certain and authorized, did I proceed?
+- **18.** Where I was uncertain, did I state my assumption and continue, raising a question only when it blocked the work or the action needed confirmation, and where I was certain and authorized, did I proceed?
 - **19.** Did I leave a durable trail of decisions, open questions, limitations, and next steps that someone without my internal context could pick up?
 
 Apply these questions to the authorized outcome. Correct material gaps within

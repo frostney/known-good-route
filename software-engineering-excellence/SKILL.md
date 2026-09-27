@@ -115,7 +115,7 @@ Consider both product performance and time from an edit to trustworthy
 feedback. Read [references/performance.md](references/performance.md) when
 making a performance claim or changing a frequent, latency-sensitive or
 resource-intensive path, tooling, hooks, CI, startup, concurrency or external
-operations.
+operations, or when diagnosing a slow, flaky or redundant feedback loop.
 
 Complexity needs a real caller or demonstrated benefit, a clear contract and
 relevant regression coverage. Comments should explain constraints or decisions

@@ -41,9 +41,9 @@ one evidence-backed path when publication is authorized.
 
 ## Prepare
 
-1. Require a clean working tree, then resolve the remote default branch,
-   changelog/version tooling, last release, remote tags, workflows, and release
-   documentation.
+1. Require a clean working tree, then resolve the authorized stage, remote
+   default branch, changelog/version tooling, last release, remote tags,
+   workflows, and release documentation.
 2. Stop if there are no releasable commits.
 3. Use a settled explicit version, or compute it under the project's
    deterministic version policy. When neither settles it, recommend a version

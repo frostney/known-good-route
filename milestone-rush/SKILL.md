@@ -29,8 +29,8 @@ work-item deliveries and the release at the verified milestone boundary.
 - Accept either a confirmed `/roadmap-review` handoff or direct invocation. For
   direct invocation, verify current scope, direction, readiness, dependencies,
   and measures of success before executing. Stop for material replanning rather
-  than silently changing the milestone: a closure that records a material
-  rejected or deferred product decision, or a material scope expansion.
+  than silently changing the milestone, for example for a closure that records a
+  material rejected or deferred product decision, or a material scope expansion.
 - Treat a confirmed roadmap item as the mini-spec for `/deliver` only when it
   states the outcome, scope and non-goals, and testable measures of success.
 - Respect project instructions, Definitions of Ready and Done, branch

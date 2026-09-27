@@ -68,8 +68,9 @@ readiness. Recording a walkthrough does not replace behavior testing.
    the implementation workflow. If no source states the claim, reconstruct the
    narrowest claim supported by the commits and diff and label it as inferred.
 5. Apply `/code-review fix-all` and `/test-against-spec fix` to the current
-   requirements and change. Reuse valid matching results; run missing or stale
-   review and real-interface checks. If the claim was inferred from the diff,
+   requirements and change. Reuse only results whose content, command,
+   environment and coverage still match; run missing or stale review and
+   real-interface checks. If the claim was inferred from the diff,
    establish explicit expected behavior before specification testing. Resolve a
    material ambiguity without inventing requirements from the implementation.
 6. Repair every verified in-scope requirement, fidelity, test and compatibility
@@ -93,8 +94,9 @@ readiness. Recording a walkthrough does not replace behavior testing.
    adjacent branches when available for related findings and duplicates. Put
    each closing keyword on its own line as `Closes #N`, and only on the layer
    that completes that issue.
-9. After the publication checks pass, push an ordinary branch normally and set
-   its upstream when needed, then open one draft PR against the remote default.
+9. After the publication checks pass, or under the preview-only draft rule
+   above, push an ordinary branch normally and set its upstream when needed,
+   then open one draft PR against the remote default.
    For a verified native stack, follow the stack reference: a new top layer
    above frozen approved PRs uses protected push, separate PR creation and
    native append; broader authorized submissions use `gh stack submit`. Require
