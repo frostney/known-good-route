@@ -88,33 +88,33 @@ confirmation of the main operation does not establish its requested side effects
 | [`git-workflow`](git-workflow/SKILL.md) | Applies the user's git defaults: branch from the remote default, merge rather than rebase for ordinary branches, use native GitHub stacks when selected, never amend, and squash-merge pull requests. Use when branching, syncing, committing, pushing, or merging in the user's repos. |
 | [`status-report`](status-report/SKILL.md) | Builds a read-only current-repository Kanban from live pull-request, CI, review, branch, and worktree evidence. Use when the user asks for a status report, PR board, review-readiness board, or local-work overview. |
 | [`create-issue`](create-issue/SKILL.md) | Investigates and creates a project-aligned GitHub issue from a tagline or short description, using the repository's template, evidence, and labels. Use when the user runs /create-issue or asks to file a GitHub issue. |
-| [`deliver`](deliver/SKILL.md) | Carries one feature, bug, issue, branch, or PR through verified delivery. Use when asked to deliver a work item or run /deliver. |
-| [`implement`](implement/SKILL.md) | Develops a GitHub issue or idea until its requirements and fidelity criteria are verified. Use when asked to implement a change or run /implement. |
-| [`run-retro`](run-retro/SKILL.md) | Review a workstream and agree process improvements when the user requests or accepts a retrospective. Apply only selected follow-up actions. |
-| [`create-pr`](create-pr/SKILL.md) | Validates and repairs an in-scope change, publishes its draft pull request, reconciles metadata and CI, and marks it ready for review. Use when the user runs /create-pr. |
-| [`update-pr`](update-pr/SKILL.md) | Commits relevant changes, merges the remote default when needed, pushes the current pull-request branch, and refreshes stale PR metadata. Use when the user runs /update-pr or asks to update a pull request. |
-| [`address-feedback`](address-feedback/SKILL.md) | Resolves review feedback on one pull request or native GitHub stack. Use when asked to address PR or stack feedback, or when the user runs /address-feedback. |
+| [`deliver`](deliver/SKILL.md) | Carries one feature, bug, issue, branch, or PR through verified delivery. Use when asked to deliver or ship a work item end to end, such as getting it merged or deployed, or when the user runs /deliver. |
+| [`implement`](implement/SKILL.md) | Develops a GitHub issue or idea until its requirements and fidelity criteria are verified. Use when asked to implement, build, or fix a described change or GitHub issue, or when the user runs /implement. |
+| [`run-retro`](run-retro/SKILL.md) | Reviews a workstream and agrees process improvements, applying only the selected follow-up actions. Use when the user asks for, runs /run-retro, or accepts a retrospective. |
+| [`create-pr`](create-pr/SKILL.md) | Validates and repairs an in-scope change, publishes its draft pull request, reconciles metadata and CI, and marks it ready for review. Use when asked to open, raise, or publish a pull request for the current change, or when the user runs /create-pr. |
+| [`update-pr`](update-pr/SKILL.md) | Commits relevant changes, merges the remote default when needed, pushes the current pull-request branch, and refreshes stale PR metadata. Use when asked to update or push changes to an existing pull request, or when the user runs /update-pr. |
+| [`address-feedback`](address-feedback/SKILL.md) | Resolves review feedback on one pull request or native GitHub stack. Use when asked to address, fix, or respond to review comments on a PR or stack, or when the user runs /address-feedback. |
 | [`delivery-wait`](delivery-wait/SKILL.md) | Provides deterministic, resumable GitHub transition waits used internally by delivery workflows. Use when another workflow must await CI, merge, tag, or release state without model heartbeats. |
-| [`code-review`](code-review/SKILL.md) | Review a PR, branch, or worktree for evidence-backed findings. Supports scoped revalidation and explicitly requested fixes or review workers. |
-| [`test-against-spec`](test-against-spec/SKILL.md) | Test observable behavior against explicit requirements when requested or when a delivery workflow needs real-interface acceptance evidence. |
-| [`create-release`](create-release/SKILL.md) | Prepare or publish a release when requested or handed off by milestone-rush, using the repository's established versioning and publication workflow. |
+| [`code-review`](code-review/SKILL.md) | Reviews a PR, branch, or worktree for evidence-backed findings, with scoped revalidation and explicitly requested fixes. Use when asked to review code changes, a diff, a branch, or a PR, or to recheck earlier review findings. |
+| [`test-against-spec`](test-against-spec/SKILL.md) | Tests observable behavior against explicit requirements through the real interface. Use when asked to test or verify that a change meets its specification or acceptance criteria, when the user runs /test-against-spec, or when a delivery workflow needs real-interface acceptance evidence. |
+| [`create-release`](create-release/SKILL.md) | Prepares or publishes a release using the repository's established versioning and publication workflow. Use when asked to cut, prepare, or publish a release, when the user runs /create-release, or when milestone-rush hands off a milestone. |
 | [`roadmap-review`](roadmap-review/SKILL.md) | Reviews a roadmap from fresh project evidence and produces a verified, throughput-anchored version plan, with execution gated on confirmation. Use when reviewing a roadmap, planning releases, or sequencing a backlog. |
-| [`milestone-rush`](milestone-rush/SKILL.md) | Autonomously completes a confirmed milestone by reconciling existing work, coordinating work-item delivery and the configured milestone release, and closing the verified milestone. Use when the user runs /milestone-rush for an exact milestone or selects it after /roadmap-review. |
+| [`milestone-rush`](milestone-rush/SKILL.md) | Autonomously completes a confirmed milestone by reconciling existing work, coordinating work-item delivery and the configured milestone release, and closing the verified milestone. Use when the user runs /milestone-rush or asks to complete one exact, confirmed milestone, including selecting it after /roadmap-review. |
 
 ### One-off project setup, guidance, and audit skills
 
 | Skill | What it does |
 | --- | --- |
 | [`project-structure`](project-structure/SKILL.md) | Applies the user's language-agnostic repository layout, documentation, governance, hook, test, agent-file, and changelog conventions. Use when scaffolding or restructuring a repo, writing AGENTS.md or docs, or laying out folders. |
-| [`maintain-project-skills`](maintain-project-skills/SKILL.md) | Install, update, or migrate project-local skills from their verified upstream source while preserving local ownership and pins. |
+| [`maintain-project-skills`](maintain-project-skills/SKILL.md) | Installs, updates, or migrates project-local skills from their verified upstream source while preserving local ownership and pins. Use when asked to add, refresh, or migrate a project's local skills. |
 | [`typescript-stack`](typescript-stack/SKILL.md) | Applies strict, runtime-aligned TypeScript conventions for compiler setup, types, modules, APIs, tests, and validation without imposing a frontend framework. Use when scaffolding, configuring, writing, reviewing, or upgrading TypeScript in web, service, CLI, library, or tooling projects. |
 | [`react-stack`](react-stack/SKILL.md) | Applies the user's Bun-based React stack across Next.js web and Expo universal profiles, deferring backend and repository details to their domain skills. Use when scaffolding a React app, upgrading dependencies, choosing MVP tooling, or selecting a project profile. |
 | [`native-nostalgia-stack`](native-nostalgia-stack/SKILL.md) | Applies the user's FreePascal toolchain and its build, formatting, hook, and test contracts while leaving project-specific mechanics local. Use when scaffolding or working in a FreePascal project that follows this toolchain. |
 | [`convex-conventions`](convex-conventions/SKILL.md) | Applies the user's Convex backend conventions while deferring mechanics to upstream Convex skills and current APIs to the live Convex docs. Use when scaffolding, reviewing, or refactoring Convex functions, schemas, or auth. |
-| [`codebase-audit`](codebase-audit/SKILL.md) | Audit a repository or subsystem for systemic engineering risks and actionable improvements. Assessment only unless follow-up fixes are selected. |
-| [`agent-behavior-audit`](agent-behavior-audit/SKILL.md) | Audit agent execution records for instruction compliance, outcome quality, and wasted work using source-backed evidence. |
-| [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Apply the user's engineering standards during substantial technical work: preserve scope, use current evidence, and complete authorized outcomes. |
-| [`agent-writing`](agent-writing/SKILL.md) | Write clear, concise agent replies and engineering artifacts while preserving evidence, decisions, and required detail. |
+| [`codebase-audit`](codebase-audit/SKILL.md) | Audits a repository or subsystem for systemic engineering risks and actionable improvements; assessment only unless follow-up fixes are selected. Use when asked to audit a codebase, assess its health or technical debt, or find systemic risks. |
+| [`agent-behavior-audit`](agent-behavior-audit/SKILL.md) | Audits agent execution records for instruction compliance, outcome quality, and wasted work using source-backed evidence. Use when asked to audit or analyze how an agent behaved in past sessions, transcripts, or logs. |
+| [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Applies the user's engineering standards during substantial technical work: preserve scope, use current evidence, delegate independent parts, and complete authorized outcomes. Use during substantial implementation, debugging, refactoring, or multi-part delivery work. |
+| [`agent-writing`](agent-writing/SKILL.md) | Writes clear, concise agent replies and engineering artifacts while preserving evidence, decisions, and required detail. Use when drafting a final response or report for engineering work, PR or issue text, or documentation. |
 | [`bleeding-edge`](bleeding-edge/SKILL.md) | Biases technology choices toward the newest viable option while preserving maintainability, live verification, reversibility, and decided constraints. Use when selecting or upgrading a dependency, runtime, tool, language feature, or AI model. |
 
 ### PR descriptions and walkthroughs
@@ -152,15 +152,17 @@ context pointers, and prune no-op prose.
 ### Frontier-model prompt contract
 
 The skills target current frontier models without relying on one model's default
-behavior. The current baseline is the official guidance for
-[GPT-6 Astra](https://developers.openai.com/api/docs/guides/latest-model#prompting-best-practices),
-[Claude Fable 5.1](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1),
+behavior. The current targets are GPT-6 Astra, GPT-6 Sol, Claude Fable 5.1 and
+Claude Opus 5.5. The baseline, checked on September 27, 2026, is the official
+guidance for
+[GPT-6 Astra and Sol](https://developers.openai.com/api/docs/guides/latest-model#prompting-best-practices),
+[Claude Fable 5.1](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-1)
 and
-[Claude Opus 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5),
-checked on September 7, 2026. The September 14 review also applies OpenAI's
-[Rethinking skills and prompts for GPT-6 Astra](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra):
-keep discovery descriptions precise, load supporting detail only when relevant,
-and remove stopping rules that interrupt the authorized completion contract.
+[Claude Opus 5.5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5-5),
+together with OpenAI's
+[Rethinking skills and prompts for GPT-6 Astra](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)
+and Anthropic's
+[Getting the most out of Opus 5.5](https://claude.dev/blog/getting-the-most-out-of-opus-5-5/).
 
 - Lead with the owned outcome, why it matters, completion evidence, boundaries,
   and stop rules. Prescribe exact mechanics only when the route is load-bearing.
@@ -168,34 +170,48 @@ and remove stopping rules that interrupt the authorized completion contract.
   invariants; use decision rules for investigation depth, optional tools,
   proportional validation, and when user input is truly required.
 - Preserve task-specific checks that define completion. Do not add generic
-  self-check, double-check, or verifier passes around them.
-- Delegate only genuinely independent, sizeable work with a bounded fan-out.
-  Do not use subagents merely to duplicate work or re-check a small task.
+  self-check, double-check, or verifier passes around them. Size committed
+  tests to the stated behavior; low-impact reversible changes need no new test.
+- Delegate sizeable independent parts to bounded workers by default when the
+  host supports it; keep small or tightly coupled work local. The coordinator
+  keeps working on independent work while workers run and checks each result's
+  evidence before accepting it. `no-subagents` keeps the work local.
 - For autonomous orchestration, repository-owned capability classes, context
   envelopes, token checkpoints, and escalation policy belong in
   `ORCHESTRATION.md`. Provider-specific model selection and harness plumbing stay
   in the host; reusable skills express only capability and observable behavior.
 - Ground progress and completion claims in current tool or source evidence.
-  Report sparse outcomes at material phase changes; finish authorized reversible
-  work instead of ending on a promise or a redundant permission question.
+  Finish authorized reversible work. Name the early stops to avoid: a summary
+  that announces the next step, an offer to continue, a non-blocking decision
+  list, and stopping because a turn is long. Status notes go with the next action.
+- A plain-language request for a workflow's outcome runs that workflow with its
+  gates; an explicit instruction about one choice replaces only that default.
+  Do not add a blanket "user instructions override this skill" line; it invites
+  bypassing the workflow a request should trigger.
 - Lead final responses and written artifacts with the outcome. Keep complete,
   readable sentences and decision-relevant evidence; omit filler, boilerplate,
-  repeated summaries, and internal-reasoning narration.
-- Keep startup descriptions limited to the outcome and when to use the skill. Put
-  model effort, verbosity, thinking, context-budget plumbing, asynchronous
-  progress delivery, and any model-specific verifier strategy in the harness.
+  repeated summaries, and internal-reasoning narration. Never ask the model to
+  reproduce its internal reasoning in the reply.
+- Keep startup descriptions limited to the outcome and when to use the skill,
+  including the plain-language requests that should trigger it. Put model
+  effort, verbosity, thinking, context-budget plumbing, asynchronous progress
+  delivery, and any model-specific verifier strategy in the harness.
+- Keep each `SKILL.md` to what applies on every run. Move content for one mode,
+  input, fix path, or conditional axis into a reference with an exact
+  "read when" pointer.
 - Keep ambient repository context lightweight and specific: non-obvious
   decisions, gotchas, commands, and boundaries rather than facts visible in the
   tree. Prefer expressive tool and file interfaces plus rich references over
   generic worked examples that narrow exploration.
 - Validate prompt changes incrementally on the same representative scenarios.
 
-Astra's guidance emphasizes clear instruction precedence, authorized
-follow-through and proportionate testing. Fable 5.1's guidance calls out task
-completion, useful progress updates, scoped edits and preserved decisions;
-Opus 5 warns that generic verification or verifier-subagent instructions can
-cause excess checking. These sources inform the shared rules above. The harness
-owns provider-specific controls and evaluates them on the intended workload.
+Astra and Sol ask clarifying questions more readily, over-test small changes and
+delegate less than intended. Fable 5.1 can end turns early, widen scope and
+commit extra tests. Opus 5.5 ends long turns with progress reports that can read
+as completion, and it runs multi-hour parallel work well. These observations
+inform the shared rules above. The harness owns provider-specific controls such
+as effort, thinking display, progress-update rendering and continuation nudges,
+and evaluates them on the intended workload.
 
 ### Conventions across all skills
 

@@ -2,8 +2,9 @@
 name: create-pr
 description: >-
   Validates and repairs an in-scope change, publishes its draft pull request,
-  reconciles metadata and CI, and marks it ready for review. Use
-  when the user runs /create-pr.
+  reconciles metadata and CI, and marks it ready for review. Use when asked to
+  open, raise, or publish a pull request for the current change, or when the
+  user runs /create-pr.
 license: Unlicense OR MIT
 compatibility: >-
   Requires git, Python 3.11 or newer, the GitHub CLI (gh) 2.99 or newer

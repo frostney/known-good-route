@@ -5,9 +5,14 @@ import type { EvalCase, RunLedger } from "./types.ts";
 
 export const defaultModels = [
   "codex:gpt-6-astra",
+  "codex:gpt-6-sol",
   "claude:claude-fable-5-1",
-  "claude:claude-opus-5",
+  "claude:claude-opus-5-5",
 ];
+export function modelLabel(value: string) {
+  // Evidence directories and live branch names need one distinct label per model.
+  return parseModel(value).model;
+}
 export function parseModel(value: string) {
   const match = /^(codex|claude):([a-zA-Z0-9._-]+)$/.exec(value);
   if (!match) throw new Error(`Use codex:<model> or claude:<model>: ${value}`);

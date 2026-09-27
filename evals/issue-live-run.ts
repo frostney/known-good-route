@@ -6,6 +6,7 @@ import {
   preflight,
   runLocal,
   defaultModels,
+  modelLabel,
   parseModel,
 } from "./local-runtime.ts";
 import { loadSkills, formatSkillCatalog } from "./skill-loader.ts";
@@ -79,15 +80,11 @@ let next = 0;
 async function consume() {
   while (next < jobs.length) {
     const { parentModel, scenario } = jobs[next++]!;
-    const label = parentModel.includes("astra")
-      ? "astra"
-      : parentModel.includes("fable")
-        ? "fable"
-        : "opus";
+    const label = modelLabel(parentModel);
     const evidence = join(output, `${label}-${scenario}`);
     await mkdir(evidence);
     const workerModel = parentModel.includes("fable")
-      ? "claude:claude-opus-5"
+      ? "claude:claude-opus-5-5"
       : parentModel;
     const c: IssueLiveConfig = {
       target: {

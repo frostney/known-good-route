@@ -1,8 +1,10 @@
 ---
 name: software-engineering-excellence
 description: >-
-  Apply the user's engineering standards during substantial technical work:
-  preserve scope, use current evidence, and complete authorized outcomes.
+  Applies the user's engineering standards during substantial technical work:
+  preserve scope, use current evidence, delegate independent parts, and
+  complete authorized outcomes. Use during substantial implementation,
+  debugging, refactoring, or multi-part delivery work.
 license: Unlicense OR MIT
 ---
 
@@ -33,6 +35,12 @@ increments. Follow native language idioms and the project's conventions.
 
 ## Continue the authorized work
 
+Treat an action-oriented request, such as "can you…" or "I want…", as an
+instruction to do the work. A plain-language request for a workflow's outcome,
+such as "open a PR" or "file an issue", runs that workflow with its gates. An
+explicit instruction about one choice, such as a label, an endpoint or skipping
+draft review, replaces only that default.
+
 Implementation authority persists across questions, corrections, diagnoses,
 worker returns and compaction. Update the affected decision or requirement while
 retaining the parent objective. A question calls for an answer; it does not
@@ -47,9 +55,19 @@ next action; reconsider the strategy if repeated work is not advancing the goal.
 Return control when the requested outcome is verified, safe in-scope progress
 is exhausted by an external blocker, or a material unresolved decision or new
 authority is needed. A known available fix is not a reason to stop. Complete
-independent authorized work before asking. When a skill requires a pause, link
-the exact loaded file, quote its rule and explain the missing decision or
-permission. User instructions and existing authorization override skill defaults.
+independent authorized work before asking. None of these ends a turn while
+authorized work remains:
+
+- a summary that announces the next step instead of taking it;
+- an offer to continue unless the user prefers otherwise;
+- a list of decisions when none of them blocks the remaining work;
+- a long turn or a completed milestone.
+
+Put status notes and recommendations on open decisions in the same message as
+the next action, and continue the work that does not depend on the answer. When
+a skill requires a pause, link the exact loaded file, quote its rule and explain
+the missing decision or permission. Risky or irreversible actions keep their
+confirmation gates.
 
 Assessment-only work can finish with findings; it does not authorize remediation.
 Stop adding work once the agreed acceptance criteria hold. For resumable work,
@@ -82,6 +100,12 @@ are valid when they enforce a specified contract. A correct refactor or
 equivalent instruction rewrite should not break tests. Each test should catch
 a relevant incorrect behavior. Do not assert prose, private calls or source
 tokens as proof of behavior.
+Commit tests where the task asks for them or the repository already tests that
+kind of change, sized like neighboring tests: about one focused test per stated
+behavior. Remove scratch probes unless one becomes the regression test for a
+defect found. A reversible, low-impact change without a behavioral contract,
+such as copy, a configuration value or documentation, needs no new test; the
+project gate covers it.
 Validate fixture preconditions so a failed setup cannot masquerade as a product
 failure. Keep structural/schema checks distinct from behavioral acceptance.
 
@@ -110,10 +134,12 @@ express; improve unclear names rather than narrating implementation.
 
 ## Coordinating deliverables
 
-For a chain of substantial deliverables, the coordinator owns confirmed
-decisions, dependencies, integration and user communication. Use bounded workers
-when the task and available host support delegation; keep small ordinary work
-local. An applicable orchestrator owns its more specific coordination contract.
+For substantial work with independent parts, the coordinator owns confirmed
+decisions, dependencies, integration and user communication. Delegate each
+sizeable independent part to a bounded worker by default when the host supports
+delegation; keep small or tightly coupled work local. `no-subagents` or an
+equivalent user instruction keeps all of the work local. An applicable
+orchestrator owns its more specific coordination contract.
 
 Give each worker the selected decisions, repository and work-item identity,
 starting state, owned scope, dependencies, required behavior and gates. Prefer
@@ -122,8 +148,10 @@ the deliverable. Request an outcome, changed state, observed validation,
 limitations and facts needed by dependent work. Keep investigation logs local
 to the worker. Bring material choices or conflicting evidence to the coordinator.
 
-Verify and integrate the returned result. Worker completion closes its lane,
-not the parent objective. Continue the parent's remaining authorized work.
+While workers run, continue the coordinator's work that does not depend on
+their results. Check each returned result's evidence before accepting and
+integrating it. Worker completion closes its lane, not the parent objective.
+Continue the parent's remaining authorized work.
 If isolated workers are unavailable, disclose the limitation and use an allowed
 local route; do not claim delegation occurred or invent unavailable telemetry.
 

@@ -104,7 +104,7 @@ for (const [sourceIndex, record] of selected.entries()) {
       }
       verifyToolReceiptTranscript(node.record.ledger, parseModel(node.record.model).cli, sourceTranscript, node.receiptScope);
     }
-    const judge = node.record.model === "claude:claude-fable-5-1" ? "claude:claude-opus-5" : "claude:claude-fable-5-1";
+    const judge = node.record.model === "claude:claude-fable-5-1" ? "claude:claude-opus-5-5" : "claude:claude-fable-5-1";
     jobs.push({
       index: jobs.length, sourceIndex, sourceCaseId: record.caseId, sourceModel: record.model,
       role: node.role, record: node.record, packet, packetSha256: packetDigest(packet), judge,

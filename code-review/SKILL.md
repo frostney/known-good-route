@@ -1,8 +1,9 @@
 ---
 name: code-review
 description: >-
-  Review a PR, branch, or worktree for evidence-backed findings. Supports scoped
-  revalidation and explicitly requested fixes or review workers.
+  Reviews a PR, branch, or worktree for evidence-backed findings, with scoped
+  revalidation and explicitly requested fixes. Use when asked to review code
+  changes, a diff, a branch, or a PR, or to recheck earlier review findings.
 license: Unlicense OR MIT
 compatibility: >-
   Requires git, the project's declared build and test tools, and network access

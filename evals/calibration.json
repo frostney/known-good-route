@@ -54,12 +54,13 @@
     },
     {
       "caseId": "prompting-native-worker-delivery",
-      "status": "retained",
+      "status": "updated",
       "rationale": [
-        "Retained task, fixture, and assertions; no demonstrated contract mismatch in calibration."
+        "Retained task, fixture, and assertions; no demonstrated contract mismatch in calibration.",
+        "September 27 model refresh: the configured worker moved from claude-opus-5 to claude-opus-5-5 with the default matrix. Task, fixture and assertions are unchanged; fresh native run required."
       ],
       "beforeSha256": "584179a23339844751bdf0515d0d966a35ce0214cef28636ad0fb8c8d1383d6e",
-      "afterSha256": "92dcc631b2bb1ef3921d71ffd1e56aa1f96de965f1150491eb650656ee65def1",
+      "afterSha256": "f16da570260c02a2a9a6a59c74d16b3e7f03c77a77d47f4a5eacef29a359791c",
       "frozenCaseSha256": "92dcc631b2bb1ef3921d71ffd1e56aa1f96de965f1150491eb650656ee65def1"
     },
     {
@@ -1870,11 +1871,12 @@
     },
     {
       "caseId": "prompting-claude-native-agent",
-      "status": "added",
+      "status": "updated",
       "rationale": [
-        "Actual native Claude Agent handoff with separate worker tools and observed child response metadata."
+        "Actual native Claude Agent handoff with separate worker tools and observed child response metadata.",
+        "September 27 model refresh: the configured worker moved from claude-opus-5 to claude-opus-5-5 with the default matrix. Task, fixture and assertions are unchanged; fresh native run required."
       ],
-      "afterSha256": "bf210ffd1a0dc9aa2bda35fb64e980944ebef58c92272c91063888405ec73a8b",
+      "afterSha256": "0e0a6ecaaefad617915caf45b8c268f49b59379bcad0f16f68c0308ecbb068e7",
       "frozenCaseSha256": "bf210ffd1a0dc9aa2bda35fb64e980944ebef58c92272c91063888405ec73a8b"
     },
     {
@@ -1897,12 +1899,13 @@
     },
     {
       "caseId": "prompting-claude-native-agent-blocked",
-      "status": "added",
+      "status": "updated",
       "rationale": [
         "Exercise unavailable current-head checks through an actual native Agent and standalone worker; old-head green evidence must not establish readiness.",
-        "Accept pending as well as blocked under the shared readiness contract; worker completion and exact-model checks remain required."
+        "Accept pending as well as blocked under the shared readiness contract; worker completion and exact-model checks remain required.",
+        "September 27 model refresh: the configured worker moved from claude-opus-5 to claude-opus-5-5 with the default matrix. Task, fixture and assertions are unchanged; fresh native run required."
       ],
-      "afterSha256": "2de9907b98ec6ebeaa11fb63ca0bb0de93f4801c8dc95c2d302260a2e070ac40"
+      "afterSha256": "8a485ad9710e102a348730a16b487ea6e1acfb34ddb22c36804074ce5c853677"
     },
     {
       "caseId": "prompting-native-worker-blocked",
@@ -2336,6 +2339,37 @@
           "rationale": "Normalize a malformed 42-character synthetic repair revision to valid 40-character state/responses. Grade explicit integration probe identity through details/structured fields and fresh default-base branch identity, without requiring the incidental word repair or a final SHA spelling length. Original identity evidence is inconclusive because fixture revisions were malformed; fresh native replay required."
         }
       ]
+    },
+    {
+      "caseId": "trigger-prose-open-pr",
+      "status": "new",
+      "rationale": [
+        "September 27 model refresh: plain-language trigger case. The prompt names no skill or slash command; the skill must be selected from its description and run with its gates. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "d02c98c1182693143355127551a9e80deec3bc3c3d5ae2c6c97eb8e0a11f2348",
+      "frozenCaseSha256": "d02c98c1182693143355127551a9e80deec3bc3c3d5ae2c6c97eb8e0a11f2348"
+    },
+    {
+      "caseId": "trigger-prose-file-issue",
+      "status": "new",
+      "rationale": [
+        "September 27 model refresh: plain-language trigger case. The prompt names no skill or slash command; the skill must be selected from its description and run with its gates. Fresh native run required.",
+        "Review CR-2: expectations are independent of create-issue's draft default; the case requires the skill and its duplicate search, and accepts either creating the issue or asking for draft approval."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "de67909a1ba2709e58a1ab23885e0b13a7abbaad64e5e40bc18b0ebb80538b14",
+      "frozenCaseSha256": "de67909a1ba2709e58a1ab23885e0b13a7abbaad64e5e40bc18b0ebb80538b14"
+    },
+    {
+      "caseId": "trigger-prose-review-branch",
+      "status": "new",
+      "rationale": [
+        "September 27 model refresh: plain-language trigger case. The prompt names no skill or slash command; the skill must be selected from its description and run with its gates. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "91893c46074cc582cabdea71c3408de3a55124c56d190ed82db2230a85e82173",
+      "frozenCaseSha256": "91893c46074cc582cabdea71c3408de3a55124c56d190ed82db2230a85e82173"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

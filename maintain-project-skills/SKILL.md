@@ -1,8 +1,9 @@
 ---
 name: maintain-project-skills
 description: >-
-  Install, update, or migrate project-local skills from their verified
-  upstream source while preserving local ownership and pins.
+  Installs, updates, or migrates project-local skills from their verified
+  upstream source while preserving local ownership and pins. Use when asked to
+  add, refresh, or migrate a project's local skills.
 license: Unlicense OR MIT
 ---
 

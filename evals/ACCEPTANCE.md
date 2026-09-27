@@ -46,8 +46,8 @@ answer to the model as instructions.
 
 1. Validate skill structure/references and run tests for changed helpers.
 2. Run the selected cases through the existing native-login runner, explicitly
-   selecting Astra and Fable and the affected cases. Avoid implicit full-matrix
-   runs. Keep original outputs when a grader needs correction.
+   selecting the target models the change affects and the affected cases.
+   Avoid implicit full-matrix runs. Keep original outputs when a grader needs correction.
 3. Review the complete result and recorded actions against the manual criteria.
    Grade executable claims from returned evidence. An acknowledgment establishes
    a request, not successful execution. Exact wording is unnecessary.

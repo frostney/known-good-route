@@ -1,8 +1,10 @@
 ---
 name: test-against-spec
 description: >-
-  Test observable behavior against explicit requirements when requested or when
-  a delivery workflow needs real-interface acceptance evidence.
+  Tests observable behavior against explicit requirements through the real
+  interface. Use when asked to test or verify that a change meets its
+  specification or acceptance criteria, when the user runs /test-against-spec,
+  or when a delivery workflow needs real-interface acceptance evidence.
 license: Unlicense OR MIT
 ---
 

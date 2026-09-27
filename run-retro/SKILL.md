@@ -1,8 +1,9 @@
 ---
 name: run-retro
 description: >-
-  Review a workstream and agree process improvements when the user requests or
-  accepts a retrospective. Apply only selected follow-up actions.
+  Reviews a workstream and agrees process improvements, applying only the
+  selected follow-up actions. Use when the user asks for, runs /run-retro, or
+  accepts a retrospective.
 license: Unlicense OR MIT
 compatibility: >-
   Requires the registered grilling skill and access to

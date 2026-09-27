@@ -2,8 +2,9 @@
 name: update-pr
 description: >-
   Commits relevant changes, merges the remote default when needed, pushes the
-  current pull-request branch, and refreshes stale PR metadata. Use when the
-  user runs /update-pr or asks to update a pull request.
+  current pull-request branch, and refreshes stale PR metadata. Use when asked
+  to update or push changes to an existing pull request, or when the user runs
+  /update-pr.
 license: Unlicense OR MIT
 compatibility: >-
   Requires git and the GitHub CLI (gh) authenticated to the target repository,

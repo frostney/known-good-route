@@ -2,7 +2,8 @@
 name: deliver
 description: >-
   Carries one feature, bug, issue, branch, or PR through verified delivery.
-  Use when asked to deliver a work item or run /deliver.
+  Use when asked to deliver or ship a work item end to end, such as getting it
+  merged or deployed, or when the user runs /deliver.
 license: Unlicense OR MIT
 compatibility: >-
   Uses the project's implementation, GitHub and integration tools and available
