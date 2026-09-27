@@ -1,10 +1,9 @@
-import { isAbsolute } from "node:path";
+import { isAbsolute, posix } from "node:path";
 import type { RunLedger } from "./types.ts";
 import { toolReceiptSchema } from "./tool-receipts.ts";
 
 export interface SkillCitationRequirement { skill: string; passage: string }
 const normalize = (text: string) => text.replace(/\s+/g, " ").trim();
-const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 function quotedPassages(text: string): string[] {
   const blocks = [...text.matchAll(/^(?: {0,3}>[^\n]*(?:\n|$))+/gm)]
@@ -27,6 +26,19 @@ function linkText(text: string): string {
   }).join("\n").replace(/(`+)[\s\S]*?\1/g, "_");
 }
 
+// Inline Markdown links, including CommonMark's optional whitespace inside the
+// parentheses, angle-wrapped destinations, and line or fragment suffixes. The
+// destination must be absolute and resolve to the loaded source; bare paths and
+// relative guesses are not links to the source this host supplied.
+function linksTo(text: string, source: string): boolean {
+  const target = posix.normalize(source);
+  for (const match of text.matchAll(/(?<![!\\])\[[^\]\n]+\]\([ \t]*(?:<([^>\n]+)>|([^\s()<>]+))[ \t]*\)/g)) {
+    const destination = (match[1] ?? match[2]!).replace(/(?::[1-9][0-9]*|#[^\s]+)$/, "");
+    if (isAbsolute(destination) && posix.normalize(destination) === target) return true;
+  }
+  return false;
+}
+
 // This checks source identity and a required verbatim excerpt, not the truth or
 // completeness of the surrounding explanation. Semantic review still applies.
 export function hasSkillCitation(ledger: RunLedger, requirement: SkillCitationRequirement): boolean {
@@ -44,14 +56,7 @@ export function hasSkillCitation(ledger: RunLedger, requirement: SkillCitationRe
       if (result.ok !== true || result.name !== requirement.skill || typeof result.path !== "string" ||
           !isAbsolute(result.path) || typeof result.instructions !== "string" ||
           !normalize(result.instructions).includes(normalize(requirement.passage))) continue;
-      // Support ordinary inline Markdown links, angle-wrapped paths, and source
-      // line/fragment suffixes. Bare paths and relative guesses are not links to
-      // the absolute source supplied by this host.
-      const suffix = "(?::[1-9][0-9]*|#[^)>\\s]+)?";
-      const path = escapeRegex(result.path);
-      const plain = /\s/.test(result.path) ? "" : path + suffix + "|";
-      const link = new RegExp("(?<![!\\\\])\\[[^\\]\\n]+\\]\\((?:" + plain + "<" + path + suffix + ">)\\)");
-      if (messages.some(message => link.test(linkText(message)) &&
+      if (messages.some(message => linksTo(linkText(message), result.path) &&
         quotedPassages(message).some(quote => quote.includes(normalize(requirement.passage))))) return true;
     }
   } catch { return false; }
