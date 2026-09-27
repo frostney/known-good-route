@@ -41,10 +41,11 @@ audit.
    follow-ups, synthetic tests, malformed records, and low-quality evidence do
    not count as human outcomes, but remain visible in coverage accounting.
 4. Write the coverage manifest from
-   [references/audit-contract.md](references/audit-contract.md), then run:
+   [references/audit-contract.md](references/audit-contract.md), then run the
+   following, where `SKILL_DIR` is this skill's directory:
 
    ```bash
-   python3 agent-behavior-audit/scripts/audit_manifest.py validate \
+   python3 "$SKILL_DIR/scripts/audit_manifest.py" validate \
      --manifest <manifest.json>
    ```
 

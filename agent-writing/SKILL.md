@@ -149,8 +149,8 @@ unclear wording, and missing validation or artifact locations. Scale revision to
 the response; a short factual answer does not need a separate checklist pass.
 Length thresholds prompt judgment, not an automatic additional revision.
 
-When editing this suite's Markdown, run
-`python3 agent-writing/scripts/check_prose.py` from the repository root.
+When editing this suite's Markdown, run `python3 scripts/check_prose.py`; the
+script path is relative to this skill directory.
 
 Source guidance: [Google developer documentation style
 guide](https://developers.google.com/style) and [Cursor Unslop

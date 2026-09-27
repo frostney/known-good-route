@@ -36,7 +36,8 @@ INLINE_CODE = re.compile(r"`[^`]*`")
 
 
 def markdown_paths(root: Path) -> list[Path]:
-    paths = [root / "README.md"]
+    readme = root / "README.md"
+    paths = [readme] if readme.is_file() else []
     for skill in sorted(root.iterdir()):
         if skill.is_dir() and (skill / "SKILL.md").is_file():
             paths.extend(sorted(skill.rglob("*.md")))
@@ -80,6 +81,8 @@ def main() -> None:
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
     paths = args.paths or markdown_paths(root)
+    if not paths:
+        raise SystemExit(f"no Markdown files found under {root}")
     findings = check_paths(path.resolve() for path in paths)
     if findings:
         raise SystemExit("\n".join(findings))
