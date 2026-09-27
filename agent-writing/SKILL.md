@@ -150,7 +150,8 @@ the response; a short factual answer does not need a separate checklist pass.
 Length thresholds prompt judgment, not an automatic additional revision.
 
 When editing this suite's Markdown, run `python3 scripts/check_prose.py`; the
-script path is relative to this skill directory.
+script path is relative to this skill directory. In a project install it checks
+only the skills that `skills-lock.json` records from this suite's source.
 
 Source guidance: [Google developer documentation style
 guide](https://developers.google.com/style) and [Cursor Unslop

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 from pathlib import Path
 from typing import Iterable
@@ -35,11 +36,36 @@ BANNED_PATTERNS = (
 INLINE_CODE = re.compile(r"`[^`]*`")
 
 
+def suite_skills(root: Path) -> set[str] | None:
+    """Skills installed from this suite's source, or None without a usable lock.
+
+    A project install keeps `skills-lock.json` beside `.agents/`, and its
+    skills root can hold skills from other sources that this contract does not
+    govern.
+    """
+    lock = root.parent.parent / "skills-lock.json"
+    try:
+        skills = json.loads(lock.read_text(encoding="utf-8"))["skills"]
+        source = skills[Path(__file__).resolve().parents[1].name]["source"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    return {
+        name
+        for name, entry in skills.items()
+        if isinstance(entry, dict) and entry.get("source") == source
+    }
+
+
 def markdown_paths(root: Path) -> list[Path]:
     readme = root / "README.md"
     paths = [readme] if readme.is_file() else []
+    suite = suite_skills(root)
     for skill in sorted(root.iterdir()):
-        if skill.is_dir() and (skill / "SKILL.md").is_file():
+        if (
+            skill.is_dir()
+            and (skill / "SKILL.md").is_file()
+            and (suite is None or skill.name in suite)
+        ):
             paths.extend(sorted(skill.rglob("*.md")))
     return paths
 

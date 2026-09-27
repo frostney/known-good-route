@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -74,6 +75,46 @@ class CheckProseTests(unittest.TestCase):
             skill_md.write_text("# Sample\n")
 
             self.assertEqual(CHECK_PROSE.markdown_paths(root), [readme, skill_md])
+
+    def project_install(self, directory: str, sources: dict[str, str]) -> Path:
+        project = Path(directory)
+        root = project / ".agents" / "skills"
+        for name in sources:
+            (root / name).mkdir(parents=True)
+            (root / name / "SKILL.md").write_text(f"# {name}\n")
+        (project / "skills-lock.json").write_text(json.dumps({
+            "version": 1,
+            "skills": {name: {"source": source} for name, source in sources.items()},
+        }))
+        return root
+
+    def test_project_install_checks_only_skills_from_this_suite_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.project_install(directory, {
+                "agent-writing": "owner/suite",
+                "create-pr": "owner/suite",
+                "improve-codebase-architecture": "someone/else",
+            })
+
+            self.assertEqual(
+                CHECK_PROSE.markdown_paths(root),
+                [root / "agent-writing" / "SKILL.md", root / "create-pr" / "SKILL.md"],
+            )
+
+    def test_lock_without_this_skill_checks_every_skill(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.project_install(directory, {
+                "create-pr": "owner/suite",
+                "improve-codebase-architecture": "someone/else",
+            })
+
+            self.assertEqual(
+                CHECK_PROSE.markdown_paths(root),
+                [
+                    root / "create-pr" / "SKILL.md",
+                    root / "improve-codebase-architecture" / "SKILL.md",
+                ],
+            )
 
 
 if __name__ == "__main__":
