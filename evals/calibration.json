@@ -4,12 +4,13 @@
   "cases": [
     {
       "caseId": "prompting-settled-implementation",
-      "status": "retained",
+      "status": "updated",
       "rationale": [
-        "Retained task, fixture, and assertions; no demonstrated contract mismatch in calibration."
+        "Retained task, fixture, and assertions; no demonstrated contract mismatch in calibration.",
+        "Eval-fix layer: the settled approach leaves no decision that depends on current external facts (implement's research rule), so reading recorded research is optional; research-when-required stays covered by implement-issue-web-search-unavailable. GPT-6 Sol skipped it in half its runs on main and on the stack."
       ],
       "beforeSha256": "ef3467a14c1d28c66e3c46488d87b407a6fdcf11276fbc118661d683785bae99",
-      "afterSha256": "c8e622d4148e2c3161c09d702d9cbc9ffc314bec37c1f99ba3c76ed2469b96ca",
+      "afterSha256": "ed5968fd8d199c08714ee783a4a2a920b09765f9b2a90f431f18b19ea0df95dc",
       "frozenCaseSha256": "c8e622d4148e2c3161c09d702d9cbc9ffc314bec37c1f99ba3c76ed2469b96ca"
     },
     {
@@ -471,10 +472,11 @@
         "Supply comparison identity and scope completeness rather than rewarding invented revisions or missing diffs.",
         "Preflight normalized synthetic full revisions to 40 hexadecimal characters.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
-        "September 27 contract change: the subagents input was removed; a default review of this non-trivial change delegates its lanes. Stable historical case ID retained. Fresh native run required."
+        "September 27 contract change: the subagents input was removed; a default review of this non-trivial change delegates its lanes. Stable historical case ID retained. Fresh native run required.",
+        "Eval-fix layer: the lane-map pattern accepts lane_map/lane-map like the case's other separator-tolerant patterns; code-review's report contract now names canonical axis and lane-status terms."
       ],
       "beforeSha256": "c5210db2cdf40ad2f2911d7c59075deb3512271f75c6d47e03196594a8b97b8c",
-      "afterSha256": "b82740df9fce3252f59b4ecef5539cead46e69a8fe0428dc20d52aef2f115d6a",
+      "afterSha256": "3f4db01d12ce0996ef0560b2e11aee9f48daae37f7b6c3119491c29f62032426",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1365,10 +1367,11 @@
       "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
-        "Independent checks are already terminal; require the blocked-scope report, not a gratuitous wait."
+        "Independent checks are already terminal; require the blocked-scope report, not a gratuitous wait.",
+        "Eval-fix layer: the fixture names the telemetry.append ledger operation and returns its result, as sibling milestone cases do; report patterns are unchanged and milestone-rush now names its report items."
       ],
       "beforeSha256": "0827b5c06d105f44ce22e0c4c84ebd5dbe171a1e12d37ead2d9b2f78e13d51e7",
-      "afterSha256": "b0dbaa5ce975dd08e45f0bf34b226babaa038101e452fe6b75c7a754c9129bd5",
+      "afterSha256": "4258db4e98bdca3bf1a736f59a89fa696ce14e74cac0689817a31ccb3269c846",
       "frozenCaseSha256": "b0dbaa5ce975dd08e45f0bf34b226babaa038101e452fe6b75c7a754c9129bd5"
     },
     {

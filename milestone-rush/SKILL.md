@@ -39,9 +39,13 @@ work-item deliveries and the release at the verified milestone boundary.
   only `git-workflow` may apply its guarded native-stack rewrite exception.
 - Before planning or spawning, read and validate repository-root
   `ORCHESTRATION.md` under
-  [references/orchestration.md](references/orchestration.md), then initialize the
-  ignored event ledger with the bundled one-shot command under
-  [references/event-ledger.md](references/event-ledger.md).
+  [references/orchestration.md](references/orchestration.md). Then start the
+  ignored event ledger by passing the run's first lifecycle event to the
+  `ingest` command under [references/event-ledger.md](references/event-ledger.md)
+  before the first issue, PR, or worker action, even when the run then stops at
+  a prerequisite. When the host exposes ingestion as a ledger or telemetry
+  operation instead of a shell, use it; only when neither exists, report the
+  ledger as unavailable.
 
 ## Reconcile and plan
 
@@ -177,16 +181,20 @@ claims or label them unconfirmed, without implying failure. Apply this to the
 whole report, including tables and parenthetical remarks; see
 [agent-writing](../agent-writing/SKILL.md) for shared writing guidance.
 
-Return one audit-style summary covering:
+Return one audit-style summary covering every item below, using these item
+names; when an item's result is missing or unconfirmed, say so rather than
+dropping it:
 
 - initial and final scope, including scope drift;
 - issue, worker/worktree, PR, and squash-merge mapping;
 - each PR's review-axis-to-lane map, completed or incomplete lanes, and
   every single-agent fallback with its reason;
 - reused local or PR state;
-- orchestration policy status, decision IDs and conflicts, CI integration
-  recommendation, prerequisites or fallback cost, worker context modes, and any
-  monitoring fallback;
+- orchestration policy status, decision IDs and conflicts, worker context
+  modes, and any monitoring fallback, named as a fallback;
+- the CI integration recommendation, labelled as a recommendation even when a
+  prerequisite issue carries the same content, with each prerequisite or the
+  current-CI fallback cost;
 - event-ledger path and completeness, intervention checkpoints, and unavailable
   telemetry fields;
 - validation and reviewer evidence for final PR heads and integrated default;
@@ -194,5 +202,6 @@ Return one audit-style summary covering:
 - integration destinations, release result and revision/artifact evidence;
 - cleanup or preserved state and milestone closure status.
 
-If the milestone closed, ask in the report whether to run `/run-retro`; invoke
-it only after explicit approval.
+If the milestone stays open, end with the remaining work and the steps that
+still lead to closure. If the milestone closed, ask in the report whether to run
+`/run-retro`; invoke it only after explicit approval.

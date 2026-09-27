@@ -224,8 +224,10 @@ Include:
 - active and skipped review axes, with the reason for each skip;
 - the material engineering-quality concerns covered and any conditional concern
   skipped because the changed runtime path did not touch it;
-- when the review delegated lanes, the review-axis-to-lane map, completed and
-  incomplete lanes, and every coordinator-completed fallback with its reason;
+- when the review delegated lanes, the review-axis-to-lane map with each
+  lane's `complete` or `incomplete` status, worker candidates the coordinator
+  filtered out with the reason (listed apart from findings), and every
+  coordinator-completed fallback with its reason, or that none was needed;
 - the churn window, symbol/file coverage, and architectural-risk hotspots;
 - exact probes and checks with observed results;
 - de-duplication coverage, coalesced evidence sources, and merged or conflicted
@@ -235,6 +237,13 @@ Include:
   DISCOVERABILITY]
   file:line: evidence, impact, smallest remedy`;
 - verified claims, static-only or unreached areas, and retained probe artifacts.
+
+Name review axes and lane statuses with this skill's terms (`de-duplication`,
+`claim and specification`, `engineering quality`, `discoverability`;
+`complete`, `incomplete`) rather than paraphrasing them; callers such as
+`milestone-rush` match them against this contract. Add a plain-language gloss
+beside a term when it helps. A short report may compress wording but keeps
+every applicable field above.
 
 Render every literal repository path, filename including extensionless files,
 variable, function, method, class, type, and other code identifier as inline

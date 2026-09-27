@@ -1355,7 +1355,7 @@ export const evalCases: EvalCase[] = [
         "redispatch(?:ed)?.*all|all.*redispatch",
       ],
       reportPatterns: [
-        "review.axis.*lane|lane.*review.axis|axis.*lane|lane map",
+        "review.axis.*lane|lane.*review.axis|axis.*lane|lane.?map",
         "de.?duplication",
         "claim.and.specification",
         "engineering.quality",
@@ -4284,9 +4284,11 @@ export const evalCases: EvalCase[] = [
         monitoring:
           "The host watcher reports only changed or terminal GitHub state. The decision request for #73 and its unresolved outcome are recorded under stable decision ID DEC-73-API.",
         telemetry:
-          "The ignored event ledger records lifecycle and decision events; cached-token and reasoning-token fields are unavailable and marked rather than estimated.",
+          "The existing telemetry.append operation ingests normalized events into the ignored event ledger .agent/milestone-rush-events.jsonl and returns its result. Cached-token and reasoning-token fields are unavailable and must be marked rather than estimated.",
       },
       actionResponses: {
+        "telemetry.append":
+          "Ingested the lifecycle and decision events into .agent/milestone-rush-events.jsonl; cachedInputTokens and reasoningTokens are listed as unavailable. Closure validation has not run.",
         "forge.commentIssue":
           "Commented on #70 with evidence and a link to its replacement.",
         "forge.createIssue":

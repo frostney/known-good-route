@@ -17,7 +17,8 @@ full project gate; the caller owns that aggregate gate, and source review and
 unit-test success alone are not behavior evidence.
 
 Reuse recorded real-interface evidence when the implementation, requirement,
-environment, and inputs match. Run missing or invalidated behavior checks after
+environment, and inputs match, except that fix mode reproduces each failure
+first-hand before fixing it. Run missing or invalidated behavior checks after
 changes, failures, or unresolved concerns.
 
 ## Boundaries
@@ -68,6 +69,6 @@ changes, failures, or unresolved concerns.
 
 Return a structured summary in the active workflow, not a committed or ignored
 artifact. Include the tested revision, environments, specification sources,
-each passed, failed, unverified, and out-of-scope requirement with its evidence
-or limitation, fixes and changed files when applicable, and whether any
+each requirement labeled `passed`, `failed`, `unverified`, or `out of scope`
+with its evidence or limitation, fixes and changed files when applicable, and whether any
 behavior remains failed or unverified.

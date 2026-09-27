@@ -110,7 +110,6 @@ export const promptingCases: EvalCase[] = [
       requiredInspections: [
         "context",
         "currentIssue",
-        "currentWebResearch",
         "projectGate",
       ],
       requiredActions: ["file.edit"],

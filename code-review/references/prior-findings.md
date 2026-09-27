@@ -41,8 +41,9 @@ For prior-findings mode, report:
 - the source path, kind, recorded revision, baseline availability, current
   `HEAD`, and dirty state;
 - the exact selected IDs and any `skippedOutOfScope` IDs;
-- when the revalidation delegated lanes, the finding-to-lane map, completed and
-  incomplete lanes, and every coordinator-completed fallback with its reason;
+- when the revalidation delegated lanes, the finding-to-lane map with each
+  lane's `complete` or `incomplete` status, and every coordinator-completed
+  fallback with its reason, or that none was needed;
 - supporting context inspected and exact probes with observed results;
 - each selected source ID, its source location, current location when known,
   outcome, current evidence, explanation, and remaining remedy when applicable;

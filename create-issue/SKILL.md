@@ -66,8 +66,9 @@ to a full draft review.
    evidence media to the repository. Put non-media evidence such as probe
    output inside a collapsed `<details>` block.
 5. Choose only existing labels unless the user asks to create one.
-6. When draft review was requested, show the proposed title, labels, and body
-   and create the issue only after approval.
+6. When draft review was requested and that exact draft is not yet approved,
+   show the proposed title, labels, and body, ask the user to approve or revise
+   it, and stop; create the issue only after approval.
 7. End the issue body with this visually separate GitHub Note, replacing both
    values with the exact identities resolved for this run:
 
