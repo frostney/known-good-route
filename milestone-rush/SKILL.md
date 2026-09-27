@@ -190,8 +190,8 @@ item's result is missing or unconfirmed, say so rather than dropping it:
 
 - initial and final scope, including scope drift;
 - issue, worker/worktree, PR, and squash-merge mapping;
-- each PR's review-axis-to-lane map, completed or incomplete lanes, and
-  every single-agent fallback with its reason;
+- each PR's review-axis-to-lane map, lane statuses, and every single-agent
+  fallback with its reason, in `code-review`'s report terms;
 - reused local or PR state;
 - orchestration policy status, decision IDs and conflicts, worker context
   modes, and any monitoring fallback, named as a fallback;

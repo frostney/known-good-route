@@ -217,8 +217,8 @@ Cite the originating requirement or identify the claim as inferred.
 
 Report terms are an interface: callers such as `milestone-rush`, review
 tooling and audits match them literally, so a paraphrase breaks the handoff.
-Use these terms verbatim, in code formatting, for the lane map, review axes,
-lane statuses, and roles: `review-axis-to-lane map`; `de-duplication`,
+Use these terms verbatim for the lane map, review axes, lane statuses, and
+roles: `review-axis-to-lane map`; `de-duplication`,
 `claim and specification`, `engineering quality`, `discoverability`;
 `complete`, `incomplete`; `coordinator`, `worker`. A plain-language gloss may
 follow a term but never replaces it. When lanes ran, label that section with

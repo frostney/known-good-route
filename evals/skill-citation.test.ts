@@ -39,7 +39,8 @@ test("source citations bind the loaded path and quote while permitting normal qu
   }
   // CommonMark allows whitespace inside the link parentheses, and an absolute
   // destination that normalizes to the loaded source names the same file.
-  for (const link of ["[rule]( /fixture/implement/SKILL.md )", "[rule](/fixture/other/../implement/SKILL.md)"])
+  for (const link of ["[rule]( /fixture/implement/SKILL.md )", "[rule](/fixture/other/../implement/SKILL.md)",
+    '[rule](/fixture/implement/SKILL.md "implement")', "[rule](\n/fixture/implement/SKILL.md\n)"])
     expect(gradeRun(scenario, ledger, `${link}\n> ${passage};`).passed).toBeTrue();
   const specialPath = "/fixture/A (work)/my+skill/SKILL.md";
   expect(gradeRun(scenario, await recorded(specialPath), report(`<${specialPath}>`)).passed).toBeTrue();

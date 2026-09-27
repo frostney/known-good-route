@@ -11,7 +11,10 @@
       ],
       "beforeSha256": "ef3467a14c1d28c66e3c46488d87b407a6fdcf11276fbc118661d683785bae99",
       "afterSha256": "ed5968fd8d199c08714ee783a4a2a920b09765f9b2a90f431f18b19ea0df95dc",
-      "frozenCaseSha256": "c8e622d4148e2c3161c09d702d9cbc9ffc314bec37c1f99ba3c76ed2469b96ca"
+      "frozenCaseSha256": "c8e622d4148e2c3161c09d702d9cbc9ffc314bec37c1f99ba3c76ed2469b96ca",
+      "postFreezeChangedFields": [
+        "expected"
+      ]
     },
     {
       "caseId": "prompting-later-issue-authorization",
@@ -1374,7 +1377,10 @@
       ],
       "beforeSha256": "0827b5c06d105f44ce22e0c4c84ebd5dbe171a1e12d37ead2d9b2f78e13d51e7",
       "afterSha256": "a15ce23f265d4d646c795c0d4dc3bb75f7a31f0cf644266a1c17189d1d7fdc3a",
-      "frozenCaseSha256": "b0dbaa5ce975dd08e45f0bf34b226babaa038101e452fe6b75c7a754c9129bd5"
+      "frozenCaseSha256": "b0dbaa5ce975dd08e45f0bf34b226babaa038101e452fe6b75c7a754c9129bd5",
+      "postFreezeChangedFields": [
+        "fixture"
+      ]
     },
     {
       "caseId": "milestone-rush-invalid-orchestration-policy",

@@ -19,8 +19,9 @@ repository, then create it. A request to file an issue authorizes creating it
 once the gates below pass.
 
 Reuse authorization and settled decisions within their scope across turns.
-Before a required pause, complete independent authorized work, then identify
-the exact skill file and quote the rule requiring a new decision or authority.
+Before a required pause, complete independent authorized work, then link the
+exact skill file as a Markdown link and quote the rule requiring a new decision
+or authority verbatim in a block quote.
 
 ## Gates
 
@@ -66,7 +67,8 @@ to a full draft review.
    evidence media to the repository. Put non-media evidence such as probe
    output inside a collapsed `<details>` block.
 5. Choose only existing labels unless the user asks to create one.
-6. When draft review was requested and that exact draft is not yet approved,
+6. When a draft review request still applies and that exact draft is not yet
+   approved,
    show the proposed title, labels, and body, ask the user to approve or revise
    it, and stop; create the issue only after approval.
 7. End the issue body with this visually separate GitHub Note, replacing both

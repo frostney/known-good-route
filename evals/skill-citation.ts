@@ -26,13 +26,14 @@ function linkText(text: string): string {
   }).join("\n").replace(/(`+)[\s\S]*?\1/g, "_");
 }
 
-// Inline Markdown links, including CommonMark's optional whitespace inside the
-// parentheses, angle-wrapped destinations, and line or fragment suffixes. The
+// Inline Markdown links, including CommonMark's optional whitespace or line
+// ending inside the parentheses, an optional link title, angle-wrapped
+// destinations, and line or fragment suffixes. The
 // destination must be absolute and resolve to the loaded source; bare paths and
 // relative guesses are not links to the source this host supplied.
 function linksTo(text: string, source: string): boolean {
   const target = posix.normalize(source);
-  for (const match of text.matchAll(/(?<![!\\])\[[^\]\n]+\]\([ \t]*(?:<([^>\n]+)>|([^\s()<>]+))[ \t]*\)/g)) {
+  for (const match of text.matchAll(/(?<![!\\])\[[^\]\n]+\]\(\s*(?:<([^>\n]+)>|([^\s()<>]+))(?:\s+(?:"[^"\n]*"|'[^'\n]*'|\([^)\n]*\)))?\s*\)/g)) {
     const destination = (match[1] ?? match[2]!).replace(/(?::[1-9][0-9]*|#[^\s]+)$/, "");
     if (isAbsolute(destination) && posix.normalize(destination) === target) return true;
   }

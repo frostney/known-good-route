@@ -164,9 +164,9 @@ Lead with the highest-value current conclusion. Include:
 - a coverage map of inspected, executed, sampled, static-only, and unreached
   capabilities;
 - active and skipped perspectives with reasons;
-- when the audit delegated lanes, the capability-and-perspective lane map,
-  completed and incomplete lanes, and every coordinator-completed fallback with
-  its reason;
+- when the audit delegated lanes, the capability-and-perspective lane map, each
+  lane's `complete` or `incomplete` status, and every coordinator-completed
+  fallback with its reason, or that none was needed;
 - the churn window, symbol/file coverage, and architectural-risk hotspots;
 - exact probes and project gates with observed results;
 - de-duplication coverage across implementation, work, evidence, and output,
