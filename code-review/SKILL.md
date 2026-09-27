@@ -215,6 +215,15 @@ Cite the originating requirement or identify the claim as inferred.
 
 ## Fresh-review report
 
+Report terms are an interface: callers such as `milestone-rush`, review
+tooling and audits match them literally, so a paraphrase breaks the handoff.
+Use these terms verbatim, in code formatting, for the lane map, review axes,
+lane statuses, and roles: `review-axis-to-lane map`; `de-duplication`,
+`claim and specification`, `engineering quality`, `discoverability`;
+`complete`, `incomplete`; `coordinator`, `worker`. A plain-language gloss may
+follow a term but never replaces it. A short report may compress wording but
+keeps every applicable field below.
+
 For a fresh review, lead with the verdict: `APPROVE`,
 `APPROVE WITH IMPROVEMENTS`, or `REQUEST CHANGES`.
 
@@ -237,14 +246,6 @@ Include:
   DISCOVERABILITY]
   file:line: evidence, impact, smallest remedy`;
 - verified claims, static-only or unreached areas, and retained probe artifacts.
-
-Name the lane map, review axes, lane statuses, and roles with this skill's
-terms (`review-axis-to-lane map`; `de-duplication`, `claim and specification`,
-`engineering quality`, `discoverability`; `complete`, `incomplete`;
-`coordinator`, `worker`) rather than paraphrasing them; callers such as
-`milestone-rush` match them against this contract. Add a plain-language gloss
-beside a term when it helps. A short report may compress wording but keeps
-every applicable field above.
 
 Render every literal repository path, filename including extensionless files,
 variable, function, method, class, type, and other code identifier as inline

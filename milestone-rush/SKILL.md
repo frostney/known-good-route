@@ -181,9 +181,12 @@ claims or label them unconfirmed, without implying failure. Apply this to the
 whole report, including tables and parenthetical remarks; see
 [agent-writing](../agent-writing/SKILL.md) for shared writing guidance.
 
-Return one audit-style summary covering every item below, using these item
-names; when an item's result is missing or unconfirmed, say so rather than
-dropping it:
+Return one audit-style summary covering every item below. Use these item names
+as labels, and keep the orchestration policy's and this skill's own terms for
+requirements, capabilities, and prerequisites (for example `stack prefix`,
+`repository-owned prerequisite`, `fallback`): repository audits and the
+retrospective match them literally, so a paraphrase loses the link. When an
+item's result is missing or unconfirmed, say so rather than dropping it:
 
 - initial and final scope, including scope drift;
 - issue, worker/worktree, PR, and squash-merge mapping;

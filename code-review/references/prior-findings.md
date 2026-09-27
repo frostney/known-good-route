@@ -36,7 +36,9 @@ Git-confirmed rename, and enumerate every excluded open or deferred ID as
 
 ## Targeted revalidation report
 
-For prior-findings mode, report:
+Use the parent skill's report terms verbatim; for revalidation they include
+`finding-to-lane map`, `not selected`, `skippedOutOfScope`, `complete`,
+`incomplete`, `coordinator`, and `worker`. For prior-findings mode, report:
 
 - the source path, kind, recorded revision, baseline availability, current
   `HEAD`, and dirty state;

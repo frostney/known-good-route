@@ -63,8 +63,9 @@ authorized work remains:
 
 Put status notes and recommendations on open decisions in the same message as
 the next action, and continue the work that does not depend on the answer. When
-a skill requires a pause, link the exact loaded file, quote its rule and explain
-the missing decision or permission. Risky or irreversible actions keep their
+a skill requires a pause, link the exact loaded file as a Markdown link, quote
+its rule verbatim in a block quote, and explain the missing decision or
+permission. Risky or irreversible actions keep their
 confirmation gates.
 
 Assessment-only work can finish with findings; it does not authorize remediation.
