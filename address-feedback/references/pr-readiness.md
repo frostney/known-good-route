@@ -66,7 +66,10 @@ success. A newer incomplete attempt or ambiguous ordering stays pending. A
 later terminal result can supersede an older completed failure or rate-limit
 notice. Empty review records created only to carry inline replies do not count
 as new verdicts; explicit approval and reviews containing original inline
-comments retain their configured meaning.
+comments retain their configured meaning. The policy's nonterminal markers
+apply to a check's own text as well as to review bodies: a successful check or
+status whose description or title reports a skipped, paused, or rate-limited
+review is not a completed verdict.
 
 Replies use a durable caller-owned `--state` checkpoint. Their operation ID is
 bound to the repository, PR, expected head, comment/thread root, authenticated
