@@ -25,7 +25,13 @@ Record the repository, PR number or URL, and final head object ID. A PR is
 - no CI, verdict, finding, reply, or thread-readiness evidence belongs only to a
   previous head.
 
-Resolving without replying does not satisfy the gate. If a thread cannot accept
+Resolving without replying does not satisfy the gate. An automation's reply to
+a maintainer reply in a thread that is now resolved answers that reply rather
+than raising a new finding, so it does not count as unanswered. The helper still
+reports it as an inline-thread surface with its `automationFollowUps` IDs. Read
+it: a confirmation needs no further reply, because replying only restarts the
+exchange. Pushback is a finding: reopen the thread and answer it. In an
+unresolved thread, every automation comment still needs a later reply. If a thread cannot accept
 an inline reply, return `blocked` with that thread identity. Any new head
 invalidates the complete gate snapshot; never patch old and new evidence
 together.
