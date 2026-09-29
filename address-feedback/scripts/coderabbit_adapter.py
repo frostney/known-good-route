@@ -36,7 +36,8 @@ TRIGGERS = {
     "full": "@coderabbitai full review",
 }
 STATED_WAIT = re.compile(
-    r"available in\D{0,10}(\d+)\s*minutes?(?:\D{0,10}(\d+)\s*seconds?)?",
+    r"(?:available in\D{0,10}|please wait\W{0,10})"
+    r"(\d+)\s*minutes?(?:\D{0,10}(\d+)\s*seconds?)?",
     re.IGNORECASE,
 )
 FINISHED = re.compile(r"review finished|reviews? (?:is|are) complete|no actionable comments", re.IGNORECASE)
@@ -51,17 +52,29 @@ WAIT_BUFFER_SECONDS = 60
 TRUSTED_ACK_SECONDS = 30
 # CodeRabbit states the account's included review allowance in each review's
 # summary, e.g. "1 included review remains after this review. ... set your
-# current allowance at 2 reviews per hour."
+# current allowance at 2 reviews per hour." Older summaries say "N reviews are
+# currently available", "included reviews refill at N per hour", or "You've
+# used all N included reviews currently available"; tests/fixtures holds each
+# wording CodeRabbit has published.
 ALLOWANCE_RATE = re.compile(
-    r"allowance at (\d+) reviews? per (minute|hour|day)\b", re.IGNORECASE
+    r"(?:allowance at|refill at) (\d+)(?: reviews?)? per (minute|hour|day)\b",
+    re.IGNORECASE,
 )
-ALLOWANCE_USED_ALL = re.compile(r"used all \d+ included reviews?", re.IGNORECASE)
+ALLOWANCE_USED_ALL = re.compile(
+    r"used (?:all \d+ included reviews?|the included review) currently available",
+    re.IGNORECASE,
+)
 ALLOWANCE_REMAINING = (
     re.compile(r"(\d+) included reviews? remains? after this review", re.IGNORECASE),
     re.compile(r"(\d+) reviews? (?:is|are) currently available", re.IGNORECASE),
 )
 RUN_ID = re.compile(r"Run ID\W{0,6}`([0-9A-Za-z-]+)`", re.IGNORECASE)
+# A rate-limit notice prints the refused run's ID beside its limit details.
+RATE_LIMIT_NOTICE = re.compile(r"rate limited by coderabbit", re.IGNORECASE)
 WINDOW_SECONDS = {"minute": 60, "hour": 3600, "day": 86400}
+# A statement without a rate is read against the hour, the unit of every rated
+# statement CodeRabbit has published; the budget then reports `degraded`.
+UNRATED_WINDOW_SECONDS = WINDOW_SECONDS["hour"]
 # The scan covers two windows: the window of a statement made up to one window
 # ago reaches back that far again.
 ALLOWANCE_LOOKBACK_WINDOWS = 2
@@ -253,26 +266,36 @@ def account_wait(gh: Gh, repos: list[str]) -> dict[str, Any] | None:
 
 
 def parse_allowance(text: str) -> dict[str, Any] | None:
-    """CodeRabbit's stated review allowance, or None without a stated rate."""
+    """CodeRabbit's stated review allowance, or None when the text states none.
+
+    `allowance` and `unit` are None when the statement gives no rate;
+    `remaining` is None when it gives no count.
+    """
     rate = ALLOWANCE_RATE.search(text)
-    if not rate or int(rate.group(1)) < 1:
-        return None
+    if rate and int(rate.group(1)) < 1:
+        rate = None
     remaining: int | None = None
-    if ALLOWANCE_USED_ALL.search(text):
+    offsets = [rate.start()] if rate else []
+    used_all = ALLOWANCE_USED_ALL.search(text)
+    if used_all:
         remaining = 0
+        offsets.append(used_all.start())
     else:
         for pattern in ALLOWANCE_REMAINING:
             match = pattern.search(text)
             if match:
                 remaining = int(match.group(1))
+                offsets.append(match.start())
                 break
-    unit = rate.group(2).lower()
+    if not offsets:
+        return None
+    unit = rate.group(2).lower() if rate else None
     return {
-        "offset": rate.start(),
+        "offset": min(offsets),
         "remaining": remaining,
-        "allowance": int(rate.group(1)),
+        "allowance": int(rate.group(1)) if rate else None,
         "unit": unit,
-        "windowSeconds": WINDOW_SECONDS[unit],
+        "windowSeconds": WINDOW_SECONDS[unit] if unit else UNRATED_WINDOW_SECONDS,
     }
 
 
@@ -296,7 +319,9 @@ def scan_allowance(
     A run is one CodeRabbit review, identified by the Run ID it prints in its
     summary statement and in any review object it submits. Each run counts
     once, at its earliest observed time. Evidence without a Run ID is not
-    counted, so the count is a lower bound of the account's runs.
+    counted, so the count is a lower bound of the account's runs. A summary's
+    "Currently processing" marker is not counted: CodeRabbit also shows it
+    while a review waits for allowance and then ends without using one.
     """
     statements: list[dict[str, Any]] = []
     runs: dict[tuple[str, str], float] = {}
@@ -331,9 +356,10 @@ def scan_allowance(
                 }
             )
             # The run a statement describes prints its ID just above it; a
-            # skip or pause notice earlier in the comment has its own.
+            # skip or pause notice earlier in the comment has its own, and a
+            # rate-limit notice's run was refused.
             run_ids = RUN_ID.findall(body, 0, parsed["offset"])
-            if run_ids:
+            if run_ids and not RATE_LIMIT_NOTICE.search(body):
                 note_run(repo, run_ids[-1], updated)
         for pr in sorted(prs):
             reviews = optional_items(
@@ -371,9 +397,10 @@ def allowance_retry(
 def account_allowance(gh: Gh, repos: list[str], now: float) -> dict[str, Any]:
     """The account's review budget from CodeRabbit's statements and counted runs.
 
-    `mode` is `enforced` when the newest statement lies within its own window
-    and its evidence supports every derived time; otherwise `degraded`, and
-    only stated waits gate triggers.
+    `mode` is `enforced` when the newest statement is within its window and
+    states a rate, and `degraded` otherwise. Without a current statement only
+    stated waits gate triggers. A current statement that reports none left
+    always holds triggers, whether or not runs could be counted.
     """
     window = WINDOW_SECONDS["hour"]
     statement, runs = scan_allowance(gh, repos, now - ALLOWANCE_LOOKBACK_WINDOWS * window)
@@ -397,21 +424,24 @@ def account_allowance(gh: Gh, repos: list[str], now: float) -> dict[str, Any]:
         "attempts": {"count": 0, "windowStart": None, "runs": []},
         "exhausted": False,
         "retryAt": None,
-        "retryAtEpoch": None,
+        "exhaustionRetryEpoch": None,
         "runEpochs": [],
     }
     if statement is None or statement["updatedAtEpoch"] <= now - statement["windowSeconds"]:
         return budget
     window = statement["windowSeconds"]
     allowance = statement["allowance"]
+    remaining = statement["remaining"]
     stated_at = statement["updatedAtEpoch"]
+    run_epochs = sorted(runs.values())
     in_window = sorted(
         (at, repo, run_id)
         for (repo, run_id), at in runs.items()
         if now - window < at <= now
     )
     budget |= {
-        "remaining": statement["remaining"],
+        "mode": "enforced" if allowance else "degraded",
+        "remaining": remaining,
         "perHour": allowance if statement["unit"] == "hour" else None,
         "reviewsPerWindow": allowance,
         "windowSeconds": window,
@@ -429,42 +459,48 @@ def account_allowance(gh: Gh, repos: list[str], now: float) -> dict[str, Any]:
                 for at, repo, run_id in in_window
             ],
         },
-        "runEpochs": sorted(runs.values()),
+        "runEpochs": run_epochs,
     }
     # The newest statement anchors the count: with R reviews left when it was
     # made, the allowance is used up from the R-th identified run after it.
     # Counted times can trail a run's start, so a larger window count alone
     # never overrides the statement.
-    remaining = statement["remaining"]
-    after = [at for at in budget["runEpochs"] if at > stated_at]
-    if remaining is None:
-        retry = allowance_retry(budget["runEpochs"], window, allowance, now, proven=False)
-    elif remaining == 0 or len(after) >= remaining:
-        exhausted_at = stated_at if remaining == 0 else after[remaining - 1]
-        retry = allowance_retry(
-            budget["runEpochs"], window, allowance, exhausted_at, proven=True
+    after = [at for at in run_epochs if at > stated_at]
+    exhausted_at: float | None = None
+    if remaining == 0:
+        exhausted_at = stated_at
+    elif remaining is not None and allowance and len(after) >= remaining:
+        exhausted_at = after[remaining - 1]
+    retry: float | None = None
+    if exhausted_at is not None:
+        # The run the statement reports on finished by its time, so a slot
+        # frees within one window even when no run could be counted.
+        derived = (
+            allowance_retry(run_epochs, window, allowance, exhausted_at, proven=True)
+            if allowance
+            else None
         )
-        if retry is None:
-            budget["reason"] = (
-                "the newest allowance statement reports no included review left, "
-                "but no identified review run in its window supports a retry "
-                "time; only stated waits gate triggers"
-            )
-            return budget
-    else:
-        retry = None
+        retry = derived if derived is not None else exhausted_at + window + WAIT_BUFFER_SECONDS
+    elif remaining is None and allowance:
+        retry = allowance_retry(run_epochs, window, allowance, now, proven=False)
     exhausted = retry is not None and retry > now
+    if allowance:
+        reason = (
+            f"{len(in_window)} identified review runs in the trailing window; "
+            f"the newest statement leaves {remaining} of {allowance}"
+        )
+    else:
+        reason = (
+            "the newest allowance statement states no rate; it is read against "
+            "one hour and runs are not counted against it"
+        )
+    if exhausted:
+        reason = f"the included review allowance is used up until retryAt; {reason}"
     budget |= {
-        "mode": "enforced",
         "exhausted": exhausted,
         "retryAt": format_timestamp(retry) if exhausted and retry else None,
-        "retryAtEpoch": retry if exhausted else None,
-        "reason": (
-            "the included review allowance is used up until retryAt"
-            if exhausted
-            else f"{len(in_window)} identified review runs in the trailing window; "
-            f"the newest statement leaves {remaining} of {allowance}"
-        ),
+        "exhaustionRetryEpoch": retry,
+        "reason": reason,
     }
     return budget
 
@@ -474,20 +510,24 @@ def trigger_gate(
 ) -> dict[str, Any] | None:
     """The latest evidenced time before which CodeRabbit would refuse a trigger.
 
-    A stated wait counts unless it predates the PR's rate-limit notice. An
-    enforced allowance adds its current retry time and, for a notice, the time
-    the runs in the window ending at that notice free a slot. A notice that
-    neither explains yields None, as does a trigger nothing gates.
+    A stated wait counts unless it predates the PR's rate-limit notice. The
+    allowance adds the time its exhaustion ends and, for a notice, when the
+    runs counted before it free a slot; an allowance time that precedes the
+    notice cannot explain it. Returns None when nothing gates a trigger. For a
+    notice that nothing explains, `retryAtEpoch` is None.
     """
     limited = bool(evidence.get("rateLimited"))
     limited_at = evidence.get("rateLimitedAtEpoch") if limited else None
+    unexplained = {"retryAtEpoch": None, "retryAt": None, "source": None}
     if limited and limited_at is None:
-        return None
+        return unexplained
     gates: list[tuple[float, str]] = []
     if wait is not None and (limited_at is None or wait["updatedAtEpoch"] >= limited_at):
         gates.append((wait["retryAtEpoch"], "stated-wait"))
-    enforced = bool(budget) and budget["mode"] == "enforced"
-    if enforced and limited_at is not None:
+    allowance_times: list[float] = []
+    if budget and budget.get("exhaustionRetryEpoch") is not None:
+        allowance_times.append(budget["exhaustionRetryEpoch"])
+    if budget and budget.get("reviewsPerWindow") and limited_at is not None:
         derived = allowance_retry(
             budget["runEpochs"],
             budget["windowSeconds"],
@@ -496,13 +536,14 @@ def trigger_gate(
             proven=True,
         )
         if derived is not None:
-            gates.append((derived, "allowance"))
-    if limited and not gates:
-        return None
-    if enforced and budget["retryAtEpoch"] is not None:
-        gates.append((budget["retryAtEpoch"], "allowance"))
+            allowance_times.append(derived)
+    gates.extend(
+        (at, "allowance")
+        for at in allowance_times
+        if limited_at is None or at > limited_at
+    )
     if not gates:
-        return None
+        return unexplained if limited else None
     retry, source = max(gates)
     return {"retryAtEpoch": retry, "retryAt": format_timestamp(retry), "source": source}
 
@@ -731,7 +772,7 @@ def classify(
     # not clean-complete.
     if evidence["rateLimited"]:
         gate = trigger_gate(evidence, wait, budget)
-        if gate is None:
+        if gate is None or gate["retryAtEpoch"] is None:
             return (
                 "pending-retry-source",
                 "rate limited without a stated retry time or an allowance-derived one",
@@ -783,7 +824,7 @@ def classify(
         desired = "incremental"
 
     gate = trigger_gate(evidence, wait, budget)
-    if gate is not None and gate["retryAtEpoch"] > now:
+    if gate is not None and gate["retryAtEpoch"] is not None and gate["retryAtEpoch"] > now:
         return "waiting", GATE_REASONS[gate["source"]], desired
     return f"trigger-{desired}", f"{desired} review trigger is permitted", desired
 
@@ -829,7 +870,7 @@ def observation(
         "allowance": {
             key: value
             for key, value in budget.items()
-            if key not in {"retryAtEpoch", "runEpochs"}
+            if key not in {"exhaustionRetryEpoch", "runEpochs"}
         },
         "pullRequests": results,
     }

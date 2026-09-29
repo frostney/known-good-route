@@ -28,7 +28,21 @@ Apply the parent SKILL.md shared authority, attribution, and evidence rules.
   `--scan-repo` for each repository with recent CodeRabbit activity. The
   adapter owns the account-wide lock, stated waits, the review allowance, and
   command choice; one `run` per exact head is that head's retrigger. Never type
-  a CodeRabbit command by hand.
+  a CodeRabbit command by hand. For a head that needs a trigger, its `status`
+  follows this table; the allowance rules are in
+  [pr-readiness.md](pr-readiness.md).
+
+  | Allowance statement | Counted runs | Stated wait | Rate-limit notice | State |
+  | --- | --- | --- | --- | --- |
+  | current | below the allowance | none or elapsed | no | `trigger-*` |
+  | current | below the allowance | none or elapsed | yes | `waiting`, allowance `retry_at` |
+  | current | at the allowance, or none counted after "0 remain" | none or elapsed | either | `waiting`, allowance `retry_at` |
+  | current | any | active | either | `waiting`, later `retry_at` |
+  | stale or missing | any | none or elapsed | no | `trigger-*` |
+  | stale or missing | any | none | yes | `pending-retry-source` |
+  | stale or missing | any | elapsed | yes | `trigger-*` |
+  | stale or missing | any | active | either | `waiting`, stated `retry_at` |
+
 - Mechanical applicability alone does not validate a finding: a symbol existing,
   a patch applying, or compilation succeeding does not establish its factual
   claim or authority. Classify both axes in step 4.

@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import re
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -805,7 +807,9 @@ class CodeRabbitAllowanceBudgetTest(unittest.TestCase):
             1,
         )
         self.assertIsNone(ADAPTER.parse_allowance("Review finished"))
-        self.assertIsNone(ADAPTER.parse_allowance("1 included review remains after this review."))
+        unrated = ADAPTER.parse_allowance("1 included review remains after this review.")
+        assert unrated
+        self.assertEqual((unrated["remaining"], unrated["allowance"]), (1, None))
 
     def test_used_up_allowance_waits_until_the_oldest_attempt_leaves_the_window(
         self,
@@ -981,19 +985,43 @@ class CodeRabbitAllowanceBudgetTest(unittest.TestCase):
         self.assertIsNone(allowance["retryAt"])
         self.assertIn("no allowance statement", allowance["reason"])
 
-    def test_missing_attempt_evidence_degrades_to_stated_waits(self) -> None:
+    def test_used_up_statement_without_counted_runs_still_holds(self) -> None:
+        # The run the statement reports on ended by its edit, so a slot frees
+        # within one window of it even when no run can be counted.
         gh = budget_gh(
             [summary_comment(81, 8, NOW - 600, availability(0, 2), None)]
         )
         value = observe(gh)
-        self.assertEqual(value["pullRequests"][0]["state"], "trigger-incremental")
+        item = value["pullRequests"][0]
+        self.assertEqual(item["state"], "waiting")
+        self.assertEqual(item["retryAt"], iso(NOW - 600 + HOUR + 60))
+        allowance = value["allowance"]
+        self.assertEqual(allowance["mode"], "enforced")
+        self.assertEqual(allowance["attempts"]["count"], 0)
+        self.assertTrue(allowance["exhausted"])
+
+    def test_statement_without_a_rate_degrades_but_still_holds(self) -> None:
+        gh = budget_gh(
+            [
+                summary_comment(
+                    81,
+                    8,
+                    NOW - 600,
+                    "**Limit details:** You\u2019ve used the included review "
+                    "currently available.",
+                    "run-a",
+                )
+            ]
+        )
+        value = observe(gh)
         allowance = value["allowance"]
         self.assertEqual(allowance["mode"], "degraded")
-        self.assertEqual(allowance["remaining"], 0)
-        self.assertEqual(allowance["attempts"]["count"], 0)
-        self.assertFalse(allowance["exhausted"])
-        self.assertIsNone(allowance["retryAt"])
-        self.assertIn("stated waits", allowance["reason"])
+        self.assertIn("states no rate", allowance["reason"])
+        self.assertTrue(allowance["exhausted"])
+        self.assertIsNone(allowance["perHour"])
+        item = value["pullRequests"][0]
+        self.assertEqual(item["state"], "waiting")
+        self.assertEqual(item["retryAt"], iso(NOW - 600 + HOUR + 60))
 
     def rate_limited_pr(self) -> list[dict[str, Any]]:
         return [
@@ -1053,6 +1081,319 @@ class CodeRabbitAllowanceBudgetTest(unittest.TestCase):
         self.assertIn("before trustworthy review completion", reason)
         self.assertEqual(gh.posts, [])
         self.assertEqual(evidence["pullRequests"][0]["state"], "waiting")
+
+
+RECORDED = json.loads(
+    (ROOT / "address-feedback" / "tests" / "fixtures" / "coderabbit_recorded.json")
+    .read_text(encoding="utf-8")
+)
+RECORDED_SCAN = ["frostney/GocciaScript", "frostney/homebrew-tap"]
+
+
+def at(value: str) -> float:
+    return ADAPTER.parse_time(value)
+
+
+class RecordedGh:
+    """Serves what GitHub's REST API showed at `now` from recorded edit history."""
+
+    def __init__(self, timeline: dict[str, Any], now: float) -> None:
+        self.timeline = timeline
+        self.now = now
+        self.metrics = FakeMetrics()
+
+    def visible(self, repo: str) -> list[dict[str, Any]]:
+        items = []
+        for item in self.timeline["comments"]:
+            versions = [v for v in item["versions"] if at(v["at"]) <= self.now]
+            if item["repo"] != repo or not versions:
+                continue
+            login = item["login"] + ("[bot]" if item["login"] == "coderabbitai" else "")
+            items.append(
+                {
+                    "id": item["id"],
+                    "user": {"login": login},
+                    "body": versions[-1]["body"],
+                    "created_at": item["createdAt"],
+                    "updated_at": versions[-1]["at"],
+                    "issue_url": f"https://api.github.com/repos/frostney/{repo}/issues/{item['pr']}",
+                }
+            )
+        return sorted(items, key=lambda item: item["updated_at"], reverse=True)
+
+    def rest_pages(self, endpoint: str) -> list[Any]:
+        scan = re.fullmatch(
+            r"repos/frostney/([^/]+)/issues/comments\?sort=updated&direction=desc"
+            r"&per_page=100(?:&since=(.+))?",
+            endpoint,
+        )
+        if scan:
+            items = self.visible(scan.group(1))
+            if scan.group(2):
+                items = [i for i in items if at(i["updated_at"]) >= at(scan.group(2))]
+            return [items]
+        reviews = re.fullmatch(
+            r"repos/frostney/([^/]+)/pulls/(\d+)/reviews\?per_page=100", endpoint
+        )
+        if reviews:
+            return [[
+                {
+                    "id": item["id"],
+                    "user": {"login": "coderabbitai[bot]"},
+                    "body": item["body"],
+                    "state": item["state"],
+                    "submitted_at": item["submittedAt"],
+                }
+                for item in self.timeline["reviews"]
+                if item["repo"] == reviews.group(1)
+                and item["pr"] == int(reviews.group(2))
+                and at(item["submittedAt"]) <= self.now
+            ]]
+        return [[]]
+
+
+def pending_evidence(rate_limited_at: float | None = None) -> dict[str, Any]:
+    """A PR head that has no completed review and needs a trigger."""
+    return {
+        "head": "head",
+        "exactHeadReview": None,
+        "finishedAck": None,
+        "skippedAck": False,
+        "alreadyReviewed": False,
+        "rateLimited": rate_limited_at is not None,
+        "rateLimitedAtEpoch": rate_limited_at,
+        "trigger": {"mode": "incremental"} if rate_limited_at is not None else None,
+        "headPushedAt": None,
+        "coverage": {"verified": False},
+        "codeRabbitCheck": {"state": None},
+        "codeRabbitCheckSuccess": False,
+    }
+
+
+def replay(
+    timeline: str, now: str, rate_limited_at: str | None = None
+) -> tuple[str, dict[str, Any] | None, dict[str, Any]]:
+    gh = RecordedGh(RECORDED["timelines"][timeline], at(now))
+    budget = ADAPTER.account_allowance(gh, RECORDED_SCAN, at(now))
+    wait = ADAPTER.account_wait(gh, RECORDED_SCAN)
+    evidence = pending_evidence(at(rate_limited_at) if rate_limited_at else None)
+    state, _, _ = ADAPTER.classify(evidence, "head", wait, at(now), budget)
+    return state, ADAPTER.trigger_gate(evidence, wait, budget), budget
+
+
+class RecordedCodeRabbitEvidenceTest(unittest.TestCase):
+    def test_every_recorded_allowance_wording_parses(self) -> None:
+        self.assertEqual(len(RECORDED["variants"]), 11)
+        for variant in RECORDED["variants"]:
+            with self.subTest(text=variant["text"]):
+                parsed = ADAPTER.parse_allowance(variant["text"])
+                assert parsed
+                self.assertEqual(parsed["remaining"], variant["remaining"])
+                self.assertEqual(parsed["allowance"], variant["allowance"])
+                self.assertEqual(parsed["windowSeconds"], HOUR)
+
+    def test_recorded_notices_classify_as_coderabbit_meant_them(self) -> None:
+        notices = {item["kind"]: item["body"] for item in RECORDED["notices"]}
+        waits = {
+            "summary-rate-limit-exceeded-with-stated-wait": (4, "47"),
+            "summary-rate-limited-with-stated-wait": (52, None),
+            "reply-rate-limited-with-stated-wait": (15, None),
+        }
+        for kind, (minutes, seconds) in waits.items():
+            with self.subTest(kind=kind):
+                self.assertRegex(notices[kind], ADAPTER.RATE_LIMITED)
+                match = ADAPTER.STATED_WAIT.search(notices[kind])
+                assert match
+                self.assertEqual((int(match.group(1)), match.group(2)), (minutes, seconds))
+        self.assertRegex(notices["reply-rate-limited-without-wait"], ADAPTER.RATE_LIMITED)
+        self.assertIsNone(ADAPTER.STATED_WAIT.search(notices["reply-rate-limited-without-wait"]))
+        for kind in ("summary-reviews-paused", "summary-in-progress", "summary-draft-not-reviewed"):
+            with self.subTest(kind=kind):
+                self.assertNotRegex(notices[kind], ADAPTER.RATE_LIMITED)
+                self.assertIsNone(ADAPTER.STATED_WAIT.search(notices[kind]))
+        self.assertIsNone(ADAPTER.parse_allowance(notices["summary-in-progress"]))
+        # A pause notice keeps the statement of the review before it.
+        self.assertEqual(
+            ADAPTER.parse_allowance(notices["summary-reviews-paused"])["remaining"], 2
+        )
+        self.assertRegex(notices["summary-review-skipped"], ADAPTER.SKIPPED)
+        self.assertRegex(notices["reply-already-reviewed"], ADAPTER.ALREADY_REVIEWED)
+        # The refused run's ID beside its limit details is not counted.
+        limited = notices["summary-rate-limited-with-stated-wait"]
+        self.assertEqual(ADAPTER.parse_allowance(limited)["remaining"], 0)
+        gh = FakeGh()
+        gh.pages[ADAPTER.allowance_comments_endpoint("owner/repo", NOW - 2 * HOUR)] = [
+            [summary_comment(81, 8, NOW - 60, limited, None)]
+        ]
+        _, runs = ADAPTER.scan_allowance(gh, ["owner/repo"], NOW - 2 * HOUR)
+        self.assertEqual(runs, {})
+
+    def test_replay_available_then_used_up_then_refused_on_2026_08_22(self) -> None:
+        # 16:21:45 frostney/GocciaScript#1203 states 2 reviews available.
+        state, _, budget = replay("2026-08-22", "2026-08-22T16:21:46Z")
+        self.assertEqual(state, "trigger-incremental")
+        self.assertEqual((budget["remaining"], budget["perHour"]), (2, 6))
+        # 16:45:27 #1205 states all 5 used; the trigger at 16:46:02 was refused
+        # at 16:46:09 with "Your next included review will be available in
+        # 15 minutes". Just before that trigger the adapter holds.
+        state, gate, budget = replay("2026-08-22", "2026-08-22T16:46:01Z")
+        self.assertEqual(state, "waiting")
+        assert gate
+        self.assertEqual(gate["source"], "allowance")
+        self.assertEqual(gate["retryAt"], "2026-08-22T17:14:58Z")
+        self.assertEqual((budget["remaining"], budget["perHour"]), (0, 5))
+        stated = at("2026-08-22T16:46:09Z") + 15 * 60 + 60
+        self.assertGreaterEqual(gate["retryAtEpoch"], stated)
+        # After the refusal, the notice and its stated wait keep it waiting.
+        state, gate, _ = replay(
+            "2026-08-22", "2026-08-22T16:46:10Z", rate_limited_at="2026-08-22T16:46:09Z"
+        )
+        self.assertEqual(state, "waiting")
+        assert gate
+        self.assertGreaterEqual(gate["retryAtEpoch"], stated)
+
+    def test_replay_holds_before_every_refused_trigger_on_2026_08_22(self) -> None:
+        refusals = [
+            ("2026-08-22T16:46:02Z", "2026-08-22T16:46:09Z", 15),
+            ("2026-08-22T17:56:07Z", "2026-08-22T17:56:15Z", 12),
+            ("2026-08-22T18:18:09Z", "2026-08-22T18:18:15Z", 5),
+        ]
+        for trigger, refused, minutes in refusals:
+            with self.subTest(trigger=trigger):
+                before = ADAPTER.format_timestamp(at(trigger) - 1)
+                state, gate, _ = replay("2026-08-22", before)
+                self.assertEqual(state, "waiting")
+                assert gate
+                self.assertGreaterEqual(
+                    gate["retryAtEpoch"], at(refused) + minutes * 60 + 60
+                )
+
+    def test_replay_2026_09_28_holds_until_the_next_review_ran(self) -> None:
+        # 17:53:41 #1287: "0 included reviews remain", 2 per hour.
+        state, gate, budget = replay("2026-09-28", "2026-09-28T18:00:00Z")
+        self.assertEqual(state, "waiting")
+        assert gate
+        self.assertEqual(gate["retryAt"], "2026-09-28T18:48:09Z")
+        self.assertEqual(budget["attempts"]["count"], 2)
+        self.assertEqual(
+            budget["source"],
+            {"repo": "frostney/GocciaScript", "pr": 1287, "commentId": 5874954441},
+        )
+        # CodeRabbit's next review, #1288, began at 18:49:02 and reported
+        # "1 included review remains"; the adapter permits a trigger by then.
+        state, _, _ = replay("2026-09-28", "2026-09-28T18:49:00Z")
+        self.assertEqual(state, "trigger-incremental")
+        later = RecordedGh(RECORDED["timelines"]["2026-09-28"], at("2026-09-28T19:02:00Z"))
+        statement, _ = ADAPTER.scan_allowance(later, RECORDED_SCAN, at("2026-09-28T17:02:00Z"))
+        assert statement
+        self.assertEqual((statement["pr"], statement["remaining"]), (1288, 1))
+
+
+TABLE_NOW = START + 900
+STATED_ACTIVE = START + 800 + 90 * 60 + 60
+ALLOWANCE_COUNTED = START - 1200 + HOUR + 60
+ALLOWANCE_BOUND = START + 30 + HOUR + 60
+# (statement, counted runs, stated wait, rate-limit notice) -> (state, source, retry)
+DECISIONS: list[tuple[str, str, str, bool, str, str | None, int | None]] = [
+    ("fresh", "below", "none", False, "trigger-incremental", None, None),
+    ("fresh", "below", "active", False, "waiting", "stated-wait", STATED_ACTIVE),
+    ("fresh", "below", "elapsed", False, "trigger-incremental", None, None),
+    ("fresh", "at-limit", "none", False, "waiting", "allowance", ALLOWANCE_COUNTED),
+    ("fresh", "at-limit", "active", False, "waiting", "stated-wait", STATED_ACTIVE),
+    ("fresh", "at-limit", "elapsed", False, "waiting", "allowance", ALLOWANCE_COUNTED),
+    ("fresh", "unknown", "none", False, "waiting", "allowance", ALLOWANCE_BOUND),
+    ("fresh", "unknown", "active", False, "waiting", "stated-wait", STATED_ACTIVE),
+    ("fresh", "unknown", "elapsed", False, "waiting", "allowance", ALLOWANCE_BOUND),
+    ("fresh", "below", "none", True, "waiting", "allowance", ALLOWANCE_BOUND),
+    ("fresh", "below", "active", True, "waiting", "stated-wait", STATED_ACTIVE),
+    ("fresh", "below", "elapsed", True, "waiting", "allowance", ALLOWANCE_BOUND),
+    ("fresh", "at-limit", "none", True, "waiting", "allowance", ALLOWANCE_COUNTED),
+    ("fresh", "at-limit", "active", True, "waiting", "stated-wait", STATED_ACTIVE),
+    ("fresh", "at-limit", "elapsed", True, "waiting", "allowance", ALLOWANCE_COUNTED),
+    ("fresh", "unknown", "none", True, "waiting", "allowance", ALLOWANCE_BOUND),
+    ("fresh", "unknown", "active", True, "waiting", "stated-wait", STATED_ACTIVE),
+    ("fresh", "unknown", "elapsed", True, "waiting", "allowance", ALLOWANCE_BOUND),
+] + [
+    (statement, runs, wait, notice, state, source, retry)
+    for statement in ("stale", "missing")
+    for runs in ("below", "at-limit", "unknown")
+    for wait, notice, state, source, retry in (
+        ("none", False, "trigger-incremental", None, None),
+        ("active", False, "waiting", "stated-wait", STATED_ACTIVE),
+        ("elapsed", False, "trigger-incremental", None, None),
+        ("none", True, "pending-retry-source", None, None),
+        ("active", True, "waiting", "stated-wait", STATED_ACTIVE),
+        ("elapsed", True, "trigger-incremental", None, None),
+    )
+]
+
+
+def decision_gh(statement: str, runs: str, wait: str, notice: bool) -> FakeGh:
+    """Fresh statements are at START + 30; stale ones one window and 100 s old.
+
+    `below`: "1 remains" with its run; `at-limit`: "0 remain" after two runs
+    in the window; `unknown`: "0 remain" with no Run ID to count. Without a
+    statement, the same runs appear only as review objects.
+    """
+    stated = START + 30 if statement == "fresh" else TABLE_NOW - HOUR - 100
+    account: list[dict[str, Any]] = []
+    reviews: dict[int, list[dict[str, Any]]] = {}
+    if statement == "missing":
+        account.append(
+            comment(80, "Review finished", START, issue_url="https://api.github.test/repos/owner/repo/issues/8")
+        )
+        reviews[8] = {
+            "below": [run_review_object(801, "run-b", START + 30)],
+            "at-limit": [
+                run_review_object(801, "run-a", START - 1200),
+                run_review_object(802, "run-b", START + 30),
+            ],
+            "unknown": [],
+        }[runs]
+    elif runs == "below":
+        account.append(summary_comment(91, 9, stated, availability(1, 2), "run-b"))
+    elif runs == "at-limit":
+        account += [
+            summary_comment(81, 8, stated - 1230, availability(1, 2), "run-a"),
+            summary_comment(91, 9, stated, availability(0, 2), "run-b"),
+        ]
+    else:
+        account.append(summary_comment(91, 9, stated, availability(0, 2), None))
+    waits = {
+        "none": [],
+        "active": [comment(95, "**Next review available in:** **90 minutes**", START + 800)],
+        "elapsed": [comment(95, "**Next review available in:** **5 minutes**", START + 100)],
+    }[wait]
+    refused = [
+        comment(10, "@coderabbitai review", START + 60, bot=False),
+        comment(
+            11,
+            "<summary>⚠️ Action not completed</summary>\n\nReview rate limited.",
+            START + 90,
+        ),
+    ]
+    return budget_gh(
+        account,
+        now=TABLE_NOW,
+        pr_comments=refused if notice else None,
+        other_reviews=reviews,
+        wait_comments=waits,
+    )
+
+
+class AllowanceDecisionTableTest(unittest.TestCase):
+    def test_every_input_combination_reaches_its_documented_state(self) -> None:
+        self.assertEqual(len(DECISIONS), 54)
+        self.assertEqual(
+            len({row[:4] for row in DECISIONS}), 54, "each combination appears once"
+        )
+        for statement, runs, wait, notice, state, source, retry in DECISIONS:
+            with self.subTest(statement=statement, runs=runs, wait=wait, notice=notice):
+                gh = decision_gh(statement, runs, wait, notice)
+                item = observe(gh, TABLE_NOW)["pullRequests"][0]
+                self.assertEqual(item["state"], state)
+                self.assertEqual(item["retrySource"], source)
+                self.assertEqual(item["retryAt"], iso(retry) if retry else None)
 
 
 if __name__ == "__main__":

@@ -113,19 +113,21 @@ unambiguously, or do not clearly describe availability. Never infer a provider,
 account quota, hourly window, blind delay, or retry count.
 
 A provider adapter may also derive `retry_at` from an allowance the provider
-itself states. The CodeRabbit adapter reads the newest "N included reviews
-remain" and "allowance at P reviews per hour" statement across the scanned
-repositories, timed by its comment's last edit, and ignores one older than its
-window. It counts review runs once each by CodeRabbit's Run ID, from summary
-statements and review objects, so automatic reviews count too. The allowance is
-used up when the statement reports none left, or when N identified runs follow
-it. The adapter then reports `waiting` with `retry_at` set to when enough
-counted runs leave the window, plus 60 seconds. A later stated wait wins. A
-rate-limit notice without a stated wait uses the runs before the notice. The
-count is a lower bound: it can prove the allowance used up but never that it is
-available. Without a current statement, or when no counted run supports the
-derivation, `status` reports the allowance `degraded` and only stated waits
-gate triggers.
+itself states. The CodeRabbit adapter reads the newest allowance statement
+across the scanned repositories, such as "N included reviews remain" with
+"allowance at P reviews per hour", timed by its comment's last edit. It ignores
+a statement older than its window. It counts review runs once each by
+CodeRabbit's Run ID, from summary statements and review objects, so automatic
+reviews count too. Refused runs and "Currently processing" markers are not
+counted. The allowance is used up when the statement reports none left, or when
+N counted runs follow it. The adapter then reports `waiting` with `retry_at` set
+to when enough counted runs leave the window, plus 60 seconds. Without counted
+runs, `retry_at` is the statement time plus one window and 60 seconds. A later
+stated wait wins. A rate-limit notice without a stated wait uses the runs
+counted before it. `status` reports the allowance `degraded` when no current
+statement exists, leaving only stated waits, or when the statement gives no
+rate, which is then read against one hour. A current statement reporting none
+left always holds triggers.
 
 ## Result contract
 

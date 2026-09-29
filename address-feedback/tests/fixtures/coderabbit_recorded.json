@@ -1,0 +1,1200 @@
+{
+ "about": "Trimmed, verbatim CodeRabbit comment versions from frostney/GocciaScript and frostney/homebrew-tap, read-only through GitHub's GraphQL userContentEdits (each version's full body at editedAt) and pull request reviews. Only lines the adapter parses are kept.",
+ "variants": [
+  {
+   "repo": "GocciaScript",
+   "pr": 1288,
+   "commentId": 5876377963,
+   "editedAt": "2026-09-28T19:01:17Z",
+   "text": "**Included review availability:** This review used your included allowance. 1 included review remains after this review. Your included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.",
+   "remaining": 1,
+   "allowance": 2
+  },
+  {
+   "repo": "GocciaScript",
+   "pr": 1262,
+   "commentId": 5846463678,
+   "editedAt": "2026-09-26T22:07:33Z",
+   "text": "**Included review availability:** This review used your included allowance. 2 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.",
+   "remaining": 2,
+   "allowance": 5
+  },
+  {
+   "repo": "GocciaScript",
+   "pr": 1287,
+   "commentId": 5874954441,
+   "editedAt": "2026-09-28T17:53:41Z",
+   "text": "**Included review availability:** This review used your included allowance. 0 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.",
+   "remaining": 0,
+   "allowance": 2
+  },
+  {
+   "repo": "GocciaScript",
+   "pr": 1283,
+   "commentId": 5870000552,
+   "editedAt": "2026-09-28T14:13:46Z",
+   "text": "**Limit details:** You’ve used all 2 included reviews currently available. Your 84 included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.",
+   "remaining": 0,
+   "allowance": 2
+  },
+  {
+   "repo": "GocciaScript",
+   "pr": 1228,
+   "commentId": 5547029146,
+   "editedAt": "2026-09-04T23:36:18Z",
+   "text": "**Included review availability:** 1 review is currently available. Your included PR review attempts over the past 7 days set your current allowance at 10 reviews per hour.",
+   "remaining": 1,
+   "allowance": 10
+  },
+  {
+   "repo": "GocciaScript",
+   "pr": 1183,
+   "commentId": 5332103791,
+   "editedAt": "2026-08-18T18:03:55Z",
+   "text": "**Included review availability:** 2 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 3 reviews per hour.",
+   "remaining": 2,
+   "allowance": 3
+  },
+  {
+   "repo": "GocciaScript",
+   "pr": 1170,
+   "commentId": 5307053326,
+   "editedAt": "2026-08-17T12:53:47Z",
+   "text": "**Included review availability:** 1 review is currently available. Based on recent review activity, included reviews refill at 3 per hour.",
+   "remaining": 1,
+   "allowance": 3
+  },
+  {
+   "repo": "GocciaScript",
+   "pr": 1165,
+   "commentId": 5305332363,
+   "editedAt": "2026-08-16T06:52:37Z",
+   "text": "**Included review availability:** 0 reviews are currently available. Based on recent review activity, included reviews refill at 1 per hour.",
+   "remaining": 0,
+   "allowance": 1
+  },
+  {
+   "repo": "GocciaScript",
+   "pr": 1165,
+   "commentId": 5305332363,
+   "editedAt": "2026-08-16T03:40:50Z",
+   "text": "**Limit details:** You’ve used all 1 included review currently available under your plan. You completed 98 included PR reviews in the past 7 days; at that activity level, included reviews refill at 1 review per hour.",
+   "remaining": 0,
+   "allowance": 1
+  },
+  {
+   "repo": "GocciaScript",
+   "pr": 1170,
+   "commentId": 5307053326,
+   "editedAt": "2026-08-17T13:02:53Z",
+   "text": "**Limit details:** You’ve used all 2 included reviews currently available under your plan. You completed 80 included PR reviews in the past 7 days; at that activity level, included reviews refill at 2 reviews per hour.",
+   "remaining": 0,
+   "allowance": 2
+  },
+  {
+   "repo": "GocciaScript",
+   "pr": 1238,
+   "commentId": 5579116825,
+   "editedAt": "2026-09-08T05:08:04Z",
+   "text": "**Limit details:** You’ve used the included review currently available.",
+   "remaining": 0,
+   "allowance": null
+  }
+ ],
+ "notices": [
+  {
+   "kind": "summary-rate-limit-exceeded-with-stated-wait",
+   "repo": "GocciaScript",
+   "pr": 8,
+   "commentId": 3922969735,
+   "createdAt": "2026-02-18T20:17:17Z",
+   "updatedAt": "2026-02-18T20:27:25Z",
+   "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->\n> ## Rate limit exceeded\n> `@frostney` has exceeded the limit for the number of commits that can be reviewed per hour. Please wait **4 minutes and 47 seconds** before requesting another review.\n> After the wait time has elapsed, a review can be triggered using the `@coderabbitai review` command as a PR comment. Alternatively, push new commits to this PR.\n> We recommend that you space out your commits to avoid hitting the rate limit.\n> <summary>🚦 How do rate limits work?</summary>\n> CodeRabbit enforces hourly rate limits for each developer per organization.\n> Our paid plans have higher rate limits than the trial, open-source and free plans. In all cases, we re-allow further reviews after a brief timeout.\n<!-- end of auto-generated comment: rate limited by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands and usage tips.</sub>"
+  },
+  {
+   "kind": "summary-rate-limited-with-stated-wait",
+   "repo": "GocciaScript",
+   "pr": 1165,
+   "commentId": 5305332363,
+   "createdAt": "2026-08-16T02:27:51Z",
+   "updatedAt": "2026-08-16T02:35:33Z",
+   "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->\n> ## Review limit reached\n> You’ve reached a temporary PR review limit under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy).<br>\n> **Next review available in:** **52 minutes**\n> **Limit details:** You’ve used all 1 included review currently available under your plan. You completed 97 included PR reviews in the past 7 days; at that activity level, included reviews refill at 1 review per hour.\n> After more reviews become available, a review can be triggered using the `@coderabbitai review` command as a PR comment. Alternatively, push new commits to this PR.\n> <summary>How do review limits work?</summary>\n> CodeRabbit enforces per-developer PR review limits for each organization. Most developers receive the normal plan review availability.\n> **Run ID**: `73d78305-1fd6-45f7-8c1b-dfe914ae8f96`\n<!-- end of auto-generated comment: rate limited by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+  },
+  {
+   "kind": "reply-rate-limited-without-wait",
+   "repo": "GocciaScript",
+   "pr": 1165,
+   "commentId": 5305356736,
+   "createdAt": "2026-08-16T02:35:29Z",
+   "updatedAt": "2026-08-16T02:35:35Z",
+   "body": "<!-- This is an auto-generated reply by CodeRabbit -->\n<summary>⚠️ Action not completed</summary>\nReview rate limited.\n> Note: CodeRabbit is an incremental review system and does not re-review already reviewed commits. This command is applicable only when automatic reviews are paused."
+  },
+  {
+   "kind": "reply-rate-limited-with-stated-wait",
+   "repo": "GocciaScript",
+   "pr": 1205,
+   "commentId": 5381496736,
+   "createdAt": "2026-08-22T16:46:09Z",
+   "updatedAt": "2026-08-22T16:46:09Z",
+   "body": "<!-- This is an auto-generated reply by CodeRabbit -->\nYour included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your current included review allowance is based on your included PR review attempts over the past 7 days. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 15 minutes."
+  },
+  {
+   "kind": "summary-reviews-paused",
+   "repo": "GocciaScript",
+   "pr": 1262,
+   "commentId": 5846463678,
+   "createdAt": "2026-09-26T12:58:55Z",
+   "updatedAt": "2026-09-26T22:07:33Z",
+   "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review paused by coderabbit.ai -->\n> ## Reviews paused\n> - `@coderabbitai resume` to resume automatic reviews.\n> - `@coderabbitai review` to trigger a single review.\n<!-- end of auto-generated comment: review paused by coderabbit.ai -->\n**Run ID**: `887fe3d4-0da8-46c6-91c7-10a60438734a`\n**Included review availability:** This review used your included allowance. 2 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+  },
+  {
+   "kind": "summary-review-skipped",
+   "repo": "GocciaScript",
+   "pr": 1286,
+   "commentId": 5874067766,
+   "createdAt": "2026-09-28T16:18:32Z",
+   "updatedAt": "2026-09-28T16:18:32Z",
+   "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Bot user detected.\n> To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `ac66b6c3-8617-407b-b43b-417070e821a6`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+  },
+  {
+   "kind": "summary-draft-not-reviewed",
+   "repo": "GocciaScript",
+   "pr": 1292,
+   "commentId": 5887035508,
+   "createdAt": "2026-09-29T09:01:13Z",
+   "updatedAt": "2026-09-29T09:01:13Z",
+   "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Draft PR not reviewed\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+  },
+  {
+   "kind": "summary-in-progress",
+   "repo": "GocciaScript",
+   "pr": 1287,
+   "commentId": 5874954441,
+   "createdAt": "2026-09-28T17:15:17Z",
+   "updatedAt": "2026-09-28T17:49:07Z",
+   "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `907ba22b-ad1d-4142-89f0-531a5aa33269`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+  },
+  {
+   "kind": "reply-already-reviewed",
+   "repo": "GocciaScript",
+   "pr": 1282,
+   "commentId": 5871196953,
+   "createdAt": "2026-09-28T13:48:06Z",
+   "updatedAt": "2026-09-28T13:48:16Z",
+   "body": "<!-- This is an auto-generated reply by CodeRabbit -->\n<summary>⚠️ Action not completed</summary>\nAlready reviewed the last commit. Use `@coderabbitai full review` to rerun a review of the entire changeset.\n> Note: CodeRabbit is an incremental review system and does not re-review already reviewed commits. This command is applicable only when automatic reviews are paused."
+  }
+ ],
+ "timelines": {
+  "2026-08-22": {
+   "comments": [
+    {
+     "repo": "GocciaScript",
+     "pr": 1201,
+     "id": 5381273350,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T15:53:52Z",
+     "versions": [
+      {
+       "at": "2026-08-22T15:53:52Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `79c919e7-5c10-4f1e-a20c-8970a608d2dc`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:00:50Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `e6b9cfe1-0937-4a15-8804-bab2f4f8be8b`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:01:22Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `a3961626-b83f-4621-b76e-54ca31cb557b`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:07:37Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1202,
+     "id": 5381273412,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T15:53:52Z",
+     "versions": [
+      {
+       "at": "2026-08-22T15:53:52Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `31111a11-2bf9-4f87-bc46-fd779694501d`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:00:50Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `f8ea5d1a-d021-437a-837c-a57309907643`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:08:36Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `c37d24de-c227-4fe4-8f93-2eec36ef4f43`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:13:56Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:14:46Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `b7a04dd9-f28e-422f-a190-33b73b45e2c1`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:18:19Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1203,
+     "id": 5381273595,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T15:53:55Z",
+     "versions": [
+      {
+       "at": "2026-08-22T15:53:55Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `5c8d20d9-f7fa-4e07-82ff-54e550e9c01a`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:00:55Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `4b93f05f-a6c2-43ba-828f-e6327a9f7d1b`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:19:05Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `feefd8af-05c6-4843-9e13-4e58b57e5dcc`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:21:45Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n**Run ID**: `feefd8af-05c6-4843-9e13-4e58b57e5dcc`\n**Included review availability:** 2 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 6 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:23:07Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `0c20139c-dea8-4e8e-96e6-61984e0c7512`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n**Run ID**: `feefd8af-05c6-4843-9e13-4e58b57e5dcc`\n**Included review availability:** 2 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 6 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:25:50Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1204,
+     "id": 5381273896,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T15:53:59Z",
+     "versions": [
+      {
+       "at": "2026-08-22T15:53:59Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `b9b3aac0-520b-49de-859c-79367495d43e`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:00:53Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `2672822f-8769-4430-aa7a-592f5c09dcb4`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:26:28Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `7adbe29d-7bfb-446a-b7a2-4e2b6e684e49`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:34:07Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1205,
+     "id": 5381274034,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T15:54:01Z",
+     "versions": [
+      {
+       "at": "2026-08-22T15:54:01Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `e0a4a8d3-69d7-478f-bbeb-cd1cd3161a3d`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:00:54Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `0b273523-e482-4812-98d3-d8b9a1b3e33f`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:34:50Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `745c1c7b-6783-4ce9-b9dc-71af96e19652`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:45:27Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n**Run ID**: `745c1c7b-6783-4ce9-b9dc-71af96e19652`\n**Limit details:** You’ve used all 5 included reviews currently available. Your 50 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- This is an auto-generated comment: all tool run failures by coderabbit.ai -->\n<!-- end of auto-generated comment: all tool run failures by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:46:21Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `b72a297c-4507-42b9-8263-4e4dc1ce8a7c`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n**Run ID**: `745c1c7b-6783-4ce9-b9dc-71af96e19652`\n**Limit details:** You’ve used all 5 included reviews currently available. Your 50 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:51:12Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: all tool run failures by coderabbit.ai -->\n<!-- end of auto-generated comment: all tool run failures by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1206,
+     "id": 5381274352,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T15:54:06Z",
+     "versions": [
+      {
+       "at": "2026-08-22T15:54:06Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `307874e0-e0d6-45f5-83dc-55f17d2b117c`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:00:56Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `ffe13ecb-d0c4-4c10-8d99-534ca5e8ec92`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T17:08:48Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `c1c55e2b-7930-4867-9780-2ef854055327`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T17:22:26Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1207,
+     "id": 5381274522,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T15:54:09Z",
+     "versions": [
+      {
+       "at": "2026-08-22T15:54:09Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `6b447e70-f824-4402-9dc9-617d1e28cd10`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:01:04Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `39842f67-9799-46ba-adea-22929a16d1ad`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T17:23:36Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `816fe279-8ad0-44f9-8ed1-80f171951a7c`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T17:33:31Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1208,
+     "id": 5381274648,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T15:54:11Z",
+     "versions": [
+      {
+       "at": "2026-08-22T15:54:11Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `13d56b6a-a45c-4162-8037-214599f7241c`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:00:59Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `0d9009f4-ed90-4d06-b4ac-a073167262f0`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T17:34:10Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `24bcd70d-6059-4641-9e15-c2fd1b849f99`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T17:42:28Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: all tool run failures by coderabbit.ai -->\n<!-- end of auto-generated comment: all tool run failures by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T17:43:47Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `8991c02a-fccf-4989-8f64-fee9d055f91b`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T17:53:48Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: all tool run failures by coderabbit.ai -->\n<!-- end of auto-generated comment: all tool run failures by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1209,
+     "id": 5381274923,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T15:54:15Z",
+     "versions": [
+      {
+       "at": "2026-08-22T15:54:15Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `544bb86e-32e4-4827-9473-fed7437f0504`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:00:59Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `fc5b5e55-9b4c-4a87-b841-254e0a7994fd`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T17:54:21Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `fb84c3f6-b6cc-4a09-be22-81859babbc6a`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T17:55:39Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n**Run ID**: `fb84c3f6-b6cc-4a09-be22-81859babbc6a`\n**Included review availability:** 0 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T17:56:27Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `b27b478b-bb7c-41d8-a89a-2f9ac80433db`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n**Run ID**: `fb84c3f6-b6cc-4a09-be22-81859babbc6a`\n**Included review availability:** 0 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T17:57:40Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n**Run ID**: `b27b478b-bb7c-41d8-a89a-2f9ac80433db`\n**Limit details:** You’ve used all 5 included reviews currently available. Your 53 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1210,
+     "id": 5381275591,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T15:54:25Z",
+     "versions": [
+      {
+       "at": "2026-08-22T15:54:25Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `7ea3cf93-16ca-420a-8caf-d3f3cae0b1d5`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:01:00Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `f0727365-eb1b-456a-94e3-b880f79ff9a9`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T18:11:15Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `bc0c4515-374e-47e6-ac59-7d69886c9517`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T18:17:52Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n**Run ID**: `bc0c4515-374e-47e6-ac59-7d69886c9517`\n**Included review availability:** 0 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T18:18:30Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `0effdda6-686b-4ea8-92fd-7b1587eb46f2`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n**Run ID**: `bc0c4515-374e-47e6-ac59-7d69886c9517`\n**Included review availability:** 0 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T18:25:11Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T18:26:34Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `f8c08ae1-b7f2-4ec5-b291-232c2a306bd2`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T18:29:44Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1201,
+     "id": 5381303794,
+     "login": "frostney",
+     "createdAt": "2026-08-22T16:01:04Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:01:04Z",
+       "body": "@coderabbitai review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1201,
+     "id": 5381304245,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T16:01:10Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:01:10Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->\n> Note: CodeRabbit is an incremental review system and does not re-review already reviewed commits. This command is applicable only when automatic reviews are paused."
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1202,
+     "id": 5381335508,
+     "login": "frostney",
+     "createdAt": "2026-08-22T16:08:18Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:08:18Z",
+       "body": "@coderabbitai review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1202,
+     "id": 5381335948,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T16:08:25Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:08:25Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->\n> Note: CodeRabbit is an incremental review system and does not re-review already reviewed commits. This command is applicable only when automatic reviews are paused."
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1202,
+     "id": 5381361937,
+     "login": "frostney",
+     "createdAt": "2026-08-22T16:14:28Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:14:28Z",
+       "body": "@coderabbitai full review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1202,
+     "id": 5381362336,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T16:14:34Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:14:34Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1203,
+     "id": 5381379869,
+     "login": "frostney",
+     "createdAt": "2026-08-22T16:18:37Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:18:37Z",
+       "body": "@coderabbitai review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1203,
+     "id": 5381380941,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T16:18:52Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:18:52Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->\n> Note: CodeRabbit is an incremental review system and does not re-review already reviewed commits. This command is applicable only when automatic reviews are paused."
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1203,
+     "id": 5381396873,
+     "login": "frostney",
+     "createdAt": "2026-08-22T16:22:47Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:22:47Z",
+       "body": "@coderabbitai full review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1203,
+     "id": 5381397431,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T16:22:56Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:22:56Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1204,
+     "id": 5381410462,
+     "login": "frostney",
+     "createdAt": "2026-08-22T16:26:03Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:26:03Z",
+       "body": "@coderabbitai review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1204,
+     "id": 5381411117,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T16:26:13Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:26:13Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->\n> Note: CodeRabbit is an incremental review system and does not re-review already reviewed commits. This command is applicable only when automatic reviews are paused."
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1211,
+     "id": 5381426536,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T16:29:57Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:29:57Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `a3d643bb-08bb-48db-a3f0-914dd3a9b487`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T16:30:23Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Please check the settings in the CodeRabbit UI or the `.coderabbit.yaml` file in this repository. To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `2ab6ea44-9b20-4efb-846d-5f6a22e8dc3d`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T18:33:03Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `2ecc9efb-9896-408d-8142-39ca4cfabf0a`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-08-22T18:35:20Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1205,
+     "id": 5381446501,
+     "login": "frostney",
+     "createdAt": "2026-08-22T16:34:30Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:34:30Z",
+       "body": "@coderabbitai review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1205,
+     "id": 5381447025,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T16:34:38Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:34:38Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->\n> Note: CodeRabbit is an incremental review system and does not re-review already reviewed commits. This command is applicable only when automatic reviews are paused."
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1205,
+     "id": 5381496264,
+     "login": "frostney",
+     "createdAt": "2026-08-22T16:46:02Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:46:02Z",
+       "body": "@coderabbitai full review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1205,
+     "id": 5381496736,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T16:46:09Z",
+     "versions": [
+      {
+       "at": "2026-08-22T16:46:09Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->\nYour included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your current included review allowance is based on your included PR review attempts over the past 7 days. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 15 minutes."
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1206,
+     "id": 5381594398,
+     "login": "frostney",
+     "createdAt": "2026-08-22T17:08:29Z",
+     "versions": [
+      {
+       "at": "2026-08-22T17:08:29Z",
+       "body": "@coderabbitai review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1206,
+     "id": 5381594873,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T17:08:36Z",
+     "versions": [
+      {
+       "at": "2026-08-22T17:08:36Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->\n> Note: CodeRabbit is an incremental review system and does not re-review already reviewed commits. This command is applicable only when automatic reviews are paused."
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1207,
+     "id": 5381656118,
+     "login": "frostney",
+     "createdAt": "2026-08-22T17:23:08Z",
+     "versions": [
+      {
+       "at": "2026-08-22T17:23:08Z",
+       "body": "@coderabbitai review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1207,
+     "id": 5381657467,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T17:23:25Z",
+     "versions": [
+      {
+       "at": "2026-08-22T17:23:25Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->\n> Note: CodeRabbit is an incremental review system and does not re-review already reviewed commits. This command is applicable only when automatic reviews are paused."
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1208,
+     "id": 5381703000,
+     "login": "frostney",
+     "createdAt": "2026-08-22T17:33:53Z",
+     "versions": [
+      {
+       "at": "2026-08-22T17:33:53Z",
+       "body": "@coderabbitai review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1208,
+     "id": 5381703452,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T17:34:00Z",
+     "versions": [
+      {
+       "at": "2026-08-22T17:34:00Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->\n> Note: CodeRabbit is an incremental review system and does not re-review already reviewed commits. This command is applicable only when automatic reviews are paused."
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1208,
+     "id": 5381743003,
+     "login": "frostney",
+     "createdAt": "2026-08-22T17:43:24Z",
+     "versions": [
+      {
+       "at": "2026-08-22T17:43:24Z",
+       "body": "@coderabbitai full review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1208,
+     "id": 5381743483,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T17:43:30Z",
+     "versions": [
+      {
+       "at": "2026-08-22T17:43:30Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1209,
+     "id": 5381787759,
+     "login": "frostney",
+     "createdAt": "2026-08-22T17:54:03Z",
+     "versions": [
+      {
+       "at": "2026-08-22T17:54:03Z",
+       "body": "@coderabbitai review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1209,
+     "id": 5381788358,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T17:54:12Z",
+     "versions": [
+      {
+       "at": "2026-08-22T17:54:12Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->\n> Note: CodeRabbit is an incremental review system and does not re-review already reviewed commits. This command is applicable only when automatic reviews are paused."
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1209,
+     "id": 5381796628,
+     "login": "frostney",
+     "createdAt": "2026-08-22T17:56:07Z",
+     "versions": [
+      {
+       "at": "2026-08-22T17:56:07Z",
+       "body": "@coderabbitai full review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1209,
+     "id": 5381797190,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T17:56:15Z",
+     "versions": [
+      {
+       "at": "2026-08-22T17:56:15Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->\nYour included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your current included review allowance is based on your included PR review attempts over the past 7 days. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 12 minutes."
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1210,
+     "id": 5381861957,
+     "login": "frostney",
+     "createdAt": "2026-08-22T18:10:55Z",
+     "versions": [
+      {
+       "at": "2026-08-22T18:10:55Z",
+       "body": "@coderabbitai review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1210,
+     "id": 5381862483,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T18:11:02Z",
+     "versions": [
+      {
+       "at": "2026-08-22T18:11:02Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->\n> Note: CodeRabbit is an incremental review system and does not re-review already reviewed commits. This command is applicable only when automatic reviews are paused."
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1210,
+     "id": 5381892982,
+     "login": "frostney",
+     "createdAt": "2026-08-22T18:18:09Z",
+     "versions": [
+      {
+       "at": "2026-08-22T18:18:09Z",
+       "body": "@coderabbitai full review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1210,
+     "id": 5381893470,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T18:18:15Z",
+     "versions": [
+      {
+       "at": "2026-08-22T18:18:15Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->\nYour included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your current included review allowance is based on your included PR review attempts over the past 7 days. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 5 minutes."
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1210,
+     "id": 5381918840,
+     "login": "frostney",
+     "createdAt": "2026-08-22T18:24:18Z",
+     "versions": [
+      {
+       "at": "2026-08-22T18:24:18Z",
+       "body": "@coderabbitai full review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1210,
+     "id": 5381928132,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T18:26:24Z",
+     "versions": [
+      {
+       "at": "2026-08-22T18:26:24Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1211,
+     "id": 5381953914,
+     "login": "frostney",
+     "createdAt": "2026-08-22T18:32:33Z",
+     "versions": [
+      {
+       "at": "2026-08-22T18:32:33Z",
+       "body": "@coderabbitai review"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1211,
+     "id": 5381954377,
+     "login": "coderabbitai",
+     "createdAt": "2026-08-22T18:32:40Z",
+     "versions": [
+      {
+       "at": "2026-08-22T18:32:40Z",
+       "body": "<!-- This is an auto-generated reply by CodeRabbit -->\n> Note: CodeRabbit is an incremental review system and does not re-review already reviewed commits. This command is applicable only when automatic reviews are paused."
+      }
+     ]
+    }
+   ],
+   "reviews": [
+    {
+     "repo": "GocciaScript",
+     "pr": 1201,
+     "id": 5000535145,
+     "state": "COMMENTED",
+     "submittedAt": "2026-08-22T16:07:40Z",
+     "body": "**Actionable comments posted: 2**\n**Run ID**: `a3961626-b83f-4621-b76e-54ca31cb557b`\n**Included review availability:** 5 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 6 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1202,
+     "id": 5000546204,
+     "state": "COMMENTED",
+     "submittedAt": "2026-08-22T16:13:58Z",
+     "body": "**Run ID**: `c37d24de-c227-4fe4-8f93-2eec36ef4f43`\n**Included review availability:** 4 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 6 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1202,
+     "id": 5000553959,
+     "state": "COMMENTED",
+     "submittedAt": "2026-08-22T16:18:21Z",
+     "body": "**Run ID**: `b7a04dd9-f28e-422f-a190-33b73b45e2c1`\n**Included review availability:** 3 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 6 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1203,
+     "id": 5000566548,
+     "state": "COMMENTED",
+     "submittedAt": "2026-08-22T16:25:55Z",
+     "body": "**Actionable comments posted: 1**\n**Run ID**: `0c20139c-dea8-4e8e-96e6-61984e0c7512`\n**Included review availability:** 1 review is currently available. Your included PR review attempts over the past 7 days set your current allowance at 6 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1204,
+     "id": 5000580391,
+     "state": "COMMENTED",
+     "submittedAt": "2026-08-22T16:34:14Z",
+     "body": "**Actionable comments posted: 2**\n**Run ID**: `7adbe29d-7bfb-446a-b7a2-4e2b6e684e49`\n**Limit details:** You’ve used all 5 included reviews currently available. Your 50 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1205,
+     "id": 5000610124,
+     "state": "COMMENTED",
+     "submittedAt": "2026-08-22T16:51:15Z",
+     "body": "**Actionable comments posted: 2**\n**Run ID**: `b72a297c-4507-42b9-8263-4e4dc1ce8a7c`\n**Limit details:** You’ve used all 5 included reviews currently available. Your 50 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1206,
+     "id": 5000666651,
+     "state": "COMMENTED",
+     "submittedAt": "2026-08-22T17:22:35Z",
+     "body": "**Actionable comments posted: 11**\n**Run ID**: `c1c55e2b-7930-4867-9780-2ef854055327`\n**Included review availability:** 2 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 6 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1207,
+     "id": 5000688066,
+     "state": "COMMENTED",
+     "submittedAt": "2026-08-22T17:33:36Z",
+     "body": "**Actionable comments posted: 8**\n**Run ID**: `816fe279-8ad0-44f9-8ed1-80f171951a7c`\n**Included review availability:** 3 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1208,
+     "id": 5000704354,
+     "state": "COMMENTED",
+     "submittedAt": "2026-08-22T17:42:30Z",
+     "body": "**Run ID**: `24bcd70d-6059-4641-9e15-c2fd1b849f99`\n**Included review availability:** 2 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1208,
+     "id": 5000725232,
+     "state": "COMMENTED",
+     "submittedAt": "2026-08-22T17:53:54Z",
+     "body": "**Actionable comments posted: 1**\n**Run ID**: `8991c02a-fccf-4989-8f64-fee9d055f91b`\n**Included review availability:** 1 review is currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1210,
+     "id": 5000781387,
+     "state": "COMMENTED",
+     "submittedAt": "2026-08-22T18:25:14Z",
+     "body": "**Actionable comments posted: 4**\n**Run ID**: `0effdda6-686b-4ea8-92fd-7b1587eb46f2`\n**Limit details:** You’ve used all 5 included reviews currently available. Your 54 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1210,
+     "id": 5000789921,
+     "state": "COMMENTED",
+     "submittedAt": "2026-08-22T18:29:47Z",
+     "body": "**Actionable comments posted: 1**\n**Run ID**: `f8c08ae1-b7f2-4ec5-b291-232c2a306bd2`\n**Included review availability:** 0 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1211,
+     "id": 5000799562,
+     "state": "COMMENTED",
+     "submittedAt": "2026-08-22T18:35:24Z",
+     "body": "**Actionable comments posted: 1**\n**Run ID**: `2ecc9efb-9896-408d-8142-39ca4cfabf0a`\n**Limit details:** You’ve used all 5 included reviews currently available. Your 55 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    }
+   ]
+  },
+  "2026-09-28": {
+   "comments": [
+    {
+     "repo": "GocciaScript",
+     "pr": 1285,
+     "id": 5871891189,
+     "login": "coderabbitai",
+     "createdAt": "2026-09-28T14:22:05Z",
+     "versions": [
+      {
+       "at": "2026-09-28T16:06:31Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `d1839796-22cf-4dba-91ad-616c506d0069`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n**Run ID**: `34cde6b5-c618-4551-b757-63538e19a379`\n**Limit details:** You’ve used all 2 included reviews currently available. Your 85 included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-28T16:16:11Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1286,
+     "id": 5874067766,
+     "login": "coderabbitai",
+     "createdAt": "2026-09-28T16:18:32Z",
+     "versions": [
+      {
+       "at": "2026-09-28T16:18:32Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> Bot user detected.\n> To trigger a single review, invoke the `@coderabbitai review` command.\n> **Run ID**: `ac66b6c3-8617-407b-b43b-417070e821a6`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1287,
+     "id": 5874954441,
+     "login": "coderabbitai",
+     "createdAt": "2026-09-28T17:15:17Z",
+     "versions": [
+      {
+       "at": "2026-09-28T17:15:17Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Draft PR not reviewed\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-28T17:43:20Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `787f2134-c5db-41ed-95fa-b08cc2dadec1`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-28T17:47:06Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-28T17:49:07Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `907ba22b-ad1d-4142-89f0-531a5aa33269`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-28T17:53:41Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n**Run ID**: `907ba22b-ad1d-4142-89f0-531a5aa33269`\n**Included review availability:** This review used your included allowance. 0 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1288,
+     "id": 5876377963,
+     "login": "coderabbitai",
+     "createdAt": "2026-09-28T18:49:02Z",
+     "versions": [
+      {
+       "at": "2026-09-28T18:49:02Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Draft PR not reviewed\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-28T18:51:56Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `c1e82bf4-1bca-432e-a04f-7f6956f1acbb`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-28T19:01:17Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n**Run ID**: `c1e82bf4-1bca-432e-a04f-7f6956f1acbb`\n**Included review availability:** This review used your included allowance. 1 included review remains after this review. Your included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    }
+   ],
+   "reviews": [
+    {
+     "repo": "GocciaScript",
+     "pr": 1285,
+     "id": 5341521871,
+     "state": "COMMENTED",
+     "submittedAt": "2026-09-28T16:16:13Z",
+     "body": "**Run ID**: `d1839796-22cf-4dba-91ad-616c506d0069`\n**Included review availability:** This review used your included allowance. 1 included review remains after this review. Your included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1287,
+     "id": 5342568643,
+     "state": "COMMENTED",
+     "submittedAt": "2026-09-28T17:47:09Z",
+     "body": "**Actionable comments posted: 1**\n**Run ID**: `787f2134-c5db-41ed-95fa-b08cc2dadec1`\n**Included review availability:** This review used your included allowance. 1 included review remains after this review. Your included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    }
+   ]
+  }
+ }
+}
