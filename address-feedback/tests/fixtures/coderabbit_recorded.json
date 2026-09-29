@@ -1845,5 +1845,68 @@
    "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 57 minutes.",
    "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 8 minutes."
   ]
+ },
+ "cleanReviews": {
+  "about": "frostney/GocciaScript#1292 on 2026-09-29: every version of CodeRabbit's summary comment 5887035508 (GraphQL userContentEdits, trimmed to the lines the adapter reads) and the CodeRabbit commit statuses of head 29204dc135915e225fb65895f9dc65b0b13a1521, newest first.",
+  "1292": {
+   "repo": "GocciaScript",
+   "pr": 1292,
+   "commentId": 5887035508,
+   "createdAt": "2026-09-29T09:01:13Z",
+   "head": "29204dc135915e225fb65895f9dc65b0b13a1521",
+   "previousHead": "52803a95ae63c3c19f5a9c4175ff80eedc7087bd",
+   "versions": [
+    {
+     "at": "2026-09-29T09:01:13Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Draft PR not reviewed\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-09-29T09:38:40Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `22815d9c-9541-4abe-8368-3ba5dbc95472`\n> Reviewing files that changed from the base of the PR and between 72cb20505832bd2e0f4db0ef8d46d2a4ca85140c and 52803a95ae63c3c19f5a9c4175ff80eedc7087bd.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-09-29T09:42:30Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `22815d9c-9541-4abe-8368-3ba5dbc95472`\nReviewing files that changed from the base of the PR and between 72cb20505832bd2e0f4db0ef8d46d2a4ca85140c and 52803a95ae63c3c19f5a9c4175ff80eedc7087bd.\n**Limit details:** You’ve used the included review currently available. Your 90 included PR review attempts over the past 7 days set your current allowance at 1 review per hour.\n<!-- recent_review_end -->\n<!-- change_assessment_commit:\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\",\"coveredCommitId\":\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-29T13:15:49Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `b4f8de2e-62c2-4486-9077-7c1463f06072`\n> Reviewing files that changed from the base of the PR and between 52803a95ae63c3c19f5a9c4175ff80eedc7087bd and 8cb8ed7fe4dd501b7c07ceea521b1ce54ede672a.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `22815d9c-9541-4abe-8368-3ba5dbc95472`\nReviewing files that changed from the base of the PR and between 72cb20505832bd2e0f4db0ef8d46d2a4ca85140c and 52803a95ae63c3c19f5a9c4175ff80eedc7087bd.\n**Limit details:** You’ve used the included review currently available. Your 90 included PR review attempts over the past 7 days set your current allowance at 1 review per hour.\n<!-- recent_review_end -->\n<!-- change_assessment_commit:\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\",\"coveredCommitId\":\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-29T13:28:30Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `22815d9c-9541-4abe-8368-3ba5dbc95472`\nReviewing files that changed from the base of the PR and between 72cb20505832bd2e0f4db0ef8d46d2a4ca85140c and 52803a95ae63c3c19f5a9c4175ff80eedc7087bd.\n**Limit details:** You’ve used the included review currently available. Your 90 included PR review attempts over the past 7 days set your current allowance at 1 review per hour.\n<!-- recent_review_end -->\n<!-- change_assessment_commit:\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\",\"coveredCommitId\":\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-29T13:29:02Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `22815d9c-9541-4abe-8368-3ba5dbc95472`\nReviewing files that changed from the base of the PR and between 72cb20505832bd2e0f4db0ef8d46d2a4ca85140c and 52803a95ae63c3c19f5a9c4175ff80eedc7087bd.\n**Limit details:** You’ve used the included review currently available. Your 90 included PR review attempts over the past 7 days set your current allowance at 1 review per hour.\n<!-- recent_review_end -->\n<!-- change_assessment_commit:\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\",\"coveredCommitId\":\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-29T13:31:34Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `22815d9c-9541-4abe-8368-3ba5dbc95472`\nReviewing files that changed from the base of the PR and between 72cb20505832bd2e0f4db0ef8d46d2a4ca85140c and 52803a95ae63c3c19f5a9c4175ff80eedc7087bd.\n**Limit details:** You’ve used the included review currently available. Your 90 included PR review attempts over the past 7 days set your current allowance at 1 review per hour.\n<!-- recent_review_end -->\n<!-- change_assessment_commit:\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\",\"coveredCommitId\":\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-29T13:35:11Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `38da5e68-0cea-4549-91ec-a86ebd24bb85`\n> Reviewing files that changed from the base of the PR and between 52803a95ae63c3c19f5a9c4175ff80eedc7087bd and 29204dc135915e225fb65895f9dc65b0b13a1521.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `22815d9c-9541-4abe-8368-3ba5dbc95472`\nReviewing files that changed from the base of the PR and between 72cb20505832bd2e0f4db0ef8d46d2a4ca85140c and 52803a95ae63c3c19f5a9c4175ff80eedc7087bd.\n**Limit details:** You’ve used the included review currently available. Your 90 included PR review attempts over the past 7 days set your current allowance at 1 review per hour.\n<!-- recent_review_end -->\n<!-- change_assessment_commit:\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\",\"coveredCommitId\":\"52803a95ae63c3c19f5a9c4175ff80eedc7087bd\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-29T13:39:41Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `38da5e68-0cea-4549-91ec-a86ebd24bb85`\nReviewing files that changed from the base of the PR and between 52803a95ae63c3c19f5a9c4175ff80eedc7087bd and 29204dc135915e225fb65895f9dc65b0b13a1521.\n**Limit details:** You’ve used the included review currently available. Your 92 included PR review attempts over the past 7 days set your current allowance at 1 review per hour.\n<!-- recent_review_end -->\n<!-- change_assessment_commit:\"29204dc135915e225fb65895f9dc65b0b13a1521\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"29204dc135915e225fb65895f9dc65b0b13a1521\",\"coveredCommitId\":\"29204dc135915e225fb65895f9dc65b0b13a1521\",\"kind\":\"reviewed\"} -->"
+    }
+   ],
+   "statuses": [
+    {
+     "context": "CodeRabbit",
+     "state": "success",
+     "description": "Review completed",
+     "created_at": "2026-09-29T13:39:44Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "pending",
+     "description": "Review in progress",
+     "created_at": "2026-09-29T13:35:00Z"
+    }
+   ]
+  }
  }
 }

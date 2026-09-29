@@ -132,7 +132,14 @@ coverage is verified for the exact head and either ack latency meets the
 trusted threshold or that same head has a CodeRabbit check SUCCESS. Latency
 and walkthrough freshness count from when GitHub recorded the head's push (its branch activity, else its earliest check suite on that
 branch), or from the commit time if that is later. Without that record, only
-the head-scoped check completes the review. It escalates untrusted incremental
+the head-scoped check completes the review. A clean automatic review also
+reaches `clean-complete`, and no trigger is planned for that head. It needs
+the summary's settled recent-review block to report no actionable comments for
+a range ending at exactly that head. That block is dated as allowance
+statements are and must not predate the head's push. It also needs the
+head-scoped CodeRabbit check or status to report a completed review; a skipped,
+paused or rate-limited one never counts, and a review carried forward to a
+later head does not complete it. It escalates untrusted incremental
 acknowledgments to a full review, refuses guessed retry times, and never
 exposes a paid-review command. Keep `review-complete` for real exact-head review
 objects only.
