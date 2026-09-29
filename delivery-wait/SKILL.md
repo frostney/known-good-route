@@ -20,8 +20,9 @@ The caller supplies the repository, expected identity, absolute deadline, and
 an optional state path. The command reconciles any saved state with fresh
 GitHub state, waits while nothing relevant changes, and exits with one result.
 Use `--json` from workflow skills; human output is for direct terminal use.
-Skills default state files beneath gitignored `.agent/waits/`; another harness
-may supply any private state path through `--state`.
+Skills default state files beneath `.agent/waits/`, which the consuming
+repository must gitignore; another harness may supply any private state path
+through `--state`.
 
 ## Invocation
 

@@ -13,6 +13,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterator, TextIO
 
+sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__.
+
 
 USAGE_COUNTERS = (
     "inferences",

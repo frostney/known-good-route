@@ -9,6 +9,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__.
+
 
 class ManifestError(ValueError):
     pass
