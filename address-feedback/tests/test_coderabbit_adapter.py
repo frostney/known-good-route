@@ -1907,5 +1907,87 @@ class ReviewFindingsTest(unittest.TestCase):
         self.assertEqual(value["pullRequests"][0]["state"], "trigger-incremental")
 
 
+class ZeroRemainReleaseRuleTest(unittest.TestCase):
+    """Maintainer ruling on PR #94 CR-4 (amended acceptance criterion 5).
+
+    A current "0 remain" statement holds until enough counted runs leave the
+    window ending at it, plus 60 s; with no counted run tied to it, until the
+    statement time plus one window plus 60 s.
+    """
+
+    def failing_history(self, _query: str, _variables: dict[str, Any]) -> dict[str, Any]:
+        raise ADAPTER.WaitError("gh: Something went wrong (HTTP 422)")
+
+    def test_each_branch_of_the_release_rule(self) -> None:
+        unrated = "**Limit details:** You’ve used the included review currently available."
+        undated = summary_body(availability(0, 2), None, processing="run-new")
+        cases = {
+            # Counted runs: the earlier run leaves the statement's window first.
+            "counted runs": (
+                [
+                    comment(80, "Review finished", NOW - 2000, issue_url="https://api.github.test/repos/owner/repo/issues/8"),
+                    summary_comment(91, 9, NOW - 600, availability(0, 2), "run-b"),
+                ],
+                {8: [run_review_object(801, "run-a", NOW - 1800)]},
+                False,
+                NOW - 1800 + HOUR + 60,
+                "enforced",
+            ),
+            # No run can be tied to it: statement time plus one window.
+            "no identifiable run": (
+                [summary_comment(91, 9, NOW - 600, availability(0, 2), None)],
+                {},
+                False,
+                NOW - 600 + HOUR + 60,
+                "enforced",
+            ),
+            # No rate: read against one hour.
+            "unrated": (
+                [summary_comment(91, 9, NOW - 600, unrated, "run-b")],
+                {},
+                False,
+                NOW - 600 + HOUR + 60,
+                "degraded",
+            ),
+            # Its time cannot be established: its last edit times it.
+            "undated": (
+                [edited_summary(91, 9, [(NOW - 5000, undated), (NOW - 600, undated)])],
+                {},
+                True,
+                NOW - 600 + HOUR + 60,
+                "degraded",
+            ),
+        }
+        for name, (account, reviews, history_fails, retry, mode) in cases.items():
+            with self.subTest(branch=name):
+                gh = budget_gh(account, other_reviews=reviews)
+                if history_fails:
+                    gh.graphql = self.failing_history  # type: ignore[method-assign]
+                value = observe(gh)
+                self.assertEqual(value["allowance"]["mode"], mode)
+                self.assertTrue(value["allowance"]["exhausted"])
+                self.assertEqual(value["allowance"]["retryAt"], iso(retry))
+                self.assertEqual(value["pullRequests"][0]["state"], "waiting")
+                self.assertEqual(value["pullRequests"][0]["retryAt"], iso(retry))
+                released = observe(gh, retry)["pullRequests"][0]
+                self.assertEqual(released["state"], "trigger-incremental")
+
+    def test_counted_runs_release_before_the_statements_own_window_ends(self) -> None:
+        # The ruling keeps the counted-run time even when it is earlier than
+        # statement time + one window + 60 s: here the statement is still
+        # current, yet the trigger is permitted.
+        gh = budget_gh(
+            [
+                comment(80, "Review finished", NOW - 4000, issue_url="https://api.github.test/repos/owner/repo/issues/8"),
+                summary_comment(91, 9, NOW - 3000, availability(0, 2), "run-b"),
+            ],
+            other_reviews={8: [run_review_object(801, "run-a", NOW - 3700)]},
+        )
+        value = observe(gh)
+        self.assertEqual((value["allowance"]["mode"], value["allowance"]["remaining"]), ("enforced", 0))
+        self.assertFalse(value["allowance"]["exhausted"])
+        self.assertEqual(value["pullRequests"][0]["state"], "trigger-incremental")
+
+
 if __name__ == "__main__":
     unittest.main()

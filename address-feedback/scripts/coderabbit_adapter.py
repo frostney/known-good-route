@@ -527,14 +527,13 @@ def allowance_retry(
 def release_time(
     runs: list[float], window: float, allowance: int | None, exhausted_at: float
 ) -> float:
-    """When a used-up allowance frees a slot.
+    """When a used-up allowance frees a slot (maintainer ruling, PR #94 CR-4).
 
-    The counted runs in the window ending at the exhaustion free one when
-    enough of them leave it. Without a rate or a counted run, the run the
-    statement reports on finished by the exhaustion, so a slot frees within
-    one window of it. Pending maintainer ruling (PR #94, CR-4): the stricter
-    alternative holds a "0 remain" statement until
-    max(derived, exhausted_at + window + WAIT_BUFFER_SECONDS).
+    It frees when enough counted runs in the window ending at the exhaustion
+    have left it that fewer than the allowance remain, plus the buffer. When
+    no counted run can be tied to it, or there is no rate, the run the
+    statement reports on finished by the exhaustion, so a slot frees one
+    window plus the buffer after it.
     """
     derived = (
         allowance_retry(runs, window, allowance, exhausted_at, proven=True)

@@ -134,10 +134,14 @@ references link here.
   markers, and evidence without a Run ID do not.
 - **Used up.** The allowance is used up when the current statement reports
   none left or uses a wording the adapter does not recognize, or when N counted
-  runs follow a statement of N. It frees when enough counted runs leave the
-  window, plus 60 seconds. Without a rate or a counted run, it frees one window
-  plus 60 seconds after the statement. This holds only while every repository
-  the account reviews in is scanned. `availableNow` is the stated count minus
+  runs follow a statement of N. It frees once enough of the counted runs in
+  the window ending at that point have left it that fewer than the allowance
+  remain, plus 60 seconds. When no counted run can be tied to it, or the
+  statement gives no rate, it frees one window plus 60 seconds after the
+  statement. A "0 remain" statement therefore holds until then, even while it
+  is still current. This is the maintainer's ruling on PR #94. The counted-run
+  time is never early only while every repository the account reviews in is
+  scanned. `availableNow` is the stated count minus
   the counted runs since, 0 while used up, or `null` when unknown.
 - **Degraded.** `status` reports `degraded` without a current statement, and
   then only stated waits gate triggers. It also reports `degraded` for a
