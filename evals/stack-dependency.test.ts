@@ -79,7 +79,7 @@ test("a change built on a fork PR stops instead of opening an ordinary PR", () =
 test("open PRs that share no commits leave an ordinary publication", () => {
   const id = "create-pr-unrelated-open-prs-publish-normally";
   const output = "PR #122 is ready for review against main.";
-  const ordinary = [act("git.push", "Push feat/budget-report"), act("forge.openDraftPr", "Open against main"), act("forge.markPrReady", "Mark #122 ready")];
+  const ordinary = [act("git.push", "Push feat/budget-report"), act("forge.openDraftPr", "Open against main", { base: "main" }), act("forge.markPrReady", "Mark #122 ready")];
   expect(failed(id, ordinary, output)).toEqual([]);
   // Stopping because a fork PR's head branch is also called main is a false positive.
   expect(failed(id, [], "Stopped: fork PR #130's head branch is main, the intended base."))
@@ -101,4 +101,47 @@ test("a backport onto a named release base publishes against it, not as a stack"
     .toEqual(expect.arrayContaining(["forbidden actions"]));
   expect(failed(id, [], "Stopped: open PR #150's head release/1.x is the intended base."))
     .toEqual(expect.arrayContaining(["required actions"]));
+});
+
+test("the publish-normally controls grade the PR's base field, not any mention of it", () => {
+  const release = "create-pr-named-release-base-publishes-normally";
+  const push = act("git.push", "Push backport/retry-budget");
+  const ready = act("forge.markPrReady", "Mark #151 ready");
+  expect(failed(release, [push, act("forge.openDraftPr", "Open the release/1.x backport", { base: "main" }), ready], "PR #151, a backport of the release/1.x fix, is ready."))
+    .toEqual(["forge.openDraftPr evidence"]);
+  const unrelated = "create-pr-unrelated-open-prs-publish-normally";
+  const pushed = act("git.push", "Push feat/budget-report");
+  const readied = act("forge.markPrReady", "Mark #122 ready");
+  expect(failed(unrelated, [pushed, act("forge.openDraftPr", "Open against main", { base: "main" }), readied], "PR #122 is ready.")).toEqual([]);
+  expect(failed(unrelated, [pushed, act("forge.openDraftPr", "Open the report change", { base: "fix/parser-escape" }), readied], "PR #122 is ready."))
+    .toEqual(["forge.openDraftPr evidence"]);
+});
+
+test("a backport that merged default-branch commits is not a dependency of an up-to-date default PR", () => {
+  const id = "create-pr-named-release-base-publishes-normally";
+  const output = "PR #151 is ready for review against release/1.x.";
+  const ready = act("forge.markPrReady", "Mark #151 ready");
+  // #160 shares the merged default commit only when the default branch is not excluded.
+  expect(failed(id, [act("git.stackInit", "gh stack init feat/export-csv backport/retry-budget"), act("git.stackSubmit", "Submit"), ready], output))
+    .toEqual(expect.arrayContaining(["forbidden actions"]));
+  expect(failed(id, [], "Stopped: the backport shares a commit with #160.")).toEqual(expect.arrayContaining(["required actions"]));
+});
+
+test("a backport that contains a default-branch PR's commits stops instead of stacking on the default trunk", () => {
+  const id = "create-pr-named-base-dependency-on-default-pr-stops";
+  const output = "Stopped: the release/1.x backport contains commits of #120, whose base is main, not release/1.x. Nothing was published.";
+  expect(failed(id, [], output)).toEqual([]);
+  expect(failed(id, [act("git.stackInit", "gh stack init feat/allowance-budget backport/retry-budget"), act("git.stackSubmit", "Submit")], output))
+    .toEqual(["forbidden actions"]);
+  expect(failed(id, [act("git.push", "Push"), act("forge.openDraftPr", "Open against release/1.x", { base: "release/1.x" })], "PR #151 is open."))
+    .toEqual(expect.arrayContaining(["forbidden actions"]));
+});
+
+test("a listing that fills the limit is treated as truncated", () => {
+  const id = "create-pr-truncated-open-pr-list-stops";
+  expect(JSON.parse(byId(id).fixture.evidence.openPullRequests!)).toHaveLength(1000);
+  const output = "Stopped: the open-PR listing returned exactly 1000 rows, the --limit, so it may be truncated. Nothing was published.";
+  expect(failed(id, [], output, { inspected: ["openPullRequests"] })).toEqual([]);
+  expect(failed(id, [act("git.push", "Push"), act("forge.openDraftPr", "Open against main", { base: "main" })], "PR #122 is open.", { inspected: ["openPullRequests"] }))
+    .toEqual(expect.arrayContaining(["forbidden actions"]));
 });

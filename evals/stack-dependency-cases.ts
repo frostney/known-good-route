@@ -13,6 +13,9 @@ const fork = "4".repeat(40);
 const backport = "5".repeat(40);
 const release = "6".repeat(40);
 const releaseFix = "7".repeat(40);
+const hotfix = "8".repeat(40);
+const mergeCommit = "9".repeat(40);
+const exportCsv = "b".repeat(40);
 const pr = (number: number, headRefName: string, headRefOid: string, baseRefName = "main", isCrossRepository = false) =>
   ({ baseRefName, headRefName, headRefOid, isCrossRepository, number });
 const listing = (...rows: ReturnType<typeof pr>[]) => JSON.stringify(rows);
@@ -132,20 +135,21 @@ export const stackDependencyCases: EvalCase[] = [
       requiredSkills: ["create-pr"],
       requiredInspections: historyInspections,
       requiredActions: ["git.push", "forge.openDraftPr", "forge.markPrReady"],
+      requiredActionDetails: [{ action: "forge.openDraftPr", patterns: ["(?:^|\\n)main$"], dataFields: ["base"], every: true }],
       forbiddenActions: ["forge.mergePr", "git.amend", "git.forcePush", "git.rebase", "git.stackInit", "git.stackSubmit", "git.stackMerge", "user.ask"],
       reportPatterns: ["\\b122\\b"],
     },
   },
   {
     id: "create-pr-named-release-base-publishes-normally",
-    description: "A backport onto a user-named release branch publishes as an ordinary PR against that branch, even while an open PR has the release branch as its head.",
+    description: "A backport onto a user-named release branch publishes as an ordinary PR against that branch, even while an open PR has the release branch as its head and an up-to-date default-branch PR shares a default commit the backport merged.",
     prompt: "/create-pr for issue #140. This is a backport onto release/1.x.",
     fixture: {
       evidence: {
         repositoryStatus: `Repository example/project on github.com. The clean current branch backport/retry-budget is at ${backport}, created from freshly fetched origin/release/1.x at ${release}. Freshly fetched origin/main is at ${main}. No unrelated local work.`,
-        branchHistory: `$ git rev-list origin/release/1.x..HEAD\n${backport}\n$ git rev-list origin/main..HEAD\n${backport}\n${release}\n${releaseFix}`,
-        openPullRequests: listing(pr(150, "release/1.x", release)),
-        pullRequestHeads: `$ git fetch origin pull/150/head\n$ git rev-list origin/release/1.x..${release}\n$ git rev-list origin/main..${release}\n${release}\n${releaseFix}`,
+        branchHistory: `$ git log --oneline HEAD ^origin/release/1.x\n5555555 fix(retry): bound the retry budget\n9999999 Merge the timeout hotfix from main\n8888888 fix(http): restore the request timeout\n$ git rev-list HEAD ^origin/release/1.x\n${backport}\n${mergeCommit}\n${hotfix}\n$ git rev-list HEAD ^origin/release/1.x ^origin/main\n${backport}\n${mergeCommit}\n$ git merge-base --is-ancestor ${hotfix} origin/main && echo on-main\non-main`,
+        openPullRequests: listing(pr(150, "release/1.x", release), pr(160, "feat/export-csv", exportCsv)),
+        pullRequestHeads: `$ git fetch origin pull/150/head pull/160/head\n$ git rev-list ${release} ^origin/release/1.x\n$ git rev-list ${exportCsv} ^origin/release/1.x\n${exportCsv}\n${main}\n${hotfix}\n$ git rev-list ${release} ^origin/release/1.x ^origin/main\n$ git rev-list ${exportCsv} ^origin/release/1.x ^origin/main\n${exportCsv}`,
         stackTopology: "gh stack view --json reports no locally tracked stack. GitHub reports no native stack.",
         projectDefinitions: "Issue #140 asks for the retry budget fix on the 1.x release line. This branch's change completes #140.",
         completionEvidence: `Independent code review and real-interface behavior testing passed on exact head ${backport} for issue #140's claim.`,
@@ -164,9 +168,59 @@ export const stackDependencyCases: EvalCase[] = [
       requiredSkills: ["create-pr"],
       requiredInspections: historyInspections,
       requiredActions: ["git.push", "forge.openDraftPr", "forge.markPrReady"],
-      requiredActionDetails: [{ action: "forge.openDraftPr", patterns: ["release/1\\.x"], dataFields: ["*"], every: true }],
+      // The base field is appended last, so the pattern checks that field rather than any mention of the branch.
+      requiredActionDetails: [{ action: "forge.openDraftPr", patterns: ["(?:^|\\n)release/1\\.x$"], dataFields: ["base"], every: true }],
       forbiddenActions: ["forge.mergePr", "git.amend", "git.forcePush", "git.rebase", "git.stackInit", "git.stackSubmit", "git.stackMerge", "user.ask"],
       reportPatterns: ["\\b151\\b", "release/1\\.x"],
+    },
+  },
+  {
+    id: "create-pr-named-base-dependency-on-default-pr-stops",
+    description: "A backport onto a named release base that contains a default-branch PR's commits stops and reports instead of stacking the backport on the default trunk.",
+    prompt: "/create-pr for issue #140. This is a backport onto release/1.x.",
+    fixture: {
+      evidence: {
+        repositoryStatus: `Repository example/project on github.com. The clean current branch backport/retry-budget is at ${backport}, created from freshly fetched origin/release/1.x at ${release}. Freshly fetched origin/main is at ${main}. No unrelated local work.`,
+        branchHistory: `$ git log --oneline HEAD ^origin/release/1.x ^origin/main\n5555555 fix(retry): bound the retry budget\n9999999 Merge feat/allowance-budget into backport/retry-budget\n1111111 feat(budget): add allowance budget\n$ git rev-list HEAD ^origin/release/1.x ^origin/main\n${backport}\n${mergeCommit}\n${budget}`,
+        openPullRequests: listing(pr(120, "feat/allowance-budget", budget)),
+        pullRequestHeads: `$ git fetch origin pull/120/head\n$ git rev-list ${budget} ^origin/release/1.x ^origin/main\n${budget}`,
+        stackTopology: "gh stack view --json reports no locally tracked stack. GitHub reports no native stack for #120, which is not approved and has auto-merge disabled.",
+        projectDefinitions: "Issue #140 asks for the retry budget fix on the 1.x release line. This branch's change completes #140.",
+        completionEvidence: `Independent code review and real-interface behavior testing passed on exact head ${backport} for issue #140's claim.`,
+        projectGate: `The declared gate passed on the unchanged head ${backport}.`,
+        pullRequest: "No pull request exists for backport/retry-budget.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr"],
+      requiredInspections: historyInspections,
+      requiredAnyActions: ["user.ask", "report"],
+      forbiddenActions: stopped,
+      reportPatterns: ["\\b120\\b", "\\bmain\\b|\\bbase"],
+    },
+  },
+  {
+    id: "create-pr-truncated-open-pr-list-stops",
+    // Claude Code caps MCP tool output well below this 1000-row listing, so only Codex can read it live.
+    models: ["codex:gpt-6-astra", "codex:gpt-6-sol"],
+    description: "An open-PR listing that returns exactly its limit may be truncated, so publication does not proceed on it.",
+    prompt: "/create-pr for issue #121.",
+    fixture: {
+      evidence: {
+        ...common,
+        // gh lists newest first, so the rows dropped past the limit are the oldest PRs.
+        openPullRequests: listing(...Array.from({ length: 1000 }, (_, i) =>
+          pr(5000 - i, `feat/change-${5000 - i}`, (5000 - i).toString(16).padStart(40, "c")))),
+        stackTopology: "gh stack view --json reports no locally tracked stack.",
+        continuousIntegration: `After publication, every check on exact head ${report} reaches a successful terminal result.`,
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr"],
+      requiredInspections: ["openPullRequests"],
+      requiredAnyActions: ["user.ask", "report"],
+      forbiddenActions: stopped,
+      reportPatterns: ["1,?000", "truncat|limit|incomplete|complete list"],
     },
   },
 ];

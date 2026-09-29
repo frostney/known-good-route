@@ -62,22 +62,27 @@ readiness. Recording a walkthrough does not replace behavior testing.
    PRs target the remote default branch. The exception is a long-lived base
    branch that the user names or that project instructions such as `AGENTS.md`
    or `CONTRIBUTING.md` document, such as a release branch for a backport: the
-   named base. Outside a named base and the stack reference's native stack
+   named base. A branch that is only an open PR's feature head is never a named
+   base. Outside a named base and the stack reference's native stack
    operations, never set a PR base to a non-default branch by hand.
 
    Before choosing a base, check whether the change builds on an unmerged PR.
    List open PRs with
-   `gh pr list --state open --limit 1000 --json number,headRefName,headRefOid,isCrossRepository,baseRefName`
-   and fetch their heads in one `git fetch REMOTE pull/A/head pull/B/head ...`
-   from the remote of the repository that list queried. Skip this branch's own
-   PR, any PR whose head contains this branch's head, and any PR whose head
+   `gh pr list --state open --limit 1000 --json number,headRefName,headRefOid,isCrossRepository,baseRefName`.
+   A listing with as many rows as the limit may be truncated: re-list with a
+   higher limit until it returns fewer rows, or stop and report. Fetch the
+   heads in one `git fetch REMOTE pull/A/head pull/B/head ...` from the remote
+   of the repository that list queried. Skip this branch's own PR, any PR whose
+   head contains this branch's head, and any same-repository PR whose head
    branch is the named base. The change builds on PR N when N is from this
    repository and its head branch is the intended base, or when
-   `git rev-list BASE..HEAD` and `git rev-list BASE..HEAD-OID` share a commit,
-   with BASE the fetched remote default or named base and HEAD-OID N's
-   `headRefOid`. A fork PR (`isCrossRepository`) cannot be a base here: stop
-   and report a fork match. Publish a same-repository match as a native stack
-   under the stack reference's "When to start a stack".
+   `git rev-list HEAD ^BASE ^DEFAULT` and `git rev-list HEAD-OID ^BASE ^DEFAULT`
+   share a commit. DEFAULT is the fetched remote default, BASE the fetched
+   named base or DEFAULT, and HEAD-OID N's `headRefOid`. Stop and report a
+   match from a fork (`isCrossRepository`), which cannot be a base here. With
+   a named base, also stop and report a match based on any other branch, so a
+   backport never stacks on the default trunk. Publish any other match as a
+   native stack under the stack reference's "When to start a stack".
 2. Stop if there are no relevant changes or commits ahead of the remote base.
    Continue without an empty commit when the work is already committed.
 3. If currently on the base branch, create a focused branch named from the issue

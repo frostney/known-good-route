@@ -2477,21 +2477,44 @@
       "caseId": "create-pr-unrelated-open-prs-publish-normally",
       "status": "new",
       "rationale": [
-        "Control for the dependency check: open PRs that share no commits with the change, including a fork PR whose head branch is named main, leave an ordinary publication against the default branch. Fresh native run required."
+        "Control for the dependency check: open PRs that share no commits with the change, including a fork PR whose head branch is named main, leave an ordinary publication against the default branch. Fresh native run required.",
+        "Re-recorded: the grader now requires the PR's base field to be main, so a hand-set non-default base fails."
       ],
       "beforeSha256": null,
-      "afterSha256": "91ac78e6b6d7dca74f745f43eaaaf1a67398c1f7445bee0dceef47e2b740e6be",
-      "frozenCaseSha256": "91ac78e6b6d7dca74f745f43eaaaf1a67398c1f7445bee0dceef47e2b740e6be"
+      "afterSha256": "ccef19a4404c7fd3569ac38d18b8db97c994a2b834769851fe80fb8ed0f10466",
+      "frozenCaseSha256": "ccef19a4404c7fd3569ac38d18b8db97c994a2b834769851fe80fb8ed0f10466"
     },
     {
       "caseId": "create-pr-named-release-base-publishes-normally",
       "status": "new",
       "rationale": [
-        "A user-named release base is the one exception to targeting the remote default. Its backport publishes as an ordinary PR against that base, and an open PR whose head is the release branch is not taken as a lower PR to stack on. Fresh native run required."
+        "A user-named release base is the one exception to targeting the remote default. Its backport publishes as an ordinary PR against that base, and an open PR whose head is the release branch is not taken as a lower PR to stack on. Fresh native run required.",
+        "Re-recorded: the backport now merges a default-branch commit that an up-to-date default PR also contains, so it matches only if the default branch is not excluded from the comparison; the grader checks the PR's base field rather than any mention of release/1.x."
       ],
       "beforeSha256": null,
-      "afterSha256": "82463197c428222109477c8b88835a0758416133f824e7ba4947dbec48d1b0cb",
-      "frozenCaseSha256": "82463197c428222109477c8b88835a0758416133f824e7ba4947dbec48d1b0cb"
+      "afterSha256": "0696f9efdb7b52eb2bffb7a3ac68d1fc03a18d75c83119c73426935ea10d25d2",
+      "frozenCaseSha256": "0696f9efdb7b52eb2bffb7a3ac68d1fc03a18d75c83119c73426935ea10d25d2"
+    },
+    {
+      "caseId": "create-pr-named-base-dependency-on-default-pr-stops",
+      "status": "new",
+      "rationale": [
+        "A backport onto a named release base that contains a default-branch PR's commits stops and reports instead of stacking on the default trunk. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "aec28118517937bcaebf81bccfb3b4946c16334833824de54ef3180c00e178cd",
+      "frozenCaseSha256": "aec28118517937bcaebf81bccfb3b4946c16334833824de54ef3180c00e178cd"
+    },
+    {
+      "caseId": "create-pr-truncated-open-pr-list-stops",
+      "status": "new",
+      "rationale": [
+        "An open-PR listing that returns exactly its 1000-row limit may be truncated (gh lists newest first, so the oldest PRs drop), so publication does not proceed on it. Fresh native run required.",
+        "Runs on Codex models only: Claude Code does not return an MCP tool result this large, so a Claude agent cannot see the row count (observed with Opus 5.5, which stopped without publishing)."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "60953bbb0fdd8f92940b9e0f5d438eb679a641cf93a78447a37834dfb25fce71",
+      "frozenCaseSha256": "60953bbb0fdd8f92940b9e0f5d438eb679a641cf93a78447a37834dfb25fce71"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",
