@@ -341,7 +341,7 @@ class CodeRabbitAdapterTest(unittest.TestCase):
         def after_post(_endpoint: str, payload: dict[str, str]) -> None:
             self.assertEqual(payload["body"], "@coderabbitai review")
             gh.pages["repos/owner/repo/pulls/7/reviews?per_page=100"] = [[
-                review(33, "Actionable comments posted: 0")
+                review(33, "Actionable comments posted: 1")
             ]]
 
         gh.on_post = after_post
@@ -2244,6 +2244,613 @@ class RoundThreeVerificationTest(unittest.TestCase):
         allowance = observe(gh)["allowance"]
         self.assertTrue(allowance["exhausted"])
         self.assertEqual(allowance["retryAt"], iso(NOW - 600 + HOUR + 60))
+
+
+CLEAN = RECORDED["cleanReviews"]["1292"]
+HEAD_1292 = CLEAN["head"]
+CLEAN_NOW = "2026-09-29T13:45:00Z"
+# Vercel's first status for 29204dc is 13:24:02; 52803a95 was reviewed from 09:38.
+PUSHED_1292 = int(ADAPTER.parse_time("2026-09-29T13:24:00Z"))
+PUSHED_PREVIOUS = int(ADAPTER.parse_time("2026-09-29T09:30:00Z"))
+
+
+def clean_gh(
+    version_at: str = "2026-09-29T13:39:41Z",
+    *,
+    statuses: list[dict[str, Any]] | None = None,
+    head: str = HEAD_1292,
+    pushed: int | None = PUSHED_1292,
+    body: str | None = None,
+    extra: list[dict[str, Any]] | None = None,
+) -> FakeGh:
+    """PR 7 at `head` with #1292's summary as CodeRabbit showed it at `version_at`."""
+    versions = [v for v in CLEAN["versions"] if v["at"] <= version_at]
+    summary = {
+        "id": CLEAN["commentId"],
+        "node_id": f"IC_{CLEAN['commentId']}",
+        "user": {"login": "coderabbitai[bot]"},
+        "body": body if body is not None else versions[-1]["body"],
+        "created_at": CLEAN["createdAt"],
+        "updated_at": versions[-1]["at"],
+        "issue_url": "https://api.github.test/repos/owner/repo/issues/7",
+    }
+    gh = configured_gh(
+        comments=[summary, *(extra or [])],
+        head=head,
+        coderabbit_statuses=CLEAN["statuses"] if statuses is None else statuses,
+        pushed=pushed,
+    )
+    gh.edits[summary["node_id"]] = [(v["at"], v["body"]) for v in versions]
+    return gh
+
+
+def clean_observe(gh: FakeGh, head: str = HEAD_1292, now: str = CLEAN_NOW) -> dict[str, Any]:
+    return ADAPTER.observation(gh, "owner/repo", [7], {7: head}, ["owner/repo"], at(now))["pullRequests"][0]
+
+
+class CleanAutomaticReviewTest(unittest.TestCase):
+    """Issue #95: a clean automatic review of the exact head completes it."""
+
+    def test_recorded_1292_clean_automatic_review_is_clean_complete(self) -> None:
+        item = clean_observe(clean_gh())
+        self.assertEqual(item["state"], "clean-complete")
+        self.assertIsNone(item["nextMode"])
+        clean = item["cleanReview"]
+        self.assertEqual(
+            (clean["commentId"], clean["runId"], clean["head"], clean["reviewedAt"], clean["dating"]),
+            (5887035508, "38da5e68-0cea-4549-91ec-a86ebd24bb85", HEAD_1292, "2026-09-29T13:39:41Z", "edit-history"),
+        )
+
+    def test_run_is_satisfied_without_posting(self) -> None:
+        gh = clean_gh()
+        clock = [at(CLEAN_NOW)]
+
+        def sleep(seconds: float) -> None:
+            clock[0] += seconds
+
+        state, _, evidence = ADAPTER.run_review(
+            gh, "owner/repo", 7, HEAD_1292, ["owner/repo"], at(CLEAN_NOW) + 30, 10,
+            clock=lambda: clock[0], sleeper=sleep,
+        )
+        self.assertEqual(state, "satisfied")
+        self.assertEqual(gh.posts, [])
+        self.assertEqual(evidence["pullRequests"][0]["state"], "clean-complete")
+
+    def test_an_already_reviewed_refusal_plans_no_full_review_of_a_clean_head(self) -> None:
+        extra = [
+            comment(10, "@coderabbitai review", START + 60, bot=False),
+            comment(11, "Action not completed. These commits are already reviewed.", START + 90),
+        ]
+        item = clean_observe(clean_gh(extra=extra))
+        self.assertEqual(item["state"], "clean-complete")
+
+    def test_a_range_ending_at_an_earlier_head_never_counts(self) -> None:
+        # 13:31:34: the recent review covers 72cb2050..52803a95.
+        item = clean_observe(clean_gh("2026-09-29T13:31:34Z"))
+        self.assertIsNone(item["cleanReview"])
+        self.assertEqual(item["state"], "trigger-incremental")
+        # The same summary does complete the head it names.
+        previous = CLEAN["previousHead"]
+        item = clean_observe(
+            clean_gh("2026-09-29T13:31:34Z", head=previous, statuses=[CLEAN["statuses"][0]], pushed=PUSHED_PREVIOUS),
+            head=previous,
+        )
+        self.assertEqual(item["state"], "clean-complete")
+
+    def test_a_summary_still_processing_never_counts(self) -> None:
+        # 13:35:11: the range naming the head is inside the in-progress block.
+        item = clean_observe(clean_gh("2026-09-29T13:35:11Z"))
+        self.assertIsNone(item["cleanReview"])
+        self.assertEqual(item["state"], "trigger-incremental")
+        processing = CLEAN["versions"][-1]["body"].replace(
+            "<!-- recent_review_start -->",
+            "> Currently processing new changes in this PR. This may take a few minutes, please wait...\n<!-- recent_review_start -->",
+        )
+        self.assertIsNone(clean_observe(clean_gh(body=processing))["cleanReview"])
+
+    def test_a_status_that_is_not_a_completed_review_never_counts(self) -> None:
+        cases = {
+            "rate limited": ("success", "Review rate limited", "pending-retry-source"),
+            "skipped": ("success", "Review skipped: draft pull request", "trigger-incremental"),
+            "paused": ("success", "Reviews paused", "trigger-incremental"),
+            "in progress": ("pending", "Review in progress", "trigger-incremental"),
+        }
+        for name, (state, description, expected) in cases.items():
+            with self.subTest(status=name):
+                statuses = [{"context": "CodeRabbit", "state": state, "description": description, "created_at": "2026-09-29T13:39:44Z"}]
+                item = clean_observe(clean_gh(statuses=statuses))
+                self.assertEqual(item["state"], expected)
+        self.assertEqual(clean_observe(clean_gh(statuses=[]))["state"], "trigger-incremental")
+
+    def test_a_summary_without_the_range_or_the_clean_verdict_never_counts(self) -> None:
+        body = CLEAN["versions"][-1]["body"]
+        no_range = "\n".join(l for l in body.splitlines() if not l.startswith("Reviewing files"))
+        no_verdict = body.replace("No actionable comments were generated in the recent review. 🎉", "Actionable comments posted: 1")
+        limited = body.replace(
+            "<!-- recent_review_start -->",
+            "<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->\n> ## Review limit reached\n"
+            "<!-- end of auto-generated comment: rate limited by coderabbit.ai -->\n<!-- recent_review_start -->",
+        )
+        for name, text in {"no range": no_range, "no clean verdict": no_verdict, "rate-limit block": limited}.items():
+            with self.subTest(body=name):
+                self.assertIsNone(clean_observe(clean_gh(body=text))["cleanReview"])
+
+    def test_a_clean_review_older_than_the_heads_push_never_counts(self) -> None:
+        pushed = int(at("2026-09-29T13:40:00Z"))
+        item = clean_observe(clean_gh(pushed=pushed))
+        self.assertIsNone(item["cleanReview"])
+        self.assertNotEqual(item["state"], "clean-complete")
+
+    def failing_history(self, _query: str, _variables: dict[str, Any]) -> dict[str, Any]:
+        raise ADAPTER.WaitError("gh: Something went wrong (HTTP 422)")
+
+    def clean_body(self, run_id: str, extra: str = "") -> str:
+        return "\n".join([
+            "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->",
+            "<!-- recent_review_start -->",
+            "No actionable comments were generated in the recent review. 🎉",
+            f"**Run ID**: `{run_id}`",
+            f"Reviewing files that changed from the base of the PR and between {CLEAN['previousHead']} and {HEAD_1292}.",
+            "<!-- recent_review_end -->",
+            extra,
+        ])
+
+    def test_the_clean_verdict_must_be_in_the_recent_review_block(self) -> None:
+        body = "\n".join([
+            "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->",
+            "<!-- recent_review_start -->",
+            "Actionable comments posted: 1",
+            f"Reviewing files that changed from the base of the PR and between {CLEAN['previousHead']} and {HEAD_1292}.",
+            "<!-- recent_review_end -->",
+            "<!-- walkthrough_start -->",
+            "No actionable comments were generated in the recent review.",
+            "<!-- walkthrough_end -->",
+        ])
+        self.assertIsNone(ADAPTER.clean_review_in(body))
+
+    def test_a_clean_review_that_cannot_be_dated_never_counts(self) -> None:
+        gh = clean_gh()
+        gh.graphql = self.failing_history  # type: ignore[method-assign]
+        item = clean_observe(gh)
+        self.assertIsNone(item["cleanReview"])
+        self.assertNotEqual(item["state"], "clean-complete")
+
+    def test_a_clean_review_is_dated_by_its_runs_review_object(self) -> None:
+        gh = clean_gh()
+        gh.graphql = self.failing_history  # type: ignore[method-assign]
+        gh.pages["repos/owner/repo/pulls/7/reviews?per_page=100"] = [[{
+            "id": 1,
+            "user": {"login": "coderabbitai[bot]"},
+            "body": "**Run ID**: `38da5e68-0cea-4549-91ec-a86ebd24bb85`",
+            "state": "COMMENTED",
+            # On another commit, so only its dating is exercised: a review
+            # object on the head itself would already be review-complete.
+            "commit_id": CLEAN["previousHead"],
+            "submitted_at": "2026-09-29T13:39:40Z",
+        }]]
+        item = clean_observe(gh)
+        self.assertEqual((item["state"], item["cleanReview"]["dating"]), ("clean-complete", "run"))
+        self.assertEqual(item["cleanReview"]["reviewedAt"], "2026-09-29T13:39:40Z")
+
+    def test_a_skipped_check_run_is_not_a_completed_review(self) -> None:
+        gh = clean_gh(statuses=[])
+        gh.pages[f"repos/owner/repo/commits/{HEAD_1292}/check-runs?per_page=100"] = [{
+            "check_runs": [{
+                "name": "CodeRabbit", "head_sha": HEAD_1292, "status": "completed",
+                "conclusion": "success", "output": {"title": "Review skipped"},
+            }]
+        }]
+        self.assertNotEqual(clean_observe(gh)["state"], "clean-complete")
+
+    def test_a_carried_clean_block_is_dated_by_its_first_appearance(self) -> None:
+        # The same run's clean block was shown before the head's push and is
+        # only carried by a later edit, so it does not count.
+        body = self.clean_body("run-early")
+        gh = clean_gh(body=body)
+        gh.edits[f"IC_{CLEAN['commentId']}"] = [("2026-09-29T13:10:00Z", body), ("2026-09-29T13:39:41Z", body + "\n")]
+        self.assertIsNone(clean_observe(gh)["cleanReview"])
+
+    def test_a_new_run_of_the_same_head_is_dated_by_its_own_first_appearance(self) -> None:
+        early, late = self.clean_body("run-early"), self.clean_body("run-late")
+        gh = clean_gh(body=late)
+        gh.edits[f"IC_{CLEAN['commentId']}"] = [("2026-09-29T13:10:00Z", early), ("2026-09-29T13:39:41Z", late)]
+        item = clean_observe(gh)
+        self.assertEqual(item["cleanReview"]["reviewedAt"], "2026-09-29T13:39:41Z")
+        self.assertEqual(item["state"], "clean-complete")
+
+    def test_a_later_refusal_does_not_undo_a_clean_review_of_the_head(self) -> None:
+        extra = [
+            comment(10, "@coderabbitai review", int(at("2026-09-29T13:41:00Z")), bot=False),
+            comment(11, "Review rate limited.", int(at("2026-09-29T13:41:10Z"))),
+        ]
+        self.assertEqual(clean_observe(clean_gh(extra=extra))["state"], "clean-complete")
+
+    def test_every_recorded_summary_version_names_the_head_it_covered(self) -> None:
+        # Each version's clean verdict binds the range end of its own recent
+        # review, which CodeRabbit's coverage marker independently names.
+        for version in CLEAN["versions"]:
+            with self.subTest(at=version["at"]):
+                found = ADAPTER.clean_review_in(version["body"])
+                recent = re.search(
+                    r"<!-- recent_review_start -->([\s\S]*?)<!-- recent_review_end -->", version["body"]
+                )
+                processing = "Currently processing" in version["body"]
+                if recent and "No actionable comments" in recent.group(1) and not processing:
+                    assert found
+                    covered = re.search(r'"coveredCommitId":"([0-9a-f]{40})"', version["body"]).group(1)
+                    self.assertEqual(found["head"], covered)
+                else:
+                    self.assertIsNone(found)
+
+
+def recorded_clean(number: str, at_: str | None = None, *, statuses: list[dict[str, Any]] | None = None) -> tuple[FakeGh, str, str]:
+    """PR 7 as GitHub showed recorded PR `number` at `at_` (default: its evaluation time)."""
+    case = RECORDED["cleanReviews"][number]
+    now = at_ or case["evaluateAt"]
+    versions = [v for v in case["versions"] if v["at"] <= now]
+    summary = {
+        "id": case["commentId"],
+        "node_id": f"IC_{case['commentId']}",
+        "user": {"login": "coderabbitai[bot]"},
+        "body": versions[-1]["body"],
+        "created_at": case["createdAt"],
+        "updated_at": versions[-1]["at"],
+        "issue_url": "https://api.github.test/repos/owner/repo/issues/7",
+    }
+    others = [
+        {
+            "id": c["id"],
+            "user": {"login": c["login"] + ("[bot]" if c["login"] == "coderabbitai" else "")},
+            "body": c["body"],
+            "created_at": c["created_at"],
+            "updated_at": c["updated_at"],
+            "issue_url": "https://api.github.test/repos/owner/repo/issues/7",
+        }
+        for c in case.get("comments", [])
+        if c["created_at"] <= now
+    ]
+    gh = configured_gh(
+        comments=[summary, *others],
+        head=case["head"],
+        coderabbit_statuses=[s for s in case["statuses"] if s["created_at"] <= now] if statuses is None else statuses,
+        pushed=int(at(case["pushedAt"])),
+    )
+    gh.edits[summary["node_id"]] = [(v["at"], v["body"]) for v in versions]
+    gh.values[f"repos/owner/repo/commits/{case['head']}"] = {"commit": {"committer": {"date": case["pushedAt"]}}}
+    return gh, case["head"], now
+
+
+class CleanReviewVerificationTest(unittest.TestCase):
+    """Findings from the verification of PR #96 at ca4110c."""
+
+    # 1: a "Reviews paused" block written with the clean review does not hide it
+    def test_recorded_clean_reviews_that_pause_later_reviews_complete_their_head(self) -> None:
+        for number in ("1265", "1262", "1212"):
+            with self.subTest(pr=number):
+                gh, head, now = recorded_clean(number)
+                self.assertIn("review paused by coderabbit", gh.pages["repos/owner/repo/issues/7/comments?per_page=100"][0][0]["body"])
+                item = clean_observe(gh, head, now)
+                self.assertEqual(item["state"], "clean-complete")
+                self.assertEqual(item["cleanReview"]["head"], head)
+
+    # 2: an "Already reviewed" refusal, with or without a skip block
+    def test_recorded_already_reviewed_refusal_does_not_escalate(self) -> None:
+        for now, skip_block in (("2026-08-15T13:43:44Z", False), ("2026-08-15T13:44:20Z", True)):
+            with self.subTest(skip_block=skip_block):
+                gh, head, _ = recorded_clean("1155", now)
+                body = gh.pages["repos/owner/repo/issues/7/comments?per_page=100"][0][0]["body"]
+                self.assertEqual("skip review by coderabbit" in body, skip_block)
+                item = clean_observe(gh, head, now)
+                self.assertTrue(item["alreadyReviewed"])
+                self.assertEqual(item["state"], "clean-complete")
+
+    # 3: statuses after a completed review
+    def test_a_later_skipped_status_does_not_hide_a_completed_review(self) -> None:
+        gh, head, now = recorded_clean("1154")
+        self.assertEqual(
+            gh.pages[f"repos/owner/repo/commits/{head}/statuses?per_page=100"][0][0]["description"],
+            "Review skipped: reviews are disabled for this base branch",
+        )
+        item = clean_observe(gh, head, now)
+        self.assertEqual(item["codeRabbitCheck"]["state"], "SUCCESS")
+        self.assertEqual(item["state"], "clean-complete")
+
+    def test_a_status_newer_than_the_completed_review_decides(self) -> None:
+        completed = {"context": "CodeRabbit", "state": "success", "description": "Review completed", "created_at": "2026-09-29T13:39:44Z"}
+        skipped = {"context": "CodeRabbit", "state": "success", "description": "Review skipped: draft pull request", "created_at": "2026-09-29T13:41:00Z"}
+        cases = {
+            "re-review in progress": ([{"context": "CodeRabbit", "state": "pending", "description": "Review in progress", "created_at": "2026-09-29T13:42:00Z"}, completed], "PENDING", "trigger-incremental"),
+            "re-review rate limited": ([{"context": "CodeRabbit", "state": "success", "description": "Review rate limited", "created_at": "2026-09-29T13:42:00Z"}, completed], "RATE_LIMITED", "pending-retry-source"),
+            "skipped, then in progress": ([{"context": "CodeRabbit", "state": "pending", "description": "Review in progress", "created_at": "2026-09-29T13:42:00Z"}, skipped, completed], "PENDING", "trigger-incremental"),
+            "skipped only": ([skipped], "INCOMPLETE", "trigger-incremental"),
+            "skipped after completed": ([skipped, completed], "SUCCESS", "clean-complete"),
+        }
+        for name, (statuses, check, state) in cases.items():
+            with self.subTest(statuses=name):
+                item = clean_observe(clean_gh(statuses=statuses))
+                self.assertEqual((item["codeRabbitCheck"]["state"], item["state"]), (check, state))
+
+    # 4: binding edges the mutation run left unpinned
+    def test_a_range_starting_at_the_head_never_counts(self) -> None:
+        previous = CLEAN["previousHead"]
+        item = clean_observe(
+            clean_gh(head=previous, statuses=[CLEAN["statuses"][0]], pushed=PUSHED_PREVIOUS), head=previous
+        )
+        self.assertIsNone(item["cleanReview"])
+        self.assertNotEqual(item["state"], "clean-complete")
+
+    def test_only_the_recent_review_blocks_range_binds(self) -> None:
+        body = "\n".join([
+            "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->",
+            "<!-- recent_review_start -->",
+            "No actionable comments were generated in the recent review. 🎉",
+            f"Reviewing files that changed from the base of the PR and between 72cb20505832bd2e0f4db0ef8d46d2a4ca85140c and {CLEAN['previousHead']}.",
+            "<!-- recent_review_end -->",
+            "<!-- walkthrough_start -->",
+            f"Changes between {CLEAN['previousHead']} and {HEAD_1292}.",
+            "<!-- walkthrough_end -->",
+        ])
+        self.assertIsNone(ADAPTER.clean_review_in(body)["head"] == HEAD_1292 or None)
+        self.assertIsNone(clean_observe(clean_gh(body=body))["cleanReview"])
+
+    def test_only_coderabbits_reviews_date_a_run(self) -> None:
+        gh = clean_gh()
+        gh.pages["repos/owner/repo/pulls/7/reviews?per_page=100"] = [[{
+            "id": 2,
+            "user": {"login": "maintainer"},
+            "body": "**Run ID**: `38da5e68-0cea-4549-91ec-a86ebd24bb85`",
+            "state": "COMMENTED",
+            "commit_id": HEAD_1292,
+            "submitted_at": "2026-09-29T13:00:00Z",
+        }]]
+        item = clean_observe(gh)
+        self.assertEqual((item["state"], item["cleanReview"]["dating"]), ("clean-complete", "edit-history"))
+
+    def test_a_clean_block_carried_across_a_processing_interlude_keeps_its_first_time(self) -> None:
+        # #1292: 52803a95's clean block (run 22815d9c) first showed at 09:42:30,
+        # disappeared under the 13:15:49 in-progress block, and came back at
+        # 13:28:30. It is still the 09:42:30 review, so a push of that head at
+        # 13:20 is not covered by it.
+        previous = CLEAN["previousHead"]
+        pushed = int(at("2026-09-29T13:20:00Z"))
+        item = clean_observe(
+            clean_gh("2026-09-29T13:31:34Z", head=previous, statuses=[CLEAN["statuses"][0]], pushed=pushed),
+            head=previous,
+        )
+        self.assertIsNone(item["cleanReview"])
+        item = clean_observe(
+            clean_gh("2026-09-29T13:31:34Z", head=previous, statuses=[CLEAN["statuses"][0]], pushed=PUSHED_PREVIOUS),
+            head=previous,
+        )
+        self.assertEqual(item["cleanReview"]["reviewedAt"], "2026-09-29T09:42:30Z")
+
+    def test_the_clean_verdict_must_be_the_exact_sentence(self) -> None:
+        body = CLEAN["versions"][-1]["body"].replace(
+            "No actionable comments were generated in the recent review. 🎉",
+            "Actionable comments posted: 2\nNo actionable comments were found in unchanged files.",
+        )
+        self.assertIsNone(ADAPTER.clean_review_in(body))
+
+    def test_a_skipped_check_run_does_not_hide_an_earlier_completed_one(self) -> None:
+        gh = clean_gh(statuses=[])
+        gh.pages[f"repos/owner/repo/commits/{HEAD_1292}/check-runs?per_page=100"] = [{
+            "check_runs": [
+                {"name": "CodeRabbit", "head_sha": HEAD_1292, "status": "completed", "conclusion": "success", "output": {"title": "Review skipped"}},
+                {"name": "CodeRabbit", "head_sha": HEAD_1292, "status": "completed", "conclusion": "success", "output": {"title": "Review completed"}},
+            ]
+        }]
+        item = clean_observe(gh)
+        self.assertEqual((item["codeRabbitCheck"]["state"], item["state"]), ("SUCCESS", "clean-complete"))
+
+    def test_a_pending_review_dates_nothing(self) -> None:
+        gh = clean_gh()
+        gh.pages["repos/owner/repo/pulls/7/reviews?per_page=100"] = [[{
+            "id": 3,
+            "user": {"login": "coderabbitai[bot]"},
+            "body": "**Run ID**: `38da5e68-0cea-4549-91ec-a86ebd24bb85`",
+            "state": "PENDING",
+            "commit_id": HEAD_1292,
+            "submitted_at": "2026-09-29T13:00:00Z",
+        }]]
+        item = clean_observe(gh)
+        self.assertEqual((item["state"], item["cleanReview"]["dating"]), ("clean-complete", "edit-history"))
+
+    def test_a_clean_review_at_the_push_second_counts(self) -> None:
+        item = clean_observe(clean_gh(pushed=int(at("2026-09-29T13:39:41Z"))))
+        self.assertEqual(item["state"], "clean-complete")
+
+
+class CleanReviewSecondVerificationTest(unittest.TestCase):
+    """Findings from the re-verification of PR #96 at fad1ce0, and findings-only reviews."""
+
+    def legacy_gh(self, remaining: str = "4/5") -> tuple[FakeGh, float]:
+        history = RECORDED["legacyFooterHistory"]
+        versions = [
+            (v["at"], v["body"].replace("4/5 reviews remaining, refill in 12 minutes.", f"{remaining} reviews remaining, refill in 12 minutes."))
+            for v in history["versions"]
+        ]
+        now = at("2026-05-02T13:43:14Z")
+        gh = FakeGh()
+        item = {
+            "id": history["commentId"],
+            "node_id": f"IC_{history['commentId']}",
+            "user": {"login": "coderabbitai[bot]"},
+            "body": versions[-1][1],
+            "created_at": history["createdAt"],
+            "updated_at": versions[-1][0],
+            "issue_url": "https://api.github.test/repos/owner/repo/issues/490",
+        }
+        gh.pages[ADAPTER.recent_comments_endpoint("owner/repo", ADAPTER.scan_since(now))] = [[item]]
+        gh.edits[item["node_id"]] = versions
+        return gh, now
+
+    # CR-A: a statement without a Run ID keeps the contiguous walk
+    def test_a_runless_footer_repeated_across_reviews_is_dated_by_its_latest_run(self) -> None:
+        gh, now = self.legacy_gh()
+        budget = ADAPTER.account_allowance(gh, ["owner/repo"], now)
+        self.assertEqual((budget["statementAt"], budget["remaining"]), ("2026-05-02T13:41:14Z", 4))
+        self.assertEqual(budget["statementDating"], "edit-history")
+
+    def test_a_runless_zero_footer_still_holds_until_its_refill(self) -> None:
+        gh, now = self.legacy_gh("0/5")
+        budget = ADAPTER.account_allowance(gh, ["owner/repo"], now)
+        self.assertTrue(budget["exhausted"])
+        self.assertEqual(budget["retryAt"], "2026-05-02T13:54:14Z")
+
+    # CR-B: a rate limit wins over a decline in one status too
+    def test_a_status_that_is_both_paused_and_rate_limited_is_rate_limited(self) -> None:
+        statuses = [
+            {"context": "CodeRabbit", "state": "success", "description": "Review paused: rate limited", "created_at": "2026-09-29T13:41:00Z"},
+            CLEAN["statuses"][0],
+        ]
+        item = clean_observe(clean_gh(statuses=statuses))
+        self.assertEqual((item["codeRabbitCheck"]["state"], item["state"]), ("RATE_LIMITED", "pending-retry-source"))
+
+    # CR-C: each guard on its own
+    def test_a_summary_showing_a_review_in_progress_never_counts(self) -> None:
+        gh, head, now = recorded_clean("1155", "2026-08-15T13:44:55Z", statuses=[
+            {"context": "CodeRabbit", "state": "success", "description": "Review completed", "created_at": "2026-08-15T05:07:24Z"}
+        ])
+        body = gh.pages["repos/owner/repo/issues/7/comments?per_page=100"][0][0]["body"]
+        self.assertIn("review in progress by coderabbit", body)
+        self.assertIn("No actionable comments were generated", body)
+        item = clean_observe(gh, head, now)
+        self.assertIsNone(item["cleanReview"])
+        self.assertNotEqual(item["state"], "clean-complete")
+
+    def test_only_coderabbit_statuses_decide(self) -> None:
+        statuses = [
+            {"context": "Vercel", "state": "success", "description": "Canceled by Ignored Build Step", "created_at": "2026-09-29T13:44:00Z"},
+            {"context": "CodeRabbit", "state": "pending", "description": "Review in progress", "created_at": "2026-09-29T13:35:00Z"},
+        ]
+        item = clean_observe(clean_gh(statuses=statuses))
+        self.assertEqual((item["codeRabbitCheck"]["state"], item["state"]), ("PENDING", "trigger-incremental"))
+
+    def failing_history(self, _query: str, _variables: dict[str, Any]) -> dict[str, Any]:
+        raise ADAPTER.WaitError("gh: Something went wrong (HTTP 422)")
+
+    def run_review_on_previous_head(self, identifier: int, submitted: str) -> dict[str, Any]:
+        return {
+            "id": identifier,
+            "user": {"login": "coderabbitai[bot]"},
+            "body": "**Run ID**: `38da5e68-0cea-4549-91ec-a86ebd24bb85`",
+            "state": "COMMENTED",
+            "commit_id": CLEAN["previousHead"],
+            "submitted_at": submitted,
+        }
+
+    def test_the_in_progress_block_marker_alone_unsettles_a_summary(self) -> None:
+        body = CLEAN["versions"][-1]["body"].replace(
+            "<!-- recent_review_start -->",
+            "<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Reviewing.\n"
+            "<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- recent_review_start -->",
+        )
+        self.assertNotIn("Currently processing", body)
+        self.assertIsNone(ADAPTER.clean_review_in(body))
+
+    def test_a_run_is_dated_by_its_earliest_review_object(self) -> None:
+        gh = clean_gh()
+        gh.graphql = self.failing_history  # type: ignore[method-assign]
+        gh.pages["repos/owner/repo/pulls/7/reviews?per_page=100"] = [[
+            self.run_review_on_previous_head(4, "2026-09-29T13:39:40Z"),
+            self.run_review_on_previous_head(5, "2026-09-29T13:10:00Z"),
+        ]]
+        # The earlier object predates the 13:24 push, so the block does not count.
+        self.assertIsNone(clean_observe(gh)["cleanReview"])
+
+    def test_a_run_dated_by_a_later_review_keeps_the_comments_edit_time(self) -> None:
+        gh = clean_gh()
+        gh.pages["repos/owner/repo/pulls/7/reviews?per_page=100"] = [[
+            self.run_review_on_previous_head(6, "2026-09-29T13:39:50Z")
+        ]]
+        self.assertEqual(clean_observe(gh)["cleanReview"]["reviewedAt"], "2026-09-29T13:39:41Z")
+
+    def test_an_unedited_summary_needs_no_edit_history(self) -> None:
+        gh = clean_gh()
+        gh.graphql = self.failing_history  # type: ignore[method-assign]
+        summary = gh.pages["repos/owner/repo/issues/7/comments?per_page=100"][0][0]
+        summary["created_at"] = summary["updated_at"]
+        item = clean_observe(gh)
+        self.assertEqual((item["state"], item["cleanReview"]["dating"]), ("clean-complete", "unedited"))
+
+    # Item 4: reviews whose findings are only outside the diff or nitpicks
+    def test_recorded_findings_only_reviews_complete_their_head(self) -> None:
+        for recorded in RECORDED["findingsOnlyReviews"]["reviews"]:
+            with self.subTest(pr=recorded["pr"]):
+                self.assertNotRegex(recorded["body"], ADAPTER.ACTIONABLE)
+                gh = configured_gh(
+                    head=recorded["commitId"],
+                    reviews=[{
+                        "id": recorded["id"], "user": {"login": "coderabbitai[bot]"}, "body": recorded["body"],
+                        "state": recorded["state"], "commit_id": recorded["commitId"], "submitted_at": recorded["submittedAt"],
+                    }],
+                )
+                evidence = ADAPTER.pull_evidence(gh, "owner/repo", 7)
+                state, _, mode = ADAPTER.classify(evidence, recorded["commitId"], None, START + 180)
+                self.assertEqual((state, mode), ("review-complete", None))
+                self.assertIsNone(evidence["exactHeadReview"]["actionable"])
+
+    def test_a_review_object_that_is_a_notice_or_empty_never_completes(self) -> None:
+        for body in (
+            "",
+            "<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->\n> ## Review limit reached",
+            "> ## Review skipped\n> Draft PR not reviewed.",
+            "> ## Reviews paused",
+            "Review rate limited.",
+        ):
+            with self.subTest(body=body[:30]):
+                gh = configured_gh(reviews=[review(40, body)])
+                state, _, _ = classify(gh)
+                self.assertNotEqual(state, "review-complete")
+
+    def test_a_findings_review_of_another_head_or_pending_never_completes(self) -> None:
+        body = RECORDED["findingsOnlyReviews"]["reviews"][0]["body"]
+        for name, item in {"other head": review(41, body, head="other-head"), "pending": review(42, body, state="PENDING")}.items():
+            with self.subTest(review=name):
+                self.assertNotEqual(classify(configured_gh(reviews=[item]))[0], "review-complete")
+
+
+class ReviewEvidenceAllowListTest(unittest.TestCase):
+    """Final verification of PR #96: only review evidence completes a head."""
+
+    def complete(self, body: str) -> bool:
+        return classify(configured_gh(reviews=[review(50, body)]))[0] == "review-complete"
+
+    def test_unknown_or_unlisted_notice_bodies_never_complete(self) -> None:
+        for body in (
+            "> [!CAUTION]\n> ## Review failed\n> The pull request is closed.",
+            "Review stopped after lock loss.",
+            "<summary>⚠️ Action not completed</summary>\n\nAlready reviewed.",
+            "Oops, something went wrong! Please try again later.",
+            "CodeRabbit couldn't update its existing comment.",
+            "Actionable comments posted: 0",
+            "Something CodeRabbit has not said before.",
+        ):
+            with self.subTest(body=body[:40]):
+                self.assertFalse(self.complete(body))
+
+    def test_review_evidence_completes(self) -> None:
+        for body in (
+            "**Actionable comments posted: 1**",
+            "<details>\n<summary>⚠️ Outside diff range comments (1)</summary>",
+            "<details>\n<summary>🧹 Nitpick comments (3)</summary>",
+            "<details>\n<summary>♻️ Duplicate comments (2)</summary>",
+        ):
+            with self.subTest(body=body[:40]):
+                self.assertTrue(self.complete(body))
+        for recorded in RECORDED["findingsOnlyReviews"]["reviews"]:
+            with self.subTest(pr=recorded["pr"]):
+                self.assertTrue(self.complete(recorded["body"]))
+
+    def test_the_notice_guard_holds_even_beside_review_evidence(self) -> None:
+        evidence = "<details>\n<summary>🧹 Nitpick comments (1)</summary>"
+        for name, notice in {
+            "marker only, after a leading comment": "<!-- internal-state -->\n<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->",
+            "lowercase heading": "> ## review skipped",
+            "heading after a preamble": "Some preamble.\n> ## Reviews paused",
+        }.items():
+            with self.subTest(notice=name):
+                self.assertFalse(self.complete(f"{notice}\n{evidence}"))
 
 
 if __name__ == "__main__":

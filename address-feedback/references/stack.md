@@ -132,10 +132,26 @@ coverage is verified for the exact head and either ack latency meets the
 trusted threshold or that same head has a CodeRabbit check SUCCESS. Latency
 and walkthrough freshness count from when GitHub recorded the head's push (its branch activity, else its earliest check suite on that
 branch), or from the commit time if that is later. Without that record, only
-the head-scoped check completes the review. It escalates untrusted incremental
+the head-scoped check completes the review. A clean automatic review also
+reaches `clean-complete`, and no trigger is planned for that head. It needs the
+summary's recent-review block to report no actionable comments for a range
+ending at exactly that head, with no review in progress or rate limit showing.
+A "Reviews paused" or "Review skipped" block beside it does not undo it. The
+block is dated by its Run ID's review, an unedited comment, or its earliest
+appearance in the edit history, and must not predate the head's push. It also
+needs the head-scoped CodeRabbit check to report a completed review. That
+check is the newest CodeRabbit status for the head, passing over skipped or
+paused ones, which only decline a further review. A newer in-progress or
+rate-limited status means the review is not complete (#87), and a review
+carried forward to a later head does not complete it. It escalates untrusted incremental
 acknowledgments to a full review, refuses guessed retry times, and never
 exposes a paid-review command. Keep `review-complete` for real exact-head review
-objects only.
+objects only: CodeRabbit review objects on the head whose body shows review
+evidence, either "Actionable comments posted: N" with N of at least 1 or an
+outside-diff, nitpick or duplicate-comments section, and is not a rate-limit,
+skip or pause notice. Reviews whose findings are only outside the diff or
+nitpicks carry no "Actionable comments posted" line and still count; any other
+body, including an unknown notice, never completes a head.
 
 ## Result contract
 
