@@ -206,13 +206,13 @@ export async function inspectInventory(skillsRoot, { normalizeHashes = false } =
       `Canonical skills inventory contains a non-directory entry: ${canonicalDirectory}`,
     );
   }
-  if (JSON.stringify(diskNames) !== JSON.stringify(sortedNames)) {
-    const missing = sortedNames.filter((name) => !diskNames.includes(name));
-    const untracked = diskNames.filter((name) => !sortedNames.includes(name));
+  const missing = sortedNames.filter((name) => !diskNames.includes(name));
+  if (missing.length > 0) {
     throw new Error(
-      `Canonical skills inventory does not match skills-lock.json (missing: ${missing.join(", ") || "none"}; untracked: ${untracked.join(", ") || "none"})`,
+      `Canonical skills inventory is missing locked skills: ${missing.join(", ")}`,
     );
   }
+  const projectAuthored = projectAuthoredNames(lock, diskNames);
 
   const identities = {};
   for (const name of sortedNames) {
@@ -249,7 +249,23 @@ export async function inspectInventory(skillsRoot, { normalizeHashes = false } =
     const normalized = `${JSON.stringify(lock, null, 2)}\n`;
     if (normalized !== raw) await writeFile(lockPath, normalized, "utf8");
   }
-  return { identities, names: sortedNames };
+  return { identities, names: sortedNames, projectAuthored };
+}
+
+// Directories absent from the lock are project-authored: kept, never refreshed.
+function projectAuthoredNames(lock, diskNames) {
+  return diskNames.filter((name) => !Object.hasOwn(lock.skills, name)).sort();
+}
+
+async function listProjectAuthoredSkills(skillsRoot) {
+  const { lock } = await loadLock(skillsRoot);
+  const diskNames = await readdir(join(skillsRoot, SKILLS_DIRECTORY));
+  return projectAuthoredNames(lock, diskNames);
+}
+
+function projectAuthoredPathsFor(repositoryRoot, skillsRoot, names) {
+  const [skillsDirectory] = scopedPathsFor(repositoryRoot, skillsRoot);
+  return names.map((name) => `${skillsDirectory}/${name}`);
 }
 
 function parseChangedPaths(repositoryRoot) {
@@ -478,7 +494,10 @@ export async function refreshProjectSkills(options, dependencies = {}) {
   const after = await inspectInventory(skillsRoot, {
     normalizeHashes: options.normalizeLockHashes,
   });
-  if (JSON.stringify(before.names) !== JSON.stringify(after.names)) {
+  if (
+    JSON.stringify(before.names) !== JSON.stringify(after.names) ||
+    JSON.stringify(before.projectAuthored) !== JSON.stringify(after.projectAuthored)
+  ) {
     throw new Error(
       "Automated refresh changed the project skill inventory; migrate additions, deletions, or renames manually from source evidence",
     );
@@ -501,6 +520,17 @@ export async function refreshProjectSkills(options, dependencies = {}) {
   if (outsideScope.length > 0) {
     throw new Error(
       `Skills refresh changed files outside its generated scope: ${outsideScope.join(", ")}`,
+    );
+  }
+  const projectAuthoredPaths = projectAuthoredPathsFor(
+    repositoryRoot, skillsRoot, before.projectAuthored,
+  );
+  const projectAuthoredChanges = changedPaths.filter((path) =>
+    isScopedPath(path, projectAuthoredPaths),
+  );
+  if (projectAuthoredChanges.length > 0) {
+    throw new Error(
+      `Skills refresh changed project-authored skills: ${projectAuthoredChanges.join(", ")}`,
     );
   }
   const changed = changedPaths.length > 0;
@@ -551,19 +581,33 @@ export async function publishProjectSkills(options) {
       `Publish checkout does not match refresh base: expected ${metadata.baseSha}, received ${currentSha}`,
     );
   }
+  const projectAuthored = await listProjectAuthoredSkills(skillsRoot);
+  const projectAuthoredPaths = projectAuthoredPathsFor(
+    repositoryRoot, skillsRoot, projectAuthored,
+  );
   git(repositoryRoot, [
     "apply", "--index", "--binary", join(artifactDirectory, "skills-update.patch"),
   ]);
-  const outsideScope = parseChangedPaths(repositoryRoot).filter(
+  const appliedPaths = parseChangedPaths(repositoryRoot);
+  const outsideScope = appliedPaths.filter(
     (path) => !isScopedPath(path, scopedPaths),
   );
   if (outsideScope.length > 0) {
     throw new Error(`Artifact changed files outside its generated scope: ${outsideScope.join(", ")}`);
   }
+  const projectAuthoredChanges = appliedPaths.filter((path) =>
+    isScopedPath(path, projectAuthoredPaths),
+  );
+  if (projectAuthoredChanges.length > 0) {
+    throw new Error(`Artifact changed project-authored skills: ${projectAuthoredChanges.join(", ")}`);
+  }
   if (git(repositoryRoot, ["write-tree"]).stdout.trim() !== metadata.tree) {
     throw new Error("Published tree does not match the snapshot produced by refresh");
   }
-  await inspectInventory(skillsRoot);
+  const published = await inspectInventory(skillsRoot);
+  if (JSON.stringify(published.projectAuthored) !== JSON.stringify(projectAuthored)) {
+    throw new Error("Artifact changed the project-authored skill inventory");
+  }
   // The verified tree is now a local Git object. Restore the base before switching branches.
   git(repositoryRoot, [
     "restore", "--source=HEAD", "--staged", "--worktree", "--", ...scopedPaths,
@@ -591,7 +635,9 @@ export async function publishProjectSkills(options) {
       .split("\0")
       .filter(Boolean);
     const foreignPaths = ownedPaths.filter(
-      (path) => !isScopedPath(path, scopedPaths),
+      (path) =>
+        !isScopedPath(path, scopedPaths) ||
+        isScopedPath(path, projectAuthoredPaths),
     );
     if (foreignPaths.length > 0) {
       throw new Error(
@@ -602,8 +648,10 @@ export async function publishProjectSkills(options) {
   } else {
     git(repositoryRoot, ["switch", "--create", options.branch, metadata.baseSha]);
   }
+  // The branch keeps its own project-authored content, so main's edits never enter the PR.
   git(repositoryRoot, [
     "restore", `--source=${metadata.tree}`, "--staged", "--worktree", "--", ...scopedPaths,
+    ...projectAuthoredPaths.map((path) => `:(exclude,literal)${path}`),
   ]);
 
   const hasCommit =

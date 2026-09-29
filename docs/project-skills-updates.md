@@ -23,22 +23,26 @@ files cannot appear in its diff.
 The read-only refresh job:
 
 1. Requires a clean checkout and a canonical, non-symlinked skills root.
-2. Verifies that lock entries and `.agents/skills/<name>` directories have the
-   same inventory, safe source paths, and exact content hashes.
+2. Verifies that every lock entry has its `.agents/skills/<name>` directory,
+   a safe source path, and an exact content hash. A directory the lock does not
+   list is project-authored: the workflow keeps it and never refreshes it.
 3. Runs `skills update --project --yes` at the configured project root.
 4. Rejects inventory additions, deletions, renames, same-name source identity
    changes, degraded upstream-deletion checks, blocked sources, hash mismatches,
-   and changes outside `.agents/skills` plus `skills-lock.json`.
+   changes to project-authored skills, and changes outside `.agents/skills`
+   plus `skills-lock.json`.
 5. Creates a binary Git patch through an alternate index, so new untracked
    generated files are included without staging the caller checkout.
 6. Uploads the patch, exact base SHA, and Git tree ID as a one-day artifact.
 
 The separately permissioned publish job downloads that artifact, checks out the
-exact base SHA, applies the patch, rejects changes outside the configured scope,
-and checks the resulting Git tree ID. This covers file contents, paths, modes,
-and the lockfile without maintaining a second hashing format. It then verifies
-any existing automation branch owns only the generated paths, restores the
-validated skill snapshot there, and pushes a new commit when its content differs.
+exact base SHA, applies the patch, rejects changes outside the configured scope
+or inside a project-authored skill, and checks the resulting Git tree ID. This
+covers file contents, paths, modes, and the lockfile without maintaining a
+second hashing format. It then verifies
+any existing automation branch owns only the generated paths and no
+project-authored skill, restores the validated skill snapshot there except the
+project-authored skills, and pushes a new commit when its content differs.
 An unchanged rerun reuses the existing commit. It creates or updates a draft PR.
 It uses no force push and has no merge operation. The publish job declares `actions: read` as its explicit
 artifact-read capability. The default same-run artifact transport also uses
