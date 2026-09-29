@@ -117,6 +117,15 @@
    "text": "**Included review availability:** This review used your included allowance. 0 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 1 review per hour.",
    "remaining": 0,
    "allowance": 1
+  },
+  {
+   "repo": "GocciaScript",
+   "pr": 1238,
+   "reviewId": 5137429643,
+   "submittedAt": "2026-09-08T04:50:39Z",
+   "text": "**Included review availability:** Your plan provides up to 1 included review per hour; 0 remain after this review.",
+   "remaining": 0,
+   "allowance": 1
   }
  ],
  "notices": [
@@ -163,7 +172,7 @@
    "commentId": 5846463678,
    "createdAt": "2026-09-26T12:58:55Z",
    "updatedAt": "2026-09-26T22:07:33Z",
-   "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review paused by coderabbit.ai -->\n> ## Reviews paused\n> - `@coderabbitai resume` to resume automatic reviews.\n> - `@coderabbitai review` to trigger a single review.\n<!-- end of auto-generated comment: review paused by coderabbit.ai -->\n**Run ID**: `887fe3d4-0da8-46c6-91c7-10a60438734a`\n**Included review availability:** This review used your included allowance. 2 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+   "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review paused by coderabbit.ai -->\n> ## Reviews paused\n> - `@coderabbitai resume` to resume automatic reviews.\n> - `@coderabbitai review` to trigger a single review.\n<!-- end of auto-generated comment: review paused by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `887fe3d4-0da8-46c6-91c7-10a60438734a`\n**Included review availability:** This review used your included allowance. 2 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
   },
   {
    "kind": "summary-review-skipped",
@@ -284,11 +293,11 @@
       },
       {
        "at": "2026-08-22T16:21:45Z",
-       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n**Run ID**: `feefd8af-05c6-4843-9e13-4e58b57e5dcc`\n**Included review availability:** 2 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 6 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `feefd8af-05c6-4843-9e13-4e58b57e5dcc`\n**Included review availability:** 2 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 6 reviews per hour.\n<!-- recent_review_end -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
       },
       {
        "at": "2026-08-22T16:23:07Z",
-       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `0c20139c-dea8-4e8e-96e6-61984e0c7512`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n**Run ID**: `feefd8af-05c6-4843-9e13-4e58b57e5dcc`\n**Included review availability:** 2 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 6 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `0c20139c-dea8-4e8e-96e6-61984e0c7512`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `feefd8af-05c6-4843-9e13-4e58b57e5dcc`\n**Included review availability:** 2 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 6 reviews per hour.\n<!-- recent_review_end -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
       },
       {
        "at": "2026-08-22T16:25:50Z",
@@ -342,11 +351,11 @@
       },
       {
        "at": "2026-08-22T16:45:27Z",
-       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n**Run ID**: `745c1c7b-6783-4ce9-b9dc-71af96e19652`\n**Limit details:** You’ve used all 5 included reviews currently available. Your 50 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- This is an auto-generated comment: all tool run failures by coderabbit.ai -->\n<!-- end of auto-generated comment: all tool run failures by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `745c1c7b-6783-4ce9-b9dc-71af96e19652`\n**Limit details:** You’ve used all 5 included reviews currently available. Your 50 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<!-- This is an auto-generated comment: all tool run failures by coderabbit.ai -->\n<!-- end of auto-generated comment: all tool run failures by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
       },
       {
        "at": "2026-08-22T16:46:21Z",
-       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `b72a297c-4507-42b9-8263-4e4dc1ce8a7c`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n**Run ID**: `745c1c7b-6783-4ce9-b9dc-71af96e19652`\n**Limit details:** You’ve used all 5 included reviews currently available. Your 50 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `b72a297c-4507-42b9-8263-4e4dc1ce8a7c`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `745c1c7b-6783-4ce9-b9dc-71af96e19652`\n**Limit details:** You’ve used all 5 included reviews currently available. Your 50 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
       },
       {
        "at": "2026-08-22T16:51:12Z",
@@ -458,15 +467,15 @@
       },
       {
        "at": "2026-08-22T17:55:39Z",
-       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n**Run ID**: `fb84c3f6-b6cc-4a09-be22-81859babbc6a`\n**Included review availability:** 0 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `fb84c3f6-b6cc-4a09-be22-81859babbc6a`\n**Included review availability:** 0 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
       },
       {
        "at": "2026-08-22T17:56:27Z",
-       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `b27b478b-bb7c-41d8-a89a-2f9ac80433db`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n**Run ID**: `fb84c3f6-b6cc-4a09-be22-81859babbc6a`\n**Included review availability:** 0 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `b27b478b-bb7c-41d8-a89a-2f9ac80433db`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `fb84c3f6-b6cc-4a09-be22-81859babbc6a`\n**Included review availability:** 0 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
       },
       {
        "at": "2026-08-22T17:57:40Z",
-       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n**Run ID**: `b27b478b-bb7c-41d8-a89a-2f9ac80433db`\n**Limit details:** You’ve used all 5 included reviews currently available. Your 53 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `b27b478b-bb7c-41d8-a89a-2f9ac80433db`\n**Limit details:** You’ve used all 5 included reviews currently available. Your 53 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
       }
      ]
     },
@@ -491,11 +500,11 @@
       },
       {
        "at": "2026-08-22T18:17:52Z",
-       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n**Run ID**: `bc0c4515-374e-47e6-ac59-7d69886c9517`\n**Included review availability:** 0 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `bc0c4515-374e-47e6-ac59-7d69886c9517`\n**Included review availability:** 0 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
       },
       {
        "at": "2026-08-22T18:18:30Z",
-       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `0effdda6-686b-4ea8-92fd-7b1587eb46f2`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n**Run ID**: `bc0c4515-374e-47e6-ac59-7d69886c9517`\n**Included review availability:** 0 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `0effdda6-686b-4ea8-92fd-7b1587eb46f2`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `bc0c4515-374e-47e6-ac59-7d69886c9517`\n**Included review availability:** 0 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
       },
       {
        "at": "2026-08-22T18:25:11Z",
@@ -1112,6 +1121,134 @@
     }
    ]
   },
+  "2026-09-26": {
+   "comments": [
+    {
+     "repo": "GocciaScript",
+     "pr": 1262,
+     "id": 5846463678,
+     "login": "coderabbitai",
+     "createdAt": "2026-09-26T12:58:55Z",
+     "versions": [
+      {
+       "at": "2026-09-26T15:47:27Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `b19629b4-7920-4d52-82ba-f9a3e1552f53`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-26T15:57:48Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: all tool run failures by coderabbit.ai -->\n<!-- end of auto-generated comment: all tool run failures by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-26T17:05:28Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `f7aac9ef-0011-4466-8969-a872985d08ad`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-26T17:11:23Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `f7aac9ef-0011-4466-8969-a872985d08ad`\n**Included review availability:** This review used your included allowance. 4 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-26T20:52:53Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `22c0208d-2ade-4973-b400-e7b91f1392ec`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `f7aac9ef-0011-4466-8969-a872985d08ad`\n**Included review availability:** This review used your included allowance. 4 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-26T20:59:31Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `22c0208d-2ade-4973-b400-e7b91f1392ec`\n**Included review availability:** This review used your included allowance. 4 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-26T21:32:55Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `bf186264-09ee-404b-8681-8ebc44e09775`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `22c0208d-2ade-4973-b400-e7b91f1392ec`\n**Included review availability:** This review used your included allowance. 4 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-26T21:37:34Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1261,
+     "id": 5846369639,
+     "login": "coderabbitai",
+     "createdAt": "2026-09-26T12:44:00Z",
+     "versions": [
+      {
+       "at": "2026-09-26T15:52:32Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `a36dc847-6bc1-44d0-8db6-780f3f6bba97`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-26T15:53:34Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-26T15:54:06Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `0acb334d-469e-47a7-935e-28493b7cefb7`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-26T15:55:14Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-26T15:56:01Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `4af8fd28-b40c-47cf-990c-97f1bbffec00`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-26T15:56:48Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-26T15:57:38Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `6ea13ef4-726a-4627-a049-b0ce39fbdff6`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-26T16:03:45Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-26T17:07:38Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `c3400e8f-bf9c-4087-9d09-4f3f82209b46`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      },
+      {
+       "at": "2026-09-26T17:12:10Z",
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+      }
+     ]
+    }
+   ],
+   "reviews": [
+    {
+     "repo": "GocciaScript",
+     "pr": 1262,
+     "id": 5326474234,
+     "state": "COMMENTED",
+     "submittedAt": "2026-09-26T15:57:51Z",
+     "body": "**Actionable comments posted: 2**\n**Run ID**: `b19629b4-7920-4d52-82ba-f9a3e1552f53`\n**Included review availability:** This review used your included allowance. 4 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1261,
+     "id": 5326488570,
+     "state": "COMMENTED",
+     "submittedAt": "2026-09-26T16:03:48Z",
+     "body": "**Actionable comments posted: 1**\n**Run ID**: `6ea13ef4-726a-4627-a049-b0ce39fbdff6`\n**Included review availability:** This review used your included allowance. 3 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1261,
+     "id": 5326690238,
+     "state": "COMMENTED",
+     "submittedAt": "2026-09-26T17:12:12Z",
+     "body": "**Run ID**: `c3400e8f-bf9c-4087-9d09-4f3f82209b46`\n**Included review availability:** This review used your included allowance. 3 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    },
+    {
+     "repo": "GocciaScript",
+     "pr": 1262,
+     "id": 5327545955,
+     "state": "COMMENTED",
+     "submittedAt": "2026-09-26T21:37:37Z",
+     "body": "**Actionable comments posted: 1**\n**Run ID**: `bf186264-09ee-404b-8681-8ebc44e09775`\n**Included review availability:** This review used your included allowance. 3 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- This is an auto-generated comment by CodeRabbit for review status -->"
+    }
+   ]
+  },
   "2026-09-28": {
    "comments": [
     {
@@ -1123,7 +1260,7 @@
      "versions": [
       {
        "at": "2026-09-28T16:06:31Z",
-       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `d1839796-22cf-4dba-91ad-616c506d0069`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n**Run ID**: `34cde6b5-c618-4551-b757-63538e19a379`\n**Limit details:** You’ve used all 2 included reviews currently available. Your 85 included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `d1839796-22cf-4dba-91ad-616c506d0069`\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `34cde6b5-c618-4551-b757-63538e19a379`\n**Limit details:** You’ve used all 2 included reviews currently available. Your 85 included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.\n<!-- recent_review_end -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
       },
       {
        "at": "2026-09-28T16:16:11Z",
@@ -1169,7 +1306,7 @@
       },
       {
        "at": "2026-09-28T17:53:41Z",
-       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n**Run ID**: `907ba22b-ad1d-4142-89f0-531a5aa33269`\n**Included review availability:** This review used your included allowance. 0 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `907ba22b-ad1d-4142-89f0-531a5aa33269`\n**Included review availability:** This review used your included allowance. 0 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.\n<!-- recent_review_end -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
       }
      ]
     },
@@ -1190,7 +1327,7 @@
       },
       {
        "at": "2026-09-28T19:01:17Z",
-       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n**Run ID**: `c1e82bf4-1bca-432e-a04f-7f6956f1acbb`\n**Included review availability:** This review used your included allowance. 1 included review remains after this review. Your included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
+       "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\n**Run ID**: `c1e82bf4-1bca-432e-a04f-7f6956f1acbb`\n**Included review availability:** This review used your included allowance. 1 included review remains after this review. Your included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.\n<!-- recent_review_end -->\n<sub>Comment `@coderabbitai help` to get the list of available commands.</sub>"
       }
      ]
     }
@@ -1214,5 +1351,102 @@
     }
    ]
   }
+ },
+ "allowanceLines": {
+  "about": "Every distinct line that mentions an included review, review availability, limit details, reviews per hour, current availability or reviews remaining, from all CodeRabbit comment versions (GraphQL userContentEdits plus current bodies) and review bodies on every pull request in frostney/GocciaScript (894) and frostney/homebrew-tap (20), sampled 2026-09-29. Walkthrough table rows are omitted.",
+  "sample": {
+   "pullRequests": 914,
+   "comments": 1175,
+   "commentVersions": 7701,
+   "reviewBodies": 1368
+  },
+  "lines": [
+   "**Included review availability:** 0 reviews are currently available. Based on recent review activity, included reviews refill at 1 per hour.",
+   "**Included review availability:** 0 reviews are currently available. Based on recent review activity, included reviews refill at 3 per hour.",
+   "**Included review availability:** 0 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 4 reviews per hour.",
+   "**Included review availability:** 0 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.",
+   "**Included review availability:** 0 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 8 reviews per hour.",
+   "**Included review availability:** 1 review is currently available. Based on recent review activity, included reviews refill at 2 per hour.",
+   "**Included review availability:** 1 review is currently available. Based on recent review activity, included reviews refill at 3 per hour.",
+   "**Included review availability:** 1 review is currently available. Your included PR review attempts over the past 7 days set your current allowance at 10 reviews per hour.",
+   "**Included review availability:** 1 review is currently available. Your included PR review attempts over the past 7 days set your current allowance at 4 reviews per hour.",
+   "**Included review availability:** 1 review is currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.",
+   "**Included review availability:** 1 review is currently available. Your included PR review attempts over the past 7 days set your current allowance at 6 reviews per hour.",
+   "**Included review availability:** 2 reviews are currently available. Based on recent review activity, included reviews refill at 3 per hour.",
+   "**Included review availability:** 2 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 10 reviews per hour.",
+   "**Included review availability:** 2 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 3 reviews per hour.",
+   "**Included review availability:** 2 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 4 reviews per hour.",
+   "**Included review availability:** 2 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.",
+   "**Included review availability:** 2 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 6 reviews per hour.",
+   "**Included review availability:** 3 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 10 reviews per hour.",
+   "**Included review availability:** 3 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 4 reviews per hour.",
+   "**Included review availability:** 3 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.",
+   "**Included review availability:** 3 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 6 reviews per hour.",
+   "**Included review availability:** 4 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 10 reviews per hour.",
+   "**Included review availability:** 4 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.",
+   "**Included review availability:** 4 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 6 reviews per hour.",
+   "**Included review availability:** 5 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 10 reviews per hour.",
+   "**Included review availability:** 5 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 6 reviews per hour.",
+   "**Included review availability:** 5 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 8 reviews per hour.",
+   "**Included review availability:** 6 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 10 reviews per hour.",
+   "**Included review availability:** 7 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 10 reviews per hour.",
+   "**Included review availability:** 7 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 8 reviews per hour.",
+   "**Included review availability:** 8 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 10 reviews per hour.",
+   "**Included review availability:** 9 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 10 reviews per hour.",
+   "**Included review availability:** This review used your included allowance. 0 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 1 review per hour.",
+   "**Included review availability:** This review used your included allowance. 0 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.",
+   "**Included review availability:** This review used your included allowance. 0 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 3 reviews per hour.",
+   "**Included review availability:** This review used your included allowance. 1 included review remains after this review. Your included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.",
+   "**Included review availability:** This review used your included allowance. 1 included review remains after this review. Your included PR review attempts over the past 7 days set your current allowance at 3 reviews per hour.",
+   "**Included review availability:** This review used your included allowance. 1 included review remains after this review. Your included PR review attempts over the past 7 days set your current allowance at 4 reviews per hour.",
+   "**Included review availability:** This review used your included allowance. 1 included review remains after this review. Your included PR review attempts over the past 7 days set your current allowance at 8 reviews per hour.",
+   "**Included review availability:** This review used your included allowance. 2 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 3 reviews per hour.",
+   "**Included review availability:** This review used your included allowance. 2 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 4 reviews per hour.",
+   "**Included review availability:** This review used your included allowance. 2 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.",
+   "**Included review availability:** This review used your included allowance. 3 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 4 reviews per hour.",
+   "**Included review availability:** This review used your included allowance. 3 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.",
+   "**Included review availability:** This review used your included allowance. 4 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.",
+   "**Included review availability:** Your plan provides up to 1 included review per hour; 0 remain after this review.",
+   "**Limit details:** You’ve used all 2 included reviews currently available under your plan. You completed 80 included PR reviews in the past 7 days; at that activity level, included reviews refill at 2 reviews per hour.",
+   "**Limit details:** You’ve used all 2 included reviews currently available. Your 82 included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.",
+   "**Limit details:** You’ve used all 2 included reviews currently available. Your 83 included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.",
+   "**Limit details:** You’ve used all 2 included reviews currently available. Your 84 included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.",
+   "**Limit details:** You’ve used all 2 included reviews currently available. Your 85 included PR review attempts over the past 7 days set your current allowance at 2 reviews per hour.",
+   "**Limit details:** You’ve used all 3 included reviews currently available under your plan. You completed 72 included PR reviews in the past 7 days; at that activity level, included reviews refill at 3 reviews per hour.",
+   "**Limit details:** You’ve used all 3 included reviews currently available under your plan. You completed 73 included PR reviews in the past 7 days; at that activity level, included reviews refill at 3 reviews per hour.",
+   "**Limit details:** You’ve used all 4 included reviews currently available. Your 67 included PR review attempts over the past 7 days set your current allowance at 4 reviews per hour.",
+   "**Limit details:** You’ve used all 5 included reviews currently available. Your 50 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.",
+   "**Limit details:** You’ve used all 5 included reviews currently available. Your 51 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.",
+   "**Limit details:** You’ve used all 5 included reviews currently available. Your 52 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.",
+   "**Limit details:** You’ve used all 5 included reviews currently available. Your 53 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.",
+   "**Limit details:** You’ve used all 5 included reviews currently available. Your 54 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.",
+   "**Limit details:** You’ve used all 5 included reviews currently available. Your 55 included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.",
+   "**Limit details:** You’ve used the included review currently available.",
+   "**Limit details:** You’ve used the included review currently available. Your 90 included PR review attempts over the past 7 days set your current allowance at 1 review per hour.",
+   "**Limit details:** You’ve used the included review currently available. Your 91 included PR review attempts over the past 7 days set your current allowance at 1 review per hour.",
+   "> **Limit details:** You’ve used all 1 included review currently available under your plan. You completed 97 included PR reviews in the past 7 days; at that activity level, included reviews refill at 1 review per hour.",
+   "> **Limit details:** You’ve used all 1 included review currently available under your plan. You completed 98 included PR reviews in the past 7 days; at that activity level, included reviews refill at 1 review per hour.",
+   "> CodeRabbit enforces per-developer PR review limits for each organization. Most developers receive the normal plan review availability.",
+   "> Enable **[usage-based reviews](https://app.coderabbit.ai/settings/billing?tab=usage&orgId=8e9dac5c-19d9-439e-a9aa-f14bf25ec0e2)** in Billing to review now. Otherwise, wait until the next included review is available.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your current included review allowance is based on your included PR review attempts over the past 7 days. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 12 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your current included review allowance is based on your included PR review attempts over the past 7 days. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 15 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your current included review allowance is based on your included PR review attempts over the past 7 days. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 2 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your current included review allowance is based on your included PR review attempts over the past 7 days. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 5 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 13 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 25 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 26 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 29 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 30 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 44 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 47 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 48 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 49 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 52 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 54 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 55 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 56 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 57 minutes.",
+   "Your included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). Your recent PR review activity is in the 95th percentile or higher among CodeRabbit users, so adaptive limits apply. This review may still proceed through usage-based billing if eligible. Your next included review will be available in 8 minutes."
+  ]
  }
 }
