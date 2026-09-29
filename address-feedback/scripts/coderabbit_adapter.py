@@ -96,10 +96,13 @@ REFUSED_BLOCK = re.compile(r"rate limited by coderabbit", re.IGNORECASE)
 RECENT_REVIEW = re.compile(r"<!-- recent_review_start -->([\s\S]*?)<!-- recent_review_end -->")
 NO_ACTIONABLE = re.compile(r"No actionable comments were generated in the recent review", re.IGNORECASE)
 REVIEWED_RANGE = re.compile(r"between ([0-9a-f]{40}) and ([0-9a-f]{40})\b")
-# While any of these blocks shows, the summary does not report a settled review.
+# While either block shows, the summary does not report a settled review. A
+# "Reviews paused" or "Review skipped" block is written beside a finished
+# review (auto-pause, or "no new commits") and does not unsettle it: a skipped
+# or paused new head leaves the recent block naming the previous head.
 UNSETTLED_BLOCK = re.compile(
-    r"auto-generated comment: (?:review in progress|rate limited|skip review|review paused)"
-    r" by coderabbit|Currently processing new changes",
+    r"auto-generated comment: (?:review in progress|rate limited) by coderabbit"
+    r"|Currently processing new changes",
     re.IGNORECASE,
 )
 # A successful check or status that reports a skipped or paused review is not
@@ -185,6 +188,7 @@ def coderabbit_check_for_head(gh: Gh, repo: str, head: str) -> dict[str, Any]:
     surfaces rateLimited so callers do not count a rate-limited pass as
     codeRabbitCheckSuccess.
     """
+    declined: dict[str, Any] | None = None
     run_pages = gh.rest_pages(f"repos/{repo}/commits/{head}/check-runs?per_page=100")
     for run in page_entries(run_pages, "check_runs"):
         name = str(run.get("name") or "")
@@ -207,7 +211,8 @@ def coderabbit_check_for_head(gh: Gh, repo: str, head: str) -> dict[str, Any]:
                     "rateLimited": True,
                 }
             if any(INCOMPLETE_CHECK.search(part) for part in (title, summary, text)):
-                return {"state": "INCOMPLETE", "source": "check-run", "name": name, "head": head}
+                declined = declined or {"state": "INCOMPLETE", "source": "check-run", "name": name, "head": head}
+                continue
             return {
                 "state": "SUCCESS",
                 "source": "check-run",
@@ -216,14 +221,21 @@ def coderabbit_check_for_head(gh: Gh, repo: str, head: str) -> dict[str, Any]:
             }
 
     statuses = rest_items(gh, f"repos/{repo}/commits/{head}/statuses?per_page=100")
-    seen_contexts: set[str] = set()
-    for status in statuses:
+    # Newest first. A skipped or paused success says CodeRabbit declined to
+    # review the commit again, not that its review is undone, so it is passed
+    # over; the newest other status decides. Only declines means incomplete.
+    newest_first = sorted(
+        (status for status in statuses if is_coderabbit_check_name(str(status.get("context") or ""))),
+        key=lambda status: str(status.get("created_at") or ""),
+        reverse=True,
+    )
+    for status in newest_first:
         context = str(status.get("context") or "")
-        if not is_coderabbit_check_name(context) or context in seen_contexts:
-            continue
-        seen_contexts.add(context)
         state = str(status.get("state") or "").upper()
         description = str(status.get("description") or "")
+        if state == "SUCCESS" and INCOMPLETE_CHECK.search(description):
+            declined = declined or {"state": "INCOMPLETE", "source": "status", "name": context, "head": head}
+            continue
         if state == "SUCCESS" and check_text_rate_limited(description):
             return {
                 "state": "RATE_LIMITED",
@@ -232,8 +244,6 @@ def coderabbit_check_for_head(gh: Gh, repo: str, head: str) -> dict[str, Any]:
                 "head": head,
                 "rateLimited": True,
             }
-        if state == "SUCCESS" and INCOMPLETE_CHECK.search(description):
-            return {"state": "INCOMPLETE", "source": "status", "name": context, "head": head}
         return {
             "state": state or None,
             "source": "status",
@@ -241,7 +251,7 @@ def coderabbit_check_for_head(gh: Gh, repo: str, head: str) -> dict[str, Any]:
             "head": head,
         }
 
-    return {"state": None, "source": None, "name": None, "head": head}
+    return declined or {"state": None, "source": None, "name": None, "head": head}
 
 def repo_parts(repo: str) -> tuple[str, str]:
     pieces = repo.split("/", 1)
@@ -430,22 +440,60 @@ def clean_review_in(body: str) -> dict[str, Any] | None:
     return {"base": reviewed.group(1), "head": reviewed.group(2), "runId": run.group(1) if run else None}
 
 
-def statement_first_seen(gh: Gh, item: dict[str, Any], key: tuple[str, Any]) -> float | None:
-    """When a comment first showed this (statement, run), from its edit history."""
+def bot_review_runs(reviews: list[dict[str, Any]]) -> dict[str, float]:
+    """The earliest submission of each Run ID among CodeRabbit's reviews.
 
-    def shows(body: str) -> bool:
-        shown = statement_in(body)
-        return bool(shown) and (shown["line"], shown["runId"]) == key
+    A PENDING review is not submitted, so it dates nothing.
+    """
+    runs: dict[str, float] = {}
+    for review in reviews:
+        run = RUN_ID.search(str(review.get("body") or ""))
+        if not is_bot(review) or review.get("state") == "PENDING" or not run:
+            continue
+        at = parse_timestamp(review.get("submitted_at"), "review submitted_at")
+        runs[run.group(1)] = min(runs.get(run.group(1), at), at)
+    return runs
 
-    return first_shown(gh, item, shows)
+
+def date_shown(
+    gh: Gh,
+    item: dict[str, Any],
+    review_runs: dict[str, float],
+    run_id: str | None,
+    shows: Callable[[str], bool],
+) -> tuple[float | None, str]:
+    """When CodeRabbit made what a comment shows, and how that was established.
+
+    In order: the review object of the same Run ID ("run"), a comment never
+    edited ("unedited"), or the first edit that still showed it
+    ("edit-history"). A summary edited in place keeps showing old content, so
+    its last edit never dates it. Otherwise the time is unknown ("undated").
+    """
+    updated = parse_timestamp(item.get("updated_at"), "comment updated_at")
+    if run_id and run_id in review_runs:
+        return min(review_runs[run_id], updated), "run"
+    if item.get("created_at") == item.get("updated_at"):
+        return updated, "unedited"
+    first = first_shown(gh, item, shows)
+    return first, "edit-history" if first is not None else "undated"
+
+
+def statement_key(shown: dict[str, Any] | None) -> tuple[str, Any] | None:
+    return (shown["line"], shown["runId"]) if shown else None
+
+
+def clean_key(shown: dict[str, Any] | None) -> tuple[str, Any] | None:
+    return (shown["head"], shown["runId"]) if shown else None
 
 
 def first_shown(gh: Gh, item: dict[str, Any], shows: Callable[[str], bool]) -> float | None:
     """When a comment first showed what `shows` accepts, from its edit history.
 
-    Walks back from the newest edit while each version still shows it.
-    Returns None when the history cannot be read or does not reach the first
-    version that showed it.
+    Reads the whole history and returns the earliest version that shows it.
+    What `shows` matches is keyed by Run ID, so a later reappearance, for
+    example after an in-progress block for another push came and went, is
+    the same review and keeps its first time. Returns None when the history
+    cannot be read in full.
     """
     node_id = item.get("node_id")
     if not isinstance(node_id, str) or not node_id:
@@ -466,9 +514,8 @@ def first_shown(gh: Gh, item: dict[str, Any], shows: Callable[[str], bool]) -> f
             reverse=True,
         )
         for version in versions:
-            if not shows(str(version.get("diff") or "")):
-                return first_seen
-            first_seen = parse_timestamp(version.get("editedAt"), "edit editedAt")
+            if shows(str(version.get("diff") or "")):
+                first_seen = parse_timestamp(version.get("editedAt"), "edit editedAt")
         page = edits.get("pageInfo") or {}
         if not page.get("hasNextPage"):
             return first_seen
@@ -504,7 +551,7 @@ def scan_allowance(
     for repo in repos:
         repo_parts(repo)
         prs: set[int] = set()
-        review_runs: dict[str, float] = {}
+        repo_reviews: list[dict[str, Any]] = []
         for item in rest_items(gh, recent_comments_endpoint(repo, since)):
             if not is_bot(item):
                 continue
@@ -518,6 +565,7 @@ def scan_allowance(
             reviews = optional_items(
                 lambda: rest_items(gh, f"repos/{repo}/pulls/{pr}/reviews?per_page=100")
             )
+            repo_reviews.extend(reviews)
             for item in reviews:
                 body = str(item.get("body") or "")
                 run = RUN_ID.search(body)
@@ -525,7 +573,6 @@ def scan_allowance(
                     continue
                 submitted = parse_timestamp(item.get("submitted_at"), "review submitted_at")
                 note_run(repo, run.group(1), submitted)
-                review_runs[run.group(1)] = min(review_runs.get(run.group(1), submitted), submitted)
                 found = statement_in(body)
                 if found is not None:
                     statements.append(
@@ -540,16 +587,18 @@ def scan_allowance(
                             "dating": "review",
                         }
                     )
+        review_runs = bot_review_runs(repo_reviews)
         for item, found in [entry for entry in pending if entry[1]["repo"] == repo]:
             updated = parse_timestamp(item.get("updated_at"), "comment updated_at")
             run_id = found["runId"]
-            if run_id and run_id in review_runs:
-                stated, dating = min(review_runs[run_id], updated), "run"
-            elif item.get("created_at") == item.get("updated_at"):
-                stated, dating = updated, "unedited"
-            else:
-                stated = statement_first_seen(gh, item, (found["line"], run_id))
-                dating = "edit-history" if stated is not None else "undated"
+            key = (found["line"], run_id)
+            stated, dating = date_shown(
+                gh,
+                item,
+                review_runs,
+                run_id,
+                lambda body, key=key: statement_key(statement_in(body)) == key,
+            )
             statements.append(
                 found
                 | {
@@ -905,32 +954,20 @@ def exact_head_clean_review(
     the first edit that showed it) and must not predate the head's push. A
     review that cannot be dated does not count.
     """
-    review_runs: dict[str, float] = {}
-    for review in reviews:
-        run = RUN_ID.search(str(review.get("body") or ""))
-        if is_bot(review) and run and isinstance(review.get("submitted_at"), str):
-            at = parse_timestamp(review["submitted_at"], "review submitted_at")
-            review_runs[run.group(1)] = min(review_runs.get(run.group(1), at), at)
+    review_runs = bot_review_runs(reviews)
     found: list[dict[str, Any]] = []
     for item in bot_comments:
         clean = clean_review_in(str(item.get("body") or ""))
         if not clean or clean["head"] != head:
             continue
-        updated = parse_timestamp(item.get("updated_at"), "comment updated_at")
-        key = (clean["head"], clean["runId"])
-        if clean["runId"] and clean["runId"] in review_runs:
-            reviewed, dating = min(review_runs[clean["runId"]], updated), "run"
-        elif item.get("created_at") == item.get("updated_at"):
-            reviewed, dating = updated, "unedited"
-        else:
-            reviewed = first_shown(
-                gh,
-                item,
-                lambda body: (lambda shown: bool(shown) and (shown["head"], shown["runId"]) == key)(
-                    clean_review_in(body)
-                ),
-            )
-            dating = "edit-history"
+        key = clean_key(clean)
+        reviewed, dating = date_shown(
+            gh,
+            item,
+            review_runs,
+            clean["runId"],
+            lambda body, key=key: clean_key(clean_review_in(body)) == key,
+        )
         if reviewed is None or reviewed < pushed_epoch:
             continue
         found.append(

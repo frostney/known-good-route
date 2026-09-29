@@ -1847,7 +1847,7 @@
   ]
  },
  "cleanReviews": {
-  "about": "frostney/GocciaScript#1292 on 2026-09-29: every version of CodeRabbit's summary comment 5887035508 (GraphQL userContentEdits, trimmed to the lines the adapter reads) and the CodeRabbit commit statuses of head 29204dc135915e225fb65895f9dc65b0b13a1521, newest first.",
+  "about": "Recorded CodeRabbit summary comments (every version up to the evaluation time, from GraphQL userContentEdits, trimmed to the lines the adapter reads) and the full CodeRabbit commit-status history of each head, newest first. #1292: the #95 case. #1265, #1262, #1212: a clean review written with a 'Reviews paused' block. #1155: an 'Already reviewed' refusal with a skip block edited into the summary. #1154: a later 'Review skipped' status on a head whose review completed. pushedAt is the head's first CodeRabbit status, the earliest recorded sign of the push.",
   "1292": {
    "repo": "GocciaScript",
    "pr": 1292,
@@ -1905,6 +1905,579 @@
      "state": "pending",
      "description": "Review in progress",
      "created_at": "2026-09-29T13:35:00Z"
+    }
+   ]
+  },
+  "1265": {
+   "repo": "GocciaScript",
+   "pr": 1265,
+   "commentId": 5851970700,
+   "createdAt": "2026-09-27T02:29:13Z",
+   "head": "2c6322d024155782d7190b43f921bdd7de029afc",
+   "evaluateAt": "2026-09-27T09:54:30Z",
+   "pushedAt": "2026-09-27T09:43:07Z",
+   "versions": [
+    {
+     "at": "2026-09-27T02:29:13Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Draft PR not reviewed\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-09-27T07:47:34Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `2c1656f9-53a6-48c0-9f16-b682a2021f0b`\n> Reviewing files that changed from the base of the PR and between b9e643c0ae1dbd7fc103783878c2675a262d1189 and 67c78e2b6ec4ab70f63505ab1224101f9852691c.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-09-27T07:55:43Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- change_assessment_commit:\"67c78e2b6ec4ab70f63505ab1224101f9852691c\" -->\n<!-- This is an auto-generated comment: all tool run failures by coderabbit.ai -->\n<!-- end of auto-generated comment: all tool run failures by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-09-27T07:55:50Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- change_assessment_commit:\"67c78e2b6ec4ab70f63505ab1224101f9852691c\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"67c78e2b6ec4ab70f63505ab1224101f9852691c\",\"coveredCommitId\":\"67c78e2b6ec4ab70f63505ab1224101f9852691c\",\"kind\":\"reviewed\"} -->\n<!-- This is an auto-generated comment: all tool run failures by coderabbit.ai -->\n<!-- end of auto-generated comment: all tool run failures by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-09-27T07:56:19Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `6e607f5b-519e-4221-8ee1-813c36a1bda6`\n> Reviewing files that changed from the base of the PR and between 67c78e2b6ec4ab70f63505ab1224101f9852691c and 0c8af01746d2aa5c460084d34d4d3f0a6975f822.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- change_assessment_commit:\"67c78e2b6ec4ab70f63505ab1224101f9852691c\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"67c78e2b6ec4ab70f63505ab1224101f9852691c\",\"coveredCommitId\":\"67c78e2b6ec4ab70f63505ab1224101f9852691c\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-27T08:06:13Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `6e607f5b-519e-4221-8ee1-813c36a1bda6`\nReviewing files that changed from the base of the PR and between 67c78e2b6ec4ab70f63505ab1224101f9852691c and 0c8af01746d2aa5c460084d34d4d3f0a6975f822.\n**Included review availability:** This review used your included allowance. 2 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 4 reviews per hour.\n<!-- recent_review_end -->\n<!-- change_assessment_commit:\"0c8af01746d2aa5c460084d34d4d3f0a6975f822\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"0c8af01746d2aa5c460084d34d4d3f0a6975f822\",\"coveredCommitId\":\"0c8af01746d2aa5c460084d34d4d3f0a6975f822\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-27T08:28:12Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `455d54e0-5005-4485-a9c0-faab5186f52b`\n> Reviewing files that changed from the base of the PR and between 0c8af01746d2aa5c460084d34d4d3f0a6975f822 and 5b4f08788018f01a0c936b62a08b88c78c5e091a.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `6e607f5b-519e-4221-8ee1-813c36a1bda6`\nReviewing files that changed from the base of the PR and between 67c78e2b6ec4ab70f63505ab1224101f9852691c and 0c8af01746d2aa5c460084d34d4d3f0a6975f822.\n**Included review availability:** This review used your included allowance. 2 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 4 reviews per hour.\n<!-- recent_review_end -->\n<!-- change_assessment_commit:\"0c8af01746d2aa5c460084d34d4d3f0a6975f822\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"0c8af01746d2aa5c460084d34d4d3f0a6975f822\",\"coveredCommitId\":\"0c8af01746d2aa5c460084d34d4d3f0a6975f822\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-27T08:33:39Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- change_assessment_commit:\"5b4f08788018f01a0c936b62a08b88c78c5e091a\" -->"
+    },
+    {
+     "at": "2026-09-27T08:33:46Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- change_assessment_commit:\"5b4f08788018f01a0c936b62a08b88c78c5e091a\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"5b4f08788018f01a0c936b62a08b88c78c5e091a\",\"coveredCommitId\":\"5b4f08788018f01a0c936b62a08b88c78c5e091a\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-27T09:21:19Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `be727ed0-0f70-464c-88f6-2eb46210d255`\n> Reviewing files that changed from the base of the PR and between 5b4f08788018f01a0c936b62a08b88c78c5e091a and 6bddc38dfba18bf7a17a153877807dfde098c495.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- change_assessment_commit:\"5b4f08788018f01a0c936b62a08b88c78c5e091a\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"5b4f08788018f01a0c936b62a08b88c78c5e091a\",\"coveredCommitId\":\"5b4f08788018f01a0c936b62a08b88c78c5e091a\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-27T09:25:32Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- change_assessment_commit:\"5b4f08788018f01a0c936b62a08b88c78c5e091a\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"5b4f08788018f01a0c936b62a08b88c78c5e091a\",\"coveredCommitId\":\"5b4f08788018f01a0c936b62a08b88c78c5e091a\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-27T09:26:43Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `f8a1a93f-1a82-453d-b5df-894af86ac7b2`\n> Reviewing files that changed from the base of the PR and between 5b4f08788018f01a0c936b62a08b88c78c5e091a and 43621f9d9bf8461962300c1d84186a4dbf90aa97.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- change_assessment_commit:\"5b4f08788018f01a0c936b62a08b88c78c5e091a\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"5b4f08788018f01a0c936b62a08b88c78c5e091a\",\"coveredCommitId\":\"5b4f08788018f01a0c936b62a08b88c78c5e091a\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-27T09:33:55Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- change_assessment_commit:\"43621f9d9bf8461962300c1d84186a4dbf90aa97\" -->\n<!-- This is an auto-generated comment: all tool run failures by coderabbit.ai -->\n<!-- end of auto-generated comment: all tool run failures by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-09-27T09:34:01Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- change_assessment_commit:\"43621f9d9bf8461962300c1d84186a4dbf90aa97\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"43621f9d9bf8461962300c1d84186a4dbf90aa97\",\"coveredCommitId\":\"43621f9d9bf8461962300c1d84186a4dbf90aa97\",\"kind\":\"reviewed\"} -->\n<!-- This is an auto-generated comment: all tool run failures by coderabbit.ai -->\n<!-- end of auto-generated comment: all tool run failures by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-09-27T09:43:17Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `37c14aaf-7e7f-43ab-b767-16f99bf35d1b`\n> Reviewing files that changed from the base of the PR and between 43621f9d9bf8461962300c1d84186a4dbf90aa97 and 2c6322d024155782d7190b43f921bdd7de029afc.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- change_assessment_commit:\"43621f9d9bf8461962300c1d84186a4dbf90aa97\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"43621f9d9bf8461962300c1d84186a4dbf90aa97\",\"coveredCommitId\":\"43621f9d9bf8461962300c1d84186a4dbf90aa97\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-27T09:53:36Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review paused by coderabbit.ai -->\n> ## Reviews paused\n<!-- end of auto-generated comment: review paused by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `37c14aaf-7e7f-43ab-b767-16f99bf35d1b`\nReviewing files that changed from the base of the PR and between 43621f9d9bf8461962300c1d84186a4dbf90aa97 and 2c6322d024155782d7190b43f921bdd7de029afc.\n**Included review availability:** This review used your included allowance. 0 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 3 reviews per hour.\n<!-- recent_review_end -->\n<!-- change_assessment_commit:\"2c6322d024155782d7190b43f921bdd7de029afc\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"2c6322d024155782d7190b43f921bdd7de029afc\",\"coveredCommitId\":\"2c6322d024155782d7190b43f921bdd7de029afc\",\"kind\":\"reviewed\"} -->\n<!-- This is an auto-generated comment: all tool run failures by coderabbit.ai -->\n<!-- end of auto-generated comment: all tool run failures by coderabbit.ai -->"
+    }
+   ],
+   "statuses": [
+    {
+     "context": "CodeRabbit",
+     "state": "success",
+     "description": "Review completed",
+     "created_at": "2026-09-27T09:53:39Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "pending",
+     "description": "Review in progress",
+     "created_at": "2026-09-27T09:43:07Z"
+    }
+   ]
+  },
+  "1262": {
+   "repo": "GocciaScript",
+   "pr": 1262,
+   "commentId": 5846463678,
+   "createdAt": "2026-09-26T12:58:55Z",
+   "head": "a5cf09e388b1ca99ad5818123302fb0dd10427b8",
+   "evaluateAt": "2026-09-26T22:08:30Z",
+   "pushedAt": "2026-09-26T22:01:20Z",
+   "versions": [
+    {
+     "at": "2026-09-26T12:58:55Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Draft PR not reviewed\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-09-26T15:47:27Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `b19629b4-7920-4d52-82ba-f9a3e1552f53`\n> Reviewing files that changed from the base of the PR and between 819aa0036b49fb5652aadf3d6474f01cb0531fe0 and f2819079ba93e116db6715a96bbc6c3985de6ceb.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-09-26T15:57:48Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- change_assessment_commit:\"f2819079ba93e116db6715a96bbc6c3985de6ceb\" -->\n<!-- This is an auto-generated comment: all tool run failures by coderabbit.ai -->\n<!-- end of auto-generated comment: all tool run failures by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-09-26T15:57:55Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- change_assessment_commit:\"f2819079ba93e116db6715a96bbc6c3985de6ceb\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"f2819079ba93e116db6715a96bbc6c3985de6ceb\",\"coveredCommitId\":\"f2819079ba93e116db6715a96bbc6c3985de6ceb\",\"kind\":\"reviewed\"} -->\n<!-- This is an auto-generated comment: all tool run failures by coderabbit.ai -->\n<!-- end of auto-generated comment: all tool run failures by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-09-26T17:05:28Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `f7aac9ef-0011-4466-8969-a872985d08ad`\n> Reviewing files that changed from the base of the PR and between f2819079ba93e116db6715a96bbc6c3985de6ceb and 366c0167bfda673f500a01f5623f75ba9e188735.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- change_assessment_commit:\"f2819079ba93e116db6715a96bbc6c3985de6ceb\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"f2819079ba93e116db6715a96bbc6c3985de6ceb\",\"coveredCommitId\":\"f2819079ba93e116db6715a96bbc6c3985de6ceb\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-26T17:11:23Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `f7aac9ef-0011-4466-8969-a872985d08ad`\nReviewing files that changed from the base of the PR and between f2819079ba93e116db6715a96bbc6c3985de6ceb and 366c0167bfda673f500a01f5623f75ba9e188735.\n**Included review availability:** This review used your included allowance. 4 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<!-- change_assessment_commit:\"366c0167bfda673f500a01f5623f75ba9e188735\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"366c0167bfda673f500a01f5623f75ba9e188735\",\"coveredCommitId\":\"366c0167bfda673f500a01f5623f75ba9e188735\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-26T20:52:53Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `22c0208d-2ade-4973-b400-e7b91f1392ec`\n> Reviewing files that changed from the base of the PR and between 366c0167bfda673f500a01f5623f75ba9e188735 and cac5c7694c4a8ecec645d6c57fb8897fa450f17b.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `f7aac9ef-0011-4466-8969-a872985d08ad`\nReviewing files that changed from the base of the PR and between f2819079ba93e116db6715a96bbc6c3985de6ceb and 366c0167bfda673f500a01f5623f75ba9e188735.\n**Included review availability:** This review used your included allowance. 4 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<!-- change_assessment_commit:\"366c0167bfda673f500a01f5623f75ba9e188735\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"366c0167bfda673f500a01f5623f75ba9e188735\",\"coveredCommitId\":\"366c0167bfda673f500a01f5623f75ba9e188735\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-26T20:59:31Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `22c0208d-2ade-4973-b400-e7b91f1392ec`\nReviewing files that changed from the base of the PR and between 366c0167bfda673f500a01f5623f75ba9e188735 and cac5c7694c4a8ecec645d6c57fb8897fa450f17b.\n**Included review availability:** This review used your included allowance. 4 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<!-- change_assessment_commit:\"cac5c7694c4a8ecec645d6c57fb8897fa450f17b\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"cac5c7694c4a8ecec645d6c57fb8897fa450f17b\",\"coveredCommitId\":\"cac5c7694c4a8ecec645d6c57fb8897fa450f17b\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-26T21:32:55Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `bf186264-09ee-404b-8681-8ebc44e09775`\n> Reviewing files that changed from the base of the PR and between cac5c7694c4a8ecec645d6c57fb8897fa450f17b and 2dec7a13fbd3da5d97728324b2692fda31d370b2.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `22c0208d-2ade-4973-b400-e7b91f1392ec`\nReviewing files that changed from the base of the PR and between 366c0167bfda673f500a01f5623f75ba9e188735 and cac5c7694c4a8ecec645d6c57fb8897fa450f17b.\n**Included review availability:** This review used your included allowance. 4 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<!-- change_assessment_commit:\"cac5c7694c4a8ecec645d6c57fb8897fa450f17b\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"cac5c7694c4a8ecec645d6c57fb8897fa450f17b\",\"coveredCommitId\":\"cac5c7694c4a8ecec645d6c57fb8897fa450f17b\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-26T21:37:34Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- change_assessment_commit:\"2dec7a13fbd3da5d97728324b2692fda31d370b2\" -->"
+    },
+    {
+     "at": "2026-09-26T21:37:41Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- change_assessment_commit:\"2dec7a13fbd3da5d97728324b2692fda31d370b2\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"2dec7a13fbd3da5d97728324b2692fda31d370b2\",\"coveredCommitId\":\"2dec7a13fbd3da5d97728324b2692fda31d370b2\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-26T22:01:31Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `887fe3d4-0da8-46c6-91c7-10a60438734a`\n> Reviewing files that changed from the base of the PR and between 2dec7a13fbd3da5d97728324b2692fda31d370b2 and a5cf09e388b1ca99ad5818123302fb0dd10427b8.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- change_assessment_commit:\"2dec7a13fbd3da5d97728324b2692fda31d370b2\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"2dec7a13fbd3da5d97728324b2692fda31d370b2\",\"coveredCommitId\":\"2dec7a13fbd3da5d97728324b2692fda31d370b2\",\"kind\":\"reviewed\"} -->"
+    },
+    {
+     "at": "2026-09-26T22:07:33Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review paused by coderabbit.ai -->\n> ## Reviews paused\n<!-- end of auto-generated comment: review paused by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `887fe3d4-0da8-46c6-91c7-10a60438734a`\nReviewing files that changed from the base of the PR and between 2dec7a13fbd3da5d97728324b2692fda31d370b2 and a5cf09e388b1ca99ad5818123302fb0dd10427b8.\n**Included review availability:** This review used your included allowance. 2 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->\n<!-- change_assessment_commit:\"a5cf09e388b1ca99ad5818123302fb0dd10427b8\" -->\n<!-- final_review_risk_coverage:{\"sourceCommitId\":\"a5cf09e388b1ca99ad5818123302fb0dd10427b8\",\"coveredCommitId\":\"a5cf09e388b1ca99ad5818123302fb0dd10427b8\",\"kind\":\"reviewed\"} -->"
+    }
+   ],
+   "statuses": [
+    {
+     "context": "CodeRabbit",
+     "state": "success",
+     "description": "Review completed",
+     "created_at": "2026-09-26T22:07:35Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "pending",
+     "description": "Review in progress",
+     "created_at": "2026-09-26T22:01:20Z"
+    }
+   ]
+  },
+  "1212": {
+   "repo": "GocciaScript",
+   "pr": 1212,
+   "commentId": 5383091588,
+   "createdAt": "2026-08-22T23:11:53Z",
+   "head": "5f6ff2d0452062848bb20d789ffade4efd3b88b6",
+   "evaluateAt": "2026-08-23T06:45:50Z",
+   "pushedAt": "2026-08-23T06:42:59Z",
+   "versions": [
+    {
+     "at": "2026-08-22T23:11:53Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `efbc4bde-aa5f-4003-950c-7d67cd3af5ef`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-22T23:12:38Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `413cb2dd-ddaa-4002-ad0a-06975df6d382`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-22T23:14:23Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `e616fa3d-3b57-46d9-ac19-3616f37db188`\n> Reviewing files that changed from the base of the PR and between cfb092f0e66939857d3341d740085131c779fb0d and 45b89d0c8a6cffd8cd89cb6c9b38f58d1bf60514.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-22T23:21:45Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-22T23:57:07Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `982db504-9a5d-47c8-bddc-3deca75944a1`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T00:00:04Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `44b56433-3d02-4c2e-978b-6a4763131017`\n> Reviewing files that changed from the base of the PR and between 45b89d0c8a6cffd8cd89cb6c9b38f58d1bf60514 and d4c66c7fb65fabcde99040b4066edf23ce121348.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T00:05:27Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T00:53:10Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `74f3ce82-35d7-4314-8016-2cbb96ba7e9c`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T00:53:49Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `b3248032-8f2c-4c5b-971e-2cc12129e7fa`\n> Reviewing files that changed from the base of the PR and between d4c66c7fb65fabcde99040b4066edf23ce121348 and 2818cdc73eacce27a513b7659748cf53fe8acf85.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T00:58:11Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T00:58:43Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `d1be156e-a02e-402e-9f31-05a1ba10307c`\n> Reviewing files that changed from the base of the PR and between cfb092f0e66939857d3341d740085131c779fb0d and 2818cdc73eacce27a513b7659748cf53fe8acf85.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T01:06:03Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T01:53:26Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `af013ad9-580b-48e8-9776-74fb8c15bca2`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T01:54:29Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `94b1feec-a4a1-4000-a23b-970650aa5417`\n> Reviewing files that changed from the base of the PR and between 2818cdc73eacce27a513b7659748cf53fe8acf85 and c938bd9a14b16d470a2d11dafbfdeea79ea82d5c.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T01:58:22Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T03:33:23Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `3c7edfad-4b40-4b46-80f8-11542c309045`\n> Reviewing files that changed from the base of the PR and between c938bd9a14b16d470a2d11dafbfdeea79ea82d5c and a6e14d63d6549ede6ed8642c84de65e735b65747.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T03:35:20Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review paused by coderabbit.ai -->\n> ## Reviews paused\n<!-- end of auto-generated comment: review paused by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `3c7edfad-4b40-4b46-80f8-11542c309045`\nReviewing files that changed from the base of the PR and between c938bd9a14b16d470a2d11dafbfdeea79ea82d5c and a6e14d63d6549ede6ed8642c84de65e735b65747.\n**Included review availability:** 4 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->"
+    },
+    {
+     "at": "2026-08-23T03:36:51Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `a692702c-f889-4fe7-a381-f38c18debefa`\n> Reviewing files that changed from the base of the PR and between cfb092f0e66939857d3341d740085131c779fb0d and a6e14d63d6549ede6ed8642c84de65e735b65747.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- This is an auto-generated comment: review paused by coderabbit.ai -->\n> ## Reviews paused\n<!-- end of auto-generated comment: review paused by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `3c7edfad-4b40-4b46-80f8-11542c309045`\nReviewing files that changed from the base of the PR and between c938bd9a14b16d470a2d11dafbfdeea79ea82d5c and a6e14d63d6549ede6ed8642c84de65e735b65747.\n**Included review availability:** 4 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->"
+    },
+    {
+     "at": "2026-08-23T03:47:14Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review paused by coderabbit.ai -->\n> ## Reviews paused\n<!-- end of auto-generated comment: review paused by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T04:58:58Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `6ae8cf6b-e2e1-4e31-82c8-8f7beb7dd444`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<!-- This is an auto-generated comment: review paused by coderabbit.ai -->\n> ## Reviews paused\n<!-- end of auto-generated comment: review paused by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T05:00:03Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `9336dd93-c28b-47fb-8dc8-d5d9118e5997`\n> Reviewing files that changed from the base of the PR and between a6e14d63d6549ede6ed8642c84de65e735b65747 and d1b6ed79c70f1b903ca64752730eb1cc156b2751.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- This is an auto-generated comment: review paused by coderabbit.ai -->\n> ## Reviews paused\n<!-- end of auto-generated comment: review paused by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T05:03:43Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review paused by coderabbit.ai -->\n> ## Reviews paused\n<!-- end of auto-generated comment: review paused by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T06:43:02Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `f0e439db-b32e-4b40-8863-422dd4c70ebf`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<!-- This is an auto-generated comment: review paused by coderabbit.ai -->\n> ## Reviews paused\n<!-- end of auto-generated comment: review paused by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T06:43:52Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `bda0bd80-8e27-4f51-80a5-db7706bc6259`\n> Reviewing files that changed from the base of the PR and between d1b6ed79c70f1b903ca64752730eb1cc156b2751 and 5f6ff2d0452062848bb20d789ffade4efd3b88b6.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- This is an auto-generated comment: review paused by coderabbit.ai -->\n> ## Reviews paused\n<!-- end of auto-generated comment: review paused by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-23T06:44:55Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review paused by coderabbit.ai -->\n> ## Reviews paused\n<!-- end of auto-generated comment: review paused by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `bda0bd80-8e27-4f51-80a5-db7706bc6259`\nReviewing files that changed from the base of the PR and between d1b6ed79c70f1b903ca64752730eb1cc156b2751 and 5f6ff2d0452062848bb20d789ffade4efd3b88b6.\n**Included review availability:** 4 reviews are currently available. Your included PR review attempts over the past 7 days set your current allowance at 5 reviews per hour.\n<!-- recent_review_end -->"
+    }
+   ],
+   "statuses": [
+    {
+     "context": "CodeRabbit",
+     "state": "success",
+     "description": "Review completed",
+     "created_at": "2026-08-23T06:44:57Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "pending",
+     "description": "Review in progress",
+     "created_at": "2026-08-23T06:43:37Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "success",
+     "description": "Review skipped: reviews are disabled for this base branch",
+     "created_at": "2026-08-23T06:43:04Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "pending",
+     "description": "Review queued",
+     "created_at": "2026-08-23T06:42:59Z"
+    }
+   ]
+  },
+  "1155": {
+   "repo": "GocciaScript",
+   "pr": 1155,
+   "commentId": 5300165833,
+   "createdAt": "2026-08-15T02:49:03Z",
+   "head": "5945432f51786fc87433f9a1d034c1a0531116e2",
+   "evaluateAt": "2026-08-15T13:44:20Z",
+   "pushedAt": "2026-08-15T04:24:40Z",
+   "versions": [
+    {
+     "at": "2026-08-15T02:49:03Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `70176e1e-9969-4e60-ba42-2127a8337500`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-15T04:24:42Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `8e3b40f9-7602-47a1-bfdd-740ca910a721`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-15T05:02:41Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `4c90a300-c490-4fb2-89c4-63aec4f4fe69`\n> Reviewing files that changed from the base of the PR and between 3a0b80b071aa6f612a7e40d336e6cd96e17a9900 and 5945432f51786fc87433f9a1d034c1a0531116e2.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-15T05:07:19Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `4c90a300-c490-4fb2-89c4-63aec4f4fe69`\nReviewing files that changed from the base of the PR and between 3a0b80b071aa6f612a7e40d336e6cd96e17a9900 and 5945432f51786fc87433f9a1d034c1a0531116e2.\n<!-- recent_review_end -->"
+    },
+    {
+     "at": "2026-08-15T13:43:45Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> No new commits to review since the last review.\n> **Run ID**: `1b8760f5-5a15-49df-a71c-e6543ec9b612`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `4c90a300-c490-4fb2-89c4-63aec4f4fe69`\nReviewing files that changed from the base of the PR and between 3a0b80b071aa6f612a7e40d336e6cd96e17a9900 and 5945432f51786fc87433f9a1d034c1a0531116e2.\n<!-- recent_review_end -->"
+    }
+   ],
+   "statuses": [
+    {
+     "context": "CodeRabbit",
+     "state": "success",
+     "description": "Review completed",
+     "created_at": "2026-08-15T13:49:00Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "success",
+     "description": "Review completed",
+     "created_at": "2026-08-15T13:48:58Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "pending",
+     "description": "Review in progress",
+     "created_at": "2026-08-15T13:44:41Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "success",
+     "description": "Review completed",
+     "created_at": "2026-08-15T05:07:24Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "success",
+     "description": "Review completed",
+     "created_at": "2026-08-15T05:07:21Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "pending",
+     "description": "Review in progress",
+     "created_at": "2026-08-15T05:02:21Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "pending",
+     "description": "Review queued",
+     "created_at": "2026-08-15T05:02:20Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "success",
+     "description": "Review skipped: draft pull request",
+     "created_at": "2026-08-15T04:24:43Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "pending",
+     "description": "Review queued",
+     "created_at": "2026-08-15T04:24:40Z"
+    }
+   ],
+   "comments": [
+    {
+     "id": 5302501168,
+     "login": "frostney",
+     "created_at": "2026-08-15T13:43:30Z",
+     "updated_at": "2026-08-15T13:43:30Z",
+     "body": "@coderabbitai review"
+    },
+    {
+     "id": 5302501659,
+     "login": "coderabbitai",
+     "created_at": "2026-08-15T13:43:37Z",
+     "updated_at": "2026-08-15T13:43:46Z",
+     "body": "<!-- This is an auto-generated reply by CodeRabbit -->\n<!-- CodeRabbit review command invocation: a369eeba-f820-47d9-a5c9-800b0dc5a8a2 -->\n<details>\n<summary>⚠️ Action not completed</summary>\n\nAlready reviewed.\n\n> Note: CodeRabbit is an incremental review system and does not re-review already reviewed commits. This command is applicable only when automatic reviews are paused.\n\n</details>"
+    }
+   ]
+  },
+  "1154": {
+   "repo": "GocciaScript",
+   "pr": 1154,
+   "commentId": 5297834816,
+   "createdAt": "2026-08-14T20:25:16Z",
+   "head": "7db7240293692551f191efb36c9de5e71df75ae4",
+   "evaluateAt": "2026-08-15T01:06:30Z",
+   "pushedAt": "2026-08-15T00:39:10Z",
+   "versions": [
+    {
+     "at": "2026-08-14T20:25:16Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `124a8f6f-3153-44a9-a042-6c4e8f542afd`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-14T20:27:48Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `e5b62779-e7b6-42ad-968d-653ae15d178d`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-14T20:47:40Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `632da0b3-0220-4326-91f8-fcb11a78464a`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-14T20:52:06Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `34a37d3c-e9b6-467c-8781-845187297777`\n> Reviewing files that changed from the base of the PR and between 90b2646eedbfad7953394638bbaa4162656680a3 and bb9b548310ce3828f6f09cd07b520a4fa98be226.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-14T20:58:02Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-14T22:21:57Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `a8cc5dff-7e52-48d9-808b-7719e0da4430`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-14T22:22:00Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `88e6ed6e-a9bb-4f3e-8e88-809bd42dcbcc`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-14T22:29:37Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `9193f0a2-e49f-4c30-81a0-cbd78bf87d5e`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-14T22:30:13Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `d87b8cea-8be5-41c0-91ac-d3dfa3a74d72`\n> Reviewing files that changed from the base of the PR and between bb9b548310ce3828f6f09cd07b520a4fa98be226 and 027dc34d942ad8ffc17056772bdcdc9cd1002edb.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-14T22:33:02Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-14T22:38:48Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `befeace7-c37e-4ab6-ba1a-f4545bd1c3af`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-14T22:39:19Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `d7f09c25-5635-4e44-a7b8-3750f4f7bf1f`\n> Reviewing files that changed from the base of the PR and between 027dc34d942ad8ffc17056772bdcdc9cd1002edb and e780631100bc46c727214bfd028ab9b3757dac18.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-14T22:40:08Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `d7f09c25-5635-4e44-a7b8-3750f4f7bf1f`\nReviewing files that changed from the base of the PR and between 027dc34d942ad8ffc17056772bdcdc9cd1002edb and e780631100bc46c727214bfd028ab9b3757dac18.\n<!-- recent_review_end -->"
+    },
+    {
+     "at": "2026-08-14T22:41:19Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->\n> ## Review limit reached\n> You’ve reached a temporary PR review limit under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy).<br>\n> **Next review available in:** **48 minutes**\n> <summary>How do review limits work?</summary>\n> CodeRabbit enforces per-developer PR review limits for each organization. Most developers receive the normal plan review availability.\n> **Run ID**: `1f093353-54aa-4ad6-becb-3e3b911039b7`\n> Reviewing files that changed from the base of the PR and between 8068e4c94e917b238264885d79879308d4b1d399 and e780631100bc46c727214bfd028ab9b3757dac18.\n<!-- end of auto-generated comment: rate limited by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `d7f09c25-5635-4e44-a7b8-3750f4f7bf1f`\nReviewing files that changed from the base of the PR and between 027dc34d942ad8ffc17056772bdcdc9cd1002edb and e780631100bc46c727214bfd028ab9b3757dac18.\n<!-- recent_review_end -->"
+    },
+    {
+     "at": "2026-08-14T23:30:41Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `af636532-3d6c-446c-afa0-744cdfc32e80`\n> Reviewing files that changed from the base of the PR and between 8068e4c94e917b238264885d79879308d4b1d399 and e780631100bc46c727214bfd028ab9b3757dac18.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `d7f09c25-5635-4e44-a7b8-3750f4f7bf1f`\nReviewing files that changed from the base of the PR and between 027dc34d942ad8ffc17056772bdcdc9cd1002edb and e780631100bc46c727214bfd028ab9b3757dac18.\n<!-- recent_review_end -->"
+    },
+    {
+     "at": "2026-08-14T23:36:20Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-14T23:39:02Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `d3dd800f-1d59-4717-b4ab-451a45b90a30`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-14T23:42:42Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `e70bfccf-f29e-4e89-aa86-a540539b39ab`\n> Reviewing files that changed from the base of the PR and between e780631100bc46c727214bfd028ab9b3757dac18 and f0cd64f9eef46ca01e4584cf0971e748f10839f8.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-14T23:44:53Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-14T23:45:51Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->\n> ## Review limit reached\n> You’ve reached a temporary PR review limit under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy).<br>\n> **Next review available in:** **44 minutes**\n> <summary>How do review limits work?</summary>\n> CodeRabbit enforces per-developer PR review limits for each organization. Most developers receive the normal plan review availability.\n> **Run ID**: `48ec37bb-7035-4851-9b77-b81fc89bdda9`\n> Reviewing files that changed from the base of the PR and between 8068e4c94e917b238264885d79879308d4b1d399 and f0cd64f9eef46ca01e4584cf0971e748f10839f8.\n<!-- end of auto-generated comment: rate limited by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-15T00:31:17Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `e8537633-7395-4305-bddf-e4fe12b4dcaa`\n> Reviewing files that changed from the base of the PR and between 8068e4c94e917b238264885d79879308d4b1d399 and f0cd64f9eef46ca01e4584cf0971e748f10839f8.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-15T00:35:43Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-15T00:39:12Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `53afb034-4e4e-424b-a055-65be695de7d6`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-15T00:39:31Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->\n> ## Review limit reached\n> You’ve reached a temporary PR review limit under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy).<br>\n> **Next review available in:** **3 minutes**\n> <summary>How do review limits work?</summary>\n> CodeRabbit enforces per-developer PR review limits for each organization. Most developers receive the normal plan review availability.\n> **Run ID**: `d97925e8-88a9-4881-9047-bfeea1312f24`\n> Reviewing files that changed from the base of the PR and between f0cd64f9eef46ca01e4584cf0971e748f10839f8 and 7db7240293692551f191efb36c9de5e71df75ae4.\n<!-- end of auto-generated comment: rate limited by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-15T00:45:14Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n> **Run ID**: `dde99a2c-5fc2-455d-875a-bf11add31f8d`\n> Reviewing files that changed from the base of the PR and between 8068e4c94e917b238264885d79879308d4b1d399 and 7db7240293692551f191efb36c9de5e71df75ae4.\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+    },
+    {
+     "at": "2026-08-15T00:49:43Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: review paused by coderabbit.ai -->\n> ## Reviews paused\n<!-- end of auto-generated comment: review paused by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `dde99a2c-5fc2-455d-875a-bf11add31f8d`\nReviewing files that changed from the base of the PR and between 8068e4c94e917b238264885d79879308d4b1d399 and 7db7240293692551f191efb36c9de5e71df75ae4.\n<!-- recent_review_end -->"
+    },
+    {
+     "at": "2026-08-15T01:05:53Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `dde99a2c-5fc2-455d-875a-bf11add31f8d`\nReviewing files that changed from the base of the PR and between 8068e4c94e917b238264885d79879308d4b1d399 and 7db7240293692551f191efb36c9de5e71df75ae4.\n<!-- recent_review_end -->"
+    },
+    {
+     "at": "2026-08-15T01:05:56Z",
+     "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Review skipped\n> **Run ID**: `bb028ee3-ac73-48b8-890f-1ab115fe82d7`\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->\n<!-- recent_review_start -->\nNo actionable comments were generated in the recent review. 🎉\n**Run ID**: `dde99a2c-5fc2-455d-875a-bf11add31f8d`\nReviewing files that changed from the base of the PR and between 8068e4c94e917b238264885d79879308d4b1d399 and 7db7240293692551f191efb36c9de5e71df75ae4.\n<!-- recent_review_end -->"
+    }
+   ],
+   "statuses": [
+    {
+     "context": "CodeRabbit",
+     "state": "success",
+     "description": "Review skipped: reviews are disabled for this base branch",
+     "created_at": "2026-08-15T01:05:57Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "success",
+     "description": "Review completed",
+     "created_at": "2026-08-15T00:49:45Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "pending",
+     "description": "Review in progress",
+     "created_at": "2026-08-15T00:45:06Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "success",
+     "description": "Review rate limited",
+     "created_at": "2026-08-15T00:39:32Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "pending",
+     "description": "Review in progress",
+     "created_at": "2026-08-15T00:39:28Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "success",
+     "description": "Review skipped: reviews are disabled for this base branch",
+     "created_at": "2026-08-15T00:39:13Z"
+    },
+    {
+     "context": "CodeRabbit",
+     "state": "pending",
+     "description": "Review queued",
+     "created_at": "2026-08-15T00:39:10Z"
     }
    ]
   }

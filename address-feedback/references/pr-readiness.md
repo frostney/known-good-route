@@ -125,8 +125,8 @@ references link here.
   2026 footer "Review rate limit: N/P reviews remaining, refill in M minutes"
   counts too; it gives no rate unit but states when a review refills. A
   statement is timed by when CodeRabbit made it: the review's submission, the
-  review object of the same Run ID, an unedited comment, or the first comment
-  edit that showed it. A summary edited in place keeps showing an old
+  review object of the same Run ID, an unedited comment, or the earliest
+  comment edit that showed it. A summary edited in place keeps showing an old
   statement, so its last edit never dates it. A statement that cannot be dated
   is ignored unless it reports none left or uses an unrecognized wording; then
   its last edit times it. A statement is current until one window, or its
