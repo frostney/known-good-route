@@ -38,7 +38,8 @@ TRIGGERS = {
     "full": "@coderabbitai full review",
 }
 STATED_WAIT = re.compile(
-    r"available in\D{0,10}(\d+)\s*minutes?(?:\D{0,10}(\d+)\s*seconds?)?",
+    r"(?:available in\D{0,10}|please wait\W{0,10})"
+    r"(?:(\d+)\s*minutes?(?:\D{0,10}(\d+)\s*seconds?)?|(\d+)\s*seconds?)",
     re.IGNORECASE,
 )
 FINISHED = re.compile(r"review finished|reviews? (?:is|are) complete|no actionable comments", re.IGNORECASE)
@@ -51,7 +52,65 @@ ACTIONABLE = re.compile(r"Actionable comments posted:\s*(\d+)", re.IGNORECASE)
 UNAVAILABLE_SOURCE = re.compile(r"\(HTTP 40[34]\)")
 WAIT_BUFFER_SECONDS = 60
 TRUSTED_ACK_SECONDS = 30
-
+# CodeRabbit states the account's included review allowance in each review's
+# summary or review body, e.g. "1 included review remains after this review.
+# ... set your current allowance at 2 reviews per hour." tests/fixtures holds
+# every allowance line CodeRabbit has published on the sampled repositories.
+ALLOWANCE_LABEL = re.compile(
+    r"\*\*(?:Included review availability|Limit details):?\*\*|Review rate limit:",
+    re.IGNORECASE,
+)
+# April-May 2026 summaries ended with "Review rate limit: 3/5 reviews
+# remaining, refill in 19 minutes and 7 seconds."; it states no rate unit.
+ALLOWANCE_LEGACY = re.compile(
+    r"(\d+)/(\d+) reviews? remaining,?\s*(?:refill in "
+    r"(?:(\d+) minutes?(?:\D{0,10}(\d+) seconds?)?|(\d+) seconds?))?",
+    re.IGNORECASE,
+)
+ALLOWANCE_RATE = re.compile(
+    r"(?:allowance at|refill at|provides up to) (\d+)(?: included)?(?: reviews?)?"
+    r" per (minute|hour|day)\b",
+    re.IGNORECASE,
+)
+ALLOWANCE_USED_ALL = re.compile(
+    r"used (?:all \d+ included reviews?|the included review) currently available",
+    re.IGNORECASE,
+)
+ALLOWANCE_REMAINING = (
+    re.compile(r"(\d+)(?: included reviews?)? remains? after this review", re.IGNORECASE),
+    re.compile(r"(\d+) reviews? (?:is|are) currently available", re.IGNORECASE),
+)
+RUN_ID = re.compile(r"Run ID\W{0,6}`([0-9A-Za-z-]+)`", re.IGNORECASE)
+# A summary is a stack of generated blocks; a statement belongs to the run
+# printed in its own block, and a rate-limit block's run was refused.
+BLOCK_START = re.compile(
+    r"<!-- (?:This is an auto-generated comment: [^>]*|recent_review_start) -->"
+)
+BLOCK_END = re.compile(
+    r"<!-- (?:end of auto-generated comment: [^>]*|recent_review_end) -->"
+)
+REFUSED_BLOCK = re.compile(r"rate limited by coderabbit", re.IGNORECASE)
+WINDOW_SECONDS = {"minute": 60, "hour": 3600, "day": 86400}
+# A statement without a rate, or with a wording the parser does not recognize,
+# is read against the hour: the unit of every rated statement CodeRabbit has
+# published. The budget then reports `degraded`.
+UNRATED_WINDOW_SECONDS = WINDOW_SECONDS["hour"]
+# Repository-wide reads cover two windows plus the retry buffer: a statement
+# stays current until one window and the buffer after it, and its own window
+# reaches back one more. For the hour this is also the stated-wait horizon.
+# Waits last until a slot in the hourly window frees; the longest in
+# frostney/GocciaScript's history is 59 minutes, so a wait edited before the
+# horizon would have to state over two hours to still be active. A PR's own
+# refusal is read from its comments without a horizon.
+ALLOWANCE_LOOKBACK_WINDOWS = 2
+EDIT_HISTORY_PAGES = 10
+COMMENT_EDITS_QUERY = """query($id: ID!, $cursor: String) {
+  node(id: $id) { ... on IssueComment {
+    userContentEdits(first: 20, after: $cursor) {
+      pageInfo { hasNextPage endCursor } nodes { editedAt diff }
+    }
+  } }
+}"""
 
 
 def is_coderabbit_check_name(value: str) -> bool:
@@ -207,35 +266,541 @@ def latest(items: list[dict[str, Any]], field: str) -> dict[str, Any] | None:
     return max(candidates, key=lambda item: str(item[field]), default=None)
 
 
-def account_wait(gh: Gh, repos: list[str]) -> dict[str, Any] | None:
+def scan_since(now: float, window: float = WINDOW_SECONDS["hour"]) -> float:
+    return now - ALLOWANCE_LOOKBACK_WINDOWS * window - WAIT_BUFFER_SECONDS
+
+
+def recent_comments_endpoint(repo: str, since: float) -> str:
+    """Issue comments edited at or after `since`, newest edit first."""
+    return (
+        f"repos/{repo}/issues/comments?sort=updated&direction=desc"
+        f"&per_page=100&since={format_timestamp(int(since))}"
+    )
+
+
+def issue_number(item: dict[str, Any]) -> int | None:
+    tail = str(item.get("issue_url") or "").rsplit("/", 1)[-1]
+    return int(tail) if tail.isdigit() else None
+
+
+def stated_wait(item: dict[str, Any]) -> dict[str, Any] | None:
+    """The wait a CodeRabbit comment states, timed from its last edit."""
+    match = STATED_WAIT.search(str(item.get("body") or ""))
+    if not match:
+        return None
+    updated_at = parse_timestamp(item.get("updated_at"), "wait updated_at")
+    minutes, seconds, only_seconds = (int(group or 0) for group in match.groups())
+    seconds = minutes * 60 + seconds + only_seconds
+    return {
+        "pr": issue_number(item),
+        "commentId": item.get("id"),
+        "updatedAt": item["updated_at"],
+        "updatedAtEpoch": updated_at,
+        "statedSeconds": seconds,
+        "retryAt": format_timestamp(updated_at + seconds + WAIT_BUFFER_SECONDS),
+        "retryAtEpoch": updated_at + seconds + WAIT_BUFFER_SECONDS,
+    }
+
+
+def account_wait(gh: Gh, repos: list[str], now: float) -> dict[str, Any] | None:
+    """The newest stated wait in comments edited since scan_since(now)."""
     candidates: list[dict[str, Any]] = []
     for repo in repos:
         repo_parts(repo)
-        comments = rest_items(
-            gh,
-            f"repos/{repo}/issues/comments?sort=updated&direction=desc&per_page=100",
+        for item in rest_items(gh, recent_comments_endpoint(repo, scan_since(now))):
+            wait = stated_wait(item) if is_bot(item) else None
+            if wait:
+                candidates.append({"repo": repo} | wait)
+    return max(candidates, key=lambda item: item["updatedAt"], default=None)
+
+
+def parse_allowance(text: str) -> dict[str, Any] | None:
+    """CodeRabbit's stated review allowance in `text`, or None when it states none.
+
+    `allowance` and `unit` are None without a (non-zero) rate. `recognized` is
+    False when the text carries an allowance label or rate but no count this
+    parser knows; callers hold on such a statement rather than skip it.
+    """
+    rate = ALLOWANCE_RATE.search(text)
+    if rate and int(rate.group(1)) < 1:
+        rate = None
+    label = ALLOWANCE_LABEL.search(text)
+    remaining: int | None = None
+    offsets = [match.start() for match in (rate, label) if match]
+    legacy = ALLOWANCE_LEGACY.search(text)
+    used_all = ALLOWANCE_USED_ALL.search(text)
+    if legacy:
+        remaining = int(legacy.group(1))
+        offsets.append(legacy.start())
+        minutes, seconds, only_seconds = legacy.group(3, 4, 5)
+        refill = (
+            int(minutes or 0) * 60 + int(seconds or 0) + int(only_seconds or 0)
+            if minutes or only_seconds
+            else None
         )
-        for comment in comments:
-            if not is_bot(comment):
+        return {
+            "offset": min(offsets),
+            "recognized": True,
+            "remaining": remaining,
+            "allowance": int(legacy.group(2)) if int(legacy.group(2)) >= 1 else None,
+            "unit": None,
+            "windowSeconds": UNRATED_WINDOW_SECONDS,
+            "refillSeconds": refill,
+        }
+    if used_all:
+        remaining = 0
+        offsets.append(used_all.start())
+    else:
+        for pattern in ALLOWANCE_REMAINING:
+            match = pattern.search(text)
+            if match:
+                remaining = int(match.group(1))
+                offsets.append(match.start())
+                break
+    if not offsets:
+        return None
+    unit = rate.group(2).lower() if rate else None
+    return {
+        "offset": min(offsets),
+        "recognized": remaining is not None,
+        "remaining": remaining,
+        "allowance": int(rate.group(1)) if rate else None,
+        "unit": unit,
+        "windowSeconds": WINDOW_SECONDS[unit] if unit else UNRATED_WINDOW_SECONDS,
+        "refillSeconds": None,
+    }
+
+
+def statement_in(body: str) -> dict[str, Any] | None:
+    """The first allowance statement in a body, bound to its block's run."""
+    position = 0
+    for line in body.splitlines(keepends=True):
+        parsed = parse_allowance(line)
+        if parsed is None:
+            position += len(line)
+            continue
+        offset = position + parsed["offset"]
+        starts = list(BLOCK_START.finditer(body, 0, offset))
+        start = starts[-1].start() if starts else 0
+        end_match = BLOCK_END.search(body, offset)
+        end = end_match.start() if end_match else len(body)
+        before = RUN_ID.findall(body, start, offset)
+        after = RUN_ID.findall(body, offset, end)
+        run_id = before[-1] if before else (after[0] if after else None)
+        refused = bool(starts and REFUSED_BLOCK.search(starts[-1].group(0)))
+        return parsed | {"line": line.strip(), "runId": run_id, "refused": refused}
+    return None
+
+
+def statement_first_seen(gh: Gh, item: dict[str, Any], key: tuple[str, Any]) -> float | None:
+    """When a comment first showed this (statement, run), from its edit history.
+
+    Walks back from the newest edit while each version still shows the same
+    statement bound to the same run. Returns None when the history cannot be
+    read or does not reach the statement's first version.
+    """
+    node_id = item.get("node_id")
+    if not isinstance(node_id, str) or not node_id:
+        return None
+    first_seen: float | None = None
+    cursor: str | None = None
+    for _page in range(EDIT_HISTORY_PAGES):
+        try:
+            data = gh.graphql(COMMENT_EDITS_QUERY, {"id": node_id, "cursor": cursor})
+        except (RateLimited, TransientError):
+            raise
+        except WaitError:
+            return None
+        edits = ((data or {}).get("node") or {}).get("userContentEdits") or {}
+        versions = sorted(
+            (node for node in edits.get("nodes") or [] if isinstance(node, dict)),
+            key=lambda node: str(node.get("editedAt") or ""),
+            reverse=True,
+        )
+        for version in versions:
+            shown = statement_in(str(version.get("diff") or ""))
+            if not shown or (shown["line"], shown["runId"]) != key:
+                return first_seen
+            first_seen = parse_timestamp(version.get("editedAt"), "edit editedAt")
+        page = edits.get("pageInfo") or {}
+        if not page.get("hasNextPage"):
+            return first_seen
+        cursor = page.get("endCursor")
+    return None
+
+
+def scan_allowance(
+    gh: Gh, repos: list[str], since: float
+) -> tuple[dict[str, Any] | None, dict[tuple[str, str], float]]:
+    """The newest current-evidence allowance statement and every counted run.
+
+    A run is one CodeRabbit review, identified by the Run ID it prints in its
+    statement's block and in any review object it submits. Each run counts
+    once, at its earliest observed time; a rate-limit block's run was refused
+    and is not counted. Evidence without a Run ID is not counted.
+
+    A statement is timed by when it was made: a review's submission, the
+    submission of the review object for the same run, a comment that was
+    never edited, or else the first edit that showed it. A summary edited in
+    place (a processing or pause block added) keeps showing an old statement,
+    so its last edit does not date it. A statement that cannot be dated never
+    outranks a dated one unless it reports no review left or uses an
+    unrecognized wording.
+    """
+    statements: list[dict[str, Any]] = []
+    pending: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    runs: dict[tuple[str, str], float] = {}
+
+    def note_run(repo: str, run_id: str, at: float) -> None:
+        runs[(repo, run_id)] = min(runs.get((repo, run_id), at), at)
+
+    for repo in repos:
+        repo_parts(repo)
+        prs: set[int] = set()
+        review_runs: dict[str, float] = {}
+        for item in rest_items(gh, recent_comments_endpoint(repo, since)):
+            if not is_bot(item):
                 continue
-            match = STATED_WAIT.search(str(comment.get("body") or ""))
-            if not match:
-                continue
-            updated_at = parse_timestamp(comment.get("updated_at"), "wait updated_at")
-            seconds = int(match.group(1)) * 60 + int(match.group(2) or 0)
-            issue_url = str(comment.get("issue_url") or "")
-            candidates.append(
-                {
-                    "repo": repo,
-                    "pr": int(issue_url.rsplit("/", 1)[-1]) if issue_url.rsplit("/", 1)[-1].isdigit() else None,
-                    "updatedAt": comment["updated_at"],
-                    "updatedAtEpoch": updated_at,
-                    "statedSeconds": seconds,
-                    "retryAt": format_timestamp(updated_at + seconds + WAIT_BUFFER_SECONDS),
-                    "retryAtEpoch": updated_at + seconds + WAIT_BUFFER_SECONDS,
+            pr = issue_number(item)
+            if pr is not None:
+                prs.add(pr)
+            found = statement_in(str(item.get("body") or ""))
+            if found is not None:
+                pending.append((item, found | {"repo": repo, "pr": pr, "commentId": item.get("id")}))
+        for pr in sorted(prs):
+            reviews = optional_items(
+                lambda: rest_items(gh, f"repos/{repo}/pulls/{pr}/reviews?per_page=100")
+            )
+            for item in reviews:
+                body = str(item.get("body") or "")
+                run = RUN_ID.search(body)
+                if not is_bot(item) or item.get("state") == "PENDING" or not run:
+                    continue
+                submitted = parse_timestamp(item.get("submitted_at"), "review submitted_at")
+                note_run(repo, run.group(1), submitted)
+                review_runs[run.group(1)] = min(review_runs.get(run.group(1), submitted), submitted)
+                found = statement_in(body)
+                if found is not None:
+                    statements.append(
+                        found
+                        | {
+                            "repo": repo,
+                            "pr": pr,
+                            "reviewId": item.get("id"),
+                            "updatedAt": item["submitted_at"],
+                            "updatedAtEpoch": submitted,
+                            "statedAtEpoch": submitted,
+                            "dating": "review",
+                        }
+                    )
+        for item, found in [entry for entry in pending if entry[1]["repo"] == repo]:
+            updated = parse_timestamp(item.get("updated_at"), "comment updated_at")
+            run_id = found["runId"]
+            if run_id and run_id in review_runs:
+                stated, dating = min(review_runs[run_id], updated), "run"
+            elif item.get("created_at") == item.get("updated_at"):
+                stated, dating = updated, "unedited"
+            else:
+                stated = statement_first_seen(gh, item, (found["line"], run_id))
+                dating = "edit-history" if stated is not None else "undated"
+            statements.append(
+                found
+                | {
+                    "updatedAt": item["updated_at"],
+                    "updatedAtEpoch": updated,
+                    "statedAtEpoch": stated,
+                    "dating": dating,
                 }
             )
-    return max(candidates, key=lambda item: item["updatedAt"], default=None)
+            if run_id and not found["refused"]:
+                # An undated run is counted at its last edit: later, so longer.
+                note_run(repo, run_id, stated if stated is not None else updated)
+    dated = [item for item in statements if item["statedAtEpoch"] is not None]
+    # An undated "none left" (or unrecognized) statement is timed by its last
+    # edit, which can only make it hold longer; other undated ones are ignored.
+    holding = [
+        item | {"statedAtEpoch": item["updatedAtEpoch"]}
+        for item in statements
+        if item["statedAtEpoch"] is None
+        and (item["remaining"] == 0 or not item["recognized"])
+    ]
+    statement = max(dated + holding, key=lambda item: item["statedAtEpoch"], default=None)
+    if statement is not None:
+        statement = statement | {
+            "undatedCount": sum(1 for item in statements if item["dating"] == "undated")
+        }
+    elif any(item["dating"] == "undated" for item in statements):
+        statement = {
+            "undatedOnly": True,
+            "undatedCount": sum(1 for item in statements if item["dating"] == "undated"),
+        }
+    return statement, runs
+
+
+def allowance_retry(
+    runs: list[float], window: float, allowance: int, at: float, *, proven: bool
+) -> float | None:
+    """When a review slot frees after `at`, from the runs in the window ending then.
+
+    A slot frees once enough counted runs leave the trailing window. With fewer
+    counted runs than the allowance, only a `proven` exhaustion (a statement or
+    notice from CodeRabbit) yields a time: its oldest counted run. The time is
+    never early only when every run in the window is counted. Runs in an
+    unscanned repository are missed, and so is a review that posts no review
+    object (no actionable comments) when a later review on the same PR
+    overwrites its summary block before a scan sees it. An uncounted run
+    between counted ones leaves a slot free later than derived.
+    """
+    counted = sorted(run for run in runs if at - window < run <= at)
+    excess = len(counted) - allowance + 1
+    if not counted or (excess < 1 and not proven):
+        return None
+    return counted[min(max(excess, 1), len(counted)) - 1] + window + WAIT_BUFFER_SECONDS
+
+
+def release_time(
+    runs: list[float],
+    window: float,
+    allowance: int | None,
+    exhausted_at: float,
+    stated_refill: float | None = None,
+) -> float:
+    """When a used-up allowance frees a slot (maintainer ruling, PR #94 CR-4).
+
+    The window is rolling: a slot frees when enough counted runs in the
+    window ending at the exhaustion have left it that fewer than the
+    allowance remain, plus the buffer. With several reviews per window that
+    is the oldest such run leaving, not the statement's own run. When no
+    counted run can be tied to it, or there is no rate, the run the statement
+    reports on finished by the exhaustion, so a slot frees one window plus the
+    buffer after it. A refill time CodeRabbit states ("refill in N minutes")
+    is used as given, plus the buffer.
+    """
+    if stated_refill is not None:
+        return exhausted_at + stated_refill + WAIT_BUFFER_SECONDS
+    derived = (
+        allowance_retry(runs, window, allowance, exhausted_at, proven=True)
+        if allowance
+        else None
+    )
+    return derived if derived is not None else exhausted_at + window + WAIT_BUFFER_SECONDS
+
+
+def account_allowance(gh: Gh, repos: list[str], now: float) -> dict[str, Any]:
+    """The account's review budget from CodeRabbit's statements and counted runs.
+
+    `mode` is `enforced` when the newest statement is current, dated,
+    recognized and states a rate with its unit, and `degraded` otherwise. Without a current statement only
+    stated waits gate triggers. A statement stays current until one window and
+    the retry buffer after it was made.
+    """
+    window = WINDOW_SECONDS["hour"]
+    statement, runs = scan_allowance(gh, repos, scan_since(now, window))
+    if statement and statement.get("windowSeconds", window) > window:
+        window = statement["windowSeconds"]
+        statement, runs = scan_allowance(gh, repos, scan_since(now, window))
+    undated = (statement or {}).get("undatedCount", 0)
+    undated_note = f"; {undated} allowance statements could not be dated" if undated else ""
+    budget: dict[str, Any] = {
+        "mode": "degraded",
+        "reason": (
+            "no allowance statement within its window in the scanned "
+            f"repositories; only stated waits gate triggers{undated_note}"
+        ),
+        "remaining": None,
+        "availableNow": None,
+        "perHour": None,
+        "reviewsPerWindow": None,
+        "windowSeconds": None,
+        "statementAt": None,
+        "statementDating": None,
+        "source": None,
+        "attempts": {"count": 0, "windowStart": None, "runs": []},
+        "exhausted": False,
+        "retryAt": None,
+        "exhaustionRetryEpoch": None,
+        "runEpochs": [],
+    }
+    if (
+        statement is None
+        or statement.get("undatedOnly")
+        or statement["statedAtEpoch"]
+        + max(statement["windowSeconds"], statement.get("refillSeconds") or 0)
+        + WAIT_BUFFER_SECONDS
+        <= now
+    ):
+        return budget
+    window = statement["windowSeconds"]
+    allowance = statement["allowance"]
+    remaining = statement["remaining"]
+    stated_at = statement["statedAtEpoch"]
+    run_epochs = sorted(runs.values())
+    in_window = sorted(
+        (at, repo, run_id)
+        for (repo, run_id), at in runs.items()
+        if now - window < at <= now
+    )
+    budget |= {
+        "mode": (
+            "enforced"
+            if statement["unit"] and statement["recognized"] and statement["dating"] != "undated"
+            else "degraded"
+        ),
+        "remaining": remaining,
+        "perHour": allowance if statement["unit"] == "hour" else None,
+        "reviewsPerWindow": allowance,
+        "windowSeconds": window,
+        "statementAt": format_timestamp(stated_at),
+        "statementDating": statement["dating"],
+        "source": {
+            "repo": statement["repo"],
+            "pr": statement["pr"],
+            **(
+                {"reviewId": statement["reviewId"]}
+                if "reviewId" in statement
+                else {"commentId": statement["commentId"]}
+            ),
+        },
+        "attempts": {
+            "count": len(in_window),
+            "windowStart": format_timestamp(int(now - window)),
+            "runs": [
+                {"repo": repo, "runId": run_id, "at": format_timestamp(at)}
+                for at, repo, run_id in in_window
+            ],
+        },
+        "runEpochs": run_epochs,
+    }
+    # The newest statement anchors the count: with R reviews left when it was
+    # made, the allowance is used up from the R-th counted run after it.
+    # Counted times can trail a run's start, so a larger window count alone
+    # never overrides the statement. A wording the parser does not recognize
+    # counts as used up.
+    after = [at for at in run_epochs if at > stated_at]
+    exhausted_at: float | None = None
+    stated_refill: float | None = None
+    if not statement["recognized"] or remaining == 0:
+        exhausted_at = stated_at
+        stated_refill = statement.get("refillSeconds")
+    elif len(after) >= remaining:
+        exhausted_at = after[remaining - 1]
+    retry = (
+        release_time(run_epochs, window, allowance, exhausted_at, stated_refill)
+        if exhausted_at is not None
+        else None
+    )
+    exhausted = retry is not None and retry > now
+    if not statement["recognized"]:
+        detail = "the newest allowance statement uses an unrecognized wording"
+    elif allowance:
+        detail = (
+            f"{len(in_window)} counted review runs in the trailing window; "
+            f"the newest statement leaves {remaining} of {allowance}"
+        )
+        if not statement["unit"]:
+            detail += "; it states no rate unit, so its window is read as one hour"
+    else:
+        detail = "the newest allowance statement states no rate; it is read against one hour"
+    if statement["dating"] == "undated":
+        detail += "; its time could not be established, so its last edit times it"
+    reason = (
+        f"the included review allowance is used up until retryAt; {detail}"
+        if exhausted
+        else detail
+    )
+    if exhausted_at is None:
+        available_now = max(0, remaining - len(after)) if remaining is not None else None
+    else:
+        # After a used-up allowance frees, at least one slot is free, but the
+        # evidence does not say how many.
+        available_now = 0 if exhausted else None
+    budget |= {
+        "exhausted": exhausted,
+        "availableNow": available_now,
+        "retryAt": format_timestamp(retry) if exhausted and retry else None,
+        "exhaustionRetryEpoch": retry,
+        "reason": reason + undated_note,
+    }
+    return budget
+
+
+def trigger_gate(
+    evidence: dict[str, Any], wait: dict[str, Any] | None, budget: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    """The latest evidenced time before which CodeRabbit would refuse a trigger.
+
+    Stated waits come from the account scan and all of the PR's own comments;
+    for a rate-limit notice, only one posted at or after it counts. The
+    allowance adds the time its exhaustion ends and, for a notice, when the
+    runs counted before it free a slot; an allowance time that precedes the
+    notice cannot explain it.
+
+    Returns None when nothing gates a trigger. For a rate-limit notice that
+    nothing explains, returns a gate with source "unexplained" and no time.
+    """
+    limited = bool(evidence.get("rateLimited"))
+    limited_at = evidence.get("rateLimitedAtEpoch") if limited else None
+    unexplained = {"retryAtEpoch": None, "retryAt": None, "source": "unexplained"}
+    if limited and limited_at is None:
+        return unexplained
+    gates: list[tuple[float, str]] = []
+    for stated in (wait, *(evidence.get("prWaits") or [])):
+        if stated is not None and (limited_at is None or stated["updatedAtEpoch"] >= limited_at):
+            gates.append((stated["retryAtEpoch"], "stated-wait"))
+    allowance_times: list[float] = []
+    if budget and budget.get("exhaustionRetryEpoch") is not None:
+        allowance_times.append(budget["exhaustionRetryEpoch"])
+    if budget and budget.get("reviewsPerWindow") and limited_at is not None:
+        derived = allowance_retry(
+            budget["runEpochs"],
+            budget["windowSeconds"],
+            budget["reviewsPerWindow"],
+            limited_at,
+            proven=True,
+        )
+        if derived is not None:
+            allowance_times.append(derived)
+    gates.extend(
+        (at, "allowance")
+        for at in allowance_times
+        if limited_at is None or at > limited_at
+    )
+    if not gates:
+        return unexplained if limited else None
+    retry, source = max(gates)
+    return {"retryAtEpoch": retry, "retryAt": format_timestamp(retry), "source": source}
+
+
+GATE_REASONS = {
+    "stated-wait": "a stated wait gates the next trigger",
+    "allowance": "the account's included CodeRabbit review allowance is used up",
+}
+
+
+class ObservationCache:
+    """Serves each GitHub read once per observation; writes pass through."""
+
+    def __init__(self, gh: Gh) -> None:
+        self.gh = gh
+        self.metrics = gh.metrics
+        self.memo: dict[Any, Any] = {}
+
+    def remember(self, key: Any, read: Callable[[], Any]) -> Any:
+        if key not in self.memo:
+            self.memo[key] = read()
+        return self.memo[key]
+
+    def rest_pages(self, endpoint: str) -> list[Any]:
+        return self.remember(("pages", endpoint), lambda: self.gh.rest_pages(endpoint))
+
+    def rest(self, endpoint: str, method: str = "GET", fields: dict[str, str] | None = None) -> Any:
+        if method != "GET":
+            return self.gh.rest(endpoint, method, fields)
+        return self.remember(("rest", endpoint), lambda: self.gh.rest(endpoint))
+
+    def graphql(self, query: str, variables: dict[str, Any]) -> Any:
+        key = ("graphql", query, repr(sorted(variables.items())))
+        return self.remember(key, lambda: self.gh.graphql(query, variables))
 
 
 def head_push_time(
@@ -391,6 +956,10 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
 
     code_rabbit_check = coderabbit_check_for_head(gh, repo, head)
     check_rate_limited = bool(code_rabbit_check.get("rateLimited"))
+    # Every wait stated on the PR, read without the account scan's horizon:
+    # an old refusal can then be retried once its own wait elapses, and a
+    # still-active wait is never hidden by a newer, shorter one elsewhere.
+    pr_waits = [wait for wait in map(stated_wait, bot_comments) if wait]
 
     return {
         "repo": repo,
@@ -427,6 +996,7 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
             else None
         ),
         "alreadyReviewed": bool(refused),
+        "prWaits": pr_waits,
         "coverage": {
             "walkthroughId": (walkthrough or {}).get("id"),
             "matched": matched,
@@ -443,6 +1013,29 @@ def classify(
     expected_head: str,
     wait: dict[str, Any] | None,
     now: float,
+    budget: dict[str, Any] | None = None,
+) -> tuple[str, str, str | None]:
+    return classify_with_gate(evidence, expected_head, wait, now, budget)[:3]
+
+
+def classify_with_gate(
+    evidence: dict[str, Any],
+    expected_head: str,
+    wait: dict[str, Any] | None,
+    now: float,
+    budget: dict[str, Any] | None = None,
+) -> tuple[str, str, str | None, dict[str, Any] | None]:
+    """The head's state, its reason and next mode, and the gate when waiting."""
+    gate = trigger_gate(evidence, wait, budget)
+    state, reason, mode = decide(evidence, expected_head, gate, now)
+    return state, reason, mode, gate if state == "waiting" else None
+
+
+def decide(
+    evidence: dict[str, Any],
+    expected_head: str,
+    gate: dict[str, Any] | None,
+    now: float,
 ) -> tuple[str, str, str | None]:
     if evidence["head"] != expected_head:
         return "invalidated", f"expected head {expected_head}, observed {evidence['head']}", None
@@ -454,16 +1047,15 @@ def classify(
     # CodeRabbit check whose description is "Review rate limited" is pending,
     # not clean-complete.
     if evidence["rateLimited"]:
-        rate_limited_at = evidence.get("rateLimitedAtEpoch")
-        if (
-            wait is None
-            or rate_limited_at is None
-            or wait["updatedAtEpoch"] < rate_limited_at
-        ):
-            return "pending-retry-source", "rate limited without a stated retry time", None
+        if gate is None or gate["retryAtEpoch"] is None:
+            return (
+                "pending-retry-source",
+                "rate limited without a stated retry time or an allowance-derived one",
+                None,
+            )
         desired = evidence["trigger"]["mode"] if evidence["trigger"] else "incremental"
-        if wait["retryAtEpoch"] > now:
-            return "waiting", "account-scoped stated wait has not elapsed", desired
+        if gate["retryAtEpoch"] > now:
+            return "waiting", GATE_REASONS[gate["source"]], desired
         return f"trigger-{desired}", f"{desired} review trigger is permitted", desired
 
     code_rabbit_ok = bool(evidence.get("codeRabbitCheckSuccess")) or (
@@ -506,8 +1098,8 @@ def classify(
     else:
         desired = "incremental"
 
-    if wait is not None and wait["retryAtEpoch"] > now:
-        return "waiting", "account-scoped stated wait gates the next trigger", desired
+    if gate is not None and gate["retryAtEpoch"] is not None and gate["retryAtEpoch"] > now:
+        return "waiting", GATE_REASONS[gate["source"]], desired
     return f"trigger-{desired}", f"{desired} review trigger is permitted", desired
 
 
@@ -519,18 +1111,23 @@ def observation(
     scan_repos: list[str],
     now: float,
 ) -> dict[str, Any]:
-    wait = account_wait(gh, scan_repos)
+    gh = ObservationCache(gh)  # type: ignore[assignment]
+    wait = account_wait(gh, scan_repos, now)
+    budget = account_allowance(gh, scan_repos, now)
     results = []
     for pr in prs:
         evidence = pull_evidence(gh, repo, pr)
-        state, reason, next_mode = classify(evidence, expected_heads[pr], wait, now)
+        state, reason, next_mode, gate = classify_with_gate(
+            evidence, expected_heads[pr], wait, now, budget
+        )
         results.append(
             evidence
             | {
                 "state": state,
                 "reason": reason,
                 "nextMode": next_mode,
-                "retryAt": wait["retryAt"] if state == "waiting" and wait else None,
+                "retryAt": gate["retryAt"] if gate else None,
+                "retrySource": gate["source"] if gate else None,
             }
         )
     return {
@@ -544,6 +1141,11 @@ def observation(
             if wait
             else None
         ),
+        "allowance": {
+            key: value
+            for key, value in budget.items()
+            if key not in {"exhaustionRetryEpoch", "runEpochs"}
+        },
         "pullRequests": results,
     }
 

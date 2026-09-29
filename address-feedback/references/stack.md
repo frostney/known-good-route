@@ -37,7 +37,8 @@ acknowledgment, coverage, rate-limit, or locking logic from prose. In read-only
 mode, run `status` with every exact `PR=SHA`. In normal mode, run `run` for one
 PR at a time with its exact head and an absolute deadline. Supply every known
 repository with recent CodeRabbit activity through repeated `--scan-repo`
-arguments so the adapter can select the newest edited account-scoped wait.
+arguments so the adapter can select the newest edited account-scoped wait
+and count the account's review allowance.
 
 ## Review rounds
 
@@ -57,8 +58,12 @@ arguments so the adapter can select the newest edited account-scoped wait.
    never a guessed trigger, completion, or wait.
 4. Review every initial member once for its exact head. Serialize triggers when
    the active provider has account-wide, repository-wide, or other shared
-   limits. During waits, use foreground transition commands and passively await
-   them. Do not wake the model merely to report unchanged state.
+   limits. For CodeRabbit, read `status` for every member first. Trigger at
+   most `allowance.availableNow` members, bottom-up, or one at a time when it
+   is `null`; see
+   [CodeRabbit allowance](pr-readiness.md#coderabbit-allowance). During
+   waits, use foreground transition commands and passively await them. Do not
+   wake the model merely to report unchanged state.
 5. Inspect every inline thread, exact-head review body, and top-level
    finding surface. Classify each claim against the integrated stack top:
    `moot`, `satisfied-later`, `mutated`, `live`, `declined`, or
@@ -120,11 +125,12 @@ Do not invent adapters for ordinary GitHub review state. Do not copy provider
 commands, comment parsing, timers, or paid options into the core workflow. The
 CodeRabbit adapter is the sole owner of its two permitted trigger commands. Its
 `run` operation serializes triggers with one authenticated-account lock, polls
-through stated waits, and treats a finished acknowledgment as `clean-complete`
-only when walkthrough coverage is verified for the exact head and either ack
-latency meets the trusted threshold or that same head has a CodeRabbit check
-SUCCESS. Latency and walkthrough freshness count from when GitHub recorded the
-head's push (its branch activity, else its earliest check suite on that
+through stated waits, holds triggers while CodeRabbit's stated allowance is
+used up (see [CodeRabbit allowance](pr-readiness.md#coderabbit-allowance)),
+and treats a finished acknowledgment as `clean-complete` only when walkthrough
+coverage is verified for the exact head and either ack latency meets the
+trusted threshold or that same head has a CodeRabbit check SUCCESS. Latency
+and walkthrough freshness count from when GitHub recorded the head's push (its branch activity, else its earliest check suite on that
 branch), or from the commit time if that is later. Without that record, only
 the head-scoped check completes the review. It escalates untrusted incremental
 acknowledgments to a full review, refuses guessed retry times, and never

@@ -26,9 +26,10 @@ Apply the parent SKILL.md shared authority, attribution, and evidence rules.
   For CodeRabbit, retrigger only through `scripts/coderabbit_adapter.py run`
   with the repository, PR, exact head, an absolute deadline, and a
   `--scan-repo` for each repository with recent CodeRabbit activity. The
-  adapter owns the account-wide lock, stated waits, and command choice; one
-  `run` per exact head is that head's retrigger. Never type a CodeRabbit
-  command by hand.
+  adapter owns the account-wide lock, stated waits, the review allowance, and
+  command choice; one `run` per exact head is that head's retrigger. Never type
+  a CodeRabbit command by hand. Its allowance and trigger decisions follow
+  [CodeRabbit allowance](pr-readiness.md#coderabbit-allowance).
 - Mechanical applicability alone does not validate a finding: a symbol existing,
   a patch applying, or compilation succeeding does not establish its factual
   claim or authority. Classify both axes in step 4.
