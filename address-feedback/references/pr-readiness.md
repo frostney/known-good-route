@@ -112,6 +112,21 @@ If no exact absolute time or duration exists, set no `retry_at` and remain
 unambiguously, or do not clearly describe availability. Never infer a provider,
 account quota, hourly window, blind delay, or retry count.
 
+A provider adapter may also derive `retry_at` from an allowance the provider
+itself states. The CodeRabbit adapter reads the newest "N included reviews
+remain" and "allowance at P reviews per hour" statement across the scanned
+repositories, timed by its comment's last edit, and ignores one older than its
+window. It counts review runs once each by CodeRabbit's Run ID, from summary
+statements and review objects, so automatic reviews count too. The allowance is
+used up when the statement reports none left, or when N identified runs follow
+it. The adapter then reports `waiting` with `retry_at` set to when enough
+counted runs leave the window, plus 60 seconds. A later stated wait wins. A
+rate-limit notice without a stated wait uses the runs before the notice. The
+count is a lower bound: it can prove the allowance used up but never that it is
+available. Without a current statement, or when no counted run supports the
+derivation, `status` reports the allowance `degraded` and only stated waits
+gate triggers.
+
 ## Result contract
 
 Return:

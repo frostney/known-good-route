@@ -701,5 +701,359 @@ class CodeRabbitAdapterTest(unittest.TestCase):
         self.assertNotEqual(state, "clean-complete")
 
 
+NOW = START + 180
+HOUR = 3600
+
+
+def availability(remaining: int, per_hour: int) -> str:
+    reviews = "review remains" if remaining == 1 else "reviews remain"
+    return (
+        "**Included review availability:** This review used your included "
+        f"allowance. {remaining} included {reviews} after this review. Your "
+        "included PR review attempts over the past 7 days set your current "
+        f"allowance at {per_hour} reviews per hour."
+    )
+
+
+def summary_comment(
+    identifier: int,
+    pr: int,
+    updated: int,
+    statement: str,
+    run_id: str | None,
+) -> dict[str, Any]:
+    run = f"**Run ID**: `{run_id}`\n\n" if run_id else ""
+    return comment(
+        identifier,
+        "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n"
+        f"{run}{statement}",
+        updated - 900,
+        updated=updated,
+        issue_url=f"https://api.github.test/repos/owner/repo/issues/{pr}",
+    )
+
+
+def run_review_object(
+    identifier: int, run_id: str, submitted: int, body: str = "Actionable comments posted: 1"
+) -> dict[str, Any]:
+    return {
+        "id": identifier,
+        "user": {"login": "coderabbitai[bot]"},
+        "body": f"{body}\n\n**Run ID**: `{run_id}`",
+        "state": "COMMENTED",
+        "commit_id": "other-head",
+        "submitted_at": iso(submitted),
+    }
+
+
+def budget_gh(
+    account_comments: list[dict[str, Any]],
+    *,
+    now: int = NOW,
+    pr_comments: list[dict[str, Any]] | None = None,
+    other_reviews: dict[int, list[dict[str, Any]]] | None = None,
+    wait_comments: list[dict[str, Any]] | None = None,
+) -> FakeGh:
+    gh = configured_gh(comments=pr_comments)
+    scan = (
+        "repos/owner/repo/issues/comments?sort=updated&direction=desc"
+        f"&per_page=100&since={iso(now - 2 * HOUR)}"
+    )
+    gh.pages[scan] = [account_comments]
+    for pr, reviews in (other_reviews or {}).items():
+        gh.pages[f"repos/owner/repo/pulls/{pr}/reviews?per_page=100"] = [reviews]
+    if wait_comments:
+        gh.pages[
+            "repos/owner/repo/issues/comments?sort=updated&direction=desc&per_page=100"
+        ] = [wait_comments]
+    return gh
+
+
+def observe(gh: FakeGh, now: int = NOW) -> dict[str, Any]:
+    return ADAPTER.observation(
+        gh, "owner/repo", [7], {7: "head-7"}, ["owner/repo"], now
+    )
+
+
+class CodeRabbitAllowanceBudgetTest(unittest.TestCase):
+    def test_statement_parsing_handles_singular_plural_and_zero(self) -> None:
+        cases = {
+            availability(1, 2): 1,
+            availability(2, 5): 2,
+            availability(0, 2): 0,
+            "**Included review availability:** 1 review is currently available. "
+            "Your included PR review attempts over the past 7 days set your "
+            "current allowance at 10 reviews per hour.": 1,
+            "**Included review availability:** 7 reviews are currently available. "
+            "Your included PR review attempts over the past 7 days set your "
+            "current allowance at 8 reviews per hour.": 7,
+            "**Limit details:** You’ve used all 2 included reviews currently "
+            "available. Your 84 included PR review attempts over the past 7 days "
+            "set your current allowance at 2 reviews per hour.": 0,
+        }
+        for text, remaining in cases.items():
+            with self.subTest(text=text):
+                parsed = ADAPTER.parse_allowance(text)
+                assert parsed
+                self.assertEqual(parsed["remaining"], remaining)
+                self.assertEqual(parsed["windowSeconds"], HOUR)
+        self.assertEqual(ADAPTER.parse_allowance(availability(1, 2))["allowance"], 2)
+        self.assertEqual(
+            ADAPTER.parse_allowance(
+                "set your current allowance at 1 review per hour."
+            )["allowance"],
+            1,
+        )
+        self.assertIsNone(ADAPTER.parse_allowance("Review finished"))
+        self.assertIsNone(ADAPTER.parse_allowance("1 included review remains after this review."))
+
+    def test_used_up_allowance_waits_until_the_oldest_attempt_leaves_the_window(
+        self,
+    ) -> None:
+        gh = budget_gh(
+            [
+                summary_comment(81, 8, NOW - 1800, availability(1, 2), "run-a"),
+                summary_comment(91, 9, NOW - 600, availability(0, 2), "run-b"),
+            ]
+        )
+        value = observe(gh)
+        item = value["pullRequests"][0]
+        self.assertEqual(item["state"], "waiting")
+        self.assertEqual(item["nextMode"], "incremental")
+        self.assertEqual(item["retryAt"], iso(NOW - 1800 + HOUR + 60))
+        self.assertEqual(item["retrySource"], "allowance")
+        allowance = value["allowance"]
+        self.assertEqual(allowance["mode"], "enforced")
+        self.assertTrue(allowance["exhausted"])
+        self.assertEqual(allowance["remaining"], 0)
+        self.assertEqual(allowance["perHour"], 2)
+        self.assertEqual(allowance["statementAt"], iso(NOW - 600))
+        self.assertEqual(
+            allowance["source"], {"repo": "owner/repo", "pr": 9, "commentId": 91}
+        )
+        self.assertEqual(allowance["attempts"]["count"], 2)
+        self.assertEqual(allowance["retryAt"], iso(NOW - 1800 + HOUR + 60))
+
+    def test_review_objects_count_once_per_run_across_pull_requests(self) -> None:
+        # Run c's summary was overwritten by run a; its review object remains.
+        # Run b appears as both a review object and a summary statement.
+        gh = budget_gh(
+            [
+                summary_comment(81, 8, NOW - 1800, availability(1, 2), "run-a"),
+                summary_comment(91, 9, NOW - 600, availability(0, 2), "run-b"),
+            ],
+            other_reviews={
+                8: [run_review_object(801, "run-c", NOW - 3000)],
+                9: [
+                    run_review_object(901, "run-b", NOW - 700),
+                    {**run_review_object(902, "run-x", NOW - 650), "body": ""},
+                ],
+            },
+        )
+        value = observe(gh)
+        allowance = value["allowance"]
+        self.assertEqual(allowance["attempts"]["count"], 3)
+        self.assertTrue(allowance["exhausted"])
+        # Three attempts against two per hour: two must leave the window.
+        self.assertEqual(allowance["retryAt"], iso(NOW - 1800 + HOUR + 60))
+        self.assertEqual(value["pullRequests"][0]["state"], "waiting")
+
+    def test_statement_binds_the_run_id_of_its_own_review(self) -> None:
+        # A skip notice above the recent-review block carries the skipped run's
+        # ID; only the run the statement describes is counted.
+        skipped_then_reviewed = comment(
+            81,
+            "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n"
+            "> ## Review skipped\n> **Run ID**: `run-skip`\n"
+            "<!-- recent_review_start -->\n**Run ID**: `run-a`\n\n"
+            + availability(1, 2),
+            NOW - 1500,
+            updated=NOW - 600,
+            issue_url="https://api.github.test/repos/owner/repo/issues/8",
+        )
+        allowance = observe(budget_gh([skipped_then_reviewed]))["allowance"]
+        self.assertEqual(
+            [run["runId"] for run in allowance["attempts"]["runs"]], ["run-a"]
+        )
+
+    def test_newest_statement_outranks_a_higher_window_count(self) -> None:
+        # Counted times can trail a run's start, so a window count above the
+        # allowance does not override CodeRabbit's own "1 remains".
+        gh = budget_gh(
+            [
+                comment(
+                    81,
+                    "Review finished",
+                    NOW - 1700,
+                    issue_url="https://api.github.test/repos/owner/repo/issues/8",
+                ),
+                summary_comment(91, 9, NOW - 600, availability(1, 2), "run-b"),
+            ],
+            other_reviews={
+                8: [
+                    run_review_object(801, "run-c", NOW - 3000),
+                    run_review_object(802, "run-a", NOW - 1800),
+                ],
+                9: [run_review_object(901, "run-b", NOW - 700)],
+            },
+        )
+        value = observe(gh)
+        self.assertEqual(value["allowance"]["attempts"]["count"], 3)
+        self.assertFalse(value["allowance"]["exhausted"])
+        self.assertEqual(value["pullRequests"][0]["state"], "trigger-incremental")
+
+    def test_runs_after_the_statement_use_up_its_remaining_reviews(self) -> None:
+        gh = budget_gh(
+            [summary_comment(91, 9, NOW - 900, availability(1, 2), "run-b")],
+            other_reviews={
+                8: [run_review_object(801, "run-a", NOW - 2400)],
+                9: [run_review_object(902, "run-d", NOW - 120)],
+            },
+        )
+        value = observe(gh)
+        self.assertTrue(value["allowance"]["exhausted"])
+        self.assertEqual(value["allowance"]["retryAt"], iso(NOW - 900 + HOUR + 60))
+        self.assertEqual(value["pullRequests"][0]["state"], "waiting")
+
+    def test_available_allowance_permits_the_trigger(self) -> None:
+        gh = budget_gh(
+            [summary_comment(81, 8, NOW - 600, availability(1, 2), "run-a")]
+        )
+        value = observe(gh)
+        item = value["pullRequests"][0]
+        self.assertEqual(item["state"], "trigger-incremental")
+        self.assertIsNone(item["retryAt"])
+        allowance = value["allowance"]
+        self.assertEqual(allowance["mode"], "enforced")
+        self.assertFalse(allowance["exhausted"])
+        self.assertEqual(allowance["remaining"], 1)
+        self.assertEqual(allowance["attempts"]["count"], 1)
+        self.assertIsNone(allowance["retryAt"])
+
+    def test_exhaustion_ends_when_its_oldest_attempt_leaves_the_window(
+        self,
+    ) -> None:
+        gh = budget_gh(
+            [summary_comment(81, 8, NOW - 3000, availability(0, 2), "run-a")],
+            other_reviews={8: [run_review_object(801, "run-c", NOW - 3700)]},
+        )
+        value = observe(gh)
+        self.assertEqual(value["pullRequests"][0]["state"], "trigger-incremental")
+        self.assertEqual(value["allowance"]["mode"], "enforced")
+        self.assertFalse(value["allowance"]["exhausted"])
+        self.assertEqual(value["allowance"]["attempts"]["count"], 1)
+
+    def test_later_stated_wait_takes_precedence_over_the_allowance(self) -> None:
+        exhausted = [
+            summary_comment(81, 8, NOW - 1800, availability(1, 2), "run-a"),
+            summary_comment(91, 9, NOW - 600, availability(0, 2), "run-b"),
+        ]
+        later = budget_gh(
+            exhausted,
+            wait_comments=[
+                comment(95, "Next review available in: 40 minutes", NOW - 60)
+            ],
+        )
+        item = observe(later)["pullRequests"][0]
+        self.assertEqual(item["state"], "waiting")
+        self.assertEqual(item["retryAt"], iso(NOW - 60 + 2400 + 60))
+        self.assertEqual(item["retrySource"], "stated-wait")
+
+        earlier = budget_gh(
+            exhausted,
+            wait_comments=[
+                comment(95, "Next review available in: 5 minutes", NOW - 60)
+            ],
+        )
+        item = observe(earlier)["pullRequests"][0]
+        self.assertEqual(item["retryAt"], iso(NOW - 1800 + HOUR + 60))
+        self.assertEqual(item["retrySource"], "allowance")
+
+    def test_statement_older_than_its_window_is_ignored(self) -> None:
+        gh = budget_gh(
+            [summary_comment(81, 8, NOW - HOUR - 100, availability(0, 2), "run-a")]
+        )
+        value = observe(gh)
+        self.assertEqual(value["pullRequests"][0]["state"], "trigger-incremental")
+        allowance = value["allowance"]
+        self.assertEqual(allowance["mode"], "degraded")
+        self.assertIsNone(allowance["remaining"])
+        self.assertIsNone(allowance["retryAt"])
+        self.assertIn("no allowance statement", allowance["reason"])
+
+    def test_missing_attempt_evidence_degrades_to_stated_waits(self) -> None:
+        gh = budget_gh(
+            [summary_comment(81, 8, NOW - 600, availability(0, 2), None)]
+        )
+        value = observe(gh)
+        self.assertEqual(value["pullRequests"][0]["state"], "trigger-incremental")
+        allowance = value["allowance"]
+        self.assertEqual(allowance["mode"], "degraded")
+        self.assertEqual(allowance["remaining"], 0)
+        self.assertEqual(allowance["attempts"]["count"], 0)
+        self.assertFalse(allowance["exhausted"])
+        self.assertIsNone(allowance["retryAt"])
+        self.assertIn("stated waits", allowance["reason"])
+
+    def rate_limited_pr(self) -> list[dict[str, Any]]:
+        return [
+            comment(10, "@coderabbitai review", START + 60, bot=False),
+            comment(11, "Action not completed: review rate limited", START + 90),
+        ]
+
+    def test_rate_limit_without_stated_wait_uses_the_derived_retry(self) -> None:
+        account = [
+            summary_comment(81, 8, START - 1200, availability(1, 2), "run-a"),
+            summary_comment(91, 9, START + 50, availability(0, 2), "run-b"),
+        ]
+        gh = budget_gh(account, pr_comments=self.rate_limited_pr())
+        item = observe(gh)["pullRequests"][0]
+        self.assertEqual(item["state"], "waiting")
+        self.assertEqual(item["nextMode"], "incremental")
+        self.assertEqual(item["retryAt"], iso(START - 1200 + HOUR + 60))
+        self.assertEqual(item["retrySource"], "allowance")
+
+        later = START + 2500
+        gh = budget_gh(account, pr_comments=self.rate_limited_pr(), now=later)
+        item = observe(gh, later)["pullRequests"][0]
+        self.assertEqual(item["state"], "trigger-incremental")
+
+    def test_rate_limit_without_attempts_before_it_keeps_pending_retry_source(
+        self,
+    ) -> None:
+        # The only counted run follows the notice, so it cannot explain it.
+        gh = budget_gh(
+            [summary_comment(81, 8, START + 150, availability(1, 2), "run-a")],
+            pr_comments=self.rate_limited_pr(),
+        )
+        item = observe(gh)["pullRequests"][0]
+        self.assertEqual(item["state"], "pending-retry-source")
+        self.assertIsNone(item["retryAt"])
+
+    def test_run_never_posts_while_the_allowance_is_used_up(self) -> None:
+        gh = budget_gh(
+            [
+                summary_comment(81, 8, NOW - 1800, availability(1, 2), "run-a"),
+                summary_comment(91, 9, NOW - 600, availability(0, 2), "run-b"),
+            ]
+        )
+        sleeps: list[float] = []
+        state, reason, evidence = ADAPTER.run_review(
+            gh,
+            "owner/repo",
+            7,
+            "head-7",
+            ["owner/repo"],
+            NOW,
+            10,
+            clock=lambda: float(NOW),
+            sleeper=sleeps.append,
+        )
+        self.assertEqual(state, "pending")
+        self.assertIn("before trustworthy review completion", reason)
+        self.assertEqual(gh.posts, [])
+        self.assertEqual(evidence["pullRequests"][0]["state"], "waiting")
+
+
 if __name__ == "__main__":
     unittest.main()
