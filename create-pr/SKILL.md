@@ -56,15 +56,24 @@ readiness. Recording a walkthrough does not replace behavior testing.
 ## Workflow
 
 1. Inspect the working tree, staged diff, recent commits, remote default branch,
-   stack topology when applicable, and any existing remote head. Before
-   choosing a base, check whether the change builds on an unmerged PR: its
-   intended base is another open PR's head branch, or its commits above the
-   merge-base with the remote default include another open PR's commits.
-   Compare against the same-repository PRs from
-   `gh pr list --state open --limit 1000 --json number,headRefName,isCrossRepository,commits`.
-   Publish such a change as a native stack under the stack reference's "When to
-   start a stack". Never set a PR base to a non-default branch outside that
-   reference's native stack operations. Preserve unrelated local work.
+   stack topology when applicable, and any existing remote head. Preserve
+   unrelated local work.
+
+   Before choosing a base, check whether the change builds on an unmerged PR.
+   List open PRs with
+   `gh pr list --state open --limit 1000 --json number,headRefName,headRefOid,isCrossRepository,baseRefName`
+   and fetch their heads in one `git fetch REMOTE pull/A/head pull/B/head ...`
+   from the remote of the repository that list queried. Skip this branch's own
+   PR and any PR whose head contains this branch's head. The change builds on
+   PR N when N is from this repository and its head branch is the intended
+   base, or when `git rev-list DEFAULT..HEAD` and
+   `git rev-list DEFAULT..HEAD-OID` share a commit, with DEFAULT the fetched
+   remote default and HEAD-OID N's `headRefOid`. A fork PR
+   (`isCrossRepository`) cannot be a base here: stop and report a fork match.
+   Publish a same-repository match as a native stack under the stack
+   reference's "When to start a stack".
+
+   Never set a PR base to a non-default branch outside that reference's native stack operations.
 2. Stop if there are no relevant changes or commits ahead of the remote base.
    Continue without an empty commit when the work is already committed.
 3. If currently on the base branch, create a focused branch named from the issue
@@ -107,7 +116,8 @@ readiness. Recording a walkthrough does not replace behavior testing.
    then open one draft PR against the remote default.
    For a verified native stack, follow the stack reference: a new top layer
    above frozen approved PRs uses protected push, separate PR creation and
-   native append; broader authorized submissions use `gh stack submit`. Require
+   native append; a new stack on a frozen lower PR uses protected
+   `gh stack link`; broader authorized submissions use `gh stack submit`. Require
    current evidence for every published layer. Only guarded official stack
    operations may rebase or push with force-with-lease. Preserve bottom-to-top
    topology and keep each layer draft.

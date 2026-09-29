@@ -2437,11 +2437,11 @@
       "caseId": "create-pr-dependent-change-native-stack",
       "status": "new",
       "rationale": [
-        "A change whose history contains an open, unmerged PR's commits is published as a native stack that adopts that PR, not through an ordinary PR whose base is set by hand to the lower branch. Fresh native run required."
+        "A change whose Git history contains an open, unmerged PR's commits is published as a native stack that adopts that PR, not through an ordinary PR whose base is set by hand to the lower branch. The dependency is observable only from history and an open-PR listing with the real command's fields. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "a118b9df1fa1fd4529f1ad5e8e5f6b0eb362d723e87f6abb7247a4fa7b5fe8e6",
-      "frozenCaseSha256": "a118b9df1fa1fd4529f1ad5e8e5f6b0eb362d723e87f6abb7247a4fa7b5fe8e6"
+      "afterSha256": "c0f6c286b7a85a860722370666b86e95d0fc3cfb35b55f6e637d24cf7dd5f027",
+      "frozenCaseSha256": "c0f6c286b7a85a860722370666b86e95d0fc3cfb35b55f6e637d24cf7dd5f027"
     },
     {
       "caseId": "delivery-delegated-publication-uses-create-pr",
@@ -2452,6 +2452,36 @@
       "beforeSha256": null,
       "afterSha256": "f02d3321eff8f3a0b4385e49b482f56f3952b2275adfc3a95ad39f5d8891428b",
       "frozenCaseSha256": "f02d3321eff8f3a0b4385e49b482f56f3952b2275adfc3a95ad39f5d8891428b"
+    },
+    {
+      "caseId": "create-pr-dependency-on-hand-based-pr-stops",
+      "status": "new",
+      "rationale": [
+        "When the PR a change builds on is based by hand on another PR's branch instead of the default, create-pr stops and reports the topology rather than retargeting or restacking PRs the change does not own. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "88beeb21066d60be9817a9c80ee8975470b4322eeee24e21ba4215de7681cac2",
+      "frozenCaseSha256": "88beeb21066d60be9817a9c80ee8975470b4322eeee24e21ba4215de7681cac2"
+    },
+    {
+      "caseId": "create-pr-dependency-on-fork-pr-stops",
+      "status": "new",
+      "rationale": [
+        "A change containing a fork PR's commits cannot stack on it, so create-pr stops and reports instead of opening an ordinary PR that carries those commits. The fork's head branch is named main, like the base. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "398bd8552576a0d654fe649426f41f22e91efdf046b3d70e244b560757b52345",
+      "frozenCaseSha256": "398bd8552576a0d654fe649426f41f22e91efdf046b3d70e244b560757b52345"
+    },
+    {
+      "caseId": "create-pr-unrelated-open-prs-publish-normally",
+      "status": "new",
+      "rationale": [
+        "Control for the dependency check: open PRs that share no commits with the change, including a fork PR whose head branch is named main, leave an ordinary publication against the default branch. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "91ac78e6b6d7dca74f745f43eaaaf1a67398c1f7445bee0dceef47e2b740e6be",
+      "frozenCaseSha256": "91ac78e6b6d7dca74f745f43eaaaf1a67398c1f7445bee0dceef47e2b740e6be"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

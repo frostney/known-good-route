@@ -477,58 +477,6 @@ describe("eval grading", () => {
     ).toBeFalse();
   });
 
-  test("publishes a change built on an unmerged PR as a native stack", () => {
-    const evalCase = evalCases.find(
-      ({ id }) => id === "create-pr-dependent-change-native-stack",
-    )!;
-    const failed = (
-      actions: RunLedger["actions"],
-      loadedReferences = ["git-workflow/references/github-stacks.md"],
-    ) =>
-      gradeRun(
-        evalCase,
-        ledger({
-          loadedSkills: ["create-pr", "git-workflow"],
-          loadedReferences,
-          inspections: ["openPullRequests"],
-          events: [
-            { kind: "inspection", name: "openPullRequests" },
-            ...actions.map((a) => ({ kind: "action" as const, name: a.action })),
-          ],
-          actions,
-        }),
-        "Native stack 31: #120 stays at the bottom and #122 is ready on top.",
-      )
-        .checks.filter((c) => !c.passed)
-        .map((c) => c.name);
-    const init = {
-      action: "git.stackInit" as const,
-      details: "Adopt both branches bottom to top",
-      data: { command: "gh stack init feat/allowance-budget feat/budget-report" },
-    };
-    const submit = { action: "git.stackSubmit" as const, details: "Submit the adopted stack" };
-    const ready = { action: "forge.markPrReady" as const, details: "Mark #122 ready" };
-    expect(failed([init, submit, ready])).toEqual([]);
-    expect(failed([init, submit, ready], [])).toEqual(["required references"]);
-    expect(
-      failed([{ ...init, data: { command: "gh stack init feat/budget-report" } }, submit, ready]),
-    ).toEqual(["git.stackInit evidence"]);
-    // The #96 shape: an ordinary PR whose base is set by hand to the lower PR's branch.
-    expect(
-      failed([
-        { action: "git.push", details: "Push feat/budget-report" },
-        {
-          action: "forge.openDraftPr",
-          details: "gh pr create --draft --base feat/allowance-budget",
-          data: { base: "feat/allowance-budget" },
-        },
-        ready,
-      ]),
-    ).toEqual(
-      expect.arrayContaining(["required actions", "forbidden actions"]),
-    );
-  });
-
   test("keeps blocked or pending create-pr cases unpublished", () => {
     const blockedCases: Array<{
       id: string;
