@@ -113,8 +113,14 @@ readiness. Recording a walkthrough does not replace behavior testing.
     for the same PR and verify its new head. Continue until all verified
     requirement gaps are resolved.
 12. Invoke `delivery-wait`'s foreground `wait checks-terminal` operation with
-    the repository, PR number, exact head, required `--check` contexts, absolute
-    deadline and `--json`. Passively await meaningful transitions; do not
+    the repository, PR number, exact head, `--all-workflows`, absolute deadline
+    and `--json`. `--all-workflows` waits for every GitHub Actions run and job
+    on the head, including jobs that later stages add. Add one `--check` per
+    commit status or other app's check that applies, such as a deployment
+    preview. Do not build the `--check` list from the checks visible when the
+    wait starts; that set is often partial. For a dispatched run whose checks
+    do not appear on the PR, also run `wait workflow-terminal --run-id <id>
+    --head <sha>`. Passively await meaningful transitions; do not
     substitute repeated model turns for a passive wait, and report an
     unavailable host capability. Inspect failed logs and return established
     in-scope causes to step 11. If expected PR checks have no run, inspect
