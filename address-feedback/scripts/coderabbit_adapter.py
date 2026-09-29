@@ -105,6 +105,13 @@ UNSETTLED_BLOCK = re.compile(
     r"|Currently processing new changes",
     re.IGNORECASE,
 )
+# A CodeRabbit review body that is a notice rather than a review (#87).
+REVIEW_NOTICE = re.compile(
+    r"auto-generated comment: (?:rate limited|skip review|review paused) by coderabbit"
+    r"|^\W*#* *(?:Review skipped|Reviews? paused|Rate limit exceeded|Review limit reached)"
+    r"|Review rate limited\.",
+    re.IGNORECASE | re.MULTILINE,
+)
 # A successful check or status that reports a skipped or paused review is not
 # a completed review (#87); rate-limited ones are handled separately.
 INCOMPLETE_CHECK = re.compile(r"skipped|paused", re.IGNORECASE)
@@ -233,9 +240,7 @@ def coderabbit_check_for_head(gh: Gh, repo: str, head: str) -> dict[str, Any]:
         context = str(status.get("context") or "")
         state = str(status.get("state") or "").upper()
         description = str(status.get("description") or "")
-        if state == "SUCCESS" and INCOMPLETE_CHECK.search(description):
-            declined = declined or {"state": "INCOMPLETE", "source": "status", "name": context, "head": head}
-            continue
+        # A rate limit wins over a decline in the same text, as for check runs.
         if state == "SUCCESS" and check_text_rate_limited(description):
             return {
                 "state": "RATE_LIMITED",
@@ -244,6 +249,9 @@ def coderabbit_check_for_head(gh: Gh, repo: str, head: str) -> dict[str, Any]:
                 "head": head,
                 "rateLimited": True,
             }
+        if state == "SUCCESS" and INCOMPLETE_CHECK.search(description):
+            declined = declined or {"state": "INCOMPLETE", "source": "status", "name": context, "head": head}
+            continue
         return {
             "state": state or None,
             "source": "status",
@@ -474,7 +482,7 @@ def date_shown(
         return min(review_runs[run_id], updated), "run"
     if item.get("created_at") == item.get("updated_at"):
         return updated, "unedited"
-    first = first_shown(gh, item, shows)
+    first = first_shown(gh, item, shows, contiguous=run_id is None)
     return first, "edit-history" if first is not None else "undated"
 
 
@@ -486,14 +494,17 @@ def clean_key(shown: dict[str, Any] | None) -> tuple[str, Any] | None:
     return (shown["head"], shown["runId"]) if shown else None
 
 
-def first_shown(gh: Gh, item: dict[str, Any], shows: Callable[[str], bool]) -> float | None:
+def first_shown(
+    gh: Gh, item: dict[str, Any], shows: Callable[[str], bool], *, contiguous: bool = False
+) -> float | None:
     """When a comment first showed what `shows` accepts, from its edit history.
 
-    Reads the whole history and returns the earliest version that shows it.
-    What `shows` matches is keyed by Run ID, so a later reappearance, for
-    example after an in-progress block for another push came and went, is
-    the same review and keeps its first time. Returns None when the history
-    cannot be read in full.
+    For content keyed by a Run ID, returns the earliest version that shows it:
+    a later reappearance, for example after an in-progress block for another
+    push came and went, is the same review and keeps its first time. Content
+    without a Run ID can recur word for word after separate reviews, so with
+    `contiguous` the walk stops at the first older version that does not show
+    it. Returns None when the history cannot be read far enough.
     """
     node_id = item.get("node_id")
     if not isinstance(node_id, str) or not node_id:
@@ -516,6 +527,8 @@ def first_shown(gh: Gh, item: dict[str, Any], shows: Callable[[str], bool]) -> f
         for version in versions:
             if shows(str(version.get("diff") or "")):
                 first_seen = parse_timestamp(version.get("editedAt"), "edit editedAt")
+            elif contiguous:
+                return first_seen
         page = edits.get("pageInfo") or {}
         if not page.get("hasNextPage"):
             return first_seen
@@ -1022,18 +1035,23 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
 
     exact_reviews = []
     for review in reviews:
-        match = ACTIONABLE.search(str(review.get("body") or ""))
+        body = str(review.get("body") or "")
+        match = ACTIONABLE.search(body)
+        # A review whose findings are only outside the diff or nitpicks has no
+        # "Actionable comments posted" line but is still a completed review.
+        # An empty body only carries thread replies; a notice is no review.
+        findings = bool(body.strip()) and not REVIEW_NOTICE.search(body)
         if (
             is_bot(review)
             and review.get("state") != "PENDING"
             and review.get("commit_id") == head
-            and match
+            and (match or findings)
         ):
             exact_reviews.append(
                 {
                     "id": review.get("id"),
                     "submittedAt": review.get("submitted_at"),
-                    "actionable": int(match.group(1)),
+                    "actionable": int(match.group(1)) if match else None,
                 }
             )
     exact_review = latest(exact_reviews, "submittedAt")
@@ -1181,7 +1199,7 @@ def decide(
     if evidence["head"] != expected_head:
         return "invalidated", f"expected head {expected_head}, observed {evidence['head']}", None
     if evidence["exactHeadReview"]:
-        return "review-complete", "exact-head actionable review object observed", None
+        return "review-complete", "exact-head CodeRabbit review object observed", None
     # A clean automatic review of exactly this head, with the head-scoped
     # check or status reporting a completed review, completes it. It is bound
     # by commit SHA, so a later refusal of another trigger does not undo it.

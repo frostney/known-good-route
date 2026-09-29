@@ -2423,7 +2423,9 @@ class CleanAutomaticReviewTest(unittest.TestCase):
             "user": {"login": "coderabbitai[bot]"},
             "body": "**Run ID**: `38da5e68-0cea-4549-91ec-a86ebd24bb85`",
             "state": "COMMENTED",
-            "commit_id": HEAD_1292,
+            # On another commit, so only its dating is exercised: a review
+            # object on the head itself would already be review-complete.
+            "commit_id": CLEAN["previousHead"],
             "submitted_at": "2026-09-29T13:39:40Z",
         }]]
         item = clean_observe(gh)
@@ -2656,6 +2658,156 @@ class CleanReviewVerificationTest(unittest.TestCase):
     def test_a_clean_review_at_the_push_second_counts(self) -> None:
         item = clean_observe(clean_gh(pushed=int(at("2026-09-29T13:39:41Z"))))
         self.assertEqual(item["state"], "clean-complete")
+
+
+class CleanReviewSecondVerificationTest(unittest.TestCase):
+    """Findings from the re-verification of PR #96 at fad1ce0, and findings-only reviews."""
+
+    def legacy_gh(self, remaining: str = "4/5") -> tuple[FakeGh, float]:
+        history = RECORDED["legacyFooterHistory"]
+        versions = [
+            (v["at"], v["body"].replace("4/5 reviews remaining, refill in 12 minutes.", f"{remaining} reviews remaining, refill in 12 minutes."))
+            for v in history["versions"]
+        ]
+        now = at("2026-05-02T13:43:14Z")
+        gh = FakeGh()
+        item = {
+            "id": history["commentId"],
+            "node_id": f"IC_{history['commentId']}",
+            "user": {"login": "coderabbitai[bot]"},
+            "body": versions[-1][1],
+            "created_at": history["createdAt"],
+            "updated_at": versions[-1][0],
+            "issue_url": "https://api.github.test/repos/owner/repo/issues/490",
+        }
+        gh.pages[ADAPTER.recent_comments_endpoint("owner/repo", ADAPTER.scan_since(now))] = [[item]]
+        gh.edits[item["node_id"]] = versions
+        return gh, now
+
+    # CR-A: a statement without a Run ID keeps the contiguous walk
+    def test_a_runless_footer_repeated_across_reviews_is_dated_by_its_latest_run(self) -> None:
+        gh, now = self.legacy_gh()
+        budget = ADAPTER.account_allowance(gh, ["owner/repo"], now)
+        self.assertEqual((budget["statementAt"], budget["remaining"]), ("2026-05-02T13:41:14Z", 4))
+        self.assertEqual(budget["statementDating"], "edit-history")
+
+    def test_a_runless_zero_footer_still_holds_until_its_refill(self) -> None:
+        gh, now = self.legacy_gh("0/5")
+        budget = ADAPTER.account_allowance(gh, ["owner/repo"], now)
+        self.assertTrue(budget["exhausted"])
+        self.assertEqual(budget["retryAt"], "2026-05-02T13:54:14Z")
+
+    # CR-B: a rate limit wins over a decline in one status too
+    def test_a_status_that_is_both_paused_and_rate_limited_is_rate_limited(self) -> None:
+        statuses = [
+            {"context": "CodeRabbit", "state": "success", "description": "Review paused: rate limited", "created_at": "2026-09-29T13:41:00Z"},
+            CLEAN["statuses"][0],
+        ]
+        item = clean_observe(clean_gh(statuses=statuses))
+        self.assertEqual((item["codeRabbitCheck"]["state"], item["state"]), ("RATE_LIMITED", "pending-retry-source"))
+
+    # CR-C: each guard on its own
+    def test_a_summary_showing_a_review_in_progress_never_counts(self) -> None:
+        gh, head, now = recorded_clean("1155", "2026-08-15T13:44:55Z", statuses=[
+            {"context": "CodeRabbit", "state": "success", "description": "Review completed", "created_at": "2026-08-15T05:07:24Z"}
+        ])
+        body = gh.pages["repos/owner/repo/issues/7/comments?per_page=100"][0][0]["body"]
+        self.assertIn("review in progress by coderabbit", body)
+        self.assertIn("No actionable comments were generated", body)
+        item = clean_observe(gh, head, now)
+        self.assertIsNone(item["cleanReview"])
+        self.assertNotEqual(item["state"], "clean-complete")
+
+    def test_only_coderabbit_statuses_decide(self) -> None:
+        statuses = [
+            {"context": "Vercel", "state": "success", "description": "Canceled by Ignored Build Step", "created_at": "2026-09-29T13:44:00Z"},
+            {"context": "CodeRabbit", "state": "pending", "description": "Review in progress", "created_at": "2026-09-29T13:35:00Z"},
+        ]
+        item = clean_observe(clean_gh(statuses=statuses))
+        self.assertEqual((item["codeRabbitCheck"]["state"], item["state"]), ("PENDING", "trigger-incremental"))
+
+    def failing_history(self, _query: str, _variables: dict[str, Any]) -> dict[str, Any]:
+        raise ADAPTER.WaitError("gh: Something went wrong (HTTP 422)")
+
+    def run_review_on_previous_head(self, identifier: int, submitted: str) -> dict[str, Any]:
+        return {
+            "id": identifier,
+            "user": {"login": "coderabbitai[bot]"},
+            "body": "**Run ID**: `38da5e68-0cea-4549-91ec-a86ebd24bb85`",
+            "state": "COMMENTED",
+            "commit_id": CLEAN["previousHead"],
+            "submitted_at": submitted,
+        }
+
+    def test_the_in_progress_block_marker_alone_unsettles_a_summary(self) -> None:
+        body = CLEAN["versions"][-1]["body"].replace(
+            "<!-- recent_review_start -->",
+            "<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Reviewing.\n"
+            "<!-- end of auto-generated comment: review in progress by coderabbit.ai -->\n<!-- recent_review_start -->",
+        )
+        self.assertNotIn("Currently processing", body)
+        self.assertIsNone(ADAPTER.clean_review_in(body))
+
+    def test_a_run_is_dated_by_its_earliest_review_object(self) -> None:
+        gh = clean_gh()
+        gh.graphql = self.failing_history  # type: ignore[method-assign]
+        gh.pages["repos/owner/repo/pulls/7/reviews?per_page=100"] = [[
+            self.run_review_on_previous_head(4, "2026-09-29T13:39:40Z"),
+            self.run_review_on_previous_head(5, "2026-09-29T13:10:00Z"),
+        ]]
+        # The earlier object predates the 13:24 push, so the block does not count.
+        self.assertIsNone(clean_observe(gh)["cleanReview"])
+
+    def test_a_run_dated_by_a_later_review_keeps_the_comments_edit_time(self) -> None:
+        gh = clean_gh()
+        gh.pages["repos/owner/repo/pulls/7/reviews?per_page=100"] = [[
+            self.run_review_on_previous_head(6, "2026-09-29T13:39:50Z")
+        ]]
+        self.assertEqual(clean_observe(gh)["cleanReview"]["reviewedAt"], "2026-09-29T13:39:41Z")
+
+    def test_an_unedited_summary_needs_no_edit_history(self) -> None:
+        gh = clean_gh()
+        gh.graphql = self.failing_history  # type: ignore[method-assign]
+        summary = gh.pages["repos/owner/repo/issues/7/comments?per_page=100"][0][0]
+        summary["created_at"] = summary["updated_at"]
+        item = clean_observe(gh)
+        self.assertEqual((item["state"], item["cleanReview"]["dating"]), ("clean-complete", "unedited"))
+
+    # Item 4: reviews whose findings are only outside the diff or nitpicks
+    def test_recorded_findings_only_reviews_complete_their_head(self) -> None:
+        for recorded in RECORDED["findingsOnlyReviews"]["reviews"]:
+            with self.subTest(pr=recorded["pr"]):
+                self.assertNotRegex(recorded["body"], ADAPTER.ACTIONABLE)
+                gh = configured_gh(
+                    head=recorded["commitId"],
+                    reviews=[{
+                        "id": recorded["id"], "user": {"login": "coderabbitai[bot]"}, "body": recorded["body"],
+                        "state": recorded["state"], "commit_id": recorded["commitId"], "submitted_at": recorded["submittedAt"],
+                    }],
+                )
+                evidence = ADAPTER.pull_evidence(gh, "owner/repo", 7)
+                state, _, mode = ADAPTER.classify(evidence, recorded["commitId"], None, START + 180)
+                self.assertEqual((state, mode), ("review-complete", None))
+                self.assertIsNone(evidence["exactHeadReview"]["actionable"])
+
+    def test_a_review_object_that_is_a_notice_or_empty_never_completes(self) -> None:
+        for body in (
+            "",
+            "<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->\n> ## Review limit reached",
+            "> ## Review skipped\n> Draft PR not reviewed.",
+            "> ## Reviews paused",
+            "Review rate limited.",
+        ):
+            with self.subTest(body=body[:30]):
+                gh = configured_gh(reviews=[review(40, body)])
+                state, _, _ = classify(gh)
+                self.assertNotEqual(state, "review-complete")
+
+    def test_a_findings_review_of_another_head_or_pending_never_completes(self) -> None:
+        body = RECORDED["findingsOnlyReviews"]["reviews"][0]["body"]
+        for name, item in {"other head": review(41, body, head="other-head"), "pending": review(42, body, state="PENDING")}.items():
+            with self.subTest(review=name):
+                self.assertNotEqual(classify(configured_gh(reviews=[item]))[0], "review-complete")
 
 
 if __name__ == "__main__":
