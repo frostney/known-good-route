@@ -8,6 +8,7 @@ import json
 import re
 import unittest
 from datetime import datetime, timezone
+from unittest import mock
 from pathlib import Path
 from typing import Any, Callable
 
@@ -79,12 +80,17 @@ class FakeGh:
                 if isinstance(item, dict) and item.get("node_id") == variables["id"]
             ][:1]
         nodes = [{"editedAt": at, "diff": body} for at, body in sorted(versions, reverse=True)]
+        # GitHub pages edits newest first, 20 at a time.
+        start = int(variables.get("cursor") or 0)
         return {
             "node": {
                 "userContentEdits": {
                     "totalCount": len(nodes),
-                    "pageInfo": {"hasNextPage": False, "endCursor": None},
-                    "nodes": nodes,
+                    "pageInfo": {
+                        "hasNextPage": start + 20 < len(nodes),
+                        "endCursor": str(start + 20),
+                    },
+                    "nodes": nodes[start:start + 20],
                 }
             }
         }
@@ -1230,7 +1236,7 @@ def replay(
 
 class RecordedCodeRabbitEvidenceTest(unittest.TestCase):
     def test_every_recorded_allowance_wording_parses(self) -> None:
-        self.assertEqual(len(RECORDED["variants"]), 14)
+        self.assertEqual(len(RECORDED["variants"]), 20)
         for variant in RECORDED["variants"]:
             with self.subTest(text=variant["text"]):
                 parsed = ADAPTER.parse_allowance(variant["text"])
@@ -1238,6 +1244,7 @@ class RecordedCodeRabbitEvidenceTest(unittest.TestCase):
                 self.assertEqual(parsed["remaining"], variant["remaining"])
                 self.assertEqual(parsed["allowance"], variant["allowance"])
                 self.assertEqual(parsed["windowSeconds"], HOUR)
+                self.assertEqual(parsed["refillSeconds"], variant.get("refillSeconds"))
 
     def test_recorded_notices_classify_as_coderabbit_meant_them(self) -> None:
         notices = {item["kind"]: item["body"] for item in RECORDED["notices"]}
@@ -1541,7 +1548,7 @@ class BoundedScanTest(unittest.TestCase):
     def test_allowance_statement_in_a_review_object_counts(self) -> None:
         # frostney/GocciaScript#1291, 2026-09-29: the statement appears only in
         # CodeRabbit's review body, not in the summary comment.
-        statement = RECORDED["variants"][-1]["text"]
+        statement = next(v["text"] for v in RECORDED["variants"] if v.get("reviewId") == 5350559230)
         gh = budget_gh(
             [comment(81, "<!-- summarize by coderabbit.ai -->", NOW - 700, updated=NOW - 300,
                      issue_url="https://api.github.test/repos/owner/repo/issues/8")],
@@ -1560,10 +1567,14 @@ class BoundedScanTest(unittest.TestCase):
 
 
 NON_STATEMENTS = {
-    # pattern -> why the line carries no allowance figure the adapter must read
-    r"^Your included review limit is currently reached": "a refusal reply, read as a rate-limit notice with its stated wait",
-    r"CodeRabbit enforces per-developer PR review limits": "explains limits in general",
-    r"Enable \*\*\[usage-based reviews\]": "a billing offer the adapter never follows",
+    # pattern -> (why the line carries no allowance figure, whether it states a wait)
+    r"has exceeded the limit for the number of commits that can be reviewed per hour": ("an old refusal notice", True),
+    r"^> More reviews will be available in": ("a refusal notice's stated wait", True),
+    r"^Your included review limit is currently reached": ("a refusal reply", False),
+    r"^Review rate limited\.$": ("a refusal reply", False),
+    r"we couldn't start this review because you've reached your PR review rate limit": ("a refusal notice", False),
+    r"CodeRabbit enforces per-developer PR review limits": ("explains limits in general", False),
+    r"Enable \*\*\[usage-based reviews\]": ("a billing offer the adapter never follows", False),
 }
 
 
@@ -1600,13 +1611,34 @@ class ReviewFindingsTest(unittest.TestCase):
         corpus = RECORDED["allowanceLines"]
         self.assertEqual(
             corpus["sample"],
-            {"pullRequests": 914, "comments": 1175, "commentVersions": 7701, "reviewBodies": 1368},
+            {
+                "pullRequests": 914, "comments": 1175, "commentVersions": 7701,
+                "reviewBodies": 1368, "distinctLines": 412, "occurrences": 1106,
+            },
         )
+        self.assertEqual(len(corpus["lines"]), 412)
+        legacy = [line for line in corpus["lines"] if "reviews remaining" in line or "review remaining" in line]
+        self.assertEqual(len(legacy), 180)
+        for line in legacy:
+            with self.subTest(legacy=line):
+                # "R/P ... refill in [M minute(s)] [S second(s)]", read independently.
+                remaining, allowance = map(int, re.search(r"(\d+)/(\d+)", line).groups())
+                minutes = re.search(r"(\d+) minutes?", line)
+                seconds = re.search(r"(\d+) seconds?", line)
+                parsed = ADAPTER.parse_allowance(line)
+                assert parsed
+                self.assertEqual((parsed["remaining"], parsed["allowance"]), (remaining, allowance))
+                self.assertEqual(
+                    parsed["refillSeconds"],
+                    (int(minutes.group(1)) * 60 if minutes else 0) + (int(seconds.group(1)) if seconds else 0),
+                )
         used: set[str] = set()
         for line in corpus["lines"]:
-            reason = next((p for p in NON_STATEMENTS if re.search(p, line.lstrip("> "))), None)
+            reason = next((p for p in NON_STATEMENTS if re.search(p, line)), None)
             if reason:
                 used.add(reason)
+                if NON_STATEMENTS[reason][1]:
+                    self.assertRegex(line, ADAPTER.STATED_WAIT)
                 continue
             with self.subTest(line=line):
                 parsed = ADAPTER.parse_allowance(line)
@@ -1987,6 +2019,182 @@ class ZeroRemainReleaseRuleTest(unittest.TestCase):
         self.assertEqual((value["allowance"]["mode"], value["allowance"]["remaining"]), ("enforced", 0))
         self.assertFalse(value["allowance"]["exhausted"])
         self.assertEqual(value["pullRequests"][0]["state"], "trigger-incremental")
+
+
+def legacy_footer(remaining: int, allowance: int, refill: str) -> str:
+    """CodeRabbit's April-May 2026 summary footer."""
+    reviews = "review" if remaining == 1 else "reviews"
+    return f"<sub>Review rate limit: {remaining}/{allowance} {reviews} remaining, refill in {refill}.</sub>"
+
+
+class ReverificationFindingsTest(unittest.TestCase):
+    """Regressions from the re-verification of PR #94 at 222f8e1 (NEW-1 to NEW-4, Q-1)."""
+
+    def failing_history(self, _query: str, _variables: dict[str, Any]) -> dict[str, Any]:
+        raise ADAPTER.WaitError("gh: Something went wrong (HTTP 422)")
+
+    # NEW-1
+    def test_legacy_none_remaining_holds_until_its_stated_refill(self) -> None:
+        gh = budget_gh([summary_comment(91, 9, NOW - 600, legacy_footer(0, 5, "54 minutes and 32 seconds"), "run-b")])
+        value = observe(gh)
+        allowance = value["allowance"]
+        self.assertEqual((allowance["remaining"], allowance["reviewsPerWindow"]), (0, 5))
+        self.assertEqual(allowance["mode"], "degraded")
+        self.assertTrue(allowance["exhausted"])
+        release = NOW - 600 + 54 * 60 + 32 + 60
+        self.assertEqual(value["pullRequests"][0]["state"], "waiting")
+        self.assertEqual(value["pullRequests"][0]["retryAt"], iso(release))
+        self.assertEqual(observe(gh, release)["pullRequests"][0]["state"], "trigger-incremental")
+
+    def test_legacy_refill_keeps_a_statement_current_until_it_passes(self) -> None:
+        # A refill longer than the assumed hour keeps the statement current
+        # past one window plus the buffer.
+        gh = budget_gh([summary_comment(91, 9, NOW - HOUR - 120, legacy_footer(0, 5, "70 minutes"), None)])
+        item = observe(gh)["pullRequests"][0]
+        self.assertEqual(item["state"], "waiting")
+        self.assertEqual(item["retryAt"], iso(NOW - HOUR - 120 + 70 * 60 + 60))
+
+    def test_legacy_reviews_remaining_permit_the_trigger(self) -> None:
+        gh = budget_gh([summary_comment(91, 9, NOW - 600, legacy_footer(3, 5, "20 minutes and 56 seconds"), "run-b")])
+        value = observe(gh)
+        self.assertEqual((value["allowance"]["remaining"], value["allowance"]["availableNow"]), (3, 3))
+        self.assertEqual(value["pullRequests"][0]["state"], "trigger-incremental")
+
+    def test_unknown_legacy_footer_holds(self) -> None:
+        gh = budget_gh(
+            [summary_comment(91, 9, NOW - 600, "<sub>Review rate limit: paused for this hour.</sub>", "run-b")]
+        )
+        value = observe(gh)
+        self.assertIn("unrecognized", value["allowance"]["reason"])
+        self.assertEqual(value["pullRequests"][0]["retryAt"], iso(NOW - 600 + HOUR + 60))
+
+    def test_a_seconds_only_stated_wait_is_read(self) -> None:
+        body = next(n["body"] for n in RECORDED["notices"] if n["kind"] == "summary-rate-limit-exceeded-seconds-wait")
+        refused = [comment(10, "@coderabbitai review", START + 60, bot=False), comment(11, body, START + 90)]
+        gh = configured_gh(comments=refused)
+        value = ADAPTER.observation(gh, "owner/repo", [7], {7: "head-7"}, ["owner/repo"], START + 120)
+        item = value["pullRequests"][0]
+        self.assertEqual(item["state"], "waiting")
+        self.assertEqual(item["retryAt"], iso(START + 90 + 29 + 60))
+
+    # NEW-2
+    def test_undated_nonzero_statement_never_outranks_a_dated_zero(self) -> None:
+        # With the edit history unreadable, a carried "4 remain" re-stamped
+        # after a newer "0 remain" must not release the hold.
+        carried = summary_body(availability(4, 5), "run-old", processing="run-new")
+        gh = budget_gh(
+            [
+                summary_comment(81, 8, NOW - 300, availability(0, 2), "run-z"),
+                edited_summary(91, 9, [(NOW - 5000, carried), (NOW - 60, carried)]),
+            ],
+            other_reviews={8: [run_review_object(801, "run-z", NOW - 300)]},
+        )
+        gh.graphql = self.failing_history  # type: ignore[method-assign]
+        value = observe(gh)
+        self.assertEqual(value["allowance"]["source"], {"repo": "owner/repo", "pr": 8, "commentId": 81})
+        self.assertEqual(value["pullRequests"][0]["state"], "waiting")
+
+    def history(self, count: int, statement: str) -> list[tuple[str, str]]:
+        """`count` versions showing `statement`, one minute apart, after one that does not."""
+        return [(iso(NOW - 100 * 60), summary_body("no statement yet", None))] + [
+            (iso(NOW - (count - i) * 60), statement) for i in range(count)
+        ]
+
+    def test_edit_history_is_read_across_pages(self) -> None:
+        body = summary_body(availability(0, 2), None, processing="run-new")
+        versions = self.history(25, body)
+        gh = budget_gh([edited_summary(91, 9, [(NOW - 100 * 60, versions[0][1]), (NOW - 60, body)])])
+        gh.edits["IC_91"] = versions
+        allowance = observe(gh)["allowance"]
+        self.assertEqual(allowance["statementDating"], "edit-history")
+        self.assertEqual(allowance["statementAt"], iso(NOW - 25 * 60))
+        self.assertEqual(sum(1 for r in gh.requests if r == "graphql:IC_91"), 2)
+
+    def test_edit_history_longer_than_the_page_limit_leaves_the_statement_undated(self) -> None:
+        body = summary_body(availability(0, 2), None, processing="run-new")
+        versions = self.history(45, body)
+        gh = budget_gh([edited_summary(91, 9, [(NOW - 100 * 60, versions[0][1]), (NOW - 60, body)])])
+        gh.edits["IC_91"] = versions
+        with mock.patch.object(ADAPTER, "EDIT_HISTORY_PAGES", 2):
+            allowance = observe(gh)["allowance"]
+        self.assertEqual(allowance["statementDating"], "undated")
+        self.assertEqual(allowance["statementAt"], iso(NOW - 60))
+
+    def test_a_still_active_wait_from_before_the_push_gates_the_trigger(self) -> None:
+        # The account scan's newest wait has elapsed; the PR's older, longer
+        # wait is still active and is read from the PR's own comments.
+        gh = configured_gh(
+            comments=[
+                comment(12, "**Next review available in:** **90 minutes**", START - 600),
+                # A newer, shorter wait on the same PR has already elapsed.
+                comment(13, "**Next review available in:** **1 minutes**", START - 300),
+            ]
+        )
+        gh.pages[ADAPTER.recent_comments_endpoint("owner/repo", ADAPTER.scan_since(START + 180))] = [[
+            comment(95, "**Next review available in:** **1 minutes**", START + 60,
+                    issue_url="https://api.github.test/repos/owner/repo/issues/5")
+        ]]
+        value = ADAPTER.observation(gh, "owner/repo", [7], {7: "head-7"}, ["owner/repo"], START + 180)
+        item = value["pullRequests"][0]
+        self.assertEqual(item["state"], "waiting")
+        self.assertEqual(item["retryAt"], iso(START - 600 + 90 * 60 + 60))
+
+    def test_a_statement_prefers_the_run_printed_before_it(self) -> None:
+        body = "\n".join([
+            "<!-- recent_review_start -->",
+            "**Run ID**: `run-before`",
+            availability(1, 2),
+            "**Run ID**: `run-after`",
+            "<!-- recent_review_end -->",
+        ])
+        self.assertEqual(ADAPTER.statement_in(body)["runId"], "run-before")
+
+    def test_a_statement_never_binds_a_run_from_a_later_block(self) -> None:
+        body = "\n".join([
+            "<!-- recent_review_start -->",
+            availability(1, 2),
+            "<!-- recent_review_end -->",
+            "<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->",
+            "> **Run ID**: `run-later`",
+            "<!-- end of auto-generated comment: review in progress by coderabbit.ai -->",
+        ])
+        self.assertIsNone(ADAPTER.statement_in(body)["runId"])
+
+    def test_a_human_comment_states_no_wait(self) -> None:
+        gh = FakeGh()
+        gh.pages[ADAPTER.recent_comments_endpoint("owner/repo", ADAPTER.scan_since(NOW))] = [[
+            comment(95, "**Next review available in:** **90 minutes**", NOW - 60, bot=False)
+        ]]
+        self.assertIsNone(ADAPTER.account_wait(gh, ["owner/repo"], NOW))
+
+    def test_an_edit_dated_run_counts_when_it_ran_not_when_it_was_re_edited(self) -> None:
+        first = summary_body(availability(1, 2), "run-old")
+        carried = summary_body(availability(1, 2), "run-old", processing="run-new")
+        gh = budget_gh([edited_summary(91, 9, [(NOW - 3000, first), (NOW - 60, carried)])])
+        gh.edits["IC_91"] = [(iso(NOW - 3000), first), (iso(NOW - 60), carried)]
+        value = observe(gh)
+        self.assertEqual(value["allowance"]["attempts"]["runs"][0]["at"], iso(NOW - 3000))
+        self.assertEqual(value["pullRequests"][0]["state"], "trigger-incremental")
+
+    # Q-1: rolling-window reading of the CR-4 ruling
+    def test_rolling_window_releases_when_the_oldest_counted_run_leaves(self) -> None:
+        # 3 per hour: runs at NOW-3000 and NOW-2000, then "0 remain" at
+        # NOW-1000. A slot frees when the NOW-3000 run leaves the window, not
+        # when the statement's own run does (NOW-1000 + 1 h).
+        gh = budget_gh(
+            [
+                comment(80, "Review finished", NOW - 3500, issue_url="https://api.github.test/repos/owner/repo/issues/8"),
+                summary_comment(91, 9, NOW - 1000, availability(0, 3), "run-c"),
+            ],
+            other_reviews={8: [
+                run_review_object(801, "run-a", NOW - 3000),
+                run_review_object(802, "run-b", NOW - 2000),
+            ]},
+        )
+        allowance = observe(gh)["allowance"]
+        self.assertEqual(allowance["perHour"], 3)
+        self.assertEqual(allowance["retryAt"], iso(NOW - 3000 + HOUR + 60))
+        self.assertNotEqual(allowance["retryAt"], iso(NOW - 1000 + HOUR + 60))
 
 
 if __name__ == "__main__":

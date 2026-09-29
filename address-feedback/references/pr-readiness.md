@@ -121,41 +121,54 @@ references link here.
 
 - **Statement.** The newest allowance statement in the scanned repositories'
   summary comments and review bodies, for example "N included reviews remain
-  after this review" with "allowance at P reviews per hour". A statement is
-  timed by when CodeRabbit made it: the review's submission, the review object
-  of the same Run ID, an unedited comment, or the first comment edit that
-  showed it. A summary edited in place keeps showing an old statement, so its
-  last edit never dates it. A statement that cannot be dated is ignored unless
-  it reports none left; then its last edit times it. A statement is current
-  until one window plus 60 seconds after it was made.
+  after this review" with "allowance at P reviews per hour". The April–May
+  2026 footer "Review rate limit: N/P reviews remaining, refill in M minutes"
+  counts too; it gives no rate unit but states when a review refills. A
+  statement is timed by when CodeRabbit made it: the review's submission, the
+  review object of the same Run ID, an unedited comment, or the first comment
+  edit that showed it. A summary edited in place keeps showing an old
+  statement, so its last edit never dates it. A statement that cannot be dated
+  is ignored unless it reports none left or uses an unrecognized wording; then
+  its last edit times it. A statement is current until one window, or its
+  stated refill if longer, plus 60 seconds after it was made.
 - **Runs.** Each review counts once by its Run ID, from the statement's own
   block and from review objects, at its earliest observed time. Automatic
   reviews count. A rate-limit block's refused run, "Currently processing"
   markers, and evidence without a Run ID do not.
 - **Used up.** The allowance is used up when the current statement reports
   none left or uses a wording the adapter does not recognize, or when N counted
-  runs follow a statement of N. It frees once enough of the counted runs in
-  the window ending at that point have left it that fewer than the allowance
-  remain, plus 60 seconds. When no counted run can be tied to it, or the
-  statement gives no rate, it frees one window plus 60 seconds after the
-  statement. A "0 remain" statement therefore holds until then, even while it
-  is still current. This is the maintainer's ruling on PR #94. The counted-run
-  time is never early only while every repository the account reviews in is
-  scanned. `availableNow` is the stated count minus
-  the counted runs since, 0 while used up, or `null` when unknown.
+  runs follow a statement of N. The window is rolling: the allowance frees
+  once enough of the counted runs in the window ending at that point have left
+  it that fewer than the allowance remain, plus 60 seconds. With several
+  reviews per window, that is the oldest such run leaving, not the statement's
+  own run. When no counted run can be tied to it, or the statement gives no
+  rate, it frees one window plus 60 seconds after the statement. A stated
+  refill time frees it at that time plus 60 seconds. A "0 remain" statement
+  therefore holds until then, even while it is still current. This is the
+  maintainer's ruling on PR #94.
+- **Uncounted runs.** The counted-run time is never early only while every run
+  in the window is counted. Two kinds of run are missed. Reviews in a
+  repository that is not scanned are missed. So is a review that posts no
+  review object, such as one with no actionable comments, when a later review
+  on the same PR overwrites its summary block before a scan sees it. An early
+  time only risks a refusal, which the rate-limit rules then handle.
+  `availableNow` is the stated count minus the counted runs since, 0 while
+  used up, or `null` when unknown.
 - **Degraded.** `status` reports `degraded` without a current statement, and
   then only stated waits gate triggers. It also reports `degraded` for a
-  current statement without a rate, with an unrecognized wording, or without a
-  date. These are read against one hour and still hold when used up.
+  current statement without a rate unit, with an unrecognized wording, or
+  without a date. These are read against one hour and still hold when used up.
 - **Waits and notices.** The gate candidates are stated waits, from the
-  account scan or from the PR's own comments since its head was pushed, and
-  the time a used-up allowance frees. For a rate-limit notice comment, a
-  candidate counts only if it follows the notice: a wait posted at or after
-  it, an allowance time after it, or, when the statement is current and rated,
-  the time the runs counted before the notice free a slot.
-- **Scan horizon.** Repository-wide reads cover two windows plus 60 seconds,
-  or two days for a per-day statement. CodeRabbit's longest stated wait so far
-  is 59 minutes, and a PR's own refusal is read without a horizon.
+  account scan or from any of the PR's own comments, and the time a used-up
+  allowance frees. For a rate-limit notice comment, a candidate counts only if
+  it follows the notice: a wait posted at or after it, an allowance time after
+  it, or, when the statement is current and rated, the time the runs counted
+  before the notice free a slot.
+- **Scan horizon.** Repository-wide reads cover two hours plus 60 seconds.
+  When that scan finds a per-day statement, they cover two days plus 60
+  seconds; a per-day statement older than the two-hour scan is not found.
+  CodeRabbit's longest stated wait so far is 59 minutes, and a PR's own
+  comments are read without a horizon.
 
 For a head that needs a trigger, `status` decides as follows:
 
