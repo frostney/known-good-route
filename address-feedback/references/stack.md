@@ -146,10 +146,12 @@ rate-limited status means the review is not complete (#87), and a review
 carried forward to a later head does not complete it. It escalates untrusted incremental
 acknowledgments to a full review, refuses guessed retry times, and never
 exposes a paid-review command. Keep `review-complete` for real exact-head review
-objects only: CodeRabbit review objects on the head with a non-empty body that
-is not a rate-limit, skip or pause notice. That includes reviews whose findings
-are only outside the diff or nitpicks, which carry no "Actionable comments
-posted" line.
+objects only: CodeRabbit review objects on the head whose body shows review
+evidence, either "Actionable comments posted: N" with N of at least 1 or an
+outside-diff, nitpick or duplicate-comments section, and is not a rate-limit,
+skip or pause notice. Reviews whose findings are only outside the diff or
+nitpicks carry no "Actionable comments posted" line and still count; any other
+body, including an unknown notice, never completes a head.
 
 ## Result contract
 

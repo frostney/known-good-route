@@ -341,7 +341,7 @@ class CodeRabbitAdapterTest(unittest.TestCase):
         def after_post(_endpoint: str, payload: dict[str, str]) -> None:
             self.assertEqual(payload["body"], "@coderabbitai review")
             gh.pages["repos/owner/repo/pulls/7/reviews?per_page=100"] = [[
-                review(33, "Actionable comments posted: 0")
+                review(33, "Actionable comments posted: 1")
             ]]
 
         gh.on_post = after_post
@@ -2808,6 +2808,49 @@ class CleanReviewSecondVerificationTest(unittest.TestCase):
         for name, item in {"other head": review(41, body, head="other-head"), "pending": review(42, body, state="PENDING")}.items():
             with self.subTest(review=name):
                 self.assertNotEqual(classify(configured_gh(reviews=[item]))[0], "review-complete")
+
+
+class ReviewEvidenceAllowListTest(unittest.TestCase):
+    """Final verification of PR #96: only review evidence completes a head."""
+
+    def complete(self, body: str) -> bool:
+        return classify(configured_gh(reviews=[review(50, body)]))[0] == "review-complete"
+
+    def test_unknown_or_unlisted_notice_bodies_never_complete(self) -> None:
+        for body in (
+            "> [!CAUTION]\n> ## Review failed\n> The pull request is closed.",
+            "Review stopped after lock loss.",
+            "<summary>⚠️ Action not completed</summary>\n\nAlready reviewed.",
+            "Oops, something went wrong! Please try again later.",
+            "CodeRabbit couldn't update its existing comment.",
+            "Actionable comments posted: 0",
+            "Something CodeRabbit has not said before.",
+        ):
+            with self.subTest(body=body[:40]):
+                self.assertFalse(self.complete(body))
+
+    def test_review_evidence_completes(self) -> None:
+        for body in (
+            "**Actionable comments posted: 1**",
+            "<details>\n<summary>⚠️ Outside diff range comments (1)</summary>",
+            "<details>\n<summary>🧹 Nitpick comments (3)</summary>",
+            "<details>\n<summary>♻️ Duplicate comments (2)</summary>",
+        ):
+            with self.subTest(body=body[:40]):
+                self.assertTrue(self.complete(body))
+        for recorded in RECORDED["findingsOnlyReviews"]["reviews"]:
+            with self.subTest(pr=recorded["pr"]):
+                self.assertTrue(self.complete(recorded["body"]))
+
+    def test_the_notice_guard_holds_even_beside_review_evidence(self) -> None:
+        evidence = "<details>\n<summary>🧹 Nitpick comments (1)</summary>"
+        for name, notice in {
+            "marker only, after a leading comment": "<!-- internal-state -->\n<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->",
+            "lowercase heading": "> ## review skipped",
+            "heading after a preamble": "Some preamble.\n> ## Reviews paused",
+        }.items():
+            with self.subTest(notice=name):
+                self.assertFalse(self.complete(f"{notice}\n{evidence}"))
 
 
 if __name__ == "__main__":

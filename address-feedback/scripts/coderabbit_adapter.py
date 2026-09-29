@@ -105,7 +105,13 @@ UNSETTLED_BLOCK = re.compile(
     r"|Currently processing new changes",
     re.IGNORECASE,
 )
-# A CodeRabbit review body that is a notice rather than a review (#87).
+# A review object completes its head only with review evidence: an
+# "Actionable comments posted: N" line with N >= 1, or a findings section.
+REVIEW_FINDINGS = re.compile(
+    r"(?:Outside diff range|Nitpick|Duplicate) comments \(\d+\)", re.IGNORECASE
+)
+# A CodeRabbit review body that is a notice rather than a review (#87); a
+# second guard beside the evidence rule.
 REVIEW_NOTICE = re.compile(
     r"auto-generated comment: (?:rate limited|skip review|review paused) by coderabbit"
     r"|^\W*#* *(?:Review skipped|Reviews? paused|Rate limit exceeded|Review limit reached)"
@@ -1037,15 +1043,17 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
     for review in reviews:
         body = str(review.get("body") or "")
         match = ACTIONABLE.search(body)
-        # A review whose findings are only outside the diff or nitpicks has no
-        # "Actionable comments posted" line but is still a completed review.
-        # An empty body only carries thread replies; a notice is no review.
-        findings = bool(body.strip()) and not REVIEW_NOTICE.search(body)
+        # Only review evidence counts: actionable comments, or findings that
+        # are only outside the diff, nitpicks or duplicates (those carry no
+        # "Actionable comments posted" line). Reply-only records are empty,
+        # and any other body, including an unknown notice, is not a review.
+        evidence = bool(match and int(match.group(1)) >= 1) or bool(REVIEW_FINDINGS.search(body))
         if (
             is_bot(review)
             and review.get("state") != "PENDING"
             and review.get("commit_id") == head
-            and (match or findings)
+            and evidence
+            and not REVIEW_NOTICE.search(body)
         ):
             exact_reviews.append(
                 {
