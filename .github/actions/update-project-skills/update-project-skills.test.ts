@@ -82,6 +82,34 @@ async function writeInventory(projectRoot: string, skillName: string, overrides 
   );
 }
 
+async function addProjectAuthoredSkill(
+  fixture: Awaited<ReturnType<typeof makeRepository>>,
+  name = "house-skill",
+) {
+  const directory = join(fixture.projectRoot, ".agents", "skills", name);
+  await mkdir(directory, { recursive: true });
+  await writeFile(
+    join(directory, "SKILL.md"),
+    `---\nname: ${name}\ndescription: Project-authored fixture.\n---\n\n# House\n`,
+  );
+  runGit(fixture.root, ["add", "."]);
+  runGit(fixture.root, ["commit", "--message", "test: add project-authored skill"]);
+  return directory;
+}
+
+async function writeTamperedArtifact(
+  fixture: Awaited<ReturnType<typeof makeRepository>>,
+  artifactDirectory: string,
+) {
+  runGit(fixture.root, ["add", "-A"]);
+  await writeFile(join(artifactDirectory, "skills-update.patch"),
+    runGit(fixture.root, ["diff", "--cached", "--binary", "--full-index", "HEAD"]) + "\n");
+  const metadataPath = join(artifactDirectory, "metadata.json");
+  const metadata = JSON.parse(await readFile(metadataPath, "utf8"));
+  metadata.tree = runGit(fixture.root, ["write-tree"]);
+  await writeFile(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`);
+}
+
 async function refreshOptions(fixture: Awaited<ReturnType<typeof makeRepository>>) {
   const artifactDirectory = join(fixture.root, "..", `${fixture.skillName}-artifact-${Date.now()}`);
   temporaryDirectories.push(artifactDirectory);
@@ -95,8 +123,9 @@ async function refreshOptions(fixture: Awaited<ReturnType<typeof makeRepository>
   };
 }
 
-async function makePublication(skillsRoot = ".") {
+async function makePublication(skillsRoot = ".", { projectAuthored = false } = {}) {
   const fixture = await makeRepository(skillsRoot);
+  if (projectAuthored) await addProjectAuthoredSkill(fixture);
   const bareRemote = await realpath(
     await mkdtemp(join(tmpdir(), "kgr-skills-remote-test-")),
   );
@@ -213,6 +242,19 @@ describe("project inventory validation", () => {
     });
     await expect(inspectInventory(blocked.projectRoot)).rejects.toThrow(
       "sourceType local cannot be refreshed remotely",
+    );
+  });
+
+  test("keeps unlocked skill directories as project-authored and still requires every locked skill", async () => {
+    const fixture = await makeRepository();
+    await addProjectAuthoredSkill(fixture);
+    const inventory = await inspectInventory(fixture.projectRoot);
+    expect(inventory.names).toEqual(["example-skill"]);
+    expect(inventory.projectAuthored).toEqual(["house-skill"]);
+
+    await rm(fixture.skillDirectory, { recursive: true });
+    await expect(inspectInventory(fixture.projectRoot)).rejects.toThrow(
+      "missing locked skills: example-skill",
     );
   });
 
@@ -493,6 +535,131 @@ describe("project refresh", () => {
       ).rejects.toThrow("changed source identity");
     }
   });
+
+  test("refreshes locked skills around a project-authored skill it never changes", async () => {
+    const fixture = await makeRepository();
+    await addProjectAuthoredSkill(fixture);
+    const result = await refreshProjectSkills(await refreshOptions(fixture), {
+      runSkills: async () => {
+        await writeFile(join(fixture.skillDirectory, "reference.md"), "refreshed\n");
+        await writeInventory(fixture.projectRoot, fixture.skillName);
+        return { status: 0, output: "Updated 1 skill" };
+      },
+    });
+    expect(result.changedPaths).toEqual([
+      ".agents/skills/example-skill/reference.md",
+      "skills-lock.json",
+    ]);
+
+    const edited = await makeRepository();
+    const house = await addProjectAuthoredSkill(edited);
+    await expect(
+      refreshProjectSkills(await refreshOptions(edited), {
+        runSkills: async () => {
+          await writeFile(join(house, "SKILL.md"), "overwritten\n");
+          return { status: 0, output: "Updated 1 skill" };
+        },
+      }),
+    ).rejects.toThrow("changed project-authored skills: .agents/skills/house-skill/SKILL.md");
+
+    const added = await makeRepository();
+    await expect(
+      refreshProjectSkills(await refreshOptions(added), {
+        runSkills: async () => {
+          const stray = join(added.projectRoot, ".agents", "skills", "stray-skill");
+          await mkdir(stray, { recursive: true });
+          await writeFile(join(stray, "SKILL.md"), "stray\n");
+          return { status: 0, output: "Updated 1 skill" };
+        },
+      }),
+    ).rejects.toThrow("changed the project skill inventory");
+  });
+
+  test("publishes beside a project-authored skill and rejects an artifact that edits it", async () => {
+    const publication = await makePublication(".", { projectAuthored: true });
+    const { options, bareRemote } = publication;
+    await withFakeGh(publication, async () => {
+      const result = await publishProjectSkills(options);
+      expect(result.pullRequestUrl).toBe("https://example.test/pull/1");
+      expect(runGit(bareRemote, ["diff", "--name-only", "main", options.branch])).not.toContain("house-skill");
+    });
+
+    const tamperings: [string, (projectRoot: string) => Promise<void>, string][] = [
+      [".", async (projectRoot) => {
+        await writeFile(join(projectRoot, ".agents/skills/house-skill/SKILL.md"), "tampered\n");
+      }, "changed project-authored skills"],
+      ["paddy", async (projectRoot) => {
+        await writeFile(join(projectRoot, ".agents/skills/house-skill/SKILL.md"), "tampered\n");
+      }, "changed project-authored skills: paddy/.agents/skills/house-skill/SKILL.md"],
+      [".", async (projectRoot) => {
+        const stray = join(projectRoot, ".agents/skills/stray-skill");
+        await mkdir(stray, { recursive: true });
+        await writeFile(join(stray, "SKILL.md"), "stray\n");
+      }, "changed the project-authored skill inventory"],
+      [".", async (projectRoot) => {
+        const house = join(projectRoot, ".agents/skills/house-skill");
+        const lockPath = join(projectRoot, "skills-lock.json");
+        const lock = JSON.parse(await readFile(lockPath, "utf8"));
+        lock.skills["house-skill"] = {
+          source: "example/skills",
+          sourceType: "github",
+          skillPath: "skills/house-skill/SKILL.md",
+          computedHash: await computeCliCompatibleSkillHash(house),
+        };
+        await writeFile(lockPath, `${JSON.stringify(lock, null, 2)}\n`);
+      }, "changed the project-authored skill inventory"],
+    ];
+    for (const [skillsRoot, tamper, message] of tamperings) {
+      const tampered = await makePublication(skillsRoot, { projectAuthored: true });
+      await tamper(tampered.fixture.projectRoot);
+      await writeTamperedArtifact(tampered.fixture, tampered.options.artifactDirectory);
+      await withFakeGh(tampered, async () => {
+        await expect(publishProjectSkills(tampered.options)).rejects.toThrow(message);
+        expect(runGit(tampered.bareRemote, ["branch", "--list", tampered.options.branch])).toBe("");
+      });
+    }
+  }, publicationTimeout);
+
+  test("keeps main's project-authored edits off an existing branch and rejects the branch editing them", async () => {
+    const publication = await makePublication(".", { projectAuthored: true });
+    const { options, fixture, bareRemote } = publication;
+    const cycle = async (update: string) => {
+      runGit(fixture.root, ["restore", "."]);
+      runGit(fixture.root, ["clean", "-fd"]);
+      runGit(fixture.root, ["pull", "--ff-only", "origin", "main"]);
+      await refreshProjectSkills({ ...(await refreshOptions(fixture)), artifactDirectory: options.artifactDirectory }, {
+        runSkills: async () => {
+          await writeFile(join(fixture.skillDirectory, "reference.md"), update);
+          await writeInventory(fixture.projectRoot, fixture.skillName);
+          return { status: 0, output: "Updated 1 skill" };
+        },
+      });
+      runGit(options.repositoryRoot, ["switch", "--detach", "main"]);
+      runGit(options.repositoryRoot, ["branch", "-D", options.branch]);
+      runGit(options.repositoryRoot, ["fetch", "origin", "main"]);
+      runGit(options.repositoryRoot, ["switch", "--detach", "origin/main"]);
+      return publishProjectSkills(options);
+    };
+    await withFakeGh(publication, async () => {
+      await publishProjectSkills(options);
+      const house = join(options.repositoryRoot, ".agents/skills/house-skill/SKILL.md");
+      runGit(options.repositoryRoot, ["switch", "--detach", "main"]);
+      await writeFile(house, "edited on main\n");
+      runGit(options.repositoryRoot, ["commit", "-am", "test: edit project-authored skill on main"]);
+      runGit(options.repositoryRoot, ["push", "origin", "HEAD:main"]);
+      await cycle("second\n");
+      await cycle("third\n");
+      expect(runGit(bareRemote, ["diff", "--name-only", `main...${options.branch}`])).not.toContain("house-skill");
+
+      runGit(options.repositoryRoot, ["switch", options.branch]);
+      await writeFile(house, "edited on the automation branch\n");
+      runGit(options.repositoryRoot, ["commit", "-am", "test: edit project-authored skill on the branch"]);
+      runGit(options.repositoryRoot, ["push", "origin", options.branch]);
+      const original = runGit(bareRemote, ["rev-parse", options.branch]);
+      await expect(cycle("fourth\n")).rejects.toThrow("Existing PR branch contains files outside");
+      expect(runGit(bareRemote, ["rev-parse", options.branch])).toBe(original);
+    });
+  }, publicationTimeout);
 
   test("publishes a new draft branch and reuses an unchanged existing branch", async () => {
     const publication = await makePublication();

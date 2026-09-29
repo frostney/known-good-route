@@ -108,8 +108,10 @@ already select it.
 ## Diagnose a failed run
 
 - Inventory or hash failure: compare `skills-lock.json` with canonical
-  `.agents/skills/<name>` folders. Reproduce with the pinned CLI at the exact
-  project root. Do not patch `SKILL.md` or hashes manually.
+  `.agents/skills/<name>` folders. A locked skill without its folder fails; a
+  folder without a lock entry is project-authored and passes. Reproduce with
+  the pinned CLI at the exact project root. Do not patch `SKILL.md` or hashes
+  manually.
 - Deleted or renamed upstream entry: follow the source-evidence migration above.
 - Changes outside generated scope: inspect the CLI's output and caller root.
   The workflow intentionally rejects package locks, helper copies, and other
@@ -126,7 +128,10 @@ already select it.
 
 ## Preserve generated-file ownership
 
-The project skills CLI owns `.agents/skills` and `skills-lock.json`. Keep
-inventory edits project-scoped, review the exact generated diff, and reject
-collateral changes. The reusable workflow creates or updates a draft PR only;
-normal repository review and merge policy remain outside this playbook.
+The project skills CLI owns `skills-lock.json` and every `.agents/skills`
+directory the lock lists. A directory the lock does not list is
+project-authored: the project edits it by hand, and the workflow keeps it but
+fails if a refresh or an artifact changes it. Keep inventory edits
+project-scoped, review the exact generated diff, and reject collateral changes.
+The reusable workflow creates or updates a draft PR only; normal repository
+review and merge policy remain outside this playbook.
