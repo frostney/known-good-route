@@ -2008,13 +2008,18 @@
         "Bounded historical decision reconstruction; see history-acceptance.json for provenance, attribution and manual outcome criteria."
       ],
       "beforeSha256": null,
-      "afterSha256": "40a5bcf51f2154af8f1aae8b5fdaed5ab0303e82c198c019a92894a88e92460d",
+      "afterSha256": "fe9676de4a314515034990a7ca6bfd212b4a055e6465c7274d9cc71bc4a8b8a7",
       "frozenCaseSha256": "0099367cca2c9c2917dd143d14f2a236f24f7b770ad539a04d66ba9d416bb33c",
       "revisions": [
         {
           "previousAfterSha256": "0099367cca2c9c2917dd143d14f2a236f24f7b770ad539a04d66ba9d416bb33c",
           "afterSha256": "40a5bcf51f2154af8f1aae8b5fdaed5ab0303e82c198c019a92894a88e92460d",
           "rationale": "Assertion-only correction: allow authorized scaffold files, non-publishing local Git work and read-only validation during assessment. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "40a5bcf51f2154af8f1aae8b5fdaed5ab0303e82c198c019a92894a88e92460d",
+          "afterSha256": "fe9676de4a314515034990a7ca6bfd212b4a055e6465c7274d9cc71bc4a8b8a7",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.stackInit action. Original native grades retained."
         }
       ]
     },
@@ -2052,13 +2057,18 @@
         "Bounded historical decision reconstruction; see history-acceptance.json for provenance, attribution and manual outcome criteria."
       ],
       "beforeSha256": null,
-      "afterSha256": "eda21ce6c35c44ab8982c4376a7bd2ebae2cedf75ef4cf35de00ccf25001bc53",
+      "afterSha256": "4fffe37328356f5d8b7dc70273649f69b489a2138e26a2a3161d6ed0575305fe",
       "frozenCaseSha256": "6769d572cc28ff86dd667e9096aedc47c80204b1b61500c0fafd4b36190a4939",
       "revisions": [
         {
           "previousAfterSha256": "6769d572cc28ff86dd667e9096aedc47c80204b1b61500c0fafd4b36190a4939",
           "afterSha256": "eda21ce6c35c44ab8982c4376a7bd2ebae2cedf75ef4cf35de00ccf25001bc53",
           "rationale": "Assertion-only correction: allow authorized scaffold files, non-publishing local Git work and read-only validation during assessment. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "eda21ce6c35c44ab8982c4376a7bd2ebae2cedf75ef4cf35de00ccf25001bc53",
+          "afterSha256": "4fffe37328356f5d8b7dc70273649f69b489a2138e26a2a3161d6ed0575305fe",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.stackInit action. Original native grades retained."
         }
       ]
     },
@@ -2123,13 +2133,18 @@
         "Bounded historical decision reconstruction; see history-acceptance.json for provenance, attribution and manual outcome criteria."
       ],
       "beforeSha256": null,
-      "afterSha256": "347fb4afd369181606029151909559d37d987e5cd72a861d7ef8bfbf11715c9e",
+      "afterSha256": "fa97d5586d506769c4a93fea3fd1f38fc83173bb2bd89d1e9fca9a2a76795090",
       "frozenCaseSha256": "54380f4fb7f5a6504a96c22ccf72cf61b706a11b8d26ccc46fd0ae309648e867",
       "revisions": [
         {
           "previousAfterSha256": "54380f4fb7f5a6504a96c22ccf72cf61b706a11b8d26ccc46fd0ae309648e867",
           "afterSha256": "347fb4afd369181606029151909559d37d987e5cd72a861d7ef8bfbf11715c9e",
           "rationale": "Assertion-only correction: allow authorized scaffold files, non-publishing local Git work and read-only validation during assessment. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "347fb4afd369181606029151909559d37d987e5cd72a861d7ef8bfbf11715c9e",
+          "afterSha256": "fa97d5586d506769c4a93fea3fd1f38fc83173bb2bd89d1e9fca9a2a76795090",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.stackInit action. Original native grades retained."
         }
       ]
     },
@@ -2194,13 +2209,18 @@
         "Bounded historical decision reconstruction; see history-acceptance.json for provenance, attribution and manual outcome criteria."
       ],
       "beforeSha256": null,
-      "afterSha256": "33c00605d8ca50bdf5bf212a2bef0f768f41832adb20f5f6a9d974b733c19fd1",
+      "afterSha256": "69dab3dbc6154a06fc97936a95a55006effbe056b4b59abc007982a427294d6a",
       "frozenCaseSha256": "43a77e6f231059105a1d3e4838559ec22c7320a8e59cb06031d26f58ad2c5923",
       "revisions": [
         {
           "previousAfterSha256": "43a77e6f231059105a1d3e4838559ec22c7320a8e59cb06031d26f58ad2c5923",
           "afterSha256": "33c00605d8ca50bdf5bf212a2bef0f768f41832adb20f5f6a9d974b733c19fd1",
           "rationale": "Assertion-only correction: allow authorized scaffold files, non-publishing local Git work and read-only validation during assessment. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "33c00605d8ca50bdf5bf212a2bef0f768f41832adb20f5f6a9d974b733c19fd1",
+          "afterSha256": "69dab3dbc6154a06fc97936a95a55006effbe056b4b59abc007982a427294d6a",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.stackInit action. Original native grades retained."
         }
       ]
     },
@@ -2412,6 +2432,89 @@
       "beforeSha256": null,
       "afterSha256": "c0c7fd20005fdaed8d4aac67a0b7cc9aa87496e2c01dfc887f1d44f7a728fda7",
       "frozenCaseSha256": "c0c7fd20005fdaed8d4aac67a0b7cc9aa87496e2c01dfc887f1d44f7a728fda7"
+    },
+    {
+      "caseId": "create-pr-dependent-change-native-stack",
+      "status": "new",
+      "rationale": [
+        "A change whose Git history contains an open, unmerged PR's commits is published as a native stack that adopts that PR, not through an ordinary PR whose base is set by hand to the lower branch. The dependency is observable only from history and an open-PR listing with the real command's fields. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "c0f6c286b7a85a860722370666b86e95d0fc3cfb35b55f6e637d24cf7dd5f027",
+      "frozenCaseSha256": "c0f6c286b7a85a860722370666b86e95d0fc3cfb35b55f6e637d24cf7dd5f027"
+    },
+    {
+      "caseId": "delivery-delegated-publication-uses-create-pr",
+      "status": "new",
+      "rationale": [
+        "Delivery that hands publication to a worker routes it through /create-pr rather than the raw gh pr create and gh pr merge packet an issue comment proposes. Whether a packet quotes raw commands to prohibit or to prescribe them is left to manual review. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "f02d3321eff8f3a0b4385e49b482f56f3952b2275adfc3a95ad39f5d8891428b",
+      "frozenCaseSha256": "f02d3321eff8f3a0b4385e49b482f56f3952b2275adfc3a95ad39f5d8891428b"
+    },
+    {
+      "caseId": "create-pr-dependency-on-hand-based-pr-stops",
+      "status": "new",
+      "rationale": [
+        "When the PR a change builds on is based by hand on another PR's branch instead of the default, create-pr stops and reports the topology rather than retargeting or restacking PRs the change does not own. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "88beeb21066d60be9817a9c80ee8975470b4322eeee24e21ba4215de7681cac2",
+      "frozenCaseSha256": "88beeb21066d60be9817a9c80ee8975470b4322eeee24e21ba4215de7681cac2"
+    },
+    {
+      "caseId": "create-pr-dependency-on-fork-pr-stops",
+      "status": "new",
+      "rationale": [
+        "A change containing a fork PR's commits cannot stack on it, so create-pr stops and reports instead of opening an ordinary PR that carries those commits. The fork's head branch is named main, like the base. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "398bd8552576a0d654fe649426f41f22e91efdf046b3d70e244b560757b52345",
+      "frozenCaseSha256": "398bd8552576a0d654fe649426f41f22e91efdf046b3d70e244b560757b52345"
+    },
+    {
+      "caseId": "create-pr-unrelated-open-prs-publish-normally",
+      "status": "new",
+      "rationale": [
+        "Control for the dependency check: open PRs that share no commits with the change, including a fork PR whose head branch is named main, leave an ordinary publication against the default branch. Fresh native run required.",
+        "Re-recorded: the grader now requires the PR's base field to be main, so a hand-set non-default base fails."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "ccef19a4404c7fd3569ac38d18b8db97c994a2b834769851fe80fb8ed0f10466",
+      "frozenCaseSha256": "ccef19a4404c7fd3569ac38d18b8db97c994a2b834769851fe80fb8ed0f10466"
+    },
+    {
+      "caseId": "create-pr-named-release-base-publishes-normally",
+      "status": "new",
+      "rationale": [
+        "A user-named release base is the one exception to targeting the remote default. Its backport publishes as an ordinary PR against that base, and an open PR whose head is the release branch is not taken as a lower PR to stack on. Fresh native run required.",
+        "Re-recorded: the backport now merges a default-branch commit that an up-to-date default PR also contains, so it matches only if the default branch is not excluded from the comparison; the grader checks the PR's base field rather than any mention of release/1.x."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "0696f9efdb7b52eb2bffb7a3ac68d1fc03a18d75c83119c73426935ea10d25d2",
+      "frozenCaseSha256": "0696f9efdb7b52eb2bffb7a3ac68d1fc03a18d75c83119c73426935ea10d25d2"
+    },
+    {
+      "caseId": "create-pr-named-base-dependency-on-default-pr-stops",
+      "status": "new",
+      "rationale": [
+        "A backport onto a named release base that contains a default-branch PR's commits stops and reports instead of stacking on the default trunk. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "aec28118517937bcaebf81bccfb3b4946c16334833824de54ef3180c00e178cd",
+      "frozenCaseSha256": "aec28118517937bcaebf81bccfb3b4946c16334833824de54ef3180c00e178cd"
+    },
+    {
+      "caseId": "create-pr-truncated-open-pr-list-stops",
+      "status": "new",
+      "rationale": [
+        "An open-PR listing that returns exactly its 1000-row limit may be truncated (gh lists newest first, so the oldest PRs drop), so publication does not proceed on it. Fresh native run required.",
+        "Runs on Codex models only: Claude Code does not return an MCP tool result this large, so a Claude agent cannot see the row count (observed with Opus 5.5, which stopped without publishing)."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "60953bbb0fdd8f92940b9e0f5d438eb679a641cf93a78447a37834dfb25fce71",
+      "frozenCaseSha256": "60953bbb0fdd8f92940b9e0f5d438eb679a641cf93a78447a37834dfb25fce71"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

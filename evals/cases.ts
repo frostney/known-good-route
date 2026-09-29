@@ -3,6 +3,7 @@ import { prWritingCases } from "./pr-writing-cases.ts";
 import { deliveryCases } from "./delivery-cases.ts";
 import { historyCases } from "./history-cases.ts";
 import { executionCases } from "./execution-cases.ts";
+import { stackDependencyCases } from "./stack-dependency-cases.ts";
 import type { EvalCase } from "./types.ts";
 export const evalCases: EvalCase[] = [
   ...historyCases,
@@ -10,6 +11,7 @@ export const evalCases: EvalCase[] = [
   ...deliveryCases,
   ...promptingCases,
   ...executionCases,
+  ...stackDependencyCases,
   {
     id: "create-pr-already-committed",
     description: "A clean feature branch must not receive an empty commit.",
