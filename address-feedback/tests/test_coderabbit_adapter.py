@@ -1632,6 +1632,22 @@ class ReviewFindingsTest(unittest.TestCase):
                     parsed["refillSeconds"],
                     (int(minutes.group(1)) * 60 if minutes else 0) + (int(seconds.group(1)) if seconds else 0),
                 )
+        modern = [line for line in corpus["lines"] if line not in legacy and not any(re.search(p, line) for p in NON_STATEMENTS)]
+        self.assertEqual(len(modern), 65)
+        for line in modern:
+            with self.subTest(modern=line):
+                # Read independently: "used all"/"used the" means none left;
+                # otherwise the count before "remain(s)"/"is|are currently
+                # available"; the rate is the number before "per hour".
+                if re.search(r"used (?:all|the)", line):
+                    remaining = 0
+                else:
+                    remaining = int(re.search(r"(\d+)(?: included)?(?: reviews?)? (?:remains?|is currently|are currently)", line).group(1))
+                rates = re.findall(r"(\d+)(?: included)?(?: reviews?)? per hour", line)
+                parsed = ADAPTER.parse_allowance(line)
+                assert parsed
+                self.assertEqual(parsed["remaining"], remaining)
+                self.assertEqual(parsed["allowance"], int(rates[-1]) if rates else None)
         used: set[str] = set()
         for line in corpus["lines"]:
             reason = next((p for p in NON_STATEMENTS if re.search(p, line)), None)
@@ -2195,6 +2211,39 @@ class ReverificationFindingsTest(unittest.TestCase):
         self.assertEqual(allowance["perHour"], 3)
         self.assertEqual(allowance["retryAt"], iso(NOW - 3000 + HOUR + 60))
         self.assertNotEqual(allowance["retryAt"], iso(NOW - 1000 + HOUR + 60))
+
+
+class RoundThreeVerificationTest(unittest.TestCase):
+    """Non-blocking improvements from the round-3 verification of PR #94 (RV3-1 to RV3-4)."""
+
+    def test_a_prs_own_wait_before_a_notice_does_not_explain_it(self) -> None:
+        # An old refusal's wait has elapsed; a later bare notice names no wait
+        # and no allowance explains it, so no trigger is permitted.
+        gh = configured_gh(
+            comments=[
+                comment(9, "Your next included review will be available in 15 minutes.", START + 30),
+                comment(10, "@coderabbitai review", START + 1200, bot=False),
+                comment(11, "Review rate limited.", START + 1230),
+            ]
+        )
+        value = ADAPTER.observation(gh, "owner/repo", [7], {7: "head-7"}, ["owner/repo"], START + 1800)
+        self.assertEqual(value["pullRequests"][0]["state"], "pending-retry-source")
+
+    def test_a_human_comment_on_the_pr_states_no_wait(self) -> None:
+        gh = configured_gh(comments=[comment(12, "Please wait 30 minutes before the next review.", START + 60, bot=False)])
+        value = ADAPTER.observation(gh, "owner/repo", [7], {7: "head-7"}, ["owner/repo"], START + 180)
+        self.assertEqual(value["pullRequests"][0]["state"], "trigger-incremental")
+
+    def test_a_footers_refill_frees_only_its_own_none_remaining(self) -> None:
+        # "1/5 remaining" used up by a later counted run is freed by counted
+        # runs, not by the footer's refill.
+        gh = budget_gh(
+            [summary_comment(91, 9, NOW - 600, legacy_footer(1, 5, "50 minutes"), "run-b")],
+            other_reviews={9: [run_review_object(901, "run-c", NOW - 300)]},
+        )
+        allowance = observe(gh)["allowance"]
+        self.assertTrue(allowance["exhausted"])
+        self.assertEqual(allowance["retryAt"], iso(NOW - 600 + HOUR + 60))
 
 
 if __name__ == "__main__":

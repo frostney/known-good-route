@@ -142,18 +142,18 @@ references link here.
   it that fewer than the allowance remain, plus 60 seconds. With several
   reviews per window, that is the oldest such run leaving, not the statement's
   own run. When no counted run can be tied to it, or the statement gives no
-  rate, it frees one window plus 60 seconds after the statement. A stated
-  refill time frees it at that time plus 60 seconds. A "0 remain" statement
-  therefore holds until then, even while it is still current. This is the
-  maintainer's ruling on PR #94.
+  rate, it frees one window plus 60 seconds after the statement. A "0/P"
+  footer frees at its stated refill plus 60 seconds; the refill is when the
+  whole window has refilled, an upper bound for the next slot. A "0 remain"
+  statement therefore holds until then, even while it is still current. This
+  is the maintainer's ruling on PR #94. `availableNow` is the stated count
+  minus the counted runs since, 0 while used up, or `null` when unknown.
 - **Uncounted runs.** The counted-run time is never early only while every run
   in the window is counted. Two kinds of run are missed. Reviews in a
   repository that is not scanned are missed. So is a review that posts no
   review object, such as one with no actionable comments, when a later review
   on the same PR overwrites its summary block before a scan sees it. An early
   time only risks a refusal, which the rate-limit rules then handle.
-  `availableNow` is the stated count minus the counted runs since, 0 while
-  used up, or `null` when unknown.
 - **Degraded.** `status` reports `degraded` without a current statement, and
   then only stated waits gate triggers. It also reports `degraded` for a
   current statement without a rate unit, with an unrecognized wording, or
