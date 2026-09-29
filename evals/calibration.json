@@ -2482,6 +2482,16 @@
       "beforeSha256": null,
       "afterSha256": "91ac78e6b6d7dca74f745f43eaaaf1a67398c1f7445bee0dceef47e2b740e6be",
       "frozenCaseSha256": "91ac78e6b6d7dca74f745f43eaaaf1a67398c1f7445bee0dceef47e2b740e6be"
+    },
+    {
+      "caseId": "create-pr-named-release-base-publishes-normally",
+      "status": "new",
+      "rationale": [
+        "A user-named release base is the one exception to targeting the remote default. Its backport publishes as an ordinary PR against that base, and an open PR whose head is the release branch is not taken as a lower PR to stack on. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "82463197c428222109477c8b88835a0758416133f824e7ba4947dbec48d1b0cb",
+      "frozenCaseSha256": "82463197c428222109477c8b88835a0758416133f824e7ba4947dbec48d1b0cb"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

@@ -87,3 +87,18 @@ test("open PRs that share no commits leave an ordinary publication", () => {
   expect(failed(id, [act("git.stackInit", "gh stack init fix/parser-escape feat/budget-report"), ...ordinary], output))
     .toEqual(["forbidden actions"]);
 });
+
+test("a backport onto a named release base publishes against it, not as a stack", () => {
+  const id = "create-pr-named-release-base-publishes-normally";
+  const output = "PR #151 is ready for review against release/1.x.";
+  const push = act("git.push", "Push backport/retry-budget");
+  const ready = act("forge.markPrReady", "Mark #151 ready");
+  expect(failed(id, [push, act("forge.openDraftPr", "Open the backport", { base: "release/1.x" }), ready], output)).toEqual([]);
+  expect(failed(id, [push, act("forge.openDraftPr", "Open the backport", { base: "main" }), ready], "PR #151 is ready for review against main."))
+    .toEqual(expect.arrayContaining(["forge.openDraftPr evidence"]));
+  // The release branch is the head of open PR #150, but it is the named base, not a lower PR.
+  expect(failed(id, [act("git.stackInit", "gh stack init release/1.x backport/retry-budget"), act("git.stackSubmit", "Submit"), ready], output))
+    .toEqual(expect.arrayContaining(["forbidden actions"]));
+  expect(failed(id, [], "Stopped: open PR #150's head release/1.x is the intended base."))
+    .toEqual(expect.arrayContaining(["required actions"]));
+});

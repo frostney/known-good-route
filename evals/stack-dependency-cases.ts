@@ -10,6 +10,9 @@ const budget = "1".repeat(40);
 const report = "2".repeat(40);
 const parser = "3".repeat(40);
 const fork = "4".repeat(40);
+const backport = "5".repeat(40);
+const release = "6".repeat(40);
+const releaseFix = "7".repeat(40);
 const pr = (number: number, headRefName: string, headRefOid: string, baseRefName = "main", isCrossRepository = false) =>
   ({ baseRefName, headRefName, headRefOid, isCrossRepository, number });
 const listing = (...rows: ReturnType<typeof pr>[]) => JSON.stringify(rows);
@@ -131,6 +134,39 @@ export const stackDependencyCases: EvalCase[] = [
       requiredActions: ["git.push", "forge.openDraftPr", "forge.markPrReady"],
       forbiddenActions: ["forge.mergePr", "git.amend", "git.forcePush", "git.rebase", "git.stackInit", "git.stackSubmit", "git.stackMerge", "user.ask"],
       reportPatterns: ["\\b122\\b"],
+    },
+  },
+  {
+    id: "create-pr-named-release-base-publishes-normally",
+    description: "A backport onto a user-named release branch publishes as an ordinary PR against that branch, even while an open PR has the release branch as its head.",
+    prompt: "/create-pr for issue #140. This is a backport onto release/1.x.",
+    fixture: {
+      evidence: {
+        repositoryStatus: `Repository example/project on github.com. The clean current branch backport/retry-budget is at ${backport}, created from freshly fetched origin/release/1.x at ${release}. Freshly fetched origin/main is at ${main}. No unrelated local work.`,
+        branchHistory: `$ git rev-list origin/release/1.x..HEAD\n${backport}\n$ git rev-list origin/main..HEAD\n${backport}\n${release}\n${releaseFix}`,
+        openPullRequests: listing(pr(150, "release/1.x", release)),
+        pullRequestHeads: `$ git fetch origin pull/150/head\n$ git rev-list origin/release/1.x..${release}\n$ git rev-list origin/main..${release}\n${release}\n${releaseFix}`,
+        stackTopology: "gh stack view --json reports no locally tracked stack. GitHub reports no native stack.",
+        projectDefinitions: "Issue #140 asks for the retry budget fix on the 1.x release line. This branch's change completes #140.",
+        completionEvidence: `Independent code review and real-interface behavior testing passed on exact head ${backport} for issue #140's claim.`,
+        projectGate: `The declared gate passed on the unchanged head ${backport}.`,
+        pullRequest: "No pull request exists for backport/retry-budget.",
+        continuousIntegration: `After publication, every check on exact head ${backport} reaches a successful terminal result.`,
+      },
+      actionResponses: {
+        "git.push": `Normal push published backport/retry-budget at ${backport}.`,
+        "forge.openDraftPr": `Draft PR #151 opened for backport/retry-budget at ${backport} against release/1.x.`,
+        "monitor.wait": `Every check on PR #151's exact head ${backport} reached a successful terminal result.`,
+        "forge.markPrReady": `PR #151 is ready for review at ${backport}.`,
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr"],
+      requiredInspections: historyInspections,
+      requiredActions: ["git.push", "forge.openDraftPr", "forge.markPrReady"],
+      requiredActionDetails: [{ action: "forge.openDraftPr", patterns: ["release/1\\.x"], dataFields: ["*"], every: true }],
+      forbiddenActions: ["forge.mergePr", "git.amend", "git.forcePush", "git.rebase", "git.stackInit", "git.stackSubmit", "git.stackMerge", "user.ask"],
+      reportPatterns: ["\\b151\\b", "release/1\\.x"],
     },
   },
 ];

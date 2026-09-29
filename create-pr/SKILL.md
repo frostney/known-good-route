@@ -59,21 +59,25 @@ readiness. Recording a walkthrough does not replace behavior testing.
    stack topology when applicable, and any existing remote head. Preserve
    unrelated local work.
 
+   PRs target the remote default branch. The exception is a long-lived base
+   branch that the user names or that project instructions such as `AGENTS.md`
+   or `CONTRIBUTING.md` document, such as a release branch for a backport: the
+   named base. Outside a named base and the stack reference's native stack
+   operations, never set a PR base to a non-default branch by hand.
+
    Before choosing a base, check whether the change builds on an unmerged PR.
    List open PRs with
    `gh pr list --state open --limit 1000 --json number,headRefName,headRefOid,isCrossRepository,baseRefName`
    and fetch their heads in one `git fetch REMOTE pull/A/head pull/B/head ...`
    from the remote of the repository that list queried. Skip this branch's own
-   PR and any PR whose head contains this branch's head. The change builds on
-   PR N when N is from this repository and its head branch is the intended
-   base, or when `git rev-list DEFAULT..HEAD` and
-   `git rev-list DEFAULT..HEAD-OID` share a commit, with DEFAULT the fetched
-   remote default and HEAD-OID N's `headRefOid`. A fork PR
-   (`isCrossRepository`) cannot be a base here: stop and report a fork match.
-   Publish a same-repository match as a native stack under the stack
-   reference's "When to start a stack".
-
-   Never set a PR base to a non-default branch outside that reference's native stack operations.
+   PR, any PR whose head contains this branch's head, and any PR whose head
+   branch is the named base. The change builds on PR N when N is from this
+   repository and its head branch is the intended base, or when
+   `git rev-list BASE..HEAD` and `git rev-list BASE..HEAD-OID` share a commit,
+   with BASE the fetched remote default or named base and HEAD-OID N's
+   `headRefOid`. A fork PR (`isCrossRepository`) cannot be a base here: stop
+   and report a fork match. Publish a same-repository match as a native stack
+   under the stack reference's "When to start a stack".
 2. Stop if there are no relevant changes or commits ahead of the remote base.
    Continue without an empty commit when the work is already committed.
 3. If currently on the base branch, create a focused branch named from the issue
@@ -113,7 +117,7 @@ readiness. Recording a walkthrough does not replace behavior testing.
    that completes that issue.
 9. After the publication checks pass, or under the preview-only draft rule
    above, push an ordinary branch normally and set its upstream when needed,
-   then open one draft PR against the remote default.
+   then open one draft PR against the remote default or the named base.
    For a verified native stack, follow the stack reference: a new top layer
    above frozen approved PRs uses protected push, separate PR creation and
    native append; a new stack on a frozen lower PR uses protected
