@@ -78,6 +78,10 @@ UNRATED_WINDOW_SECONDS = WINDOW_SECONDS["hour"]
 # The scan covers two windows: the window of a statement made up to one window
 # ago reaches back that far again.
 ALLOWANCE_LOOKBACK_WINDOWS = 2
+# Stated waits last until a slot in CodeRabbit's hourly window frees; the
+# longest in frostney/GocciaScript's history is 59 minutes. A wait edited
+# before this horizon would have to state over 1 hour 59 minutes to be active.
+WAIT_LOOKBACK_SECONDS = 2 * 3600
 
 
 
@@ -234,13 +238,13 @@ def latest(items: list[dict[str, Any]], field: str) -> dict[str, Any] | None:
     return max(candidates, key=lambda item: str(item[field]), default=None)
 
 
-def account_wait(gh: Gh, repos: list[str]) -> dict[str, Any] | None:
+def account_wait(gh: Gh, repos: list[str], now: float) -> dict[str, Any] | None:
+    """The newest stated wait in comments edited within WAIT_LOOKBACK_SECONDS."""
     candidates: list[dict[str, Any]] = []
     for repo in repos:
         repo_parts(repo)
         comments = rest_items(
-            gh,
-            f"repos/{repo}/issues/comments?sort=updated&direction=desc&per_page=100",
+            gh, allowance_comments_endpoint(repo, now - WAIT_LOOKBACK_SECONDS)
         )
         for comment in comments:
             if not is_bot(comment):
@@ -371,8 +375,22 @@ def scan_allowance(
                 if not is_bot(item) or item.get("state") == "PENDING" or not run:
                     continue
                 submitted = parse_timestamp(item.get("submitted_at"), "review submitted_at")
-                if submitted >= since:
-                    note_run(repo, run.group(1), submitted)
+                if submitted < since:
+                    continue
+                note_run(repo, run.group(1), submitted)
+                # CodeRabbit may state the allowance in its review body only.
+                parsed = parse_allowance(body)
+                if parsed is not None:
+                    statements.append(
+                        parsed
+                        | {
+                            "repo": repo,
+                            "pr": pr,
+                            "reviewId": item.get("id"),
+                            "updatedAt": item["submitted_at"],
+                            "updatedAtEpoch": submitted,
+                        }
+                    )
     statement = max(statements, key=lambda item: item["updatedAtEpoch"], default=None)
     return statement, runs
 
@@ -449,7 +467,11 @@ def account_allowance(gh: Gh, repos: list[str], now: float) -> dict[str, Any]:
         "source": {
             "repo": statement["repo"],
             "pr": statement["pr"],
-            "commentId": statement["commentId"],
+            **(
+                {"reviewId": statement["reviewId"]}
+                if "reviewId" in statement
+                else {"commentId": statement["commentId"]}
+            ),
         },
         "attempts": {
             "count": len(in_window),
@@ -837,7 +859,7 @@ def observation(
     scan_repos: list[str],
     now: float,
 ) -> dict[str, Any]:
-    wait = account_wait(gh, scan_repos)
+    wait = account_wait(gh, scan_repos, now)
     budget = account_allowance(gh, scan_repos, now)
     results = []
     for pr in prs:

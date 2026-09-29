@@ -114,9 +114,12 @@ account quota, hourly window, blind delay, or retry count.
 
 A provider adapter may also derive `retry_at` from an allowance the provider
 itself states. The CodeRabbit adapter reads the newest allowance statement
-across the scanned repositories, such as "N included reviews remain" with
-"allowance at P reviews per hour", timed by its comment's last edit. It ignores
-a statement older than its window. It counts review runs once each by
+across the scanned repositories' summaries and review bodies, such as "N
+included reviews remain" with "allowance at P reviews per hour", timed by the
+comment's last edit or the review's submission. It ignores a statement older
+than its window. Every repository-wide read, including stated waits, covers
+only comments edited in the last two hours; CodeRabbit's longest stated wait
+so far is 59 minutes. It counts review runs once each by
 CodeRabbit's Run ID, from summary statements and review objects, so automatic
 reviews count too. Refused runs and "Currently processing" markers are not
 counted. The allowance is used up when the statement reports none left, or when

@@ -217,8 +217,8 @@ class CodeRabbitAdapterTest(unittest.TestCase):
 
     def test_newest_edited_wait_wins_across_supplied_repositories(self) -> None:
         gh = FakeGh()
-        first = "repos/owner/one/issues/comments?sort=updated&direction=desc&per_page=100"
-        second = "repos/owner/two/issues/comments?sort=updated&direction=desc&per_page=100"
+        first = ADAPTER.allowance_comments_endpoint("owner/one", START + 180 - 2 * 3600)
+        second = ADAPTER.allowance_comments_endpoint("owner/two", START + 180 - 2 * 3600)
         gh.pages[first] = [[comment(1, "Next review available in: 9 minutes", START, updated=START + 30)]]
         gh.pages[second] = [[
             comment(
@@ -229,7 +229,7 @@ class CodeRabbitAdapterTest(unittest.TestCase):
                 issue_url="https://api.github.test/repos/owner/two/issues/88",
             )
         ]]
-        wait = ADAPTER.account_wait(gh, ["owner/one", "owner/two"])
+        wait = ADAPTER.account_wait(gh, ["owner/one", "owner/two"], START + 180)
         self.assertIsNotNone(wait)
         assert wait
         self.assertEqual(wait["repo"], "owner/two")
@@ -761,13 +761,9 @@ def budget_gh(
         "repos/owner/repo/issues/comments?sort=updated&direction=desc"
         f"&per_page=100&since={iso(now - 2 * HOUR)}"
     )
-    gh.pages[scan] = [account_comments]
+    gh.pages[scan] = [account_comments + (wait_comments or [])]
     for pr, reviews in (other_reviews or {}).items():
         gh.pages[f"repos/owner/repo/pulls/{pr}/reviews?per_page=100"] = [reviews]
-    if wait_comments:
-        gh.pages[
-            "repos/owner/repo/issues/comments?sort=updated&direction=desc&per_page=100"
-        ] = [wait_comments]
     return gh
 
 
@@ -1175,7 +1171,7 @@ def replay(
 ) -> tuple[str, dict[str, Any] | None, dict[str, Any]]:
     gh = RecordedGh(RECORDED["timelines"][timeline], at(now))
     budget = ADAPTER.account_allowance(gh, RECORDED_SCAN, at(now))
-    wait = ADAPTER.account_wait(gh, RECORDED_SCAN)
+    wait = ADAPTER.account_wait(gh, RECORDED_SCAN, at(now))
     evidence = pending_evidence(at(rate_limited_at) if rate_limited_at else None)
     state, _, _ = ADAPTER.classify(evidence, "head", wait, at(now), budget)
     return state, ADAPTER.trigger_gate(evidence, wait, budget), budget
@@ -1183,7 +1179,7 @@ def replay(
 
 class RecordedCodeRabbitEvidenceTest(unittest.TestCase):
     def test_every_recorded_allowance_wording_parses(self) -> None:
-        self.assertEqual(len(RECORDED["variants"]), 11)
+        self.assertEqual(len(RECORDED["variants"]), 13)
         for variant in RECORDED["variants"]:
             with self.subTest(text=variant["text"]):
                 parsed = ADAPTER.parse_allowance(variant["text"])
@@ -1394,6 +1390,92 @@ class AllowanceDecisionTableTest(unittest.TestCase):
                 self.assertEqual(item["state"], state)
                 self.assertEqual(item["retrySource"], source)
                 self.assertEqual(item["retryAt"], iso(retry) if retry else None)
+
+
+class BoundedScanTest(unittest.TestCase):
+    """Repository-wide reads stay within the scan horizon on busy repositories."""
+
+    def busy_gh(self, now: int, wait_age: int, stated_minutes: int) -> FakeGh:
+        gh = FakeGh()
+        requested: list[str] = []
+        unbounded = "repos/owner/busy/issues/comments?sort=updated&direction=desc&per_page=100"
+        # 60 pages of old comments, as on a repository with 6,000 of them.
+        gh.pages[unbounded] = [
+            [comment(page * 100 + i, "LGTM", START - 86400 * 30) for i in range(100)]
+            for page in range(60)
+        ]
+        gh.pages[ADAPTER.allowance_comments_endpoint("owner/busy", now - 2 * HOUR)] = [[
+            comment(
+                7001,
+                f"**Next review available in:** **{stated_minutes} minutes**",
+                now - wait_age,
+                issue_url="https://api.github.test/repos/owner/busy/issues/5",
+            )
+        ]]
+        original = gh.rest_pages
+
+        def rest_pages(endpoint: str) -> list[Any]:
+            requested.append(endpoint)
+            if endpoint == unbounded:
+                raise AssertionError("unbounded repository-wide comment scan")
+            return original(endpoint)
+
+        gh.rest_pages = rest_pages  # type: ignore[method-assign]
+        gh.requested = requested  # type: ignore[attr-defined]
+        return gh
+
+    def test_account_wait_reads_only_the_horizon_and_keeps_an_active_wait(self) -> None:
+        # The longest wait CodeRabbit has stated is 59 minutes; one stated
+        # 58 minutes ago is still active and lies inside the two-hour horizon.
+        gh = self.busy_gh(NOW, 58 * 60, 59)
+        wait = ADAPTER.account_wait(gh, ["owner/busy"], NOW)
+        assert wait
+        self.assertEqual(wait["retryAtEpoch"], NOW - 58 * 60 + 59 * 60 + 60)
+        self.assertGreater(wait["retryAtEpoch"], NOW)
+        self.assertEqual(
+            gh.requested,  # type: ignore[attr-defined]
+            [ADAPTER.allowance_comments_endpoint("owner/busy", NOW - 2 * HOUR)],
+        )
+
+    def test_status_observation_never_scans_a_repository_unbounded(self) -> None:
+        gh = self.busy_gh(NOW, 58 * 60, 59)
+        original = gh.rest_pages
+
+        def rest_pages(endpoint: str) -> list[Any]:
+            if endpoint.startswith("repos/owner/repo/"):
+                return configured_gh().rest_pages(endpoint)
+            return original(endpoint)
+
+        gh.rest_pages = rest_pages  # type: ignore[method-assign]
+        gh.values.update(configured_gh().values)
+        value = ADAPTER.observation(
+            gh, "owner/repo", [7], {7: "head-7"}, ["owner/repo", "owner/busy"], NOW
+        )
+        self.assertEqual(value["pullRequests"][0]["state"], "waiting")
+        self.assertEqual(value["pullRequests"][0]["retrySource"], "stated-wait")
+        scans = [e for e in gh.requested if "/issues/comments?" in e]  # type: ignore[attr-defined]
+        self.assertTrue(scans)
+        self.assertTrue(all("&since=" in endpoint for endpoint in scans))
+
+    def test_allowance_statement_in_a_review_object_counts(self) -> None:
+        # frostney/GocciaScript#1291, 2026-09-29: the statement appears only in
+        # CodeRabbit's review body, not in the summary comment.
+        statement = RECORDED["variants"][-1]["text"]
+        gh = budget_gh(
+            [comment(81, "<!-- summarize by coderabbit.ai -->", NOW - 700, updated=NOW - 300,
+                     issue_url="https://api.github.test/repos/owner/repo/issues/8")],
+            other_reviews={
+                8: [run_review_object(801, "run-a", NOW - 600, body=f"Actionable comments posted: 1\n\n{statement}")]
+            },
+        )
+        value = observe(gh)
+        allowance = value["allowance"]
+        self.assertEqual(allowance["mode"], "enforced")
+        self.assertEqual((allowance["remaining"], allowance["perHour"]), (0, 1))
+        self.assertEqual(allowance["source"], {"repo": "owner/repo", "pr": 8, "reviewId": 801})
+        self.assertEqual(allowance["statementAt"], iso(NOW - 600))
+        self.assertEqual(value["pullRequests"][0]["state"], "waiting")
+        self.assertEqual(value["pullRequests"][0]["retryAt"], iso(NOW - 600 + HOUR + 60))
 
 
 if __name__ == "__main__":

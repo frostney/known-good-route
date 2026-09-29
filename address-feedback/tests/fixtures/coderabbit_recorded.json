@@ -99,6 +99,24 @@
    "text": "**Limit details:** You’ve used the included review currently available.",
    "remaining": 0,
    "allowance": null
+  },
+  {
+   "repo": "GocciaScript",
+   "pr": 1292,
+   "commentId": 5887035508,
+   "editedAt": "2026-09-29T09:42:30Z",
+   "text": "**Limit details:** You’ve used the included review currently available. Your 90 included PR review attempts over the past 7 days set your current allowance at 1 review per hour.",
+   "remaining": 0,
+   "allowance": 1
+  },
+  {
+   "repo": "GocciaScript",
+   "pr": 1291,
+   "reviewId": 5350559230,
+   "submittedAt": "2026-09-29T09:40:30Z",
+   "text": "**Included review availability:** This review used your included allowance. 0 included reviews remain after this review. Your included PR review attempts over the past 7 days set your current allowance at 1 review per hour.",
+   "remaining": 0,
+   "allowance": 1
   }
  ],
  "notices": [
