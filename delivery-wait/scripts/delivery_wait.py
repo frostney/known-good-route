@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
+sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__.
+
 from kgr_github import (
     Gh,
     Metrics,

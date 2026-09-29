@@ -20,6 +20,14 @@ npx skills add frostney/known-good-route
 
 Installs into your skills-compatible agent(s): Cursor, Claude Code, Codex, GitHub Copilot, and more. See [skills.sh](https://www.skills.sh/) for details.
 
+The delivery helpers save resumable wait state under `.agent/waits/` in the
+repository they run in. Add that directory to the repository's `.gitignore` so
+the state is never committed:
+
+```gitignore
+.agent/waits/
+```
+
 ## Usage
 
 These are [Agent Skills](https://agentskills.io): any skills-compatible agent loads each skill's `name` and `description` at startup and reads the full `SKILL.md` when a task matches. Several are invoked directly as slash commands (e.g. `/deliver`, `/implement`, `/create-pr`); the rest activate from ambient context. The skills split into recurring workflow skills and one-off setup, guidance, and audit skills.

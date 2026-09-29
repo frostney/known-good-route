@@ -45,7 +45,8 @@ inline replies, and thread resolution. Invoke it with `--json`; the harness must
 passively await a running command rather than wake a model to report unchanged
 state. The repository policy defaults to
 `.github/delivery/review-automations.json` and may be overridden explicitly.
-Use a caller-owned `--state` path below gitignored `.agent/waits/`.
+Use a caller-owned `--state` path below `.agent/waits/`, which the repository
+must gitignore.
 
 ## Active review automation
 

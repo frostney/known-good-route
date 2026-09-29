@@ -14,6 +14,8 @@ import sys
 from datetime import datetime, timezone
 import uuid
 
+sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__.
+
 
 class GuardError(RuntimeError):
     pass
