@@ -238,7 +238,7 @@ export function gradeRun(
         [
           actionText(a),
           ...(requirement.dataFields ?? []).map((field) => {
-            const value = a.data?.[field];
+            const value = field === "*" ? a.data : a.data?.[field];
             return value === undefined
               ? ""
               : typeof value === "string"

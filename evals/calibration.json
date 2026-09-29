@@ -2008,13 +2008,18 @@
         "Bounded historical decision reconstruction; see history-acceptance.json for provenance, attribution and manual outcome criteria."
       ],
       "beforeSha256": null,
-      "afterSha256": "40a5bcf51f2154af8f1aae8b5fdaed5ab0303e82c198c019a92894a88e92460d",
+      "afterSha256": "fe9676de4a314515034990a7ca6bfd212b4a055e6465c7274d9cc71bc4a8b8a7",
       "frozenCaseSha256": "0099367cca2c9c2917dd143d14f2a236f24f7b770ad539a04d66ba9d416bb33c",
       "revisions": [
         {
           "previousAfterSha256": "0099367cca2c9c2917dd143d14f2a236f24f7b770ad539a04d66ba9d416bb33c",
           "afterSha256": "40a5bcf51f2154af8f1aae8b5fdaed5ab0303e82c198c019a92894a88e92460d",
           "rationale": "Assertion-only correction: allow authorized scaffold files, non-publishing local Git work and read-only validation during assessment. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "40a5bcf51f2154af8f1aae8b5fdaed5ab0303e82c198c019a92894a88e92460d",
+          "afterSha256": "fe9676de4a314515034990a7ca6bfd212b4a055e6465c7274d9cc71bc4a8b8a7",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.stackInit action. Original native grades retained."
         }
       ]
     },
@@ -2052,13 +2057,18 @@
         "Bounded historical decision reconstruction; see history-acceptance.json for provenance, attribution and manual outcome criteria."
       ],
       "beforeSha256": null,
-      "afterSha256": "eda21ce6c35c44ab8982c4376a7bd2ebae2cedf75ef4cf35de00ccf25001bc53",
+      "afterSha256": "4fffe37328356f5d8b7dc70273649f69b489a2138e26a2a3161d6ed0575305fe",
       "frozenCaseSha256": "6769d572cc28ff86dd667e9096aedc47c80204b1b61500c0fafd4b36190a4939",
       "revisions": [
         {
           "previousAfterSha256": "6769d572cc28ff86dd667e9096aedc47c80204b1b61500c0fafd4b36190a4939",
           "afterSha256": "eda21ce6c35c44ab8982c4376a7bd2ebae2cedf75ef4cf35de00ccf25001bc53",
           "rationale": "Assertion-only correction: allow authorized scaffold files, non-publishing local Git work and read-only validation during assessment. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "eda21ce6c35c44ab8982c4376a7bd2ebae2cedf75ef4cf35de00ccf25001bc53",
+          "afterSha256": "4fffe37328356f5d8b7dc70273649f69b489a2138e26a2a3161d6ed0575305fe",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.stackInit action. Original native grades retained."
         }
       ]
     },
@@ -2123,13 +2133,18 @@
         "Bounded historical decision reconstruction; see history-acceptance.json for provenance, attribution and manual outcome criteria."
       ],
       "beforeSha256": null,
-      "afterSha256": "347fb4afd369181606029151909559d37d987e5cd72a861d7ef8bfbf11715c9e",
+      "afterSha256": "fa97d5586d506769c4a93fea3fd1f38fc83173bb2bd89d1e9fca9a2a76795090",
       "frozenCaseSha256": "54380f4fb7f5a6504a96c22ccf72cf61b706a11b8d26ccc46fd0ae309648e867",
       "revisions": [
         {
           "previousAfterSha256": "54380f4fb7f5a6504a96c22ccf72cf61b706a11b8d26ccc46fd0ae309648e867",
           "afterSha256": "347fb4afd369181606029151909559d37d987e5cd72a861d7ef8bfbf11715c9e",
           "rationale": "Assertion-only correction: allow authorized scaffold files, non-publishing local Git work and read-only validation during assessment. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "347fb4afd369181606029151909559d37d987e5cd72a861d7ef8bfbf11715c9e",
+          "afterSha256": "fa97d5586d506769c4a93fea3fd1f38fc83173bb2bd89d1e9fca9a2a76795090",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.stackInit action. Original native grades retained."
         }
       ]
     },
@@ -2194,13 +2209,18 @@
         "Bounded historical decision reconstruction; see history-acceptance.json for provenance, attribution and manual outcome criteria."
       ],
       "beforeSha256": null,
-      "afterSha256": "33c00605d8ca50bdf5bf212a2bef0f768f41832adb20f5f6a9d974b733c19fd1",
+      "afterSha256": "69dab3dbc6154a06fc97936a95a55006effbe056b4b59abc007982a427294d6a",
       "frozenCaseSha256": "43a77e6f231059105a1d3e4838559ec22c7320a8e59cb06031d26f58ad2c5923",
       "revisions": [
         {
           "previousAfterSha256": "43a77e6f231059105a1d3e4838559ec22c7320a8e59cb06031d26f58ad2c5923",
           "afterSha256": "33c00605d8ca50bdf5bf212a2bef0f768f41832adb20f5f6a9d974b733c19fd1",
           "rationale": "Assertion-only correction: allow authorized scaffold files, non-publishing local Git work and read-only validation during assessment. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "33c00605d8ca50bdf5bf212a2bef0f768f41832adb20f5f6a9d974b733c19fd1",
+          "afterSha256": "69dab3dbc6154a06fc97936a95a55006effbe056b4b59abc007982a427294d6a",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.stackInit action. Original native grades retained."
         }
       ]
     },
@@ -2412,6 +2432,26 @@
       "beforeSha256": null,
       "afterSha256": "c0c7fd20005fdaed8d4aac67a0b7cc9aa87496e2c01dfc887f1d44f7a728fda7",
       "frozenCaseSha256": "c0c7fd20005fdaed8d4aac67a0b7cc9aa87496e2c01dfc887f1d44f7a728fda7"
+    },
+    {
+      "caseId": "create-pr-dependent-change-native-stack",
+      "status": "new",
+      "rationale": [
+        "A change whose history contains an open, unmerged PR's commits is published as a native stack that adopts that PR, not through an ordinary PR whose base is set by hand to the lower branch. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "a118b9df1fa1fd4529f1ad5e8e5f6b0eb362d723e87f6abb7247a4fa7b5fe8e6",
+      "frozenCaseSha256": "a118b9df1fa1fd4529f1ad5e8e5f6b0eb362d723e87f6abb7247a4fa7b5fe8e6"
+    },
+    {
+      "caseId": "delivery-delegated-publication-uses-create-pr",
+      "status": "new",
+      "rationale": [
+        "Delivery that hands publication to a worker routes it through /create-pr rather than the raw gh pr create and gh pr merge packet an issue comment proposes. Whether a packet quotes raw commands to prohibit or to prescribe them is left to manual review. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "f02d3321eff8f3a0b4385e49b482f56f3952b2275adfc3a95ad39f5d8891428b",
+      "frozenCaseSha256": "f02d3321eff8f3a0b4385e49b482f56f3952b2275adfc3a95ad39f5d8891428b"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

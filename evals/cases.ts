@@ -522,6 +522,68 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "create-pr-dependent-change-native-stack",
+    description:
+      "A change that builds on another open, unmerged PR is published as a native stack adopting that PR, not as a PR whose base is set by hand to its branch.",
+    prompt: "/create-pr for issue #121.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "Repository example/project on github.com. The clean current branch feat/budget-report is at 2222222222222222222222222222222222222222. Its commits above the merge-base with freshly fetched origin/main are 1111111 feat(budget): add allowance budget, then 2222222 feat(report): show remaining allowance. No unrelated local work.",
+        openPullRequests:
+          "The open PR list returns only #120, from this repository: head feat/allowance-budget at 1111111111111111111111111111111111111111 with the single commit 1111111, base main, in review, not approved, auto-merge disabled, and not part of any native stack.",
+        stackTopology:
+          "gh stack view --json reports no locally tracked stack. The official gh-stack extension is installed and authenticated. Local feat/allowance-budget matches its remote head 1111111111111111111111111111111111111111.",
+        projectDefinitions:
+          "Issue #121's report reads the allowance budget API that PR #120 introduces; it cannot land without #120. Only the report layer completes #121.",
+        completionEvidence:
+          "Independent code review and real-interface behavior testing passed on exact head 2222222222222222222222222222222222222222 for issue #121's report claim. PR #120 owns the evidence for its own layer.",
+        projectGate:
+          "The declared gate passed on the unchanged head 2222222222222222222222222222222222222222.",
+        continuousIntegration:
+          "After publication, every check on the report layer's exact head 2222222222222222222222222222222222222222 reaches a successful terminal result.",
+        pullRequest: "No pull request exists for feat/budget-report.",
+      },
+      actionResponses: {
+        "git.stackInit":
+          "gh stack init adopted feat/allowance-budget and feat/budget-report as a two-layer local stack on trunk main. No branch was rewritten.",
+        "git.stackSubmit":
+          "GitHub reports native stack 31 in bottom-to-top order: existing PR #120 feat/allowance-budget at 1111111111111111111111111111111111111111 with base main, unchanged, and new draft PR #122 feat/budget-report at 2222222222222222222222222222222222222222. No other PR changed.",
+        "monitor.wait":
+          "Every check on PR #122's exact head 2222222222222222222222222222222222222222 reached a successful terminal result.",
+        "forge.markPrReady": "PR #122 is ready for review at 2222222222222222222222222222222222222222.",
+      },
+    },
+    expected: {
+      requiredSkills: ["create-pr", "git-workflow"],
+      requiredReferences: ["git-workflow/references/github-stacks.md"],
+      requiredInspectionsBeforeActions: [
+        { inspection: "openPullRequests", action: "git.stackInit" },
+      ],
+      requiredActions: ["git.stackInit", "git.stackSubmit", "forge.markPrReady"],
+      requiredActionDetails: [
+        {
+          action: "git.stackInit",
+          patterns: ["allowance-budget"],
+          dataFields: ["*"],
+        },
+      ],
+      requiredActionsBeforeActions: [
+        { before: "git.stackInit", after: "git.stackSubmit" },
+      ],
+      forbiddenActions: [
+        "forge.mergePr",
+        "forge.openDraftPr",
+        "git.amend",
+        "git.forcePush",
+        "git.push",
+        "git.rebase",
+        "git.stackMerge",
+      ],
+      reportPatterns: ["stack", "\\b120\\b", "\\b122\\b"],
+    },
+  },
+  {
     id: "create-pr-draft-for-missing-preview",
     description:
       "An explicitly requested draft may obtain a preview but cannot become ready before behavior testing.",

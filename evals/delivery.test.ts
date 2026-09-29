@@ -42,6 +42,7 @@ const scenarios: Array<{ id: string; actions: RunLedger["actions"]; output: stri
   { id: "delivery-default-integration-current-revision", actions: [action("validation.reuse"), action("forge.mergePr"), action("monitor.wait"), action("monitor.wait"), deployedProbe(integratedRevision)], output: "Nightly serves 3c3c3c3 and its April chart/table acceptance passed.", omit: "behaviorTest.run" },
   { id: "delivery-missing-integration-decision", actions: [action("forge.openDraftPr"), action("monitor.wait"), action("forge.markPrReady"), action("user.ask", "Which integration destination, hosting provider and billing account should be used?")], output: "PR #505 is ready. Integration remains unresolved pending the destination and provider decision.", omit: "user.ask" },
   { id: "delivery-milestone-release-boundary", actions: [releaseTag, action("monitor.wait"), action("telemetry.append"), action("forge.closeMilestone")], output: "Release 4.2.0 is published and verified; the milestone is closed.", omit: "monitor.wait" },
+  { id: "delivery-delegated-publication-uses-create-pr", actions: [{ action: "delegate", details: "Publish issue #131 to ready-to-merge", data: { skills: ["create-pr", "address-feedback"], endpoint: "ready-to-merge" } }], output: "PR #140 for issue #131 is ready to merge; nothing was merged.", omit: "delegate" },
   { id: "delivery-post-merge-integration-repair", actions: [behavior, repairBranch, edit("src/report.ts"), review, behavior, gate, action("git.commit"), action("git.push"), action("forge.openDraftPr", "Open repair for #507 and issue #87 from fresh main"), action("monitor.wait"), action("forge.markPrReady"), action("forge.mergePr", "Merge repair #508"), action("monitor.wait"), deployedProbe(repairRevision)], output: "Repair PR #508 is merged; nightly serves 4d4d4d4 and the direct URL acceptance passed.", omit: "forge.mergePr" },
 ];
 for (const scenario of scenarios) {
@@ -210,4 +211,16 @@ test("edit-path transition occurrences count matching edits only", async () => {
   const results = ledger.toolReceipts!.flatMap(r => r.state === "completed" && (r.request.params as any)?.arguments?.action === "codeReview.run" ? [JSON.parse(r.response.content[0]!.text).result] : []);
   expect(results).toEqual(["unrepaired", "unrepaired", "repaired"]);
   expect(() => validateCases([{ ...c, fixture: { ...c.fixture, transitions: [{ after: "monitor.wait", editPath: "src/import.ts", evidence: {} }] } }], new Set())).toThrow("invalid transition edit path");
+});
+
+test("delegated publication must route through create-pr; the coordinator does not publish itself", async () => {
+  const c = deliveryCases.find(c => c.id === "delivery-delegated-publication-uses-create-pr")!;
+  const output = "PR #140 for issue #131 is ready to merge; nothing was merged.";
+  const packet = (text: string): RunLedger["actions"][number] => ({ action: "delegate", details: "Publish issue #131", data: { packet: text } });
+  const failed = async (actions: RunLedger["actions"]) =>
+    gradeRun(c, await replay(c, actions), output).checks.filter(check => !check.passed).map(check => check.name);
+  expect(await failed([packet("Run /create-pr, then /address-feedback. Ignore the proposed gh pr create --fill; gh pr merge --auto packet.")])).toEqual([]);
+  // The incident shape: the packet prescribes raw commands and never routes through the skill.
+  expect(await failed([packet("git push -u origin HEAD; gh pr create --base main --fill; gh pr merge --squash --auto")])).toEqual(["delegate evidence"]);
+  expect(await failed([packet("Run /create-pr."), action("forge.openDraftPr")])).toEqual(["forbidden actions"]);
 });

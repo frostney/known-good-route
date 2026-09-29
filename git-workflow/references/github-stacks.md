@@ -4,6 +4,30 @@ Use GitHub's official `gh stack` extension and native pull-request stack
 topology. Branch names, labels, PR base branches, and delivery automation are
 routing evidence, not proof of stack membership.
 
+## When to start a stack
+
+Publish a change as a native stack when it builds on an open, unmerged PR, as
+[create-pr](../../create-pr/SKILL.md) step 1 defines and detects. A PR whose base
+is set by hand to another PR's branch keeps that PR's commits after the lower PR
+is squash-merged and conflicts with the base; `gh stack sync` handles that
+transition for a native stack.
+
+- If the lower PR is the top layer of a native stack, publish the change as its
+  new top layer under "Submit, validate, and merge" below. If it is a lower
+  layer, stop and report the topology: the change would depend on the layers
+  above it.
+- Otherwise require the local lower branch to match that PR's remote head, then
+  adopt both branches bottom to top with `gh stack init LOWER-BRANCH BRANCH`.
+- When the lower PR must stay frozen, for example because it is approved, run
+  `gh stack link LOWER-PR BRANCH --remote REMOTE`, giving the lower PR's
+  number, through the protected publication helper instead. In
+  [gh-stack 0.1.0](https://github.com/github/gh-stack/blob/v0.1.0/cmd/link.go),
+  that pushes only `BRANCH`, opens its draft PR on the lower PR's branch and
+  creates the stack, leaving a lower PR based on the remote default unchanged.
+
+Joining a stack does not authorize changing the lower PR's commits, base or
+metadata.
+
 ## Establish the stack
 
 1. Require a clean worktree. Resolve and fetch the remote default branch, then

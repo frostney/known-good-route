@@ -22,6 +22,7 @@ export const actionNames = [
   "git.push",
   "git.pushTag",
   "git.rebase",
+  "git.stackInit",
   "git.stackMerge",
   "git.stackSubmit",
   "git.stackSync",
@@ -76,6 +77,7 @@ export interface EvalExpectations {
   requiredActionDetails?: Array<{
     action: ActionName;
     patterns: string[];
+    // "*" includes the action's complete data.
     dataFields?: string[];
     every?: boolean;
   }>;

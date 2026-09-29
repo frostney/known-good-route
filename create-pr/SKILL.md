@@ -33,7 +33,8 @@ failing.
 
 ## Conditional references
 
-- When the branch belongs to a native GitHub stack, read
+- When the branch belongs to a native GitHub stack or builds on an unmerged
+  PR (step 1), read
   [../git-workflow/references/github-stacks.md](../git-workflow/references/github-stacks.md).
   The request then authorizes submission and metadata reconciliation for the
   confirmed stack layers owned by the current change, not unrelated branches.
@@ -55,8 +56,15 @@ readiness. Recording a walkthrough does not replace behavior testing.
 ## Workflow
 
 1. Inspect the working tree, staged diff, recent commits, remote default branch,
-   stack topology when applicable, and any existing remote head. Preserve
-   unrelated local work.
+   stack topology when applicable, and any existing remote head. Before
+   choosing a base, check whether the change builds on an unmerged PR: its
+   intended base is another open PR's head branch, or its commits above the
+   merge-base with the remote default include another open PR's commits.
+   Compare against the same-repository PRs from
+   `gh pr list --state open --limit 1000 --json number,headRefName,isCrossRepository,commits`.
+   Publish such a change as a native stack under the stack reference's "When to
+   start a stack". Never set a PR base to a non-default branch outside that
+   reference's native stack operations. Preserve unrelated local work.
 2. Stop if there are no relevant changes or commits ahead of the remote base.
    Continue without an empty commit when the work is already committed.
 3. If currently on the base branch, create a focused branch named from the issue
