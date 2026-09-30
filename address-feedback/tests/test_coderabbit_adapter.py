@@ -659,8 +659,9 @@ class AccountTest(unittest.TestCase):
             notice = ADAPTER.SUMMARY_MARKER + f"\n> Next included review available in {minutes} minutes."
             gh.add_version(pr, summary, notice, f"2026-09-30T{edited}Z")
             gh.add_status(pr, "Review rate limited", iso(at(f"2026-09-30T{edited}Z") + 1))
-        held = observe(gh, "1089")
-        self.assertEqual((held["state"], held["retryAt"]), ("waiting", "2026-09-30T17:55:00Z"))
+        for now in ("2026-09-30T17:11:00Z", "2026-09-30T17:20:00Z"):
+            held = observed_at(gh, "1089", now)
+            self.assertEqual((held["state"], held["retryAt"]), ("waiting", "2026-09-30T17:55:00Z"))
         self.assertEqual(observed_at(gh, "1089", "2026-09-30T17:55:00Z")["state"], "trigger-full")
 
 
