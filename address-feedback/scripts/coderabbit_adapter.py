@@ -9,13 +9,17 @@ head commit:
 - CodeRabbit review objects whose `commit_id` is the head;
 - the summary comment's coverage marker naming the head;
 - the summary comment version CodeRabbit edited in just before a rate-limit
-  status, which carries the only stated retry time; and
+  status, which carries the only stated retry time;
 - when the head arrived, the pull request was opened, and it was last marked
-  ready, after which CodeRabbit starts its own review.
+  ready, after which CodeRabbit starts its own review; and
+- CodeRabbit's newest status on the head of every open pull request in the
+  scanned repositories, which holds a trigger on the account.
 
-Every state that waits on CodeRabbit ends after a fixed bound: the wait for
-its own review becomes a trigger, and an unanswered trigger, a stalled review
-and an unexplained refusal each become a blocked state.
+Completion evidence counts only when it is newer than the latest trigger and
+the latest event after which CodeRabbit starts its own review. Every state
+that waits on CodeRabbit ends after a fixed bound: the wait for its own
+review becomes a trigger, and an unanswered trigger, a stalled review and an
+unexplained refusal each become a blocked state.
 """
 
 from __future__ import annotations
@@ -101,13 +105,11 @@ AUTOMATIC_REVIEW_SECONDS = 120
 TRIGGER_ANSWER_SECONDS = 10 * 60
 # The longest recorded review in progress ended after 700 s.
 IN_PROGRESS_SECONDS = 60 * 60
-# How long a refusal without a paired stated wait is observed for the edit.
+# How long a refusal without a paired stated wait holds triggers while
+# CodeRabbit shows no review or stated wait after it.
 UNKNOWN_WAIT_SECONDS = 15 * 60
-# Stated waits run to at most one hour (the longest recorded is 59 minutes),
-# so a wait stated before this horizon has passed.
-ACCOUNT_SCAN_SECONDS = 2 * 3600 + 60
 EDIT_HISTORY_PAGES = 10
-SCAN_COMMITS = 20
+OPEN_PULL_PAGES = 10
 
 COMMENT_EDITS_QUERY = """query($id: ID!, $cursor: String) {
   node(id: $id) { ... on IssueComment {
@@ -123,11 +125,17 @@ READY_QUERY = """query($owner: String!, $name: String!, $number: Int!) {
     }
   } }
 }"""
-PR_COMMITS_QUERY = """query($owner: String!, $name: String!, $number: Int!) {
-  repository(owner: $owner, name: $name) { pullRequest(number: $number) {
-    commits(last: %d) { nodes { commit { oid status { contexts { context createdAt } } } } }
-  } }
-}""" % SCAN_COMMITS
+# A commit's `status.contexts` holds the newest status of each context.
+OPEN_PULLS_QUERY = """query($owner: String!, $name: String!, $cursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(states: OPEN, first: 100, after: $cursor) {
+      pageInfo { hasNextPage endCursor }
+      nodes { number commits(last: 1) { nodes { commit { oid status { contexts {
+        context state description createdAt creator { login }
+      } } } } } }
+    }
+  }
+}"""
 
 # Every state a command reports, and the commands that report it. `status`
 # reports one state per head and one for the whole set; `run` reports its
@@ -235,11 +243,6 @@ def optional_items(fetch: Callable[[], list[Any]]) -> list[Any]:
         raise
 
 
-def issue_number(item: dict[str, Any]) -> int | None:
-    tail = str(item.get("issue_url") or "").rsplit("/", 1)[-1]
-    return int(tail) if tail.isdigit() else None
-
-
 def stated_seconds(body: str) -> int | None:
     match = STATED_WAIT.search(body)
     if not match:
@@ -251,13 +254,16 @@ def stated_seconds(body: str) -> int | None:
 # --- Head statuses ---------------------------------------------------------
 
 
+def is_coderabbit(status: dict[str, Any]) -> bool:
+    return "coderabbit" in str(status.get("context") or "").lower() and is_bot(status, "creator")
+
+
 def coderabbit_statuses(gh: Gh, repo: str, sha: str) -> list[dict[str, Any]]:
     """CodeRabbit's statuses on one commit, oldest first."""
     statuses = [
         status
         for status in rest_items(gh, f"repos/{repo}/commits/{sha}/statuses?per_page=100")
-        if "coderabbit" in str(status.get("context") or "").lower()
-        and is_bot(status, "creator")
+        if is_coderabbit(status)
     ]
     return sorted(
         statuses,
@@ -387,7 +393,6 @@ def correlated_wait(
     return (
         {
             "commentId": item.get("id"),
-            "pr": issue_number(item),
             "editedAt": format_timestamp(at),
             "statedSeconds": seconds,
             "availableAt": format_timestamp(available),
@@ -399,85 +404,71 @@ def correlated_wait(
     )
 
 
-def recent_bot_comments(gh: Gh, repo: str, since: float) -> list[dict[str, Any]]:
-    """CodeRabbit's pull-request comments edited at or after `since`."""
-    endpoint = (
-        f"repos/{repo}/issues/comments?sort=updated&direction=desc"
-        f"&per_page=100&since={format_timestamp(int(since))}"
-    )
-    return [
-        item
-        for item in rest_items(gh, endpoint)
-        if is_bot(item) and "/pull/" in str(item.get("html_url") or "")
-    ]
+def refusal(
+    gh: Gh, head: dict[str, Any], status: dict[str, Any], comments: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """A rate-limit status on a head, with the stated wait paired to it or why there is none."""
+    at = parse_timestamp(status.get("created_at"), "status created_at")
+    wait, missing = correlated_wait(gh, comments, at)
+    return head | {"statusAt": format_timestamp(at), "at": at, "wait": wait, "missing": missing}
 
 
-def recent_rate_limits(gh: Gh, repo: str, pr: int, since: float) -> list[dict[str, Any]]:
-    """Rate-limit statuses at or after `since` on the PR's recent commits."""
+def open_heads(gh: Gh, repo: str) -> dict[str, tuple[list[int], dict[str, Any] | None]]:
+    """Each open pull request's head, with its PRs and CodeRabbit's newest status on it."""
     owner, name = repo_parts(repo)
-    data = gh.graphql(PR_COMMITS_QUERY, {"owner": owner, "name": name, "number": pr})
-    pull = ((data or {}).get("repository") or {}).get("pullRequest") or {}
-    found: list[dict[str, Any]] = []
-    for node in ((pull.get("commits") or {}).get("nodes") or []):
-        commit = (node or {}).get("commit") or {}
-        oid = commit.get("oid")
-        contexts = ((commit.get("status") or {}).get("contexts")) or []
-        recent = [
-            context
-            for context in contexts
-            if "coderabbit" in str(context.get("context") or "").lower()
-            and parse_timestamp(context.get("createdAt"), "status createdAt") >= since
-        ]
-        if not isinstance(oid, str) or not recent:
-            continue
-        for status in coderabbit_statuses(gh, repo, oid):
-            at = parse_timestamp(status.get("created_at"), "status created_at")
-            if at >= since and status_kind(status) == "rate-limited":
-                found.append({"id": status.get("id"), "sha": oid, "at": at})
-    return found
+    heads: dict[str, tuple[list[int], dict[str, Any] | None]] = {}
+    cursor: str | None = None
+    for _page in range(OPEN_PULL_PAGES):
+        data = gh.graphql(OPEN_PULLS_QUERY, {"owner": owner, "name": name, "cursor": cursor})
+        pulls = ((data or {}).get("repository") or {}).get("pullRequests") or {}
+        for node in pulls.get("nodes") or []:
+            commits = ((node or {}).get("commits") or {}).get("nodes") or []
+            commit = ((commits[-1] if commits else None) or {}).get("commit") or {}
+            oid = commit.get("oid")
+            if not isinstance(oid, str) or not isinstance(node.get("number"), int):
+                raise WaitError(f"an open pull request in {repo} is missing its number or head")
+            statuses = [
+                context | {"created_at": context.get("createdAt")}
+                for context in ((commit.get("status") or {}).get("contexts") or [])
+                if is_coderabbit(context)
+            ]
+            newest = max(
+                statuses,
+                key=lambda item: parse_timestamp(item["created_at"], "status createdAt"),
+                default=None,
+            )
+            heads.setdefault(oid, ([], newest))[0].append(node["number"])
+        page = pulls.get("pageInfo") or {}
+        if not page.get("hasNextPage"):
+            return heads
+        cursor = page.get("endCursor")
+    raise WaitError(
+        f"{repo} has more than {OPEN_PULL_PAGES * 100} open pull requests, so the account scan "
+        "cannot read every head"
+    )
 
 
-def account_wait(gh: Gh, repos: list[str], now: float) -> dict[str, Any]:
-    """The newest paired stated wait, and every refusal without one, across the scanned repositories."""
-    since = now - ACCOUNT_SCAN_SECONDS
-    waits: list[dict[str, Any]] = []
-    unmatched: list[dict[str, Any]] = []
+def account_statuses(gh: Gh, repos: list[str]) -> dict[str, Any]:
+    """CodeRabbit's newest status on every open head in the scanned repositories.
+
+    Returns each head it last refused with a rate limit, and the newest of
+    these statuses reporting a review in progress or completed.
+    """
+    refusals: list[dict[str, Any]] = []
+    recoveries: list[float] = []
     for repo in repos:
-        comments = recent_bot_comments(gh, repo, since - CORRELATION_SECONDS)
-        by_pr: dict[int, list[dict[str, Any]]] = {}
-        for item in comments:
-            number = issue_number(item)
-            if number is not None:
-                by_pr.setdefault(number, []).append(item)
-        # A commit can belong to several stacked pull requests; its status is
-        # paired once, against the comments of every PR that lists it.
-        limits: dict[Any, dict[str, Any]] = {}
-        for pr in sorted(by_pr):
-            for limit in recent_rate_limits(gh, repo, pr, since):
-                limits.setdefault((limit["sha"], limit["id"]), limit | {"prs": []})["prs"].append(pr)
-        for limit in limits.values():
-            candidates = [item for pr in limit["prs"] for item in by_pr[pr]]
-            wait, missing = correlated_wait(gh, candidates, limit["at"])
-            if wait is None:
-                unmatched.append(
-                    {
-                        "repo": repo,
-                        "sha": limit["sha"],
-                        "prs": limit["prs"],
-                        "statusAt": format_timestamp(limit["at"]),
-                        "reason": missing,
-                        "at": limit["at"],
-                    }
-                )
-            else:
-                waits.append({"repo": repo, "sha": limit["sha"]} | wait)
-    newest = max(waits, key=lambda wait: (wait["editedAt"], wait["retryAtEpoch"]), default=None)
-    return {
-        "since": format_timestamp(since),
-        "newest": newest,
-        "active": bool(newest and newest["retryAtEpoch"] > now),
-        "unmatchedRateLimits": sorted(unmatched, key=lambda item: item["at"]),
-    }
+        for sha, (prs, status) in open_heads(gh, repo).items():
+            kind = status_kind(status)
+            if kind in {"in-progress", "completed"}:
+                recoveries.append(parse_timestamp(status["created_at"], "status createdAt"))
+            elif kind == "rate-limited":
+                comments = [
+                    item
+                    for pr in prs
+                    for item in rest_items(gh, f"repos/{repo}/issues/{pr}/comments?per_page=100")
+                ]
+                refusals.append(refusal(gh, {"repo": repo, "prs": prs, "sha": sha}, status, comments))
+    return {"refusals": refusals, "reviewedAt": max(recoveries, default=None)}
 
 
 # --- Completion ----------------------------------------------------------------
@@ -621,9 +612,7 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
     )
     rate_limit = None
     if status_kind(newest) == "rate-limited":
-        at = parse_timestamp(newest["created_at"], "status created_at")
-        wait, missing = correlated_wait(gh, bot_comments, at)
-        rate_limit = {"statusAt": newest["created_at"], "wait": wait, "missing": missing}
+        rate_limit = refusal(gh, {"repo": repo, "prs": [pr], "sha": head}, newest, bot_comments)
     return {
         "repo": repo,
         "pr": pr,
@@ -641,7 +630,7 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
 
 
 def decide(
-    evidence: dict[str, Any], expected_head: str, account: dict[str, Any] | None, now: float
+    evidence: dict[str, Any], expected_head: str, account: dict[str, Any], now: float
 ) -> dict[str, Any]:
     """The head's state, why, the trigger mode to post, and when it can change."""
 
@@ -666,33 +655,44 @@ def decide(
             return result(pending, f"{why}; {blocked} at {timing['boundAt']}", mode, **timing)
         return result(blocked, f"{why} and nothing changed for {seconds // 60} minutes", **timing)
 
-    def gate(mode: str, own: dict[str, Any] | None = None) -> dict[str, Any]:
-        unmatched = (account or {}).get("unmatchedRateLimits") or []
-        if unmatched:
-            oldest = unmatched[0]
+    def gate(mode: str) -> dict[str, Any]:
+        """Hold the trigger while any open head's refusal still applies to the account."""
+        own = evidence["rateLimit"]
+        by_head = {(item["repo"], item["sha"]): item for item in account["refusals"]}
+        if own:
+            by_head[(own["repo"], own["sha"])] = own
+        paired = [item for item in by_head.values() if item["wait"]]
+        # A later review or paired refusal on the account shows CodeRabbit recovered.
+        recovered = max([item["at"] for item in paired] + [account["reviewedAt"] or 0.0])
+        unknown = [item for item in by_head.values() if not item["wait"] and item["at"] >= recovered]
+        if unknown:
+            oldest = min(unknown, key=lambda item: item["at"])
             prs = ", ".join(f"#{pr}" for pr in oldest["prs"])
+            names = (
+                ("rate-limited-unknown-wait", "blocked-unknown-wait")
+                if oldest is own
+                else ("waiting-account-unknown", "blocked-account-unknown-wait")
+            )
             return bounded(
-                "waiting-account-unknown",
-                "blocked-account-unknown-wait",
+                *names,
                 oldest["at"],
                 UNKNOWN_WAIT_SECONDS,
-                f"CodeRabbit rate-limited {oldest['repo']} {prs} at {oldest['statusAt']}: "
-                f"{oldest['reason']}, so no trigger on the account is permitted",
+                f"CodeRabbit rate-limited {oldest['repo']} {prs} at {oldest['statusAt']} and "
+                f"{oldest['missing']}, and has shown no review or stated wait since",
                 mode,
-                unmatchedRateLimit={key: value for key, value in oldest.items() if key != "at"},
+                unmatchedRateLimit=public_refusal(oldest),
             )
-        waits = [(own, "pull-request")] if own else []
-        if account and account.get("newest"):
-            waits.append((account["newest"], "account"))
-        pending = [(wait, source) for wait, source in waits if wait["retryAtEpoch"] > now]
+        pending = [item for item in paired if item["wait"]["retryAtEpoch"] > now]
         if pending:
-            wait, source = max(pending, key=lambda entry: entry[0]["retryAtEpoch"])
+            latest_wait = max(pending, key=lambda item: item["wait"]["retryAtEpoch"])
+            prs = ", ".join(f"#{pr}" for pr in latest_wait["prs"])
             return result(
                 "waiting",
-                f"CodeRabbit stated a wait ({source}) that ends at {wait['retryAt']}",
+                f"CodeRabbit stated a wait on {latest_wait['repo']} {prs} that ends at "
+                f"{latest_wait['wait']['retryAt']}",
                 mode,
-                retryAt=wait["retryAt"],
-                retrySource=source,
+                retryAt=latest_wait["wait"]["retryAt"],
+                retrySource="pull-request" if latest_wait is own else "account",
             )
         return result(f"trigger-{mode}", f"a {mode} review trigger is permitted", mode)
 
@@ -720,53 +720,44 @@ def decide(
             IN_PROGRESS_SECONDS,
             f"CodeRabbit has reported a review in progress on the head since {status['createdAt']}",
         )
-    if evidence["findingsReview"]:
+
+    triggers = evidence["triggers"]
+    latest = triggers[-1] if triggers else None
+    automatic = evidence["automaticReview"]
+    start = parse_timestamp(automatic["from"], "automatic review start")
+    # A trigger or an automatic start begins a new review; evidence from before it is superseded.
+    begun = max(start, latest["at"]) if latest else start
+    review = evidence["findingsReview"]
+    if review and parse_timestamp(review["submittedAt"], "review submitted_at") > begun:
         return result("review-complete", "a CodeRabbit review of exactly this head states findings")
-    if evidence["cleanReview"]:
+    # CodeRabbit keeps the marker while it reviews again; the completed status dates the pass.
+    if evidence["cleanReview"] and kind == "completed" and status_at > begun:
         return result(
             "clean-complete",
             "CodeRabbit's summary marks this head covered with no actionable comments",
         )
-
-    triggers = evidence["triggers"]
-    latest = triggers[-1] if triggers else None
-    awaiting = latest is not None and (status_at is None or latest["at"] > status_at)
-
+    if kind in {"none", "draft-skip"} and evidence["draft"]:
+        return result("draft", "CodeRabbit does not review a draft pull request")
+    # No answer comes within a second of its trigger, so a status in that second predates it.
+    if latest is not None and (status_at is None or latest["at"] >= status_at):
+        return answer(latest)
+    automatic_start = kind in {"none", "draft-skip"} or start > status_at
+    if automatic_start and now < start + AUTOMATIC_REVIEW_SECONDS:
+        return result(
+            "awaiting-automatic",
+            f"CodeRabbit may still start its own review after {automatic['source']} at "
+            f"{automatic['from']}; a trigger is permitted from "
+            f"{format_timestamp(start + AUTOMATIC_REVIEW_SECONDS)}",
+            since=automatic["from"],
+            boundAt=format_timestamp(start + AUTOMATIC_REVIEW_SECONDS),
+        )
     if kind in {"none", "draft-skip"}:
-        if evidence["draft"]:
-            return result("draft", "CodeRabbit does not review a draft pull request")
-        if awaiting:
-            return answer(latest)
-        automatic = evidence["automaticReview"]
-        start = parse_timestamp(automatic["from"], "automatic review start")
-        if now < start + AUTOMATIC_REVIEW_SECONDS:
-            return result(
-                "awaiting-automatic",
-                f"CodeRabbit may still start its own review after {automatic['source']} at "
-                f"{automatic['from']}; a trigger is permitted from "
-                f"{format_timestamp(start + AUTOMATIC_REVIEW_SECONDS)}",
-                since=automatic["from"],
-                boundAt=format_timestamp(start + AUTOMATIC_REVIEW_SECONDS),
-            )
         return gate("incremental")
     if kind == "skipped":
         return result("skipped", f"CodeRabbit skipped the head: {status['description']}")
     if kind == "rate-limited":
-        if awaiting:
-            return answer(latest)
-        rate_limit = evidence["rateLimit"]
-        if rate_limit["wait"] is None:
-            return bounded(
-                "rate-limited-unknown-wait",
-                "blocked-unknown-wait",
-                status_at,
-                UNKNOWN_WAIT_SECONDS,
-                f"CodeRabbit rate-limited the head at {status['createdAt']} and {rate_limit['missing']}",
-            )
-        return gate(latest["mode"] if latest else "incremental", rate_limit["wait"])
+        return gate(latest["mode"] if latest else "incremental")
     if kind == "completed":
-        if awaiting:
-            return answer(latest)
         if any(trigger["mode"] == "full" for trigger in triggers):
             return result(
                 "blocked-unconfirmed",
@@ -780,16 +771,22 @@ def decide(
     )
 
 
+def public_refusal(item: dict[str, Any]) -> dict[str, Any]:
+    """A refusal without internal epoch fields."""
+    value = {key: entry for key, entry in item.items() if key != "at"}
+    if item["wait"]:
+        value["wait"] = {key: entry for key, entry in item["wait"].items() if key != "retryAtEpoch"}
+    return value
+
+
 def public(evidence: dict[str, Any]) -> dict[str, Any]:
     """Evidence without internal epoch fields."""
     value = dict(evidence)
     value["triggers"] = [
         {key: item[key] for key in ("id", "mode", "createdAt")} for item in evidence["triggers"]
     ]
-    if evidence.get("rateLimit") and evidence["rateLimit"].get("wait"):
-        wait = dict(evidence["rateLimit"]["wait"])
-        wait.pop("retryAtEpoch", None)
-        value["rateLimit"] = evidence["rateLimit"] | {"wait": wait}
+    if evidence["rateLimit"]:
+        value["rateLimit"] = public_refusal(evidence["rateLimit"])
     return value
 
 
@@ -828,21 +825,17 @@ def observation(
     now: float,
 ) -> dict[str, Any]:
     gh = ObservationCache(gh)  # type: ignore[assignment]
-    account = account_wait(gh, scan_repos, now)
+    account = account_statuses(gh, scan_repos)
     results = []
     for pr in prs:
         evidence = pull_evidence(gh, repo, pr)
         results.append(public(evidence) | decide(evidence, expected_heads[pr], account, now))
-    newest = account["newest"]
+    reviewed = account["reviewedAt"]
     return {
         "scanRepos": scan_repos,
-        "accountWait": account
-        | {
-            "newest": {key: value for key, value in newest.items() if key != "retryAtEpoch"} if newest else None,
-            "unmatchedRateLimits": [
-                {key: value for key, value in item.items() if key != "at"}
-                for item in account["unmatchedRateLimits"]
-            ],
+        "account": {
+            "refusals": [public_refusal(item) for item in account["refusals"]],
+            "reviewedAt": format_timestamp(reviewed) if reviewed is not None else None,
         },
         "pullRequests": results,
     }

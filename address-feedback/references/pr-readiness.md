@@ -128,7 +128,8 @@ CodeRabbit command or work out a CodeRabbit wait yourself.
   account lock, posts any trigger the head needs, and waits until the head
   reaches a final state or the deadline.
 
-Pass each repository with recent CodeRabbit activity as a `--scan-repo`.
+Pass each other repository CodeRabbit reviews on the same account as a
+`--scan-repo`.
 `status` reports one state for the whole set and one for each head; `run`
 reports its head's state. A pending head state from `run` means its deadline
 came first.
