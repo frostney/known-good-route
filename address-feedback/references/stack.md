@@ -133,17 +133,23 @@ through stated waits, holds triggers while CodeRabbit's stated allowance is
 used up (see [CodeRabbit allowance](pr-readiness.md#coderabbit-allowance)),
 and treats a finished acknowledgment as `clean-complete` only when walkthrough
 coverage is verified for the exact head and either ack latency meets the
-trusted threshold or that same head has a CodeRabbit check SUCCESS. Latency
-and walkthrough freshness count from when GitHub recorded the head's push (its branch activity, else its earliest check suite on that
-branch), or from the commit time if that is later. Without that record, only
-the head-scoped check completes the review. A clean automatic review also
-reaches `clean-complete`, and no trigger is planned for that head. It needs the
+trusted threshold or that same head has a CodeRabbit check SUCCESS. Walkthrough
+freshness counts from when GitHub recorded the head's push (its branch
+activity, else its earliest check suite on that branch), or from the commit
+time if that is later. Ack latency counts from that time, or the latest
+trigger if later, to when the acknowledgment was shown, dated as
+[CodeRabbit notice dating](pr-readiness.md#coderabbit-notice-dating) states;
+an acknowledgment that cannot be dated never completes a head. Without that
+push record, only the head-scoped check completes the review. A clean
+automatic review also reaches `clean-complete`, and no trigger is planned for
+that head. It needs the
 summary's recent-review block to report no actionable comments for a range
 ending at exactly that head, with no review in progress or rate limit showing.
 A "Reviews paused" or "Review skipped" block beside it does not undo it. The
-block is dated by its Run ID's review, an unedited comment, or its earliest
-appearance in the edit history, and must not predate the head's push. It also
-needs the head-scoped CodeRabbit check to report a completed review. That
+block is dated as [CodeRabbit notice dating](pr-readiness.md#coderabbit-notice-dating)
+states, must not predate the head's push, and is never read as a finished
+acknowledgment. It also needs the head-scoped CodeRabbit check to report a
+completed review. That
 check is the newest CodeRabbit status for the head, passing over skipped or
 paused ones, which only decline a further review. A newer in-progress or
 rate-limited status means the review is not complete (#87), and a review

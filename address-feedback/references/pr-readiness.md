@@ -114,26 +114,74 @@ account quota, hourly window, blind delay, or retry count. The one exception
 is the CodeRabbit allowance below, which reads CodeRabbit's own statements and
 may assume an hour only to hold longer.
 
+## CodeRabbit notice dating
+
+This section and the next are the normative rules for
+`scripts/coderabbit_adapter.py`; other references link here.
+
+CodeRabbit keeps one summary comment per PR and edits each notice into it in
+place, and it edits some of its replies too. A comment's creation or last edit
+therefore does not say when CodeRabbit made what it shows now. One rule dates
+every notice the adapter reads from CodeRabbit's comments: rate-limit notices,
+skip notices, already-reviewed refusals, finished acknowledgments, clean
+recent reviews, and allowance statements.
+
+- **Identity.** A notice is the Run ID its own generated block prints, if
+  any, and its content. A refusal's content is the text of its own block, so a
+  new wait or limit is a new notice. An acknowledgment's content is its
+  matched words. An allowance statement's is its line, and a clean recent
+  review's is the head its range ends at. The summary's other blocks are not
+  part of a notice, so an unrelated summary edit never re-dates it. The
+  summary's recent-review block is a clean automatic review, never a finished
+  acknowledgment.
+- **Date.** A notice is dated by the review object of its Run ID, an unedited
+  comment, or the first edit of its current showing in the comment's edit
+  history. With a Run ID, that is the earliest edit that showed it, because a
+  run is shown for one review. Without one, CodeRabbit can repeat it word for
+  word after separate reviews, so it is the oldest edit of its latest unbroken
+  showing.
+- **Undatable.** A notice cannot be dated when its edit history cannot be
+  read or runs past the adapter's page limit. A redacted revision may or may
+  not have shown it, so it also cannot be dated when such a revision could
+  hold its first showing: with a Run ID, one older than the earliest edit that
+  shows it; without one, one inside or just before its latest showing. It
+  then takes its kind's conservative direction:
+  - A refusal or hold is dated by the comment's last edit, the latest it can
+    have been shown. That covers rate-limit, skip and already-reviewed
+    notices, and an allowance statement that reports none left or uses an
+    unrecognized wording. A refusal that may belong to the head is then never
+    ignored, and only a wait or allowance time after its last edit can
+    explain it.
+  - Completion evidence never completes a head. An undatable finished
+    acknowledgment escalates as an untrusted one does: `trigger-full`, or
+    `pending-full-unverified` after an explicit full review. An undatable
+    clean recent review is ignored.
+  - An allowance statement that reports reviews left is ignored.
+- **Repeated runless notice.** An unchanged repeat of a notice leaves no edit
+  of its own. While the head's CodeRabbit check reports a rate limit, a
+  rate-limit notice without a Run ID is therefore dated by its comment's last
+  edit when that edit is at or after the later of the head's push and the
+  latest trigger.
+- **Head.** A notice belongs to the head when it is dated at or after the
+  later of the head's push and the latest trigger. A clean recent review must
+  not predate the head's push. A dated finished acknowledgment shown after a
+  rate-limit notice comment reports a review CodeRabbit finished after that
+  refusal, so the notice no longer limits the head. A rate limit the head's
+  check reports is never superseded.
+
 ## CodeRabbit allowance
 
-This section is the normative rule for `scripts/coderabbit_adapter.py`; other
-references link here.
+The adapter reads CodeRabbit's stated review allowance as follows.
 
 - **Statement.** The newest allowance statement in the scanned repositories'
   summary comments and review bodies, for example "N included reviews remain
   after this review" with "allowance at P reviews per hour". The April–May
   2026 footer "Review rate limit: N/P reviews remaining, refill in M minutes"
   counts too; it gives no rate unit but states when a review refills. A
-  statement is timed by when CodeRabbit made it: the review's submission, the
-  review object of the same Run ID, an unedited comment, or the comment's edit
-  history. A statement bound to a Run ID takes the earliest edit that showed
-  it under that Run ID. One without a Run ID, which CodeRabbit can repeat word
-  for word after separate reviews, takes the oldest edit of its latest unbroken
-  showing. A summary edited in place keeps showing an old
-  statement, so its last edit never dates it. A statement that cannot be dated
-  is ignored unless it reports none left or uses an unrecognized wording; then
-  its last edit times it. A statement is current until one window, or its
-  stated refill if longer, plus 60 seconds after it was made.
+  statement in a review body is timed by the review's submission, and one in
+  a comment as [CodeRabbit notice dating](#coderabbit-notice-dating) states.
+  A statement is current until one window, or its stated refill if longer,
+  plus 60 seconds after it was made.
 - **Runs.** Each review counts once by its Run ID, from the statement's own
   block and from review objects, at its earliest observed time. Automatic
   reviews count. A rate-limit block's refused run, "Currently processing"
@@ -166,12 +214,9 @@ references link here.
   allowance frees. For a rate-limit notice comment, a candidate counts only if
   it follows the notice: a wait posted at or after it, an allowance time after
   it, or, when the statement is current and rated, the time the runs counted
-  before the notice free a slot. A notice comment belongs to the head when
-  CodeRabbit showed it at or after the later of the head's push and the
-  latest trigger. CodeRabbit edits its summary into a notice in place, for
-  example when a draft is marked ready, so a notice is dated as a statement
-  is, not by the comment's last edit. Only a notice whose showing cannot be
-  dated falls back to the comment's creation time.
+  before the notice free a slot. A notice comment belongs to the head as
+  [CodeRabbit notice dating](#coderabbit-notice-dating) states. A stated wait
+  is timed from the last edit of the comment that states it.
 - **Scan horizon.** Repository-wide reads cover two hours plus 60 seconds.
   When that scan finds a per-day statement, they cover two days plus 60
   seconds; a per-day statement older than the two-hour scan is not found.
