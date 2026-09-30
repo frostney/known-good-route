@@ -2999,23 +2999,74 @@ def acknowledged(extra: list[dict[str, Any]], **kwargs: Any) -> FakeGh:
 class EditedSummaryNoticeTest(unittest.TestCase):
     """Every notice CodeRabbit edits into its summary is dated by when it showed it (PR #103 reviews)."""
 
-    def test_a_redacted_revision_does_not_end_a_showing_that_began_before_the_push(self) -> None:
-        # Finding 1: the notice showed at START - 900, a later revision is
-        # redacted, and an unrelated edit after the push still shows it. The
-        # redacted revision counted as "not shown", so the notice was dated
-        # after the push and blocked the acknowledgment's clean completion.
+    def redacted_first_notice(self, *, keyed: bool, ack_at: int | None) -> FakeGh:
+        """Astra's reproduction on PR #103: the notice's first showing, before
+        the push, is redacted, and an unrelated edit after the push carries it."""
+        run = "**Run ID**: `old-run`\n" if keyed else ""
+        body = (
+            "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n"
+            "<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->\n"
+            f"Review limit reached\n{run}"
+            "<!-- end of auto-generated comment: rate limited by coderabbit.ai -->\nsrc/feature.ts"
+        )
+        summary = comment(11, body, START - 300, updated=START + 60)
+        comments = [summary] + ([comment(12, "Review finished", ack_at)] if ack_at is not None else [])
+        gh = configured_gh(
+            comments=comments,
+            coderabbit_statuses=[{"context": "CodeRabbit", "state": "success", "description": "Review completed", "created_at": iso(START + 90)}],
+        )
+        gh.edits[summary["node_id"]] = [
+            (iso(START - 300), "Draft PR not reviewed"), (iso(START - 100), None), (iso(START + 60), body)
+        ]
+        return gh
+
+    def test_a_redacted_first_showing_leaves_the_notice_undated_and_a_later_acknowledgment_supersedes_it(self) -> None:
+        # Finding 1: the redacted revision counted as "not shown", so the
+        # notice was dated at the carrying edit, after the push, and blocked
+        # the acknowledgment's clean completion with pending-retry-source. It
+        # cannot be dated, so its last edit dates it; the acknowledgment and
+        # the check's completed review both follow that edit.
+        for keyed in (False, True):
+            with self.subTest(keyed=keyed):
+                evidence = ADAPTER.pull_evidence(self.redacted_first_notice(keyed=keyed, ack_at=START + 90), "owner/repo", 7)
+                self.assertEqual(ADAPTER.classify(evidence, "head-7", None, START + 180)[0], "clean-complete")
+                self.assertEqual((evidence["rateLimitedAt"], evidence["rateLimitedDating"]), (iso(START + 60), "undated"))
+                self.assertTrue(evidence["rateLimitSuperseded"])
+
+    def test_an_undated_notice_without_a_later_acknowledgment_still_limits_the_head(self) -> None:
+        # The refusal is never ignored: with no acknowledgment, or one shown
+        # before the notice's last edit, it limits the head from that edit.
+        for ack_at in (None, START + 30):
+            with self.subTest(ack_at=ack_at):
+                evidence = ADAPTER.pull_evidence(self.redacted_first_notice(keyed=False, ack_at=ack_at), "owner/repo", 7)
+                self.assertTrue(evidence["rateLimited"])
+                self.assertFalse(evidence["rateLimitSuperseded"])
+                self.assertEqual(evidence["rateLimitedAt"], iso(START + 60))
+                self.assertEqual(ADAPTER.classify(evidence, "head-7", None, START + 180)[0], "pending-retry-source")
+
+    def test_a_redacted_revision_inside_a_runless_showing_leaves_it_undated(self) -> None:
+        # Without a Run ID the redacted revision may have interrupted the
+        # showing, so the showing's start is unknown rather than read across.
         notice = runless_limit("10 minutes")
         summary, history = edited_pr_summary([
             (START - 900, summary_notice(notice, "walkthrough A")),
             (START - 300, None),
             (START + 50, summary_notice(notice, "walkthrough B")),
         ])
-        gh = acknowledged([summary])
+        gh = configured_gh(comments=[summary])
         gh.edits[summary["node_id"]] = history
         evidence = ADAPTER.pull_evidence(gh, "owner/repo", 7)
-        self.assertIsNone(evidence["rateLimitedAt"])
-        state, _, _ = ADAPTER.classify(evidence, "head-7", None, START + 180)
-        self.assertEqual(state, "clean-complete")
+        self.assertEqual((evidence["rateLimitedAt"], evidence["rateLimitedDating"]), (iso(START + 50), "undated"))
+        # With a Run ID, the readable showing before the push dates it.
+        keyed = notice.replace("> ## Rate limit exceeded", "> ## Rate limit exceeded\n> **Run ID**: `run-old`")
+        summary, history = edited_pr_summary([
+            (START - 900, summary_notice(keyed, "walkthrough A")),
+            (START - 300, None),
+            (START + 50, summary_notice(keyed, "walkthrough B")),
+        ])
+        gh = configured_gh(comments=[summary])
+        gh.edits[summary["node_id"]] = history
+        self.assertIsNone(ADAPTER.pull_evidence(gh, "owner/repo", 7)["rateLimitedAt"])
 
     def test_a_redacted_revision_that_may_have_shown_a_clean_review_first_leaves_it_undated(self) -> None:
         # The completion side of finding 1: the redacted revision predates the

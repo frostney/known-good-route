@@ -511,11 +511,12 @@ def first_shown(
     push came and went, is the same review and keeps its first time. Content
     without a Run ID can recur word for word after separate reviews, so with
     `contiguous` the walk stops at the first older version that does not show
-    it. A redacted or deleted version has no readable body; it neither shows
-    nor hides the content. Between two versions that show it, it does not
-    break the showing. Where the first showing could be that version, the time
-    is unknown. Returns None when the time is unknown or the history cannot be
-    read far enough.
+    it. A redacted or deleted version has no readable body, so it may or may
+    not have shown the content. The time is unknown when that version could
+    hold the first showing: for keyed content, one older than the earliest
+    version that shows it; with `contiguous`, one reached before the showing
+    ends. Returns None when the time is unknown or the history cannot be read
+    far enough.
     """
     node_id = item.get("node_id")
     if not isinstance(node_id, str) or not node_id:
@@ -539,6 +540,8 @@ def first_shown(
         for version in versions:
             body = version.get("diff")
             if not isinstance(body, str):
+                if contiguous and first_seen is not None:
+                    return None
                 unreadable_before = True
             elif shows(body):
                 first_seen = parse_timestamp(version.get("editedAt"), "edit editedAt")
@@ -1229,6 +1232,15 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
     finished = newest_shown([ack for ack in acks if ack["dating"] != "undated"] or acks)
     skipped = shown(skipped_key)
     limited = newest_shown(shown(notice_key, head_rate_limited=check_rate_limited))
+    # A dated acknowledgment shown after a rate-limit notice reports a review
+    # CodeRabbit finished after that refusal, so the notice no longer limits
+    # the head. A rate limit the head's check reports is never superseded.
+    superseded = bool(
+        limited
+        and finished
+        and finished["dating"] != "undated"
+        and finished["shownAtEpoch"] > limited["shownAtEpoch"]
+    )
     refused = shown(already_reviewed_key)
     walkthrough = latest(
         [
@@ -1292,7 +1304,8 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
             else None
         ),
         "skippedAck": bool(skipped),
-        "rateLimited": bool(limited) or check_rate_limited,
+        "rateLimited": (bool(limited) and not superseded) or check_rate_limited,
+        "rateLimitSuperseded": superseded,
         "rateLimitedAt": format_timestamp(limited["shownAtEpoch"]) if limited else None,
         "rateLimitedAtEpoch": limited["shownAtEpoch"] if limited else None,
         "rateLimitedDating": limited["dating"] if limited else None,
