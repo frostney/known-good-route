@@ -53,9 +53,11 @@ class Replay:
         self.now = at(now)
         self.metrics = FakeMetrics()
         self.posts: list[tuple[str, dict[str, str], float]] = []
-        self.on_post: Callable[[str, dict[str, str]], None] | None = None
+        # Answers a POST as GitHub and CodeRabbit would; returns the comment's id.
+        self.on_post: Callable[[str, dict[str, str]], int] | None = None
         self.requests: list[str] = []
         self.closed: set[str] = set()
+        self.unreadable_histories: set[int] = set()
         self.next_id = 9_000_000_000
 
     # Mutations of the recorded evidence -------------------------------------
@@ -86,6 +88,13 @@ class Replay:
                 "creator": {"login": "coderabbitai[bot]"},
             }
         )
+
+    def add_version(self, pr: str, identifier: int, body: str, when: str) -> None:
+        self.comment(pr, identifier)["versions"].append([when, body])
+
+    def add_suite(self, pr: str, when: str, branch: str) -> None:
+        case = self.cases[pr]
+        case["checkSuites"][case["head"]].append({"created_at": when, "head_branch": branch, "app": "other"})
 
     def add_comment(self, pr: str, body: str, when: str, login: str = "maintainer") -> int:
         self.next_id += 1
@@ -136,7 +145,7 @@ class Replay:
         if method == "POST":
             self.posts.append((endpoint, dict(fields or {}), self.now))
             if self.on_post:
-                self.on_post(endpoint, dict(fields or {}))
+                return {"id": self.on_post(endpoint, dict(fields or {}))}
             self.next_id += 1
             return {"id": self.next_id}
         self.requests.append(endpoint)
@@ -144,11 +153,12 @@ class Replay:
         if match and self.by_number(int(match.group(1))):
             pr = match.group(1)
             case = self.cases[pr]
-            draft = case["draft"] or bool(case["draftUntil"] and self.now < at(case["draftUntil"]))
+            draft = case["draft"] or bool(case["readyAt"] and self.now < at(case["readyAt"]))
             return {
                 "head": {"sha": case["head"], "ref": case["ref"]},
                 "state": "closed" if pr in self.closed else "open",
                 "draft": draft,
+                "created_at": case["createdAt"],
             }
         raise ADAPTER.WaitError(f"gh: Not Found (HTTP 404) {endpoint}")
 
@@ -189,9 +199,16 @@ class Replay:
         raise AssertionError(f"unexpected read {endpoint}")
 
     def graphql(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
+        if "READY_FOR_REVIEW_EVENT" in query:
+            self.requests.append(f"graphql:ready:{variables['number']}")
+            ready = self.cases[str(variables["number"])]["readyAt"]
+            nodes = [{"createdAt": ready}] if ready and at(ready) <= self.now else []
+            return {"repository": {"pullRequest": {"timelineItems": {"nodes": nodes}}}}
         if "userContentEdits" in query:
             self.requests.append(f"graphql:{variables['id']}")
             identifier = int(variables["id"].removeprefix("IC_"))
+            if identifier in self.unreadable_histories:
+                raise ADAPTER.WaitError("GitHub GraphQL error: edit history unavailable")
             item = next(
                 entry
                 for case in self.cases.values()
@@ -242,6 +259,11 @@ def state(pr: str, now: str, *others: str) -> dict[str, Any]:
     return observe(Replay(pr, *others, now=now), pr)
 
 
+def observed_at(gh: Replay, pr: str, now: str) -> dict[str, Any]:
+    gh.now = at(now)
+    return observe(gh, pr)
+
+
 def run(gh: Replay, pr: str, deadline: str, interval: float = 60) -> tuple[str, str, dict[str, Any]]:
     sleeps = [0]
 
@@ -264,15 +286,25 @@ def run(gh: Replay, pr: str, deadline: str, interval: float = 60) -> tuple[str, 
     )
 
 
+def answering(gh: Replay, pr: str, *answers: Callable[[float], None]) -> None:
+    """GitHub lists each posted trigger; CodeRabbit then gives the next answer."""
+    pending = list(answers)
+
+    def post(_endpoint: str, fields: dict[str, str]) -> int:
+        identifier = gh.add_comment(pr, fields["body"], iso(gh.now))
+        if pending:
+            pending.pop(0)(gh.now)
+        return identifier
+
+    gh.on_post = post
+
+
+SUMMARY_1043 = 5880781313
+REPLY = "<!-- This is an auto-generated reply by CodeRabbit -->\n> Next included review available in {}."
+
+
 class HeadStatusTest(unittest.TestCase):
     """Each CodeRabbit status on the head, as recorded, reaches its state."""
-
-    def test_no_status_on_a_ready_head_triggers_an_incremental_review(self) -> None:
-        gh = Replay("1043", now="2026-09-30T16:17:05Z")
-        gh.case("1043")["draftUntil"] = None
-        result = observe(gh, "1043")
-        self.assertIsNone(result["status"])
-        self.assertEqual((result["state"], result["nextMode"]), ("trigger-incremental", "incremental"))
 
     def test_draft_skip_on_a_draft_waits_for_it_to_be_ready(self) -> None:
         result = state("1043", "2026-09-30T16:30:00Z")
@@ -280,16 +312,11 @@ class HeadStatusTest(unittest.TestCase):
         self.assertEqual(result["state"], "draft")
         self.assertIsNone(result["nextMode"])
 
-    def test_draft_skip_after_the_pr_is_ready_triggers_an_incremental_review(self) -> None:
-        result = state("1043", "2026-09-30T17:02:15Z")
-        self.assertFalse(result["draft"])
-        self.assertEqual(result["status"]["kind"], "draft-skip")
-        self.assertEqual(result["state"], "trigger-incremental")
-
     def test_review_in_progress_is_waited_on(self) -> None:
         result = state("1095", "2026-09-30T19:12:00Z")
         self.assertEqual(result["status"]["description"], "Review in progress")
         self.assertEqual(result["state"], "in-progress")
+        self.assertEqual((result["since"], result["boundAt"]), ("2026-09-30T19:10:35Z", "2026-09-30T20:10:35Z"))
         self.assertIsNone(result["nextMode"])
 
     def test_rate_limit_waits_for_the_stated_wait_edited_in_before_it(self) -> None:
@@ -322,6 +349,14 @@ class HeadStatusTest(unittest.TestCase):
         self.assertEqual(result["state"], "review-complete")
         self.assertEqual(result["findingsReview"]["actionable"], 1)
 
+    def test_a_review_with_no_actionable_comments_and_no_findings_is_not_a_findings_review(self) -> None:
+        gh = Replay("1040", now="2026-09-30T01:43:00Z")
+        for review in gh.case("1040")["reviews"]:
+            review["body"] = "**Actionable comments posted: 0**"
+        result = observe(gh, "1040")
+        self.assertIsNone(result["findingsReview"])
+        self.assertEqual(result["state"], "trigger-full")
+
     def test_coverage_marker_for_the_head_completes_a_clean_pass(self) -> None:
         for pr, now in (("1087", "2026-09-30T10:26:00Z"), ("1095", "2026-09-30T19:18:00Z")):
             with self.subTest(pr=pr):
@@ -329,8 +364,17 @@ class HeadStatusTest(unittest.TestCase):
                 self.assertEqual(result["state"], "clean-complete")
                 self.assertEqual(result["cleanReview"]["coveredCommitId"], FIXTURE["cases"][pr]["head"])
 
+    def test_a_coverage_marker_of_another_kind_does_not_complete(self) -> None:
+        gh = Replay("1087", now="2026-09-30T10:26:00Z")
+        summary = gh.comment("1087", 5907716986)
+        self.assertIn('"kind":"reviewed"', summary["versions"][-1][1])
+        summary["versions"][-1][1] = summary["versions"][-1][1].replace('"kind":"reviewed"', '"kind":"skipped"')
+        result = observe(gh, "1087")
+        self.assertIsNone(result["cleanReview"])
+        self.assertEqual(result["state"], "trigger-full")
+
     def test_completed_status_without_review_or_marker_escalates_to_one_full_review(self) -> None:
-        result = state("1089", "2026-09-30T13:20:00Z")
+        result = state("1089", "2026-09-30T13:20:00Z")  # Synthetic: #1089 merged at 13:19:33.
         self.assertIsNone(result["findingsReview"])
         self.assertIsNone(result["cleanReview"])
         self.assertEqual((result["state"], result["nextMode"]), ("trigger-full", "full"))
@@ -359,6 +403,209 @@ class HeadStatusTest(unittest.TestCase):
             }
         )
         self.assertEqual(observe(gh, "1043")["status"]["description"], "Review rate limited")
+
+
+class AutomaticReviewTest(unittest.TestCase):
+    """CodeRabbit's own review of a new or ready head is awaited before any trigger."""
+
+    def test_a_ready_head_without_a_review_status_waits_120_s_from_its_push(self) -> None:
+        gh = Replay("1043", now="2026-09-30T16:17:05Z")
+        gh.case("1043")["readyAt"] = None  # Replayed as ready from the push.
+        first = observe(gh, "1043")
+        self.assertIsNone(first["status"])
+        self.assertEqual(first["automaticReview"], {"from": "2026-09-30T16:16:59Z", "source": "head-check-suite"})
+        self.assertEqual((first["state"], first["boundAt"]), ("awaiting-automatic", "2026-09-30T16:18:59Z"))
+        self.assertEqual(observed_at(gh, "1043", "2026-09-30T16:18:58Z")["state"], "awaiting-automatic")
+        last = observed_at(gh, "1043", "2026-09-30T16:18:59Z")
+        self.assertEqual((last["state"], last["nextMode"]), ("trigger-incremental", "incremental"))
+
+    def test_a_head_marked_ready_waits_120_s_from_the_ready_event(self) -> None:
+        # Recorded: marked ready 17:02:10, CodeRabbit's own review in progress 17:02:23.
+        gh = Replay("1043", now="2026-09-30T17:02:15Z")
+        result = observe(gh, "1043")
+        self.assertEqual(result["status"]["kind"], "draft-skip")
+        self.assertEqual(result["automaticReview"], {"from": "2026-09-30T17:02:10Z", "source": "ready-for-review"})
+        self.assertEqual((result["state"], result["since"], result["boundAt"]), (
+            "awaiting-automatic", "2026-09-30T17:02:10Z", "2026-09-30T17:04:10Z"
+        ))
+        self.assertIsNone(result["nextMode"])
+        self.assertEqual(observed_at(gh, "1043", "2026-09-30T17:02:23Z")["state"], "in-progress")
+
+    def test_a_pull_request_opened_after_the_push_waits_from_its_opening(self) -> None:
+        gh = Replay("1043", now="2026-09-30T16:19:10Z")
+        gh.case("1043")["readyAt"] = None
+        gh.case("1043")["createdAt"] = "2026-09-30T16:17:30Z"  # Synthetic: opened after the push.
+        result = observe(gh, "1043")
+        self.assertEqual(result["automaticReview"], {"from": "2026-09-30T16:17:30Z", "source": "opened"})
+        self.assertEqual((result["state"], result["boundAt"]), ("awaiting-automatic", "2026-09-30T16:19:30Z"))
+
+
+class BoundTest(unittest.TestCase):
+    """Every state that waits on CodeRabbit becomes blocked after its bound."""
+
+    def test_an_unanswered_trigger_blocks_after_ten_minutes(self) -> None:
+        gh = Replay("1043", now="2026-09-30T17:25:59Z")
+        gh.add_comment("1043", "@coderabbitai review", "2026-09-30T17:16:00Z")
+        waiting = observe(gh, "1043")
+        self.assertEqual((waiting["state"], waiting["boundAt"]), ("triggered", "2026-09-30T17:26:00Z"))
+        blocked = observed_at(gh, "1043", "2026-09-30T17:26:00Z")
+        self.assertEqual((blocked["state"], blocked["since"]), ("blocked-unanswered", "2026-09-30T17:16:00Z"))
+        self.assertIsNone(blocked["nextMode"])
+
+    def test_a_trigger_in_the_same_second_as_a_status_counts_as_answered(self) -> None:
+        gh = Replay("1043", now="2026-09-30T17:20:00Z")
+        gh.add_comment("1043", "@coderabbitai review", "2026-09-30T17:02:29Z")
+        self.assertEqual(observe(gh, "1043")["state"], "trigger-incremental")
+
+    def test_a_review_in_progress_for_an_hour_blocks_as_stalled(self) -> None:
+        gh = Replay("1043", now="2026-09-30T18:19:59Z")
+        gh.add_status("1043", "Review in progress", "2026-09-30T17:20:00Z", state="pending")
+        self.assertEqual(observe(gh, "1043")["state"], "in-progress")
+        blocked = observed_at(gh, "1043", "2026-09-30T18:20:00Z")
+        self.assertEqual((blocked["state"], blocked["since"]), ("blocked-stalled", "2026-09-30T17:20:00Z"))
+
+    def test_a_refusal_without_a_stated_wait_blocks_after_fifteen_minutes(self) -> None:
+        gh = Replay("1043", now="2026-09-30T17:17:28Z")
+        gh.move_version("1043", SUMMARY_1043, "2026-09-30T17:02:28Z", "2026-09-30T17:00:00Z")
+        unknown = observe(gh, "1043")
+        self.assertEqual((unknown["state"], unknown["boundAt"]), ("rate-limited-unknown-wait", "2026-09-30T17:17:29Z"))
+        blocked = observed_at(gh, "1043", "2026-09-30T17:17:29Z")
+        self.assertEqual((blocked["state"], blocked["since"]), ("blocked-unknown-wait", "2026-09-30T17:02:29Z"))
+        self.assertIsNone(blocked["retryAt"])
+
+
+class StatedWaitTest(unittest.TestCase):
+    """A rate limit waits only on the wait CodeRabbit edited into its summary just before it."""
+
+    def test_the_trigger_is_permitted_at_retry_time_and_not_a_second_before(self) -> None:
+        self.assertEqual(state("1043", "2026-09-30T17:15:27Z")["state"], "waiting")
+        self.assertEqual(state("1043", "2026-09-30T17:15:28Z")["state"], "trigger-incremental")
+
+    def test_an_edit_sixty_seconds_before_the_status_correlates(self) -> None:
+        gh = Replay("1043", now="2026-09-30T17:05:00Z")
+        gh.move_version("1043", SUMMARY_1043, "2026-09-30T17:02:28Z", "2026-09-30T17:01:29Z")
+        result = observe(gh, "1043")
+        self.assertEqual(result["state"], "waiting")
+        self.assertEqual(result["retryAt"], "2026-09-30T17:14:29Z")
+
+    def test_an_edit_sixty_one_seconds_before_the_status_leaves_the_wait_unknown(self) -> None:
+        gh = Replay("1043", now="2026-09-30T17:05:00Z")
+        gh.move_version("1043", SUMMARY_1043, "2026-09-30T17:02:28Z", "2026-09-30T17:01:28Z")
+        result = observe(gh, "1043")
+        self.assertEqual(result["state"], "rate-limited-unknown-wait")
+        self.assertEqual(result["since"], "2026-09-30T17:02:29Z")
+        self.assertIsNone(result["nextMode"])
+        self.assertIsNone(result["retryAt"])
+
+    def test_an_edit_after_the_status_does_not_correlate(self) -> None:
+        gh = Replay("1043", now="2026-09-30T17:05:00Z")
+        gh.move_version("1043", SUMMARY_1043, "2026-09-30T17:02:28Z", "2026-09-30T17:02:30Z")
+        self.assertEqual(observe(gh, "1043")["state"], "rate-limited-unknown-wait")
+
+    def test_an_unreadable_edit_history_leaves_the_wait_unknown(self) -> None:
+        gh = Replay("1043", now="2026-09-30T17:05:00Z")
+        gh.unreadable_histories.add(SUMMARY_1043)
+        result = observe(gh, "1043")
+        self.assertEqual(result["state"], "rate-limited-unknown-wait")
+        self.assertIn("could not be read", result["reason"])
+
+    def test_a_notice_gone_from_the_current_body_is_read_from_its_history(self) -> None:
+        gh = Replay("1059", now="2026-09-29T18:20:00Z")
+        body = gh.visible_comments("1059")[0]["body"]
+        self.assertNotRegex(body, ADAPTER.STATED_WAIT)
+        result = observe(gh, "1059")
+        self.assertEqual(result["state"], "waiting")
+        self.assertEqual(result["rateLimit"]["wait"]["editedAt"], "2026-09-29T18:06:27Z")
+        self.assertEqual(result["retryAt"], "2026-09-29T18:29:27Z")
+        gh.now = at("2026-09-29T18:29:27Z")
+        self.assertEqual(observe(gh, "1059")["state"], "trigger-incremental")
+
+    def test_each_recorded_rate_limit_pairs_with_its_own_edit(self) -> None:
+        expected = {
+            "2026-09-30T17:25:00Z": "2026-09-30T17:24:41Z",
+            "2026-09-30T17:30:00Z": "2026-09-30T17:25:58Z",
+            "2026-09-30T18:00:00Z": "2026-09-30T17:58:19Z",
+        }
+        for now, edited in expected.items():
+            with self.subTest(now=now):
+                self.assertEqual(state("1095", now)["rateLimit"]["wait"]["editedAt"], edited)
+
+    def test_two_recorded_summary_versions_in_the_window_take_the_later_retry_time(self) -> None:
+        # Each newer version states a wait that ends earlier than the older one's.
+        cases = {
+            "1062": ("2026-09-29T19:15:00Z", "2026-09-29T19:08:52Z", 20 * 60, "2026-09-29T19:29:52Z"),
+            "1084": ("2026-09-30T07:50:00Z", "2026-09-30T07:42:17Z", 45 * 60, "2026-09-30T08:28:17Z"),
+        }
+        for pr, (now, edited, seconds, retry) in cases.items():
+            with self.subTest(pr=pr):
+                result = state(pr, now)
+                self.assertEqual(result["state"], "waiting")
+                self.assertEqual(result["rateLimit"]["wait"]["editedAt"], edited)
+                self.assertEqual(result["rateLimit"]["wait"]["statedSeconds"], seconds)
+                self.assertEqual(result["retryAt"], retry)
+
+    def test_a_bot_reply_is_not_the_notice(self) -> None:
+        for wait, retry in (("1 minute", "2026-09-30T17:15:28Z"), ("50 minutes", "2026-09-30T17:15:28Z")):
+            with self.subTest(reply=wait):
+                gh = Replay("1043", now="2026-09-30T17:05:00Z")
+                gh.add_comment("1043", REPLY.format(wait), "2026-09-30T17:02:29Z", login="coderabbitai[bot]")
+                result = observe(gh, "1043")
+                self.assertEqual(result["rateLimit"]["wait"]["commentId"], SUMMARY_1043)
+                self.assertEqual((result["state"], result["retryAt"]), ("waiting", retry))
+
+    def test_the_newest_wait_in_the_scanned_repositories_gates_a_trigger(self) -> None:
+        result = state("1043", "2026-09-30T17:15:40Z", *NEIGHBOURS)
+        self.assertEqual(result["accountWait"]["newest"]["pr"], 1055)
+        self.assertEqual(result["accountWait"]["newest"]["editedAt"], "2026-09-30T17:02:50Z")
+        self.assertEqual(result["state"], "waiting")
+        self.assertEqual((result["retryAt"], result["retrySource"]), ("2026-09-30T17:15:50Z", "account"))
+        self.assertEqual(state("1043", "2026-09-30T17:15:50Z", *NEIGHBOURS)["state"], "trigger-incremental")
+
+    def test_a_status_on_a_commit_several_pull_requests_share_pairs_with_any_of_their_summaries(self) -> None:
+        # The other PRs have recent CodeRabbit comments, but none near the shared refusals.
+        for owner, sharers in (("1055", ("1095",)), ("1095", ("1043", "1055"))):
+            with self.subTest(owner=owner):
+                gh = Replay("1043", "1055", "1095", now="2026-09-30T17:30:00Z")
+                shared = gh.case(owner)["head"]
+                for pr in sharers:
+                    gh.case(pr)["statuses"][shared] = gh.case(owner)["statuses"][shared]
+                result = observe(gh, "1043")
+                self.assertEqual(result["accountWait"]["unmatchedRateLimits"], [])
+                self.assertEqual((result["state"], result["retrySource"]), ("waiting", "account"))
+
+    def test_a_stacked_pull_requests_summary_does_not_shorten_a_shared_commits_wait(self) -> None:
+        gh = Replay("1089", "1043", "1095", now="2026-09-30T17:05:00Z")
+        shared = gh.case("1043")["head"]
+        gh.case("1095")["statuses"][shared] = gh.case("1043")["statuses"][shared]
+        decoy = ADAPTER.SUMMARY_MARKER + "\n> Next included review available in 1 minute."
+        gh.add_comment("1095", decoy, "2026-09-30T17:02:29Z", login="coderabbitai[bot]")
+        result = observe(gh, "1089")
+        self.assertEqual(result["accountWait"]["newest"]["commentId"], SUMMARY_1043)
+        self.assertEqual((result["state"], result["retryAt"]), ("waiting", "2026-09-30T17:15:28Z"))
+
+    def test_an_account_wait_holds_a_head_that_has_no_rate_limit_of_its_own(self) -> None:
+        gh = Replay("1043", *NEIGHBOURS, now="2026-09-30T17:10:00Z")
+        gh.case("1043")["statuses"][gh.case("1043")["head"]] = gh.case("1043")["statuses"][
+            gh.case("1043")["head"]
+        ][:2]
+        result = observe(gh, "1043")
+        self.assertEqual(result["status"]["kind"], "draft-skip")
+        self.assertEqual((result["state"], result["retrySource"]), ("waiting", "account"))
+
+    def test_a_refusal_without_a_stated_wait_holds_triggers_on_every_pull_request(self) -> None:
+        gh = Replay("1089", "1043", now="2026-09-30T17:05:00Z")
+        gh.move_version("1043", SUMMARY_1043, "2026-09-30T17:02:28Z", "2026-09-30T17:00:00Z")
+        self.assertEqual(observe(gh, "1043")["state"], "rate-limited-unknown-wait")
+        held = observe(gh, "1089")
+        self.assertEqual(held["state"], "waiting-account-unknown")
+        self.assertEqual(held["nextMode"], "full")
+        self.assertEqual(held["unmatchedRateLimit"]["prs"], [1043])
+        self.assertEqual(held["unmatchedRateLimit"]["statusAt"], "2026-09-30T17:02:29Z")
+        self.assertEqual(held["boundAt"], "2026-09-30T17:17:29Z")
+        self.assertEqual(observed_at(gh, "1089", "2026-09-30T17:17:28Z")["state"], "waiting-account-unknown")
+        blocked = observed_at(gh, "1089", "2026-09-30T17:17:29Z")
+        self.assertEqual((blocked["state"], blocked["since"]), ("blocked-account-unknown-wait", "2026-09-30T17:02:29Z"))
+        self.assertIsNone(blocked["nextMode"])
 
 
 class HeadScopeTest(unittest.TestCase):
@@ -419,88 +666,24 @@ class HeadScopeTest(unittest.TestCase):
         )
         self.assertEqual(observe(gh, "1087")["state"], "trigger-full")
 
-
-class StatedWaitTest(unittest.TestCase):
-    """A rate limit waits only on the wait CodeRabbit edited in just before it."""
-
-    def test_the_trigger_is_permitted_at_retry_time_and_not_a_second_before(self) -> None:
-        self.assertEqual(state("1043", "2026-09-30T17:15:27Z")["state"], "waiting")
-        self.assertEqual(state("1043", "2026-09-30T17:15:28Z")["state"], "trigger-incremental")
-
-    def test_an_edit_sixty_seconds_before_the_status_correlates(self) -> None:
-        gh = Replay("1043", now="2026-09-30T17:05:00Z")
-        gh.move_version("1043", 5880781313, "2026-09-30T17:02:28Z", "2026-09-30T17:01:29Z")
+    def test_a_check_suite_on_another_branch_does_not_date_the_head(self) -> None:
+        gh = Replay("1043", now="2026-09-30T17:20:00Z")
+        gh.add_suite("1043", "2026-09-30T16:00:00Z", "another-branch")
+        gh.add_comment("1043", "@coderabbitai review", "2026-09-30T16:10:00Z")
         result = observe(gh, "1043")
-        self.assertEqual(result["state"], "waiting")
-        self.assertEqual(result["retryAt"], "2026-09-30T17:14:29Z")
-
-    def test_an_edit_sixty_one_seconds_before_the_status_leaves_the_wait_unknown(self) -> None:
-        gh = Replay("1043", now="2026-09-30T17:05:00Z")
-        gh.move_version("1043", 5880781313, "2026-09-30T17:02:28Z", "2026-09-30T17:01:28Z")
-        result = observe(gh, "1043")
-        self.assertEqual(result["state"], "rate-limited-unknown-wait")
-        self.assertEqual(result["rateLimitedAt"], "2026-09-30T17:02:29Z")
-        self.assertIsNone(result["nextMode"])
-        self.assertIsNone(result["retryAt"])
-
-    def test_an_edit_after_the_status_does_not_correlate(self) -> None:
-        gh = Replay("1043", now="2026-09-30T17:05:00Z")
-        gh.move_version("1043", 5880781313, "2026-09-30T17:02:28Z", "2026-09-30T17:02:30Z")
-        self.assertEqual(observe(gh, "1043")["state"], "rate-limited-unknown-wait")
-
-    def test_a_notice_gone_from_the_current_body_is_read_from_its_history(self) -> None:
-        gh = Replay("1059", now="2026-09-29T18:20:00Z")
-        body = gh.visible_comments("1059")[0]["body"]
-        self.assertNotRegex(body, ADAPTER.STATED_WAIT)
-        result = observe(gh, "1059")
-        self.assertEqual(result["state"], "waiting")
-        self.assertEqual(result["rateLimit"]["wait"]["editedAt"], "2026-09-29T18:06:27Z")
-        self.assertEqual(result["retryAt"], "2026-09-29T18:29:27Z")
-        gh.now = at("2026-09-29T18:29:27Z")
-        self.assertEqual(observe(gh, "1059")["state"], "trigger-incremental")
-
-    def test_each_recorded_rate_limit_pairs_with_its_own_edit(self) -> None:
-        expected = {
-            "2026-09-30T17:25:00Z": "2026-09-30T17:24:41Z",
-            "2026-09-30T17:30:00Z": "2026-09-30T17:25:58Z",
-            "2026-09-30T18:00:00Z": "2026-09-30T17:58:19Z",
-        }
-        for now, edited in expected.items():
-            with self.subTest(now=now):
-                self.assertEqual(state("1095", now)["rateLimit"]["wait"]["editedAt"], edited)
-
-    def test_the_newest_wait_in_the_scanned_repositories_gates_a_trigger(self) -> None:
-        result = state("1043", "2026-09-30T17:15:40Z", *NEIGHBOURS)
-        self.assertEqual(result["accountWait"]["newest"]["pr"], 1055)
-        self.assertEqual(result["accountWait"]["newest"]["editedAt"], "2026-09-30T17:02:50Z")
-        self.assertEqual(result["state"], "waiting")
-        self.assertEqual((result["retryAt"], result["retrySource"]), ("2026-09-30T17:15:50Z", "account"))
-        self.assertEqual(state("1043", "2026-09-30T17:15:50Z", *NEIGHBOURS)["state"], "trigger-incremental")
-
-    def test_a_status_on_a_commit_two_pull_requests_share_is_paired_once(self) -> None:
-        # #1095 has recent CodeRabbit comments but none near #1055's refusal.
-        gh = Replay("1043", "1055", "1095", now="2026-09-30T17:30:00Z")
-        shared = gh.case("1055")["head"]
-        gh.case("1095")["statuses"][shared] = gh.case("1055")["statuses"][shared]
-        result = observe(gh, "1043")
-        self.assertEqual(result["accountWait"]["uncorrelatedRateLimits"], 0)
-
-    def test_an_account_wait_holds_a_head_that_has_no_rate_limit_of_its_own(self) -> None:
-        gh = Replay("1043", *NEIGHBOURS, now="2026-09-30T17:10:00Z")
-        gh.case("1043")["statuses"][gh.case("1043")["head"]] = gh.case("1043")["statuses"][
-            gh.case("1043")["head"]
-        ][:2]
-        result = observe(gh, "1043")
-        self.assertEqual(result["status"]["kind"], "draft-skip")
-        self.assertEqual((result["state"], result["retrySource"]), ("waiting", "account"))
+        self.assertEqual(result["headArrival"], {"at": "2026-09-30T16:16:59Z", "source": "check-suite"})
+        self.assertEqual(result["triggers"], [])
 
 
 class EscalationTest(unittest.TestCase):
-    """An unconfirmed completion gets one full review per head, then blocks."""
+    """An unconfirmed completion gets one full review per head, then blocks.
+
+    Synthetic: #1083 merged at 07:57:44, before the Review completed statuses
+    these replays read, and is replayed open.
+    """
 
     def replay(self, now: str) -> Replay:
-        gh = Replay("1083", now=now)  # Recorded while the PR was being closed; replayed open.
-        return gh
+        return Replay("1083", now=now)
 
     def test_one_full_review_then_blocked(self) -> None:
         first = observe(self.replay("2026-09-30T08:29:00Z"), "1083")
@@ -518,32 +701,75 @@ class EscalationTest(unittest.TestCase):
         self.assertLess(at(earlier["created_at"]), at(observe(gh, "1083")["headArrival"]["at"]))
         self.assertEqual(observe(gh, "1083")["state"], "trigger-full")
 
-    def test_run_posts_one_full_review_and_stops_blocked(self) -> None:
-        gh = Replay("1089", now="2026-09-30T13:20:00Z")
-
-        def answer(_endpoint: str, fields: dict[str, str]) -> None:
-            posted = iso(gh.now)
-            gh.add_comment("1089", fields["body"], posted)
-            gh.add_status("1089", "Review completed", iso(gh.now + 30))
-
-        gh.on_post = answer
-        final, _reason, value = run(gh, "1089", "2026-09-30T14:00:00Z")
-        self.assertEqual(final, "blocked-unconfirmed")
-        self.assertEqual([fields["body"] for _endpoint, fields, _when in gh.posts], ["@coderabbitai full review"])
-        self.assertEqual(value["triggers"][0]["mode"], "full")
-
 
 class RunTest(unittest.TestCase):
     def test_recorded_1043_triggers_once_exactly_when_the_wait_ends(self) -> None:
         gh = Replay("1043", now="2026-09-30T17:05:00Z")
-        gh.on_post = lambda _endpoint, fields: gh.add_comment("1043", fields["body"], iso(gh.now))
+        answering(gh, "1043")
         final, _reason, value = run(gh, "1043", "2026-09-30T17:30:00Z")
         self.assertEqual(len(gh.posts), 1)
         endpoint, fields, when = gh.posts[0]
         self.assertEqual(endpoint, f"repos/{REPO}/issues/1043/comments")
         self.assertEqual(fields, {"body": "@coderabbitai review"})
         self.assertEqual(iso(when), "2026-09-30T17:15:28Z")
-        self.assertEqual(final, "triggered")
+        self.assertEqual(final, "blocked-unanswered")
+        self.assertEqual(iso(gh.now), "2026-09-30T17:25:28Z")
+        self.assertEqual(value["triggers"][0]["commentId"], gh.case("1043")["comments"][-1]["id"])
+
+    def test_a_run_started_during_the_automatic_review_does_not_post_before_it(self) -> None:
+        # Recorded: a run at 17:02:15 posted a trigger; CodeRabbit's own review started at 17:02:23.
+        gh = Replay("1043", now="2026-09-30T17:02:15Z")
+        answering(gh, "1043")
+        final, _reason, _value = run(gh, "1043", "2026-09-30T17:30:00Z", interval=5)
+        self.assertEqual([iso(when) for _endpoint, _fields, when in gh.posts], ["2026-09-30T17:15:28Z"])
+        self.assertEqual(final, "blocked-unanswered")
+
+    def test_run_escalates_an_unconfirmed_completion_to_one_full_review(self) -> None:
+        gh = Replay("1043", now="2026-09-30T17:20:00Z")
+
+        def completes(posted: float) -> None:
+            gh.add_status("1043", "Review in progress", iso(posted + 10), state="pending")
+            gh.add_status("1043", "Review completed", iso(posted + 40))
+
+        answering(gh, "1043", completes, completes)
+        final, _reason, value = run(gh, "1043", "2026-09-30T18:00:00Z")
+        self.assertEqual(
+            [fields["body"] for _endpoint, fields, _when in gh.posts],
+            ["@coderabbitai review", "@coderabbitai full review"],
+        )
+        self.assertEqual([trigger["mode"] for trigger in value["triggers"]], ["incremental", "full"])
+        self.assertEqual(final, "blocked-unconfirmed")
+
+    def test_run_waits_out_a_refusal_then_retries(self) -> None:
+        gh = Replay("1043", now="2026-09-30T17:20:00Z")
+        summary = ADAPTER.SUMMARY_MARKER + "\n> Next included review available in 5 minutes."
+
+        def refuses(posted: float) -> None:
+            gh.add_status("1043", "Review in progress", iso(posted + 10), state="pending")
+            gh.add_version("1043", SUMMARY_1043, summary, iso(posted + 15))
+            gh.add_status("1043", "Review rate limited", iso(posted + 16))
+
+        def reviews(posted: float) -> None:
+            gh.add_status("1043", "Review in progress", iso(posted + 10), state="pending")
+            gh.case("1043")["reviews"].append(
+                {
+                    "id": 1,
+                    "user": {"login": "coderabbitai[bot]"},
+                    "body": "**Actionable comments posted: 2**",
+                    "state": "COMMENTED",
+                    "commit_id": gh.case("1043")["head"],
+                    "submitted_at": iso(posted + 200),
+                }
+            )
+            gh.add_status("1043", "Review completed", iso(posted + 205))
+
+        answering(gh, "1043", refuses, reviews)
+        final, _reason, _value = run(gh, "1043", "2026-09-30T18:00:00Z")
+        self.assertEqual(
+            [(fields["body"], iso(when)) for _endpoint, fields, when in gh.posts],
+            [("@coderabbitai review", "2026-09-30T17:20:00Z"), ("@coderabbitai review", "2026-09-30T17:26:15Z")],
+        )
+        self.assertEqual(final, "review-complete")
 
     def test_a_trigger_not_yet_listed_is_never_posted_twice(self) -> None:
         gh = Replay("1043", now="2026-09-30T17:20:00Z")
@@ -551,20 +777,20 @@ class RunTest(unittest.TestCase):
         self.assertEqual(len(gh.posts), 1)
         self.assertEqual(final, "trigger-incremental")
 
-    def test_an_unknown_wait_is_polled_and_never_triggered(self) -> None:
+    def test_an_unknown_wait_is_polled_then_blocks_and_never_triggers(self) -> None:
         gh = Replay("1043", now="2026-09-30T17:05:00Z")
-        gh.move_version("1043", 5880781313, "2026-09-30T17:02:28Z", "2026-09-30T17:00:00Z")
-        final, reason, value = run(gh, "1043", "2026-09-30T17:40:00Z")
-        self.assertEqual(final, "rate-limited-unknown-wait")
-        self.assertIn("deadline", reason)
+        gh.move_version("1043", SUMMARY_1043, "2026-09-30T17:02:28Z", "2026-09-30T17:00:00Z")
+        final, _reason, value = run(gh, "1043", "2026-09-30T19:00:00Z")
+        self.assertEqual(final, "blocked-unknown-wait")
         self.assertEqual(gh.posts, [])
-        self.assertEqual(value["pullRequests"][0]["rateLimitedAt"], "2026-09-30T17:02:29Z")
+        self.assertEqual(iso(gh.now), "2026-09-30T17:17:29Z")
+        self.assertEqual(value["pullRequests"][0]["since"], "2026-09-30T17:02:29Z")
 
     def test_an_unknown_wait_ends_when_a_new_status_arrives(self) -> None:
         gh = Replay("1043", now="2026-09-30T17:05:00Z")
-        gh.move_version("1043", 5880781313, "2026-09-30T17:02:28Z", "2026-09-30T17:00:00Z")
-        gh.add_status("1043", "Review in progress", "2026-09-30T17:20:00Z", state="pending")
-        gh.add_status("1043", "Review skipped: 474 files exceed the limit of 150", "2026-09-30T17:21:00Z")
+        gh.move_version("1043", SUMMARY_1043, "2026-09-30T17:02:28Z", "2026-09-30T17:00:00Z")
+        gh.add_status("1043", "Review in progress", "2026-09-30T17:10:00Z", state="pending")
+        gh.add_status("1043", "Review skipped: 474 files exceed the limit of 150", "2026-09-30T17:11:00Z")
         final, _reason, _value = run(gh, "1043", "2026-09-30T17:40:00Z")
         self.assertEqual(final, "skipped")
         self.assertEqual(gh.posts, [])
@@ -661,20 +887,35 @@ class ContractTest(unittest.TestCase):
 
         self.assertEqual(aggregate("review-complete", "clean-complete"), "satisfied")
         self.assertEqual(aggregate("review-complete", "invalidated", "skipped"), "invalidated")
-        self.assertEqual(aggregate("waiting", "blocked-unconfirmed"), "blocked")
-        self.assertEqual(aggregate("review-complete", "rate-limited-unknown-wait"), "pending")
+        for blocked in sorted(ADAPTER.BLOCKED_STATES):
+            with self.subTest(state=blocked):
+                self.assertEqual(aggregate("waiting", blocked), "blocked")
+        for pending in ("rate-limited-unknown-wait", "waiting-account-unknown", "awaiting-automatic", "triggered"):
+            with self.subTest(state=pending):
+                self.assertEqual(aggregate("review-complete", pending), "pending")
 
-    def test_every_state_is_named_by_the_skill_docs(self) -> None:
-        documented = (ROOT / "address-feedback" / "references" / "pr-readiness.md").read_text()
-        source = MODULE_PATH.read_text()
-        states = set(re.findall(r'result\(\s*"([a-z-]+)"', source)) | {
-            "trigger-incremental",
-            "trigger-full",
-            "lock-held",
-        }
-        for name in states:
-            with self.subTest(state=name):
-                self.assertIn(f"`{name}`", documented)
+    def test_a_command_never_reports_a_state_it_does_not_declare(self) -> None:
+        metrics = ADAPTER.Metrics(0.0)
+        with self.assertRaises(ADAPTER.WaitError):
+            ADAPTER.envelope("status", "lock-held", {}, {}, metrics, "")
+        with self.assertRaises(ADAPTER.WaitError):
+            ADAPTER.envelope("run", "satisfied", {}, {}, metrics, "")
+        self.assertEqual(ADAPTER.envelope("run", "pending", {}, {}, metrics, "")["state"], "pending")
+        self.assertLessEqual(ADAPTER.FINAL_STATES, ADAPTER.HEAD_STATES)
+
+    def test_the_docs_list_every_state_with_the_commands_that_report_it(self) -> None:
+        text = (ROOT / "address-feedback" / "references" / "pr-readiness.md").read_text()
+        section = text.split("\n## CodeRabbit\n", 1)[1].split("\n## ", 1)[0]
+        documented: dict[str, frozenset[str]] = {}
+        for line in section.splitlines():
+            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+            if not line.startswith("|") or len(cells) != 3 or not cells[0].startswith("`"):
+                continue
+            commands = frozenset(re.findall(r"`([a-z]+)`", cells[1]))
+            for name in re.findall(r"`([a-z-]+)`", cells[0]):
+                self.assertNotIn(name, documented, f"{name} is listed twice")
+                documented[name] = commands
+        self.assertEqual(documented, ADAPTER.STATE_COMMANDS)
 
 
 if __name__ == "__main__":
