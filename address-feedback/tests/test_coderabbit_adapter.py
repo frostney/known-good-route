@@ -3087,6 +3087,182 @@ class EditedSummaryNoticeTest(unittest.TestCase):
         recorded = next(n["body"] for n in RECORDED["notices"] if n["kind"] == "summary-rate-limited-with-stated-wait")
         self.assertEqual(ADAPTER.notice_key(recorded)[0], "73d78305-1fd6-45f7-8c1b-dfe914ae8f96")
 
+    def failing_history(self, _query: str, _variables: dict[str, Any]) -> dict[str, Any]:
+        raise ADAPTER.WaitError("gh: Something went wrong (HTTP 422)")
+
+    # Finding 3: a refusal whose showing cannot be dated counts from the
+    # comment's last edit, not its creation.
+    def test_recorded_notice_with_unreadable_history_waits_and_then_permits_the_trigger(self) -> None:
+        # 3a: the #1043 summary, created before the push, with its edit history
+        # unreadable. The creation time put the notice before the push, and the
+        # head stalled in pending-retry-source with no next mode.
+        gh = edited_notice_gh()
+        gh.graphql = self.failing_history  # type: ignore[method-assign]
+        item = edited_observe(gh, "2026-09-30T17:10:00Z")["pullRequests"][0]
+        self.assertEqual(item["state"], "waiting")
+        self.assertEqual((item["retryAt"], item["retrySource"]), ("2026-09-30T17:15:28Z", "stated-wait"))
+        self.assertEqual((item["rateLimitedAt"], item["rateLimitedDating"]), ("2026-09-30T17:02:28Z", "undated"))
+        item = edited_observe(gh, EDITED["observedAt"])["pullRequests"][0]
+        self.assertEqual((item["state"], item["nextMode"]), ("trigger-incremental", "incremental"))
+
+    def test_recorded_notice_beyond_the_edit_history_page_limit_waits_and_then_permits_the_trigger(self) -> None:
+        # 3b: 25 draft-notice revisions before the rate-limit notice put its
+        # first showing beyond one page of history.
+        gh = edited_notice_gh()
+        draft = EDITED["versions"][0]["body"]
+        fillers = [(iso(int(at("2026-09-29T00:00:00Z")) + minute * 60), draft) for minute in range(25)]
+        gh.edits[f"IC_{EDITED['commentId']}"] = [
+            (EDITED["versions"][0]["at"], draft), *fillers, (EDITED["versions"][-1]["at"], EDITED["versions"][-1]["body"])
+        ]
+        with mock.patch.object(ADAPTER, "EDIT_HISTORY_PAGES", 1):
+            item = edited_observe(gh, EDITED["observedAt"])["pullRequests"][0]
+        self.assertEqual((item["state"], item["nextMode"]), ("trigger-incremental", "incremental"))
+        self.assertEqual((item["rateLimitedAt"], item["rateLimitedDating"]), ("2026-09-30T17:02:28Z", "undated"))
+
+    def test_an_obsolete_wait_never_explains_a_refusal_edited_in_long_after_the_comment_was_created(self) -> None:
+        # 3c: the summary was created 10 s after the push, a 1-minute wait was
+        # stated at +20 s, and the summary became a refusal without a wait at
+        # +1800 s. Dated by its creation, the refusal followed the push but
+        # preceded the obsolete wait, which then permitted a trigger.
+        limit = "\n".join([
+            "<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->",
+            "> ## Review limit reached",
+            "> **Run ID**: `run-refused`",
+            "<!-- end of auto-generated comment: rate limited by coderabbit.ai -->",
+        ])
+        summary, _history = edited_pr_summary([
+            (START + 10, summary_notice("", "walkthrough")), (START + 1800, summary_notice(limit, "walkthrough"))
+        ])
+        wait = comment(21, "**Next review available in:** **1 minutes**", START + 20)
+        gh = configured_gh(comments=[summary, wait])
+        gh.graphql = self.failing_history  # type: ignore[method-assign]
+        item = ADAPTER.observation(gh, "owner/repo", [7], {7: "head-7"}, ["owner/repo"], START + 1860)["pullRequests"][0]
+        self.assertEqual(item["rateLimitedAt"], iso(START + 1800))
+        self.assertEqual(item["state"], "pending-retry-source")
+        self.assertIsNone(item["retryAt"])
+
+    # Finding 4: finished, skipped and already-reviewed notices are dated the
+    # same way.
+    def legacy_summary(self, versions: list[tuple[int, str]]) -> dict[str, Any]:
+        """A summary without recent-review markers, as CodeRabbit wrote it before them."""
+        summary, history = edited_pr_summary(versions)
+        self.histories[summary["node_id"]] = history
+        return summary
+
+    ACK = "No actionable comments were generated in the recent review. 🎉\n**Run ID**: `run-clean`"
+
+    def setUp(self) -> None:
+        self.histories: dict[str, list[tuple[str, str | None]]] = {}
+
+    def with_histories(self, gh: FakeGh) -> FakeGh:
+        gh.edits.update(self.histories)
+        return gh
+
+    def test_an_acknowledgment_edited_into_the_summary_after_the_push_counts(self) -> None:
+        summary = self.legacy_summary([
+            (START - 1000, summary_notice("", "src/feature.ts")),
+            (START + 100, summary_notice("", self.ACK + "\nsrc/feature.ts")),
+        ])
+        evidence = ADAPTER.pull_evidence(self.with_histories(configured_gh(comments=[summary])), "owner/repo", 7)
+        self.assertEqual(ADAPTER.classify(evidence, "head-7", None, START + 180)[0], "clean-complete")
+        self.assertEqual(
+            {key: evidence["finishedAck"][key] for key in ("shownAt", "dating", "latencySeconds")},
+            {"shownAt": iso(START + 100), "dating": "edit-history", "latencySeconds": 100},
+        )
+
+    def test_an_acknowledgment_first_shown_before_the_push_does_not_count(self) -> None:
+        summary = self.legacy_summary([
+            (START - 1000, summary_notice("", self.ACK + "\nsrc/feature.ts")),
+            (START + 100, summary_notice("", self.ACK + "\nsrc/feature.ts, src/other.ts")),
+        ])
+        evidence = ADAPTER.pull_evidence(self.with_histories(configured_gh(comments=[summary])), "owner/repo", 7)
+        self.assertIsNone(evidence["finishedAck"])
+        self.assertEqual(ADAPTER.classify(evidence, "head-7", None, START + 180)[0], "trigger-incremental")
+
+    def test_an_acknowledgment_that_cannot_be_dated_never_completes_and_escalates(self) -> None:
+        # 4b: the reply was created after the trigger and edited, and its edit
+        # history is unreadable. Dated by its creation, it completed the head
+        # with the check's SUCCESS; now it plans a full review instead of
+        # completing or waiting silently.
+        success = [{"context": "CodeRabbit", "state": "success", "description": "Review completed", "created_at": iso(START + 90)}]
+
+        def gh_for(trigger: str) -> FakeGh:
+            gh = configured_gh(
+                comments=[
+                    comment(10, trigger, START + 50, bot=False),
+                    comment(11, "Review finished", START + 60, updated=START + 400),
+                    comment(12, "<!-- summarize by coderabbit --> src/feature.ts", START + 70),
+                ],
+                coderabbit_statuses=success,
+            )
+            gh.graphql = self.failing_history  # type: ignore[method-assign]
+            return gh
+
+        evidence = ADAPTER.pull_evidence(gh_for("@coderabbitai review"), "owner/repo", 7)
+        self.assertEqual(ADAPTER.classify(evidence, "head-7", None, START + 500), ("trigger-full", "full review trigger is permitted", "full"))
+        self.assertEqual((evidence["finishedAck"]["dating"], evidence["finishedAck"]["latencySeconds"]), ("undated", None))
+        # An explicit full review's undatable acknowledgment returns at once.
+        state, _, mode = ADAPTER.classify(ADAPTER.pull_evidence(gh_for("@coderabbitai full review"), "owner/repo", 7), "head-7", None, START + 500)
+        self.assertEqual((state, mode), ("pending-full-unverified", None))
+        # `run` acts on it: one full-review trigger, then the review completes it.
+        gh = gh_for("@coderabbitai review")
+        clock = [float(START + 500)]
+
+        def after_post(_endpoint: str, _payload: dict[str, str]) -> None:
+            gh.pages["repos/owner/repo/pulls/7/reviews?per_page=100"] = [[review(33, "Actionable comments posted: 1")]]
+
+        def sleep(seconds: float) -> None:
+            clock[0] += seconds
+
+        gh.on_post = after_post
+        state, _, _ = ADAPTER.run_review(
+            gh, "owner/repo", 7, "head-7", ["owner/repo"], START + 530, 10, clock=lambda: clock[0], sleeper=sleep
+        )
+        self.assertEqual(state, "satisfied")
+        self.assertEqual(gh.posts, [("repos/owner/repo/issues/7/comments", {"body": "@coderabbitai full review"})])
+
+    def test_each_kind_of_undatable_notice_takes_its_conservative_direction(self) -> None:
+        # Each comment was created before the trigger at START + 50 and last
+        # edited after it, and its edit history is unreadable. Refusals count
+        # from the last edit; an acknowledgment never completes. Dating by the
+        # creation, or ignoring the notice, leaves the trigger in flight with
+        # no next mode.
+        success = [{"context": "CodeRabbit", "state": "success", "description": "Review completed", "created_at": iso(START + 90)}]
+        kinds = {
+            "rate limit": ("Review rate limited.", "pending-retry-source", None),
+            "skip": ("> ## Review skipped\n> Bot user detected.", "pending-skipped", None),
+            "already reviewed": ("<summary>⚠️ Action not completed</summary>\n\nAlready reviewed.", "trigger-full", "full"),
+            "acknowledgment": ("Review finished", "trigger-full", "full"),
+        }
+        for kind, (body, state, mode) in kinds.items():
+            for edited, expected in ((START + 300, (state, mode)), (START + 40, ("in-flight", None))):
+                with self.subTest(kind=kind, edited=edited - START):
+                    gh = configured_gh(
+                        comments=[
+                            comment(10, "@coderabbitai review", START + 50, bot=False),
+                            comment(11, body, START - 500, updated=edited),
+                            comment(12, "<!-- summarize by coderabbit --> src/feature.ts", START + 70),
+                        ],
+                        coderabbit_statuses=success,
+                    )
+                    gh.graphql = self.failing_history  # type: ignore[method-assign]
+                    evidence = ADAPTER.pull_evidence(gh, "owner/repo", 7)
+                    self.assertEqual(ADAPTER.classify(evidence, "head-7", None, START + 400)[::2], expected)
+                    if kind == "rate limit" and edited > START + 50:
+                        self.assertEqual((evidence["rateLimitedAt"], evidence["rateLimitedDating"]), (iso(edited), "undated"))
+
+    def test_a_clean_recent_review_is_never_an_acknowledgment(self) -> None:
+        # #96: the summary's clean recent-review block completes a head only
+        # with the head's check reporting a completed review. Read as an
+        # acknowledgment, it would complete this head by latency and coverage
+        # while the check reports a review in progress.
+        in_progress = [{"context": "CodeRabbit", "state": "pending", "description": "Review in progress", "created_at": "2026-09-29T13:42:00Z"}]
+        walkthrough = comment(12, "<!-- summarize by coderabbit --> src/feature.ts", int(at("2026-09-29T13:40:00Z")))
+        item = clean_observe(clean_gh(statuses=in_progress, extra=[walkthrough]))
+        self.assertTrue(item["coverage"]["verified"])
+        self.assertIsNone(item["finishedAck"])
+        self.assertEqual(item["state"], "trigger-incremental")
+
 
 if __name__ == "__main__":
     unittest.main()

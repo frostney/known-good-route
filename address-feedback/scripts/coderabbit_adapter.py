@@ -1048,57 +1048,108 @@ def own_block_text(body: str, offset: int) -> str:
     return "".join(parts)
 
 
+def notice_in(
+    body: str, pattern: re.Pattern[str], *, whole: bool = True, outside_recent_review: bool = False
+) -> tuple[str | None, str] | None:
+    """A notice's identity in a CodeRabbit comment: its own block's Run ID, if any, and its content.
+
+    With `whole`, the content is the text of the notice's own block, so a
+    refusal that states a new wait or limit is a new notice. Otherwise it is
+    the matched words, so edits beside a completion never re-date it. With
+    `outside_recent_review`, a match in the summary's recent-review block is
+    passed over: that block is a clean automatic review, which only the
+    clean-review rule reads.
+    """
+    recent = [block.span() for block in RECENT_REVIEW.finditer(body)] if outside_recent_review else []
+    for match in pattern.finditer(body):
+        if any(begin <= match.start() < end for begin, end in recent):
+            continue
+        text = own_block_text(body, match.start())
+        run = RUN_ID.search(text)
+        content = text if whole else match.group(0).lower()
+        return (run.group(1) if run else None, " ".join(content.split()))
+    return None
+
+
 def notice_key(body: str) -> tuple[str | None, str] | None:
     """A rate-limit notice's identity: the refused run its block prints, if any, and the block's text.
 
     A new wait or limit is a new notice, even without a Run ID.
     """
-    match = RATE_LIMITED.search(body)
-    if not match:
+    return notice_in(body, RATE_LIMITED)
+
+
+def finished_key(body: str) -> tuple[str | None, str] | None:
+    """A finished or no-actionable acknowledgment's identity, outside a skip notice."""
+    if SKIPPED.search(body):
         return None
-    text = own_block_text(body, match.start())
-    run = RUN_ID.search(text)
-    return (run.group(1) if run else None, " ".join(text.split()))
+    return notice_in(body, FINISHED, whole=False, outside_recent_review=True)
 
 
-def rate_limit_notice(
+def skipped_key(body: str) -> tuple[str | None, str] | None:
+    return notice_in(body, SKIPPED)
+
+
+def already_reviewed_key(body: str) -> tuple[str | None, str] | None:
+    return notice_in(body, ALREADY_REVIEWED)
+
+
+def shown_notices(
     gh: Gh,
     boundary: float,
     bot_comments: list[dict[str, Any]],
-    reviews: list[dict[str, Any]],
+    review_runs: dict[str, float],
+    identify: Callable[[str], tuple[str | None, str] | None],
     *,
     head_rate_limited: bool = False,
-) -> dict[str, Any] | None:
-    """The newest rate-limit notice CodeRabbit showed at or after `boundary`.
+) -> list[dict[str, Any]]:
+    """Every notice `identify` finds that CodeRabbit showed at or after `boundary`.
 
-    CodeRabbit edits its summary comment into a notice in place, so a summary
-    created before the head's push can carry the head's notice. A notice is
-    dated as allowance statements are (the review object of its Run ID, an
-    unedited comment, or the first edit that showed it), never by its last
-    edit. One whose showing cannot be dated keeps its comment's creation time.
+    CodeRabbit edits one summary comment per PR, and some replies, into each
+    notice in place, so a comment created before the head's push can carry
+    the head's notice. A notice is dated as an allowance statement is: by the
+    review object of its Run ID, an unedited comment, or the first edit of
+    its current showing. Neither the comment's creation nor its last edit
+    dates it.
+
+    A notice whose showing cannot be dated is dated by the comment's last
+    edit, the latest it can have been shown, and marked "undated". A refusal
+    then counts as late as it can; completion evidence never completes a head
+    (see decide).
 
     A notice without a Run ID can be repeated word for word, and an unchanged
-    repeat leaves no edit of its own. While the head's check reports a rate
-    limit, such a notice still shown after `boundary` may be that head's, so
-    its last edit dates it.
+    repeat leaves no edit of its own. With `head_rate_limited`, the head's
+    check reports a rate limit, so such a notice still shown after `boundary`
+    may be that head's, and its last edit dates it.
     """
-    review_runs = bot_review_runs(reviews)
     found: list[dict[str, Any]] = []
     for item in bot_comments:
-        key = notice_key(str(item.get("body") or ""))
+        key = identify(str(item.get("body") or ""))
         if key is None:
             continue
         shown, dating = date_shown(
-            gh, item, review_runs, key[0], lambda body, key=key: notice_key(body) == key
+            gh, item, review_runs, key[0], lambda body, key=key: identify(body) == key
         )
-        updated = parse_timestamp(item.get("updated_at"), "rate-limit updated_at")
+        updated = parse_timestamp(item.get("updated_at"), "comment updated_at")
         if shown is None:
-            shown = parse_timestamp(item.get("created_at"), "rate-limit created_at")
+            shown = updated
         elif key[0] is None and head_rate_limited and shown < boundary <= updated:
             shown, dating = updated, "last-edit"
         if shown >= boundary:
-            found.append({"id": item.get("id"), "shownAtEpoch": shown, "dating": dating})
-    return max(found, key=lambda notice: notice["shownAtEpoch"], default=None)
+            found.append(
+                {
+                    "id": item.get("id"),
+                    "createdAt": item.get("created_at"),
+                    "shownAt": format_timestamp(shown),
+                    "shownAtEpoch": shown,
+                    "dating": dating,
+                }
+            )
+    return found
+
+
+def newest_shown(notices: list[dict[str, Any]]) -> dict[str, Any] | None:
+    return max(notices, key=lambda notice: notice["shownAtEpoch"], default=None)
 
 
 def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
@@ -1165,33 +1216,20 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
     exact_review = latest(exact_reviews, "submittedAt")
     clean_review = exact_head_clean_review(gh, head, pushed_epoch, bot_comments, reviews)
 
-    after_boundary = [
-        item
-        for item in bot_comments
-        if parse_timestamp(item.get("created_at"), "comment created_at") >= boundary
-    ]
-    finished = latest(
-        [
-            item
-            for item in after_boundary
-            if FINISHED.search(str(item.get("body") or ""))
-            and not SKIPPED.search(str(item.get("body") or ""))
-        ],
-        "created_at",
-    )
-    skipped = latest(
-        [item for item in after_boundary if SKIPPED.search(str(item.get("body") or ""))],
-        "created_at",
-    )
+    review_runs = bot_review_runs(reviews)
     code_rabbit_check = coderabbit_check_for_head(gh, repo, head)
     check_rate_limited = bool(code_rabbit_check.get("rateLimited"))
-    limited = rate_limit_notice(
-        gh, boundary, bot_comments, reviews, head_rate_limited=check_rate_limited
-    )
-    refused = latest(
-        [item for item in after_boundary if ALREADY_REVIEWED.search(str(item.get("body") or ""))],
-        "created_at",
-    )
+
+    def shown(identify: Callable[[str], tuple[str | None, str] | None], **kwargs: Any) -> list[dict[str, Any]]:
+        return shown_notices(gh, boundary, bot_comments, review_runs, identify, **kwargs)
+
+    acks = shown(finished_key)
+    # A dated acknowledgment can complete the head; an undated one only
+    # stands in when there is no dated one.
+    finished = newest_shown([ack for ack in acks if ack["dating"] != "undated"] or acks)
+    skipped = shown(skipped_key)
+    limited = newest_shown(shown(notice_key, head_rate_limited=check_rate_limited))
+    refused = shown(already_reviewed_key)
     walkthrough = latest(
         [
             item
@@ -1208,11 +1246,7 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
         for filename in filenames
         if filename and (filename in walkthrough_body or Path(filename).name in walkthrough_body)
     )
-    ack_latency = (
-        parse_timestamp(finished.get("created_at"), "finished created_at") - boundary
-        if finished
-        else None
-    )
+    ack_dated = bool(finished) and finished["dating"] != "undated"
     trigger_mode = None
     if trigger:
         trigger_mode = next(
@@ -1246,9 +1280,13 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
         "cleanReview": clean_review,
         "finishedAck": (
             {
-                "id": finished.get("id"),
-                "createdAt": finished.get("created_at"),
-                "latencySeconds": int(max(0, ack_latency or 0)),
+                "id": finished["id"],
+                "createdAt": finished["createdAt"],
+                "shownAt": finished["shownAt"],
+                "dating": finished["dating"],
+                "latencySeconds": (
+                    int(max(0, finished["shownAtEpoch"] - boundary)) if ack_dated else None
+                ),
             }
             if finished
             else None
@@ -1337,9 +1375,12 @@ def decide(
     # Without a GitHub-recorded push time, an acknowledgment may belong to the
     # previous head, so only the head-scoped check can complete the review.
     push_known = evidence.get("headPushedAt") is not None
-    trusted_latency = bool(ack) and ack["latencySeconds"] >= TRUSTED_ACK_SECONDS
+    # An acknowledgment whose showing cannot be dated may predate the push, so
+    # it never completes the head; it escalates as an untrusted one does.
+    dated_ack = bool(ack) and ack.get("dating") != "undated"
+    trusted_latency = dated_ack and ack["latencySeconds"] >= TRUSTED_ACK_SECONDS
     latency_ok = push_known and trusted_latency
-    if ack and evidence["coverage"]["verified"] and (latency_ok or code_rabbit_ok):
+    if dated_ack and evidence["coverage"]["verified"] and (latency_ok or code_rabbit_ok):
         if code_rabbit_ok and not latency_ok:
             reason = (
                 "finished acknowledgment has current walkthrough coverage "
