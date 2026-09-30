@@ -65,7 +65,10 @@ and count the account's review allowance.
    waits, use foreground transition commands and passively await them. Do not
    wake the model merely to report unchanged state.
 5. Inspect every inline thread, exact-head review body, and top-level
-   finding surface. Classify each claim against the integrated stack top:
+   finding surface. Record each finding's impact, gain, and if-not-done facts
+   and apply the repository's finding policy as the [PR workflow](pr.md)
+   describes; a finding the policy does not select is `declined`. Classify
+   each claim against the integrated stack top:
    `moot`, `satisfied-later`, `mutated`, `live`, `declined`, or
    `material-decision`. Cite the exact descendant commit and call path for
    `satisfied-later`; do not accept a vague later-layer claim.
@@ -83,7 +86,8 @@ and count the account's review allowance.
    incremental review surfaces each missed sibling one round later.
 8. Run focused validation while fixing. Before submitting a substantive fix
    layer, repeat `/code-review fix-all` and `/test-against-spec fix` against the
-   complete integrated tree until both pass on the same unchanged content, then
+   complete integrated tree until both pass on the same unchanged content,
+   leaving a finding declined under the finding policy unfixed, then
    establish the project's declared gate using matching current results. Stop
    for a material product, architecture, security, compatibility, or scope
    decision.
