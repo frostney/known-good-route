@@ -664,6 +664,18 @@ class ContractTest(unittest.TestCase):
         self.assertEqual(aggregate("waiting", "blocked-unconfirmed"), "blocked")
         self.assertEqual(aggregate("review-complete", "rate-limited-unknown-wait"), "pending")
 
+    def test_every_state_is_named_by_the_skill_docs(self) -> None:
+        documented = (ROOT / "address-feedback" / "references" / "pr-readiness.md").read_text()
+        source = MODULE_PATH.read_text()
+        states = set(re.findall(r'result\(\s*"([a-z-]+)"', source)) | {
+            "trigger-incremental",
+            "trigger-full",
+            "lock-held",
+        }
+        for name in states:
+            with self.subTest(state=name):
+                self.assertIn(f"`{name}`", documented)
+
 
 if __name__ == "__main__":
     unittest.main()
