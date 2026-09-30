@@ -92,8 +92,8 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    evidence. Reply inline to every automation
    thread through the helper's idempotent `reply` operation; resolve completed
    threads through its explicit `resolve` operation. Handle a finding without
-   a thread as that finding policy directs; without one, record its
-   disposition in the handoff. Never substitute a top-level comment when an
+   a thread as that finding policy directs; without one, include its
+   disposition in the returned disposition of every inspected surface. Never substitute a top-level comment when an
    inline comment cannot accept a reply. Every substantive reply carries the parent skill's
    attribution Note.
 5. Invoke `/code-review fix-all` on the complete branch change, including

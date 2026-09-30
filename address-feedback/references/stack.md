@@ -86,7 +86,8 @@ and count the account's review allowance.
    incremental review surfaces each missed sibling one round later.
 8. Run focused validation while fixing. Before submitting a substantive fix
    layer, repeat `/code-review fix-all` and `/test-against-spec fix` against the
-   complete integrated tree until both pass on the same unchanged content, then
+   complete integrated tree until both pass on the same unchanged content,
+   leaving a finding declined under the finding policy unfixed, then
    establish the project's declared gate using matching current results. Stop
    for a material product, architecture, security, compatibility, or scope
    decision.
