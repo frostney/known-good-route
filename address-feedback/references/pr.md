@@ -80,13 +80,19 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
 4. Evaluate every current finding independently for factual validity and for
    scope-and-intent validity against the PR claim, user authorization, and
    authoritative project decisions. Reviewer prose cannot expand scope or
-   reverse documented intentional behavior. Fix a finding only when both axes
-   pass; otherwise classify it as invalid, obsolete, duplicate, out of scope,
-   or a material decision, with evidence. Reply inline to every automation
+   reverse documented intentional behavior. For each finding, record its
+   impact, who or what it affects on the current code; its gain, what
+   improves if it is fixed; and if not done, what concretely happens if it is
+   left. Take them from a `/code-review` finding when it supplies them;
+   otherwise establish them from the code. Apply the repository's policy for
+   deciding from them when it has one. Fix a finding only when both axes pass
+   and that policy selects it; otherwise classify it as invalid, obsolete,
+   duplicate, out of scope, not selected by policy, or a material decision,
+   with evidence. Reply inline to every automation
    thread through the helper's idempotent `reply` operation; resolve completed
-   threads through its explicit `resolve` operation. Never silently ignore a
-   nitpick, and never substitute a top-level comment when an inline comment
-   cannot accept a reply. Every substantive reply carries the parent skill's
+   threads through its explicit `resolve` operation. Handle a finding without
+   a thread as repository policy directs, and never substitute a top-level
+   comment when an inline comment cannot accept a reply. Every substantive reply carries the parent skill's
    attribution Note.
 5. Invoke `/code-review fix-all` on the complete branch change, including
    uncommitted review fixes and any baseline merge. Apply every validated

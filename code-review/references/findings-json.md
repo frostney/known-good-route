@@ -49,6 +49,8 @@ Each finding contains:
   "location": {"path": "string", "line": 1, "symbol": "string or null"},
   "evidence": ["string"],
   "impact": "string",
+  "gain": "string",
+  "ifNotDone": "string",
   "remedy": "string",
   "status": "open | fixed | deferred",
   "staticOnly": false,

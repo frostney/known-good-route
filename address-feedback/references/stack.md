@@ -65,7 +65,9 @@ and count the account's review allowance.
    waits, use foreground transition commands and passively await them. Do not
    wake the model merely to report unchanged state.
 5. Inspect every inline thread, exact-head review body, and top-level
-   finding surface. Classify each claim against the integrated stack top:
+   finding surface. Record each finding's impact, gain, and if-not-done facts
+   as the [PR workflow](pr.md) describes. Classify each claim against the
+   integrated stack top:
    `moot`, `satisfied-later`, `mutated`, `live`, `declined`, or
    `material-decision`. Cite the exact descendant commit and call path for
    `satisfied-later`; do not accept a vague later-layer claim.

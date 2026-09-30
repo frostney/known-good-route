@@ -245,7 +245,7 @@ Include:
 - actionable findings as
   `[CR-N][BLOCKING|IMPORTANT|IMPROVEMENT|NITPICK][CLAIM|QUALITY|ARCHITECTURE_RISK|
   DISCOVERABILITY]
-  file:line: evidence, impact, smallest remedy`;
+  file:line: evidence, impact, gain, if not done, smallest remedy`;
 - verified claims, static-only or unreached areas, and retained probe artifacts.
 
 Render every literal repository path, filename including extensionless files,
@@ -266,6 +266,11 @@ current-practice alignment. `NITPICK` is a small, local polish issue with a
 clear remedy and evidence from repository conventions or current code; it must
 not represent personal taste. Omit praise, diff narration, subjective style
 preferences, and findings without concrete impact.
+
+Every finding also states three facts without a verdict on whether to act:
+impact, who or what the finding affects on the current code; gain, what
+improves if it is fixed; and if not done, what concretely happens if it is
+left. The repository's own policy decides from them.
 
 Unresolved `BLOCKING` or `IMPORTANT` findings prevent readiness. Optional polish
 does not block readiness, but every verified gap against the agreed requirements
