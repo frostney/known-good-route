@@ -90,6 +90,11 @@ BLOCK_END = re.compile(
     r"<!-- (?:end of auto-generated comment: [^>]*|recent_review_end) -->"
 )
 REFUSED_BLOCK = re.compile(r"rate limited by coderabbit", re.IGNORECASE)
+RATE_LIMIT_BLOCK = re.compile(
+    r"<!-- This is an auto-generated comment: rate limited by coderabbit[^>]*-->"
+    r"([\s\S]*?)(?:<!-- end of auto-generated comment: rate limited by coderabbit|$)",
+    re.IGNORECASE,
+)
 # A clean automatic review edits the summary's recent-review block in place:
 # "No actionable comments were generated in the recent review" for the range
 # "between <base> and <head>". It posts no review object.
@@ -1001,6 +1006,45 @@ def exact_head_clean_review(
     return max(found, key=lambda item: item["reviewedAtEpoch"], default=None)
 
 
+def notice_key(body: str) -> tuple[str | None] | None:
+    """A rate-limit notice's identity: the refused run its block prints, if any."""
+    if not RATE_LIMITED.search(body):
+        return None
+    block = RATE_LIMIT_BLOCK.search(body)
+    run = RUN_ID.search(block.group(1)) if block else None
+    return (run.group(1) if run else None,)
+
+
+def rate_limit_notice(
+    gh: Gh,
+    boundary: float,
+    bot_comments: list[dict[str, Any]],
+    reviews: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """The newest rate-limit notice CodeRabbit showed at or after `boundary`.
+
+    CodeRabbit edits its summary comment into a notice in place, so a summary
+    created before the head's push can carry the head's notice. A notice is
+    dated as allowance statements are (the review object of its Run ID, an
+    unedited comment, or the first edit that showed it), never by its last
+    edit. One whose showing cannot be dated keeps its comment's creation time.
+    """
+    review_runs = bot_review_runs(reviews)
+    found: list[dict[str, Any]] = []
+    for item in bot_comments:
+        key = notice_key(str(item.get("body") or ""))
+        if key is None:
+            continue
+        shown, _dating = date_shown(
+            gh, item, review_runs, key[0], lambda body, key=key: notice_key(body) == key
+        )
+        if shown is None:
+            shown = parse_timestamp(item.get("created_at"), "rate-limit created_at")
+        if shown >= boundary:
+            found.append({"id": item.get("id"), "shownAtEpoch": shown})
+    return max(found, key=lambda notice: notice["shownAtEpoch"], default=None)
+
+
 def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
     repo_parts(repo)
     pr = positive_pr(pr)
@@ -1083,10 +1127,7 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
         [item for item in after_boundary if SKIPPED.search(str(item.get("body") or ""))],
         "created_at",
     )
-    limited = latest(
-        [item for item in after_boundary if RATE_LIMITED.search(str(item.get("body") or ""))],
-        "created_at",
-    )
+    limited = rate_limit_notice(gh, boundary, bot_comments, reviews)
     refused = latest(
         [item for item in after_boundary if ALREADY_REVIEWED.search(str(item.get("body") or ""))],
         "created_at",
@@ -1156,12 +1197,8 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
         ),
         "skippedAck": bool(skipped),
         "rateLimited": bool(limited) or check_rate_limited,
-        "rateLimitedAt": limited.get("created_at") if limited else None,
-        "rateLimitedAtEpoch": (
-            parse_timestamp(limited.get("created_at"), "rate-limit created_at")
-            if limited
-            else None
-        ),
+        "rateLimitedAt": format_timestamp(limited["shownAtEpoch"]) if limited else None,
+        "rateLimitedAtEpoch": limited["shownAtEpoch"] if limited else None,
         "alreadyReviewed": bool(refused),
         "prWaits": pr_waits,
         "coverage": {

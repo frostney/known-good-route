@@ -166,7 +166,12 @@ references link here.
   allowance frees. For a rate-limit notice comment, a candidate counts only if
   it follows the notice: a wait posted at or after it, an allowance time after
   it, or, when the statement is current and rated, the time the runs counted
-  before the notice free a slot.
+  before the notice free a slot. A notice comment belongs to the head when
+  CodeRabbit showed it at or after the later of the head's push and the
+  latest trigger. CodeRabbit edits its summary into a notice in place, for
+  example when a draft is marked ready, so a notice is dated as a statement
+  is, not by the comment's last edit. Only a notice whose showing cannot be
+  dated falls back to the comment's creation time.
 - **Scan horizon.** Repository-wide reads cover two hours plus 60 seconds.
   When that scan finds a per-day statement, they cover two days plus 60
   seconds; a per-day statement older than the two-hour scan is not found.

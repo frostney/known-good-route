@@ -2704,5 +2704,48 @@
     "commitId": "46fc2582d71c1f5aa759582ab1fefec71ace2da3"
    }
   ]
+ },
+ "editedRateLimitNotice": {
+  "about": "A draft pull request against the default branch, marked ready for review at 2026-09-30T17:02:10Z; CodeRabbit edited its summary, created when the draft opened, into a rate-limit notice in place. Recorded read-only on 2026-09-30 from a private repository: every version of the summary comment from GraphQL userContentEdits, trimmed to the lines the adapter reads, and the head's full CodeRabbit commit-status history, newest first. pushedAt is the branch activity entry that moved the head ref to this head. Nothing changed after 17:02:29Z; CodeRabbit did not retry on its own.",
+  "commentId": 5880781313,
+  "createdAt": "2026-09-28T23:40:05Z",
+  "head": "214cdbcc577946346ab6150e109c3077f28a06cc",
+  "pushedAt": "2026-09-30T16:16:56Z",
+  "readyForReviewAt": "2026-09-30T17:02:10Z",
+  "observedAt": "2026-09-30T20:29:20Z",
+  "versions": [
+   {
+    "at": "2026-09-28T23:40:05Z",
+    "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Draft PR not reviewed\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+   },
+   {
+    "at": "2026-09-30T14:39:37Z",
+    "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n> ## Draft PR not reviewed\n<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+   },
+   {
+    "at": "2026-09-30T17:02:28Z",
+    "body": "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->\n> ## Review limit reached\n> **Next included review available in 12 minutes.**\n> **Limit details:** You’ve used the included review currently available. Your 96 included PR review attempts over the past 7 days set your current allowance at 1 review per hour.\n> **Run ID**: `2195d23d-8f2d-4803-843c-e02678c78f50`\n> Reviewing files that changed from the base of the PR and between 492001012a928d4f3aff03dc46372f682ca84a2b and 214cdbcc577946346ab6150e109c3077f28a06cc.\n<!-- end of auto-generated comment: rate limited by coderabbit.ai -->"
+   }
+  ],
+  "statuses": [
+   {
+    "context": "CodeRabbit",
+    "state": "success",
+    "description": "Review rate limited",
+    "created_at": "2026-09-30T17:02:29Z"
+   },
+   {
+    "context": "CodeRabbit",
+    "state": "pending",
+    "description": "Review in progress",
+    "created_at": "2026-09-30T17:02:23Z"
+   },
+   {
+    "context": "CodeRabbit",
+    "state": "success",
+    "description": "Review skipped: draft pull request",
+    "created_at": "2026-09-30T16:17:13Z"
+   }
+  ]
  }
 }

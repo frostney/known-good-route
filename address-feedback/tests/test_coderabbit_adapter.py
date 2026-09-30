@@ -2853,5 +2853,109 @@ class ReviewEvidenceAllowListTest(unittest.TestCase):
                 self.assertFalse(self.complete(f"{notice}\n{evidence}"))
 
 
+EDITED = RECORDED["editedRateLimitNotice"]
+
+
+def edited_notice_gh(
+    *, pushed: str = EDITED["pushedAt"], later: list[dict[str, str]] | None = None
+) -> FakeGh:
+    """PR 7 as recorded: the draft summary edited in place into a rate-limit notice."""
+    versions = [*EDITED["versions"], *(later or [])]
+    summary = {
+        "id": EDITED["commentId"],
+        "node_id": f"IC_{EDITED['commentId']}",
+        "user": {"login": "coderabbitai[bot]"},
+        "body": versions[-1]["body"],
+        "created_at": EDITED["createdAt"],
+        "updated_at": versions[-1]["at"],
+        "issue_url": "https://api.github.test/repos/owner/repo/issues/7",
+    }
+    gh = configured_gh(
+        comments=[summary],
+        head=EDITED["head"],
+        coderabbit_statuses=EDITED["statuses"],
+        pushed=int(at(pushed)),
+    )
+    gh.edits[summary["node_id"]] = [(v["at"], v["body"]) for v in versions]
+    return gh
+
+
+def edited_observe(gh: FakeGh, now: str) -> dict[str, Any]:
+    return ADAPTER.observation(
+        gh, "owner/repo", [7], {7: EDITED["head"]}, ["owner/repo"], at(now)
+    )
+
+
+class EditedRateLimitNoticeTest(unittest.TestCase):
+    """A draft marked ready is rate limited by a notice edited into its summary."""
+
+    def test_recorded_notice_edited_into_the_summary_permits_the_trigger(self) -> None:
+        # main reported pending-retry-source with no next mode: it dated the
+        # notice by the summary's creation, before the push, and so saw only
+        # the rate-limited status. The stated 12-minute wait elapsed at 17:15:28Z.
+        value = edited_observe(edited_notice_gh(), EDITED["observedAt"])
+        self.assertIsNone(value["accountWait"])
+        self.assertEqual(value["allowance"]["mode"], "degraded")
+        item = value["pullRequests"][0]
+        self.assertEqual(item["codeRabbitCheck"]["state"], "RATE_LIMITED")
+        self.assertEqual(item["rateLimitedAt"], "2026-09-30T17:02:28Z")
+        self.assertEqual(item["prWaits"][0]["retryAt"], "2026-09-30T17:15:28Z")
+        self.assertEqual(item["state"], "trigger-incremental")
+        self.assertEqual(item["nextMode"], "incremental")
+
+    def test_run_posts_one_incremental_trigger_for_the_recorded_state(self) -> None:
+        gh = edited_notice_gh()
+        clock = [at(EDITED["observedAt"])]
+
+        def after_post(_endpoint: str, _payload: dict[str, str]) -> None:
+            gh.pages["repos/owner/repo/pulls/7/reviews?per_page=100"] = [[
+                review(33, "Actionable comments posted: 1", head=EDITED["head"])
+            ]]
+
+        def sleep(seconds: float) -> None:
+            clock[0] += seconds
+
+        gh.on_post = after_post
+        state, _, _ = ADAPTER.run_review(
+            gh, "owner/repo", 7, EDITED["head"], ["owner/repo"], clock[0] + 30, 10,
+            clock=lambda: clock[0], sleeper=sleep,
+        )
+        self.assertEqual(state, "satisfied")
+        self.assertEqual(
+            gh.posts, [("repos/owner/repo/issues/7/comments", {"body": "@coderabbitai review"})]
+        )
+
+    def test_the_notice_waits_for_its_stated_wait_and_the_allowance(self) -> None:
+        # In the account scan the notice states none left at 1 per hour; the
+        # run counted at 16:24:04Z frees the slot at 17:25:04Z, after the
+        # stated wait.
+        def gh_at(now: str) -> FakeGh:
+            gh = edited_notice_gh()
+            scan = ADAPTER.recent_comments_endpoint("owner/repo", ADAPTER.scan_since(at(now)))
+            gh.pages[scan] = [[
+                *gh.pages["repos/owner/repo/issues/7/comments?per_page=100"][0],
+                comment(80, "Review finished", int(at("2026-09-30T16:24:04Z")),
+                        issue_url="https://api.github.test/repos/owner/repo/issues/8"),
+            ]]
+            gh.pages["repos/owner/repo/pulls/8/reviews?per_page=100"] = [[
+                run_review_object(801, "run-a", int(at("2026-09-30T16:24:04Z")))
+            ]]
+            return gh
+
+        item = edited_observe(gh_at("2026-09-30T17:10:00Z"), "2026-09-30T17:10:00Z")["pullRequests"][0]
+        self.assertEqual(item["state"], "waiting")
+        self.assertEqual((item["retryAt"], item["retrySource"]), ("2026-09-30T17:25:04Z", "allowance"))
+        item = edited_observe(gh_at("2026-09-30T17:25:04Z"), "2026-09-30T17:25:04Z")["pullRequests"][0]
+        self.assertEqual(item["state"], "trigger-incremental")
+
+    def test_a_notice_first_shown_before_the_push_does_not_explain_the_limit(self) -> None:
+        # A later edit that still shows the same notice does not re-date it.
+        later = [{"at": "2026-09-30T17:40:00Z", "body": EDITED["versions"][-1]["body"]}]
+        gh = edited_notice_gh(pushed="2026-09-30T17:30:00Z", later=later)
+        item = edited_observe(gh, EDITED["observedAt"])["pullRequests"][0]
+        self.assertIsNone(item["rateLimitedAt"])
+        self.assertEqual(item["state"], "pending-retry-source")
+
+
 if __name__ == "__main__":
     unittest.main()
