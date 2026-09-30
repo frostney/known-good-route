@@ -84,19 +84,22 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    impact, who or what it affects on the current code; its gain, what
    improves if it is fixed; and if not done, what concretely happens if it is
    left. Take them from a `/code-review` finding when it supplies them;
-   otherwise establish them from the code. Apply the repository's policy for
-   deciding from them when it has one. Fix a finding only when both axes pass
-   and that policy selects it; otherwise classify it as invalid, obsolete,
-   duplicate, out of scope, not selected by policy, or a material decision,
-   with evidence. Reply inline to every automation
+   otherwise establish them from the code. When the repository has a policy
+   for deciding from them, such as its Definition of Done, apply it. Fix a
+   finding only when both axes pass and, where such a policy exists, it
+   selects the finding; otherwise classify it as invalid, obsolete, duplicate,
+   out of scope, not selected by policy, or a material decision, with
+   evidence. Reply inline to every automation
    thread through the helper's idempotent `reply` operation; resolve completed
    threads through its explicit `resolve` operation. Handle a finding without
-   a thread as repository policy directs, and never substitute a top-level
-   comment when an inline comment cannot accept a reply. Every substantive reply carries the parent skill's
+   a thread as that finding policy directs; without one, record its
+   disposition in the handoff. Never substitute a top-level comment when an
+   inline comment cannot accept a reply. Every substantive reply carries the parent skill's
    attribution Note.
 5. Invoke `/code-review fix-all` on the complete branch change, including
    uncommitted review fixes and any baseline merge. Apply every validated
-   in-scope requirement gap. Continue established repairs; stop dependent work
+   in-scope requirement gap except a finding step 4 classified as not
+   selected by policy; that classification stands. Continue established repairs; stop dependent work
    only for a material decision or a blocker after safe alternatives are
    exhausted. An unresolved required finding prevents readiness. If
    `/code-review` is unavailable, perform the same bounded review and fix pass

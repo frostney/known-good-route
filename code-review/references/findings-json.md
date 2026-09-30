@@ -58,6 +58,9 @@ Each finding contains:
 }
 ```
 
+`gain` and `ifNotDone` were added within schema version 2; a reader accepts
+a version 2 finding without them.
+
 For `ARCHITECTURE_RISK`, replace `churn: null` with:
 
 ```json

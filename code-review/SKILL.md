@@ -270,7 +270,9 @@ preferences, and findings without concrete impact.
 Every finding also states three facts without a verdict on whether to act:
 impact, who or what the finding affects on the current code; gain, what
 improves if it is fixed; and if not done, what concretely happens if it is
-left. The repository's own policy decides from them.
+left. Where the repository has a policy for deciding from them, that policy
+decides which findings are acted on, and a finding it declines is resolved by
+that decline.
 
 Unresolved `BLOCKING` or `IMPORTANT` findings prevent readiness. Optional polish
 does not block readiness, but every verified gap against the agreed requirements

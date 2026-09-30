@@ -66,8 +66,9 @@ and count the account's review allowance.
    wake the model merely to report unchanged state.
 5. Inspect every inline thread, exact-head review body, and top-level
    finding surface. Record each finding's impact, gain, and if-not-done facts
-   as the [PR workflow](pr.md) describes. Classify each claim against the
-   integrated stack top:
+   and apply the repository's finding policy as the [PR workflow](pr.md)
+   describes; a finding the policy does not select is `declined`. Classify
+   each claim against the integrated stack top:
    `moot`, `satisfied-later`, `mutated`, `live`, `declined`, or
    `material-decision`. Cite the exact descendant commit and call path for
    `satisfied-later`; do not accept a vague later-layer claim.
