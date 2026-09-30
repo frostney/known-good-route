@@ -90,11 +90,7 @@ BLOCK_END = re.compile(
     r"<!-- (?:end of auto-generated comment: [^>]*|recent_review_end) -->"
 )
 REFUSED_BLOCK = re.compile(r"rate limited by coderabbit", re.IGNORECASE)
-RATE_LIMIT_BLOCK = re.compile(
-    r"<!-- This is an auto-generated comment: rate limited by coderabbit[^>]*-->"
-    r"([\s\S]*?)(?:<!-- end of auto-generated comment: rate limited by coderabbit|$)",
-    re.IGNORECASE,
-)
+BLOCK_MARKER = re.compile(f"(?P<start>{BLOCK_START.pattern})|{BLOCK_END.pattern}")
 # A clean automatic review edits the summary's recent-review block in place:
 # "No actionable comments were generated in the recent review" for the range
 # "between <base> and <head>". It posts no review object.
@@ -1015,13 +1011,54 @@ def exact_head_clean_review(
     return max(found, key=lambda item: item["reviewedAtEpoch"], default=None)
 
 
-def notice_key(body: str) -> tuple[str | None] | None:
-    """A rate-limit notice's identity: the refused run its block prints, if any."""
-    if not RATE_LIMITED.search(body):
+def block_spans(body: str) -> list[tuple[int, int, int]]:
+    """Each generated block's start, end and nesting depth, markers included.
+
+    A block whose end marker is missing runs to the end of the body.
+    """
+    spans: list[tuple[int, int, int]] = []
+    opened: list[int] = []
+    for marker in BLOCK_MARKER.finditer(body):
+        if marker.group("start"):
+            opened.append(marker.start())
+        elif opened:
+            begin = opened.pop()
+            spans.append((begin, marker.end(), len(opened)))
+    spans.extend((begin, len(body), depth) for depth, begin in enumerate(opened))
+    return spans
+
+
+def own_block_text(body: str, offset: int) -> str:
+    """The innermost generated block around `offset`, without the blocks nested in it.
+
+    CodeRabbit writes each notice as its own block of the summary, so edits to
+    the summary's other blocks are not part of it. Outside every block, the
+    body without its blocks.
+    """
+    spans = block_spans(body)
+    around = [span for span in spans if span[0] <= offset < span[1]]
+    begin, end, depth = max(around, key=lambda span: span[2]) if around else (0, len(body), -1)
+    parts: list[str] = []
+    cursor = begin
+    for inner_begin, inner_end, inner_depth in sorted(spans):
+        if inner_depth == depth + 1 and begin <= inner_begin and inner_end <= end:
+            parts.append(body[cursor:inner_begin])
+            cursor = inner_end
+    parts.append(body[cursor:end])
+    return "".join(parts)
+
+
+def notice_key(body: str) -> tuple[str | None, str] | None:
+    """A rate-limit notice's identity: the refused run its block prints, if any, and the block's text.
+
+    A new wait or limit is a new notice, even without a Run ID.
+    """
+    match = RATE_LIMITED.search(body)
+    if not match:
         return None
-    block = RATE_LIMIT_BLOCK.search(body)
-    run = RUN_ID.search(block.group(1)) if block else None
-    return (run.group(1) if run else None,)
+    text = own_block_text(body, match.start())
+    run = RUN_ID.search(text)
+    return (run.group(1) if run else None, " ".join(text.split()))
 
 
 def rate_limit_notice(
@@ -1029,6 +1066,8 @@ def rate_limit_notice(
     boundary: float,
     bot_comments: list[dict[str, Any]],
     reviews: list[dict[str, Any]],
+    *,
+    head_rate_limited: bool = False,
 ) -> dict[str, Any] | None:
     """The newest rate-limit notice CodeRabbit showed at or after `boundary`.
 
@@ -1037,6 +1076,11 @@ def rate_limit_notice(
     dated as allowance statements are (the review object of its Run ID, an
     unedited comment, or the first edit that showed it), never by its last
     edit. One whose showing cannot be dated keeps its comment's creation time.
+
+    A notice without a Run ID can be repeated word for word, and an unchanged
+    repeat leaves no edit of its own. While the head's check reports a rate
+    limit, such a notice still shown after `boundary` may be that head's, so
+    its last edit dates it.
     """
     review_runs = bot_review_runs(reviews)
     found: list[dict[str, Any]] = []
@@ -1044,13 +1088,16 @@ def rate_limit_notice(
         key = notice_key(str(item.get("body") or ""))
         if key is None:
             continue
-        shown, _dating = date_shown(
+        shown, dating = date_shown(
             gh, item, review_runs, key[0], lambda body, key=key: notice_key(body) == key
         )
+        updated = parse_timestamp(item.get("updated_at"), "rate-limit updated_at")
         if shown is None:
             shown = parse_timestamp(item.get("created_at"), "rate-limit created_at")
+        elif key[0] is None and head_rate_limited and shown < boundary <= updated:
+            shown, dating = updated, "last-edit"
         if shown >= boundary:
-            found.append({"id": item.get("id"), "shownAtEpoch": shown})
+            found.append({"id": item.get("id"), "shownAtEpoch": shown, "dating": dating})
     return max(found, key=lambda notice: notice["shownAtEpoch"], default=None)
 
 
@@ -1136,7 +1183,11 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
         [item for item in after_boundary if SKIPPED.search(str(item.get("body") or ""))],
         "created_at",
     )
-    limited = rate_limit_notice(gh, boundary, bot_comments, reviews)
+    code_rabbit_check = coderabbit_check_for_head(gh, repo, head)
+    check_rate_limited = bool(code_rabbit_check.get("rateLimited"))
+    limited = rate_limit_notice(
+        gh, boundary, bot_comments, reviews, head_rate_limited=check_rate_limited
+    )
     refused = latest(
         [item for item in after_boundary if ALREADY_REVIEWED.search(str(item.get("body") or ""))],
         "created_at",
@@ -1170,8 +1221,6 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
             if body == str(trigger.get("body") or "").strip().lower()
         )
 
-    code_rabbit_check = coderabbit_check_for_head(gh, repo, head)
-    check_rate_limited = bool(code_rabbit_check.get("rateLimited"))
     # Every wait stated on the PR, read without the account scan's horizon:
     # an old refusal can then be retried once its own wait elapses, and a
     # still-active wait is never hidden by a newer, shorter one elsewhere.
@@ -1208,6 +1257,7 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
         "rateLimited": bool(limited) or check_rate_limited,
         "rateLimitedAt": format_timestamp(limited["shownAtEpoch"]) if limited else None,
         "rateLimitedAtEpoch": limited["shownAtEpoch"] if limited else None,
+        "rateLimitedDating": limited["dating"] if limited else None,
         "alreadyReviewed": bool(refused),
         "prWaits": pr_waits,
         "coverage": {

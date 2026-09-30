@@ -3031,6 +3031,62 @@ class EditedSummaryNoticeTest(unittest.TestCase):
         self.assertIsNone(item["cleanReview"])
         self.assertNotEqual(item["state"], "clean-complete")
 
+    RATE_LIMITED_STATUS = [
+        {"context": "CodeRabbit", "state": "success", "description": "Review rate limited", "created_at": iso(START + 60)}
+    ]
+
+    def limited_summary(self, versions: list[tuple[int, str | None]]) -> FakeGh:
+        """PR 7 pushed at START, rate limited by its check, with the given summary history."""
+        summary, history = edited_pr_summary(versions)
+        gh = configured_gh(comments=[summary], coderabbit_statuses=self.RATE_LIMITED_STATUS)
+        gh.edits[summary["node_id"]] = history
+        return gh
+
+    def pr_state(self, gh: FakeGh, now: int) -> dict[str, Any]:
+        return ADAPTER.observation(gh, "owner/repo", [7], {7: "head-7"}, ["owner/repo"], now)["pullRequests"][0]
+
+    def test_a_runless_notice_replaced_by_a_new_wait_is_a_new_notice(self) -> None:
+        # Finding 2a: every runless notice shared one identity, so the
+        # 30-minute notice shown after the push kept the 10-minute notice's
+        # date from before it, and only the check reported the limit.
+        gh = self.limited_summary([
+            (START - 2000, summary_notice("", "walkthrough")),
+            (START - 600, summary_notice(runless_limit("10 minutes"), "walkthrough")),
+            (START + 50, summary_notice(runless_limit("30 minutes"), "walkthrough")),
+        ])
+        item = self.pr_state(gh, START + 180)
+        self.assertEqual(item["state"], "waiting")
+        self.assertEqual((item["rateLimitedAt"], item["rateLimitedDating"]), (iso(START + 50), "edit-history"))
+        self.assertEqual((item["retryAt"], item["retrySource"]), (iso(START + 50 + 1800 + 60), "stated-wait"))
+        self.assertEqual(self.pr_state(gh, START + 50 + 1800 + 60)["state"], "trigger-incremental")
+
+    def test_a_runless_notice_shown_across_the_push_honours_its_wait_while_the_check_is_limited(self) -> None:
+        # Finding 2b: the same runless notice shows before and after the push.
+        # CodeRabbit can repeat it word for word for the new head, so while
+        # the head's check reports the limit, its last edit dates it and its
+        # own wait gates the trigger instead of pending-retry-source.
+        notice = runless_limit("10 minutes")
+        gh = self.limited_summary([
+            (START - 600, summary_notice(notice, "walkthrough A")),
+            (START + 50, summary_notice(notice, "walkthrough B")),
+        ])
+        item = self.pr_state(gh, START + 180)
+        self.assertEqual(item["state"], "waiting")
+        self.assertEqual((item["rateLimitedAt"], item["rateLimitedDating"]), (iso(START + 50), "last-edit"))
+        self.assertEqual(item["nextMode"], "incremental")
+        self.assertEqual((item["retryAt"], item["retrySource"]), (iso(START + 50 + 600 + 60), "stated-wait"))
+        self.assertEqual(self.pr_state(gh, START + 50 + 600 + 60)["state"], "trigger-incremental")
+
+    def test_a_notice_identity_is_its_own_block(self) -> None:
+        # Finding 5: the identity comes from the summary's block markers; the
+        # summary's other blocks and text do not change it.
+        limit = runless_limit("10 minutes")
+        first = ADAPTER.notice_key(summary_notice(limit, "walkthrough A"))
+        self.assertEqual(first, ADAPTER.notice_key(summary_notice(limit, "walkthrough B\n" + summary_body(availability(1, 2), "run-a"))))
+        self.assertNotEqual(first, ADAPTER.notice_key(summary_notice(runless_limit("30 minutes"), "walkthrough A")))
+        recorded = next(n["body"] for n in RECORDED["notices"] if n["kind"] == "summary-rate-limited-with-stated-wait")
+        self.assertEqual(ADAPTER.notice_key(recorded)[0], "73d78305-1fd6-45f7-8c1b-dfe914ae8f96")
+
 
 if __name__ == "__main__":
     unittest.main()
