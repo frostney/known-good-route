@@ -2957,5 +2957,80 @@ class EditedRateLimitNoticeTest(unittest.TestCase):
         self.assertEqual(item["state"], "pending-retry-source")
 
 
+
+def summary_notice(block: str, rest: str = "") -> str:
+    """A summary comment body showing one generated notice block, then `rest`."""
+    return "\n".join([
+        "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->",
+        block,
+        rest,
+    ])
+
+
+def runless_limit(wait: str) -> str:
+    """CodeRabbit's older rate-limit block, which prints no Run ID."""
+    return "\n".join([
+        "<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->",
+        "> ## Rate limit exceeded",
+        f"> `@maintainer` has exceeded the limit for the number of commits that can be reviewed per hour. Please wait **{wait}** before requesting another review.",
+        "<!-- end of auto-generated comment: rate limited by coderabbit.ai -->",
+    ])
+
+
+def edited_pr_summary(
+    versions: list[tuple[int, str | None]], *, identifier: int = 20
+) -> tuple[dict[str, Any], list[tuple[str, str | None]]]:
+    """PR 7's summary comment and its edit history; a None body is a redacted version."""
+    current = next(body for _, body in reversed(versions) if body is not None)
+    item = comment(identifier, current, versions[0][0], updated=versions[-1][0])
+    return item, [(iso(when), body) for when, body in versions]
+
+
+def acknowledged(extra: list[dict[str, Any]], **kwargs: Any) -> FakeGh:
+    """PR 7 pushed at START, with a trusted acknowledgment and current walkthrough coverage."""
+    comments = [
+        comment(11, "Review finished", START + 100),
+        comment(12, "<!-- summarize by coderabbit --> src/feature.ts", START + 101),
+        *extra,
+    ]
+    return configured_gh(comments=comments, **kwargs)
+
+
+class EditedSummaryNoticeTest(unittest.TestCase):
+    """Every notice CodeRabbit edits into its summary is dated by when it showed it (PR #103 reviews)."""
+
+    def test_a_redacted_revision_does_not_end_a_showing_that_began_before_the_push(self) -> None:
+        # Finding 1: the notice showed at START - 900, a later revision is
+        # redacted, and an unrelated edit after the push still shows it. The
+        # redacted revision counted as "not shown", so the notice was dated
+        # after the push and blocked the acknowledgment's clean completion.
+        notice = runless_limit("10 minutes")
+        summary, history = edited_pr_summary([
+            (START - 900, summary_notice(notice, "walkthrough A")),
+            (START - 300, None),
+            (START + 50, summary_notice(notice, "walkthrough B")),
+        ])
+        gh = acknowledged([summary])
+        gh.edits[summary["node_id"]] = history
+        evidence = ADAPTER.pull_evidence(gh, "owner/repo", 7)
+        self.assertIsNone(evidence["rateLimitedAt"])
+        state, _, _ = ADAPTER.classify(evidence, "head-7", None, START + 180)
+        self.assertEqual(state, "clean-complete")
+
+    def test_a_redacted_revision_that_may_have_shown_a_clean_review_first_leaves_it_undated(self) -> None:
+        # The completion side of finding 1: the redacted revision predates the
+        # push and may be where the clean review first showed, so it cannot
+        # complete the head. It counted as "not shown" and dated the review
+        # after the push.
+        gh = clean_gh()
+        gh.edits[f"IC_{CLEAN['commentId']}"] = [
+            ("2026-09-29T13:10:00Z", None),
+            ("2026-09-29T13:39:41Z", CLEAN["versions"][-1]["body"]),
+        ]
+        item = clean_observe(gh)
+        self.assertIsNone(item["cleanReview"])
+        self.assertNotEqual(item["state"], "clean-complete")
+
+
 if __name__ == "__main__":
     unittest.main()

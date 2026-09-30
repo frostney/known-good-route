@@ -515,12 +515,17 @@ def first_shown(
     push came and went, is the same review and keeps its first time. Content
     without a Run ID can recur word for word after separate reviews, so with
     `contiguous` the walk stops at the first older version that does not show
-    it. Returns None when the history cannot be read far enough.
+    it. A redacted or deleted version has no readable body; it neither shows
+    nor hides the content. Between two versions that show it, it does not
+    break the showing. Where the first showing could be that version, the time
+    is unknown. Returns None when the time is unknown or the history cannot be
+    read far enough.
     """
     node_id = item.get("node_id")
     if not isinstance(node_id, str) or not node_id:
         return None
     first_seen: float | None = None
+    unreadable_before = False
     cursor: str | None = None
     for _page in range(EDIT_HISTORY_PAGES):
         try:
@@ -536,13 +541,17 @@ def first_shown(
             reverse=True,
         )
         for version in versions:
-            if shows(str(version.get("diff") or "")):
+            body = version.get("diff")
+            if not isinstance(body, str):
+                unreadable_before = True
+            elif shows(body):
                 first_seen = parse_timestamp(version.get("editedAt"), "edit editedAt")
+                unreadable_before = False
             elif contiguous:
-                return first_seen
+                return None if unreadable_before else first_seen
         page = edits.get("pageInfo") or {}
         if not page.get("hasNextPage"):
-            return first_seen
+            return None if unreadable_before else first_seen
         cursor = page.get("endCursor")
     return None
 
