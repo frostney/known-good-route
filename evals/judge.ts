@@ -12,11 +12,11 @@ import type {
 
 // Bump when the judge input, instructions or verdict rules change; recorded
 // calibration results for an older protocol no longer open the gate.
-export const judgeProtocolVersion = 1;
+export const judgeProtocolVersion = 2;
 
 // Claude runs are judged by Codex and Codex runs by Claude.
 export const defaultJudges = {
-  codex: "codex:gpt-6-sol",
+  codex: "codex:gpt-6.1-sol",
   claude: "claude:claude-opus-5-5",
 } as const;
 
@@ -186,23 +186,26 @@ export function judgesFromFlags(values: string[]) {
   return judges;
 }
 
+// One answer the founder labelled: a verdict on every rubric item of its case.
 export interface CalibrationSample {
+  id: string;
   caseId: string;
+  model: string;
   output: string;
   actions?: ActionRecord[];
-  label: "pass" | "fail";
-  failingItems?: string[];
-  source: string;
+  labels: Record<string, "yes" | "no">;
+  labelledBy: string;
 }
 
 export interface CalibrationResult {
   digest: string;
   judgedAt: string;
+  samples: number;
   total: number;
   agreed: number;
   agreement: number;
   falsePasses: number;
-  disagreements: Array<{ index: number; caseId: string; label: string; judged: string }>;
+  disagreements: Array<{ sample: string; caseId: string; item: string; label: "yes" | "no"; judged: "yes" | "no" | "error" }>;
 }
 
 export interface JudgeCalibration {
@@ -244,34 +247,26 @@ export function validateCalibrationSamples(
     calibration.minimumSamples < 1
   )
     throw new Error("Invalid judge calibration threshold");
-  calibration.samples.forEach((sample, index) => {
+  const ids = new Set<string>();
+  for (const sample of calibration.samples) {
+    if (!sample.id.trim() || ids.has(sample.id))
+      throw new Error(`Calibration sample ${sample.id} needs a unique id`);
+    ids.add(sample.id);
     const rubric = cases.find((c) => c.id === sample.caseId)?.expected.rubric;
     if (!rubric?.length)
-      throw new Error(`Calibration sample ${index} names a case without a rubric`);
-    if (!["pass", "fail"].includes(sample.label) || !sample.source.trim())
-      throw new Error(`Calibration sample ${index} needs a label and source`);
-    if (sample.label === "fail" && !sample.failingItems?.length)
-      throw new Error(`Calibration sample ${index} needs its failing items`);
-    for (const id of sample.failingItems ?? [])
-      if (!rubric.some((item) => item.id === id))
-        throw new Error(`Calibration sample ${index} names unknown item ${id}`);
-  });
+      throw new Error(`Calibration sample ${sample.id} names a case without a rubric`);
+    if (!sample.labelledBy.trim())
+      throw new Error(`Calibration sample ${sample.id} needs its labeller`);
+    const labelled = Object.keys(sample.labels).sort();
+    if (JSON.stringify(labelled) !== JSON.stringify(rubric.map((item) => item.id).sort()))
+      throw new Error(`Calibration sample ${sample.id} must label exactly its case's rubric items`);
+    if (Object.values(sample.labels).some((label) => label !== "yes" && label !== "no"))
+      throw new Error(`Calibration sample ${sample.id} labels must be yes or no`);
+  }
 }
 
-// A sample agrees when the judge reaches the human verdict: every item passes
-// for a pass label, and at least one labelled failing item fails for a fail
-// label. A judge error disagrees.
-export function sampleAgrees(
-  sample: CalibrationSample,
-  verdicts: RubricVerdict[] | undefined,
-): boolean {
-  if (!verdicts) return false;
-  if (sample.label === "pass") return verdicts.every((v) => v.passed);
-  return verdicts.some(
-    (v) => !v.passed && (sample.failingItems ?? []).includes(v.id),
-  );
-}
-
+// Agreement is per rubric item: the judge agrees when its item passes exactly
+// where the labeller said yes. A judge error disagrees on every item.
 export function scoreCalibration(
   samples: CalibrationSample[],
   verdicts: Array<RubricVerdict[] | undefined>,
@@ -279,29 +274,34 @@ export function scoreCalibration(
   judgedAt = new Date().toISOString(),
 ): CalibrationResult {
   const disagreements: CalibrationResult["disagreements"] = [];
+  let total = 0;
   let falsePasses = 0;
   samples.forEach((sample, index) => {
-    const judged = verdicts[index];
-    if (sampleAgrees(sample, judged)) return;
-    const status = judged ? answerStatus(judged) : "error";
-    if (sample.label === "fail" && status === "pass") falsePasses++;
-    disagreements.push({ index, caseId: sample.caseId, label: sample.label, judged: status });
+    for (const [item, label] of Object.entries(sample.labels)) {
+      total++;
+      const verdict = verdicts[index]?.find((v) => v.id === item);
+      const judged = verdict ? (verdict.passed ? "yes" : "no") : "error";
+      if (judged === label) continue;
+      if (label === "no" && judged === "yes") falsePasses++;
+      disagreements.push({ sample: sample.id, caseId: sample.caseId, item, label, judged });
+    }
   });
-  const agreed = samples.length - disagreements.length;
+  const agreed = total - disagreements.length;
   return {
     digest,
     judgedAt,
-    total: samples.length,
+    samples: samples.length,
+    total,
     agreed,
-    agreement: samples.length ? agreed / samples.length : 0,
+    agreement: total ? agreed / total : 0,
     falsePasses,
     disagreements,
   };
 }
 
 // The gate opens only for a judge whose recorded result covers the current
-// samples, rubrics and protocol, meets the threshold, and passed no answer a
-// human labelled as failing.
+// labels, rubrics and protocol, meets the threshold, and passed no item the
+// labeller failed.
 export function calibrationGate(
   judge: string,
   calibration: JudgeCalibration,
@@ -310,14 +310,14 @@ export function calibrationGate(
   const result = calibration.results[judge];
   if (!result) return { calibrated: false, reason: "no recorded calibration for this judge" };
   if (result.digest !== digest)
-    return { calibrated: false, reason: "calibration predates the current samples, rubrics or judge protocol" };
-  if (result.total < calibration.minimumSamples)
-    return { calibrated: false, reason: `only ${result.total} of ${calibration.minimumSamples} required samples` };
+    return { calibrated: false, reason: "calibration predates the current labels, rubrics or judge protocol" };
+  if (result.samples < calibration.minimumSamples)
+    return { calibrated: false, reason: `only ${result.samples} of ${calibration.minimumSamples} required labelled answers` };
   if (result.falsePasses > 0)
-    return { calibrated: false, reason: `${result.falsePasses} human-labelled failing answers judged as passing` };
+    return { calibrated: false, reason: `${result.falsePasses} items the labeller failed were judged as passing` };
   if (result.agreement < calibration.agreementThreshold)
-    return { calibrated: false, reason: `agreement ${result.agreement.toFixed(3)} is below ${calibration.agreementThreshold}` };
-  return { calibrated: true, reason: `agreement ${result.agreed}/${result.total}` };
+    return { calibrated: false, reason: `item agreement ${result.agreement.toFixed(3)} is below ${calibration.agreementThreshold}` };
+  return { calibrated: true, reason: `item agreement ${result.agreed}/${result.total}` };
 }
 
 export async function loadJudgeCalibration(

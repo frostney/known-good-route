@@ -85,7 +85,7 @@ export const stackDependencyCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "stopped-hand-based-120", question: "Does the answer state that publication stopped without opening a PR because PR #120 is based on feat/budget-schema, the branch of PR #119, rather than on main?" },
+        { id: "stopped-hand-based-120", question: "Does the answer state that publication stopped without opening or changing any PR because PR #120, whose commits this branch contains, is based on feat/budget-schema (PR #119's branch) rather than on main?" },
       ],
       requiredSkills: ["create-pr", "git-workflow"],
       requiredReferences: ["git-workflow/references/github-stacks.md"],

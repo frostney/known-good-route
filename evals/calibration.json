@@ -153,7 +153,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "91f1574297bde316d19cefa96744a2bfc490a662b453e9c9f3e3765147ae872e",
-      "afterSha256": "326a5eba9362728b623d6b9d335035d1241693cf872c4fb4e409cd82440041f8",
+      "afterSha256": "1eec3329a252915a3b9476c24703aca1c597dbb6d297a43260b6c041232e8691",
       "frozenCaseSha256": "464d952c11b6d072c8878045b823974bcdd126ba534caedd668b0bdc219af768"
     },
     {
@@ -164,7 +164,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "76fd226f3bcf160de6614ffb9e3b70a97e172954e7eda2eaf00c339d14040919",
-      "afterSha256": "b5125bd3b2fb5edf95dbb1b0f413b560ae3740dbc5ace6d2139df9071f5b015e",
+      "afterSha256": "93ae438b7330db7f5e8e8745c87769cdc89088e56f3a08afed922576cc7f8c9e",
       "frozenCaseSha256": "9150981935d89f49a70fdd35453c5d3f29775bbd8b3badbe8b29b65ebd2a63e6"
     },
     {
@@ -205,7 +205,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "2d025147d9c13d443c71cef1f8d27c83875488dd2e4f4bf8cb477a7f07d7a50b",
-      "afterSha256": "3442acbb86308cc464af937484297aab3c39a81ee39d2314713386a76adc8865",
+      "afterSha256": "aa83adb1355ecf073561ecd8820eb5d0cf0fcb68a9abd0e0d0a0fdaf05582d5f",
       "frozenCaseSha256": "19607c37b1d3187f8568eb140244945b9031f984b97e3cc105dfa56e953dee50"
     },
     {
@@ -217,7 +217,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "907648cc4955236886c84565b623a0975242aa3bafa9bb580f1676db73b6f816",
-      "afterSha256": "e8edf6c9f2646b2f53db9ab76fc35747268847a378c61196faf6c0ecb57a1aa5",
+      "afterSha256": "71e61c78534435c3d402515899624db49badd212f2f32a95114986527f16a170",
       "frozenCaseSha256": "2e94c6431cd280a93d7171c01b85a24cb083eb4eef27a5fbcdea2bda617c9766"
     },
     {
@@ -251,7 +251,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "c129c0668c66cab64a2513696b076df05b87a99f6f616c9f29e5882087ca2ced",
-      "afterSha256": "7d04e44b3c24ed29eea78ea17190ec688fdef6b03db8d79c6c99f4fc3272f100",
+      "afterSha256": "c2e2fa6f42480c5821ba07fc5db60d43d8603494a6f39385eb76dce2c8dcba9f",
       "frozenCaseSha256": "6359a23f46b488be11300659b47264bc174a4010c53a21fa736c203d532e91c0"
     },
     {
@@ -264,7 +264,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "f15f3e9754b57ca99175653a1e23ae985bb9fe290517e45893da2c65a222a80e",
-      "afterSha256": "13d4ae72fe3f9f294b2f495dc49711c30fd5931042deb86f3d373c2f360e42d8",
+      "afterSha256": "6eae66ed8417c7ffbb40e2ebaff9a5c450eaeab462b1d41c5621df232e413520",
       "frozenCaseSha256": "e7a1178babb4c69f40b54a284ae8445683759132c912a5228535657e248a6a3d",
       "revisions": [
         {
@@ -334,7 +334,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "4eb75902e5ae5c5e9ef33ff14ec77b7d76697005b8e0802e7871bf857402c398",
-      "afterSha256": "de10d4df011bf74ecd9d025ee1947e9c930d814132e3cff69bf07dc984af392e",
+      "afterSha256": "bea0606c99da7d4841613bcefafceab7e25513681f392c96a095280452ff25a7",
       "frozenCaseSha256": "866b59a28db8eb1bf63b32679a2b22285979f9aef15a7848d1e88dc8a9362bb4"
     },
     {
@@ -373,7 +373,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "b79d974c56b737ad830799de7f90a88659f2a0c16a53c1c45ac9ce8707a35bf7",
-      "afterSha256": "bcd6a5285822e62f408675e2d99edb75ba4fccdd54b051f4b290c33873de4229",
+      "afterSha256": "a61483c75ba28b841ffc697114d491a77048001218a800770d8f60323dc37312",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -396,7 +396,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "815c3f2c5f33019ba1a7afef03b1dc6f0b35a9fa3a714283527a7a2061591e0e",
-      "afterSha256": "9fb43563ac231c836b0e50965fafc2cc97a00927a42b08be47acebcfee5440d4",
+      "afterSha256": "27e0e5fc233760751c0d0fb311ec9bf48127c4a4529d3078aba3eed1a5c48c02",
       "postFreezeChangedFields": [
         "fixture",
         "expected"
@@ -418,7 +418,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "9aa8ec998c3114d12c75f82a21c9e88bc585e28deff6eed8936c5d683101acd1",
-      "afterSha256": "c6aa1abd056839fdc22d00858d5774afcf912f393db57bd67d4583612ab0761f",
+      "afterSha256": "42a36138515c44739f59499885f8d9124145ce70ec5e8d37fae390ad9748d6ac",
       "frozenCaseSha256": "53b30b3e453e0d5e437be3cbe5934b04751f1da2ccfdb3280b746ea36401ad96"
     },
     {
@@ -476,7 +476,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "b2fc4c8f13feac7c8b775c464917988b9e0651e0f9aa89038d0617d47ddc9873",
-      "afterSha256": "d321e7db42f8b2018e980a2fc96ea2345e20656d11cd211a2afc9b0e020c7b61",
+      "afterSha256": "2e99b1c14318a47f4905b3713382e6cc86da140cb5399a8083cf54a7c8edbc9c",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -513,7 +513,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "c5210db2cdf40ad2f2911d7c59075deb3512271f75c6d47e03196594a8b97b8c",
-      "afterSha256": "f10e60f246330f7f10d6586f70afd8b9036dbb70c8ef48899ccc732d7f26d6d4",
+      "afterSha256": "03117f08f1b15ec5fdd19de464f1f495fadf69a6326c822121cb8a52367d882c",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -657,7 +657,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "bcd63fa4cd357c8c753c018fb4e1a48e1f2a18cbb71e0386ab07b7d2b26faf9c",
-      "afterSha256": "cbc0b5d4b0bb017ab3740895ac941fae8964784f331c350a5f60114fd6a3cfba",
+      "afterSha256": "72447bb0240514cb748d87bcebb914f0d098ffa314b2b6ed4c1a0804f51efa17",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -781,7 +781,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "34b83e0912c8638480a795363891d569271678fef05a001adce7554ed78ce5af",
-      "afterSha256": "f8afd5b317ef18169484bbb8e75ec1e9ae7ede20b5a0d6b7b4ec733dd19e6f94",
+      "afterSha256": "08267a8e7e8e02bf51c7b60aa6ae3374deb079e026370af837e9a96ecd0889d5",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -794,7 +794,7 @@
         "Normal single-PR mode may post one documented retrigger for a rate-limited active reviewer after its derived retry_at, under the same evidence conditions as automatic-merge, and still never merges.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
-      "afterSha256": "37fb1519915d69d292a210b51c01e5d33962773a1c15bb6b1e865073028df476",
+      "afterSha256": "b9203534ec5c6be683099c5aa41f18903a31e1ab30eee37fe4cd5e58537c393d",
       "frozenCaseSha256": "91f2c0173f31fe3d3ecf17c3ba26fd073eeb1cf21a135c8300e831848128abee"
     },
     {
@@ -816,7 +816,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "9042efa9980fe53aae0f2c1bb5867f3cff9f45c14f088468fab3a23b6bf5d61c",
-      "afterSha256": "458b11853b055d13b83260d5ec7a998fea91179941544b6fcbc79d39e64c6f86",
+      "afterSha256": "2d9b09d3cdea1734e979142efb1403fd7684571b69e8dac6fd55def07d393f20",
       "frozenCaseSha256": "16e2ea18df5e6be63c2f4df6b68405b4330f16ddd773ea8aa6a17d4b965511f5"
     },
     {
@@ -828,7 +828,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "be707d3b154fe81c4a3dbfc7e0e38e815adb1aaadc06eb1f8d3b974e9a1dcb9b",
-      "afterSha256": "cddff8d40ff1716cbb9b8a86a6f870e9429cb99b8ab3ecf1032fbb5620bd1347",
+      "afterSha256": "05c64d7f9a133f141104ef62938ab4cbe68db3895e409a5aafc0205ecd2f386a",
       "postFreezeChangedFields": [
         "fixture"
       ],
@@ -842,7 +842,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "53ec4f345210e5fc286e48910ee6c05888d556f22c9d7d1906e7f375806c4add",
-      "afterSha256": "a56c6195cde5d7760e05185947c5398aea3b28886182e3fc6ae6e41d84db29e4",
+      "afterSha256": "0460f40cbb00e74db6b9b0f9091b1697aaed281bf2f1d1f67285b0c3d98badf7",
       "frozenCaseSha256": "9df393f63b61201b13e24b65d42cd4fd493ff922e60333491fd11b5737ed8554"
     },
     {
@@ -922,7 +922,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "2426ae425c19ac2386c4eda6f9750b26a0ec3b84c512710c9b9832b9e5471a4d",
-      "afterSha256": "b86f36a15441e5536c96bc1202708768c311062956047fdcf3e1d5d28cec7ba0",
+      "afterSha256": "62a4d946de21e1856e45b47e99c35c160029a6f55b3fea9894db6da1dcfa2003",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -964,7 +964,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "3ecf85957088ad9c1f37ae684aad702e9b39a88ad2e9a6e75c75c18c4534b8f6",
-      "afterSha256": "ce7d2960eeb47ec20103a23cd45806a3f2943f44f971324193f37771f5908714",
+      "afterSha256": "fbdf09a5af053b2ebbc10610f38731070e71afe348f52756c6d55c8b007bd254",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1020,7 +1020,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "232af01c1707853a8c64f7873b0ab77cec9b6828e95bba99c64fcfbcf60e1323",
-      "afterSha256": "75c304df4a8402700502912bfce9900da1f2f079e39300fd6f0db1f1a4980333",
+      "afterSha256": "95599be5e826df3d67cd390be2cee74685bee011f0f1da2da234935eb367dc0a",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1046,7 +1046,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "5ba0a6f2cdb4840e55dcfaaeaf33ee399217f4f3b348f2fa222f923b647614ad",
-      "afterSha256": "272c58305c72f16cbecd8a71fc92495916133b25647188fab13f1edce88d2483",
+      "afterSha256": "725357f4f7372709326d1d68b50be09cb19d57ace36d8a15eb47ed043bc3be18",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1075,7 +1075,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "5ccf9cf936660cb6dc1798a44741518f3e1efb95b9fa28ad42e4643e4581a82b",
-      "afterSha256": "ee96f8410b25d1d4d025b4843c0afd39b0118137bb8c8dfd89fa7be094d75f3c",
+      "afterSha256": "0035bbf4e18170fe2afbeecf90cbeac7d748d0bb0696d053fb158eba86f91c28",
       "frozenCaseSha256": "1443830d1d7429a1b11629c5697ad639282a9ae1d5715a8ad85484296eb5aa06"
     },
     {
@@ -1102,7 +1102,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "f5557baad21dd0e0bc572a03944c090b5cfbdc5c80d0f25ea6a4e92e15cac777",
-      "afterSha256": "184cddd7d5f4449a40b7724a56aacb87e24e335646b44446964606131bcab56b",
+      "afterSha256": "9615e42f42a02588ea1146ab39c787418b5b972025c5e26408d6ae15d4110374",
       "frozenCaseSha256": "52e62d6445806302a323a3917eb75c4b4d18221865e15a0d9c70a72060046acd"
     },
     {
@@ -1131,7 +1131,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "0c6cae5a4f8f1bf71975b1cf3d1a6dd8ec1b6071c0fa25bb7eca168df5060688",
-      "afterSha256": "b82d336d029492a693797985ce16673087f0cb06d7d89f0326f227b37caafdb5",
+      "afterSha256": "8658b7c1f021bd0cc6c55e2cf7d4815e454d9de090301f904fd8d06926795e83",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1205,7 +1205,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "553f265ec9649c816e261760eb0f3faaa68ade291ed2bce6393c4226060ae44c",
-      "afterSha256": "3ea649cc0180d3a75af6cf3f1192626ad49bcace15df3471eacb8a091215071c",
+      "afterSha256": "b829479fedcfda3e1ef7fe4aefb0780562dd077a66644049a70e1d703b504128",
       "frozenCaseSha256": "79a74ab38a48a613c19b355f8f736bf1212ba490c23f5873188257453f6ac75c",
       "revisions": [
         {
@@ -1448,7 +1448,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "4a77e31e0e86343d1e4e0f72ba1a2f18f4e13d4645feb94c336ef87f43123791",
-      "afterSha256": "d601bef4b22cb824bf75b333df64e0c2780516cd5e3af46b259937c7ba85a2ac",
+      "afterSha256": "9a2a0910dd7576904ea353c9bda14a2552c0d73f039c66bc847ee43a20e2fd0e",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1472,7 +1472,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "0827b5c06d105f44ce22e0c4c84ebd5dbe171a1e12d37ead2d9b2f78e13d51e7",
-      "afterSha256": "83f8decdf487b501cef8be831d795c9d4093d028638660d9b74e12812137a68d",
+      "afterSha256": "20f6e3c7eda664a9fc7be8ba0b2aa0f4d763a6b14ab570a5cfa0cebedefd0e0f",
       "frozenCaseSha256": "b0dbaa5ce975dd08e45f0bf34b226babaa038101e452fe6b75c7a754c9129bd5",
       "postFreezeChangedFields": [
         "fixture"
@@ -1486,7 +1486,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "05c0e220a1dee74000324faae5e1894e335d6ffb566e0fb474125b88ac671df6",
-      "afterSha256": "3ec4f01dd778c4503d278a05cc683ac45d3608456ccf82d8479398438853fa1b",
+      "afterSha256": "2131eb5403fca8c6c7745d4eac213d8bcf6da5dc8ffac4315599079aea63469c",
       "frozenCaseSha256": "8037599737c2cb06a7f453669b71fd12e5f49590c35209b5b235d5800f2fab36"
     },
     {
@@ -1503,7 +1503,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "c3fbca768f61c78e41ac5b4dbd3d2e0184e325f56080e65ff097aa7715cd2d2a",
-      "afterSha256": "2b9e98a2a8ea09356f00118319fda8941ed567464d90615b6782a8f9f9f7d096",
+      "afterSha256": "c203acf4e915c1f714734b7b75d57b84014ffe21d440044964aafcaa164ef79e",
       "frozenCaseSha256": "61fe9fb21d1bf37042808dc9137a0ec6ce73557270fdb9d96915f63bd7f7d07f",
       "postFreezeChangedFields": [
         "fixture",
@@ -1525,7 +1525,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "cfa5593b7681837a9d298eab78bfa5539de751208a21630bbc4cd3560afe28e0",
-      "afterSha256": "37d87015983f4e4032bef804712e6d800969db8b533999beddc5544cba1697a5",
+      "afterSha256": "d00f011f73a23418a571fa26177c785863aeecc4d725fcaded9afa22a890dcf3",
       "frozenCaseSha256": "30bd8e8c8d7f4485151c4dde068a0d94eeba85968bd1c5046ef606f301ee0268"
     },
     {
@@ -1883,7 +1883,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "80ff9dd5fba193a1b64e4f0167cfcef2e0c437a993a08de84d95ff39aeca94e5",
-      "afterSha256": "6f8ca3634ceeef74de188f9253f8c336bf9efbbc102377d35947e1d178f0fb84",
+      "afterSha256": "1727b47c7d7f4043c68701d0b11a70d6d75b8c7529f8586f1624bccae1b4f78c",
       "frozenCaseSha256": "4345450cf8703bd1b4f49e7a713104d8a94e4899088962ed750302192baeadfe"
     },
     {
@@ -1895,7 +1895,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "053fa98a93edd1d6c4e89290ca1ceb532e3e3752f73d124d2e154b6344cfb8b8",
-      "afterSha256": "d81e4ac10b4fa65e8f39b07c10f4c84864c3e652c506d16a41950b11c7198f03",
+      "afterSha256": "0da00f0a2558c2b2901755444474893b462ef4af2b716e017c6aed1ccf3e6125",
       "frozenCaseSha256": "c8fb620b21ff3f8b94953a41cf090a30cf84189ec3ae1395a832d12f158d42ab",
       "postFreezeChangedFields": [
         "expected"
@@ -1988,7 +1988,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "fc24628b3a6645d80fefb45103cee88bb4df7a000675b926a5cbfdc1ca35f858",
-      "afterSha256": "25b9e483fe2a3c33158d306c1e2368ab6476919121ce221071ab19bbaeb687a6",
+      "afterSha256": "254ef451aa1474d3efe10dfccc7505531a9fa4ae508f87c19681a1dfc9a6bf28",
       "frozenCaseSha256": "44024129f277b059e2b7d81f9bc951bbe1fdbd2b609f51e0ae7eea2ecd5a1389",
       "postFreezeChangedFields": [
         "expected"
@@ -2441,7 +2441,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "14de7fbe402c9f72ed3677b2b031be16933062504228d15a9ed77d8534f3f932",
+      "afterSha256": "1d1d6b705deb688a5c26e10b050d99f75aeb6edf39f48188fd9c1a5e58f7c154",
       "frozenCaseSha256": "401cc269a75174343ba427b8a39b768907f2de94e60ff6023ae5c8254bc417a9",
       "revisions": [
         {
@@ -2508,7 +2508,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "0f39a1412bd7d72b69f949ca914c978ca5fd26ff2b18ba4b5cb19d72978a43b8",
+      "afterSha256": "859174f27ebbe81f6221e7795afbaa4fc6c4795d3b15dbf3213ef129fb94991b",
       "frozenCaseSha256": "e843cae16695caf4ae161cabe10079010403e2d9f4169146a3130e7a8cf7865a"
     },
     {
@@ -2619,7 +2619,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "074227db3352070450cb53b98c09bb9175b358d61781d07197e84e984f47816c",
+      "afterSha256": "27c052610bd04696ca36130582445d1bcef7f3c5945774fdd50594a31a915b2f",
       "frozenCaseSha256": "f02d3321eff8f3a0b4385e49b482f56f3952b2275adfc3a95ad39f5d8891428b"
     },
     {
@@ -2630,7 +2630,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "74e99374fa4dea932b27650f743355f352b484b4156988c9c37a9cd4c6af75be",
+      "afterSha256": "0cb9d20bda37316f1a9104cd57258b4143898e4fff2d86d795bd43a7159c9983",
       "frozenCaseSha256": "88beeb21066d60be9817a9c80ee8975470b4322eeee24e21ba4215de7681cac2"
     },
     {
@@ -2696,2634 +2696,8 @@
   "frozenReference": "calibrated-matrix-v2 immutable snapshot (135 scenarios)",
   "judgeCalibration": {
     "agreementThreshold": 0.9,
-    "minimumSamples": 100,
-    "samples": [
-      {
-        "caseId": "delivery-implement-development-only",
-        "output": "The April selection and label now match the reference; development validation is complete.",
-        "actions": [
-          {
-            "action": "file.edit",
-            "details": "Apply the scoped regression correction",
-            "data": {
-              "path": "src/report.ts"
-            }
-          },
-          {
-            "action": "codeReview.run",
-            "details": "codeReview.run"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "validation.run",
-            "details": "validation.run"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/delivery.test.ts:39"
-      },
-      {
-        "caseId": "delivery-implement-development-only",
-        "output": "Development complete",
-        "actions": [
-          {
-            "action": "codeReview.run",
-            "details": "codeReview.run"
-          },
-          {
-            "action": "file.edit",
-            "details": "Apply the scoped regression correction",
-            "data": {
-              "path": "src/report.ts"
-            }
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "codeReview.run",
-            "details": "codeReview.run"
-          },
-          {
-            "action": "validation.run",
-            "details": "validation.run"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/delivery.test.ts:108"
-      },
-      {
-        "caseId": "delivery-create-pr-missing-gates-repair",
-        "output": "PR #502 is ready after the MissingFile correction and current gates.",
-        "label": "pass",
-        "source": "evals/delivery.test.ts:40"
-      },
-      {
-        "caseId": "delivery-existing-pr-ci-recovery",
-        "output": "Existing PR #503 is merge-ready at 2b2b2b2 after repairing the encoded pathname failure.",
-        "actions": [
-          {
-            "action": "validation.reuse",
-            "details": "validation.reuse"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "file.edit",
-            "details": "Apply the scoped regression correction",
-            "data": {
-              "path": "src/theme-fixture.ts"
-            }
-          },
-          {
-            "action": "codeReview.run",
-            "details": "codeReview.run"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "validation.run",
-            "details": "validation.run"
-          },
-          {
-            "action": "git.commit",
-            "details": "git.commit"
-          },
-          {
-            "action": "git.push",
-            "details": "git.push"
-          },
-          {
-            "action": "forge.updatePrMetadata",
-            "details": "forge.updatePrMetadata"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "Mark existing PR #503 ready",
-            "data": {
-              "head": "2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b"
-            }
-          }
-        ],
-        "label": "pass",
-        "source": "evals/delivery.test.ts:41"
-      },
-      {
-        "caseId": "delivery-existing-pr-ci-recovery",
-        "output": "PR #503 ready at 2b2b2b…",
-        "actions": [
-          {
-            "action": "validation.reuse",
-            "details": "validation.reuse"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "file.edit",
-            "details": "Apply the scoped regression correction",
-            "data": {
-              "path": "src/theme-fixture.ts"
-            }
-          },
-          {
-            "action": "codeReview.run",
-            "details": "codeReview.run"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "validation.run",
-            "details": "validation.run"
-          },
-          {
-            "action": "git.commit",
-            "details": "git.commit"
-          },
-          {
-            "action": "git.push",
-            "details": "git.push"
-          },
-          {
-            "action": "forge.updatePrMetadata",
-            "details": "forge.updatePrMetadata"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "Mark existing PR #503 ready",
-            "data": {
-              "head": "2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b"
-            }
-          }
-        ],
-        "label": "pass",
-        "source": "evals/delivery.test.ts:185"
-      },
-      {
-        "caseId": "delivery-existing-pr-ci-recovery",
-        "output": "PR #503 ready",
-        "actions": [
-          {
-            "action": "validation.reuse",
-            "details": "validation.reuse"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "file.edit",
-            "details": "Apply the scoped regression correction",
-            "data": {
-              "path": "src/theme-fixture.ts"
-            }
-          },
-          {
-            "action": "codeReview.run",
-            "details": "codeReview.run"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "validation.run",
-            "details": "validation.run"
-          },
-          {
-            "action": "git.commit",
-            "details": "git.commit"
-          },
-          {
-            "action": "git.push",
-            "details": "git.push"
-          },
-          {
-            "action": "forge.updatePrMetadata",
-            "details": "forge.updatePrMetadata"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "Mark existing PR #503 ready",
-            "data": {
-              "head": "1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a"
-            }
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "mark-ready-at-repaired-head"
-        ],
-        "source": "evals/delivery.test.ts:187"
-      },
-      {
-        "caseId": "delivery-default-integration-current-revision",
-        "output": "Nightly serves 3c3c3c3 and its April chart/table acceptance passed.",
-        "actions": [
-          {
-            "action": "validation.reuse",
-            "details": "validation.reuse"
-          },
-          {
-            "action": "forge.mergePr",
-            "details": "forge.mergePr"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label in chart/table, including direct table URL and return to chart",
-            "data": {
-              "url": "https://nightly.example.test",
-              "revision": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"
-            }
-          }
-        ],
-        "label": "pass",
-        "source": "evals/delivery.test.ts:42"
-      },
-      {
-        "caseId": "delivery-default-integration-current-revision",
-        "output": "Delivered to nightly at 3c3c3c…",
-        "actions": [
-          {
-            "action": "validation.reuse",
-            "details": "validation.reuse"
-          },
-          {
-            "action": "forge.mergePr",
-            "details": "forge.mergePr"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label in chart/table, including direct table URL and return to chart",
-            "data": {
-              "url": "https://nightly.example.test",
-              "revision": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"
-            }
-          }
-        ],
-        "label": "pass",
-        "source": "evals/delivery.test.ts:129"
-      },
-      {
-        "caseId": "delivery-default-integration-current-revision",
-        "output": "Delivered to nightly at 3c3c3c…",
-        "actions": [
-          {
-            "action": "validation.reuse",
-            "details": "validation.reuse"
-          },
-          {
-            "action": "forge.mergePr",
-            "details": "forge.mergePr"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label in chart/table, including direct table URL and return to chart",
-            "data": {
-              "revision": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"
-            }
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "nightly-probe-identity"
-        ],
-        "source": "evals/delivery.test.ts:132"
-      },
-      {
-        "caseId": "delivery-default-integration-current-revision",
-        "output": "Delivered to nightly at 3c3c3c…",
-        "actions": [
-          {
-            "action": "validation.reuse",
-            "details": "validation.reuse"
-          },
-          {
-            "action": "forge.mergePr",
-            "details": "forge.mergePr"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label in chart/table, including direct table URL and return to chart",
-            "data": {
-              "url": "https://nightly.example.test",
-              "revision": "1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a"
-            }
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "nightly-probe-identity"
-        ],
-        "source": "evals/delivery.test.ts:132"
-      },
-      {
-        "caseId": "delivery-default-integration-current-revision",
-        "output": "Delivered to nightly at 3c3c3c…",
-        "actions": [
-          {
-            "action": "validation.reuse",
-            "details": "validation.reuse"
-          },
-          {
-            "action": "forge.mergePr",
-            "details": "forge.mergePr"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label in chart/table, including direct table URL and return to chart",
-            "data": {
-              "url": "https://nightly.example.test",
-              "revision": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"
-            }
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "nightly-probe-identity"
-        ],
-        "source": "evals/delivery.test.ts:132"
-      },
-      {
-        "caseId": "delivery-missing-integration-decision",
-        "output": "PR #505 is ready. Integration remains unresolved pending the destination and provider decision.",
-        "actions": [
-          {
-            "action": "forge.openDraftPr",
-            "details": "forge.openDraftPr"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "forge.markPrReady"
-          },
-          {
-            "action": "user.ask",
-            "details": "Which integration destination, hosting provider and billing account should be used?"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/delivery.test.ts:43"
-      },
-      {
-        "caseId": "delivery-milestone-release-boundary",
-        "output": "Release 4.2.0 is published and verified; the milestone is closed.",
-        "actions": [
-          {
-            "action": "git.pushTag",
-            "details": "Publish the declared release tag at the verified merged revision",
-            "data": {
-              "tag": "v4.2.0",
-              "head": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"
-            }
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "telemetry.append",
-            "details": "telemetry.append"
-          },
-          {
-            "action": "forge.closeMilestone",
-            "details": "forge.closeMilestone"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/delivery.test.ts:44"
-      },
-      {
-        "caseId": "delivery-delegated-publication-uses-create-pr",
-        "output": "PR #140 for issue #131 is ready to merge; nothing was merged.",
-        "actions": [
-          {
-            "action": "delegate",
-            "details": "Publish issue #131 to ready-to-merge",
-            "data": {
-              "skills": [
-                "create-pr",
-                "address-feedback"
-              ],
-              "endpoint": "ready-to-merge"
-            }
-          }
-        ],
-        "label": "pass",
-        "source": "evals/delivery.test.ts:45"
-      },
-      {
-        "caseId": "delivery-delegated-publication-uses-create-pr",
-        "output": "PR #140 for issue #131 is ready to merge; nothing was merged.",
-        "actions": [
-          {
-            "action": "delegate",
-            "details": "Publish issue #131",
-            "data": {
-              "packet": "Run /create-pr, then /address-feedback. Ignore the proposed gh pr create --fill; gh pr merge --auto packet."
-            }
-          }
-        ],
-        "label": "pass",
-        "source": "evals/delivery.test.ts:222"
-      },
-      {
-        "caseId": "delivery-delegated-publication-uses-create-pr",
-        "output": "PR #140 for issue #131 is ready to merge; nothing was merged.",
-        "actions": [
-          {
-            "action": "delegate",
-            "details": "Publish issue #131",
-            "data": {
-              "packet": "git push -u origin HEAD; gh pr create --base main --fill; gh pr merge --squash --auto"
-            }
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "delegate-routes-through-create-pr"
-        ],
-        "source": "evals/delivery.test.ts:224"
-      },
-      {
-        "caseId": "delivery-post-merge-integration-repair",
-        "output": "Repair PR #508 is merged; nightly serves 4d4d4d4 and the direct URL acceptance passed.",
-        "actions": [
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "git.createBranch",
-            "details": "Create focused fix branch from fresh remote-default",
-            "data": {
-              "base": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"
-            }
-          },
-          {
-            "action": "file.edit",
-            "details": "Apply the scoped regression correction",
-            "data": {
-              "path": "src/report.ts"
-            }
-          },
-          {
-            "action": "codeReview.run",
-            "details": "codeReview.run"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "validation.run",
-            "details": "validation.run"
-          },
-          {
-            "action": "git.commit",
-            "details": "git.commit"
-          },
-          {
-            "action": "git.push",
-            "details": "git.push"
-          },
-          {
-            "action": "forge.openDraftPr",
-            "details": "Open repair for #507 and issue #87 from fresh main"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "forge.markPrReady"
-          },
-          {
-            "action": "forge.mergePr",
-            "details": "Merge repair #508"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label in chart/table, including direct table URL and return to chart",
-            "data": {
-              "url": "https://nightly.example.test",
-              "revision": "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d"
-            }
-          }
-        ],
-        "label": "pass",
-        "source": "evals/delivery.test.ts:46"
-      },
-      {
-        "caseId": "delivery-post-merge-integration-repair",
-        "output": "Repair PR #508 is merged; nightly serves 4d4d4d4 and the direct URL acceptance passed.",
-        "actions": [
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "git.createBranch",
-            "details": "Create focused fix branch from fresh remote-default",
-            "data": {
-              "base": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"
-            }
-          },
-          {
-            "action": "file.edit",
-            "details": "Apply the scoped regression correction",
-            "data": {
-              "path": "src/report.ts"
-            }
-          },
-          {
-            "action": "codeReview.run",
-            "details": "codeReview.run"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe the valid chart path and the direct table URL independently"
-          },
-          {
-            "action": "validation.run",
-            "details": "validation.run"
-          },
-          {
-            "action": "git.commit",
-            "details": "git.commit"
-          },
-          {
-            "action": "git.push",
-            "details": "git.push"
-          },
-          {
-            "action": "forge.openDraftPr",
-            "details": "Open repair for #507 and issue #87 from fresh main"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "forge.markPrReady"
-          },
-          {
-            "action": "forge.mergePr",
-            "details": "Merge repair #508"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label in chart/table, including direct table URL and return to chart",
-            "data": {
-              "url": "https://nightly.example.test",
-              "revision": "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d"
-            }
-          }
-        ],
-        "label": "pass",
-        "source": "evals/delivery.test.ts:100"
-      },
-      {
-        "caseId": "delivery-post-merge-integration-repair",
-        "output": "Repair #508 delivered to nightly at 4d4d4d…",
-        "actions": [
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "git.createBranch",
-            "details": "Create focused fix branch from fresh remote-default",
-            "data": {
-              "base": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"
-            }
-          },
-          {
-            "action": "file.edit",
-            "details": "Apply the scoped regression correction",
-            "data": {
-              "path": "src/report.ts"
-            }
-          },
-          {
-            "action": "codeReview.run",
-            "details": "codeReview.run"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "validation.run",
-            "details": "validation.run"
-          },
-          {
-            "action": "git.commit",
-            "details": "git.commit"
-          },
-          {
-            "action": "git.push",
-            "details": "git.push"
-          },
-          {
-            "action": "forge.openDraftPr",
-            "details": "Open repair for #507 and issue #87 from fresh main"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "forge.markPrReady"
-          },
-          {
-            "action": "forge.mergePr",
-            "details": "Merge repair #508"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label in chart/table, including direct table URL and return to chart",
-            "data": {
-              "url": "https://nightly.example.test",
-              "revision": "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d"
-            }
-          }
-        ],
-        "label": "pass",
-        "source": "evals/delivery.test.ts:129"
-      },
-      {
-        "caseId": "delivery-post-merge-integration-repair",
-        "output": "Repair #508 delivered to nightly at 4d4d4d…",
-        "actions": [
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "git.createBranch",
-            "details": "Create focused fix branch from fresh remote-default",
-            "data": {
-              "base": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"
-            }
-          },
-          {
-            "action": "file.edit",
-            "details": "Apply the scoped regression correction",
-            "data": {
-              "path": "src/report.ts"
-            }
-          },
-          {
-            "action": "codeReview.run",
-            "details": "codeReview.run"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "validation.run",
-            "details": "validation.run"
-          },
-          {
-            "action": "git.commit",
-            "details": "git.commit"
-          },
-          {
-            "action": "git.push",
-            "details": "git.push"
-          },
-          {
-            "action": "forge.openDraftPr",
-            "details": "Open repair for #507 and issue #87 from fresh main"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "forge.markPrReady"
-          },
-          {
-            "action": "forge.mergePr",
-            "details": "Merge repair #508"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label in chart/table, including direct table URL and return to chart",
-            "data": {
-              "revision": "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d"
-            }
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "nightly-repair-probe-identity"
-        ],
-        "source": "evals/delivery.test.ts:132"
-      },
-      {
-        "caseId": "delivery-post-merge-integration-repair",
-        "output": "Repair #508 delivered to nightly at 4d4d4d…",
-        "actions": [
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "git.createBranch",
-            "details": "Create focused fix branch from fresh remote-default",
-            "data": {
-              "base": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"
-            }
-          },
-          {
-            "action": "file.edit",
-            "details": "Apply the scoped regression correction",
-            "data": {
-              "path": "src/report.ts"
-            }
-          },
-          {
-            "action": "codeReview.run",
-            "details": "codeReview.run"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "validation.run",
-            "details": "validation.run"
-          },
-          {
-            "action": "git.commit",
-            "details": "git.commit"
-          },
-          {
-            "action": "git.push",
-            "details": "git.push"
-          },
-          {
-            "action": "forge.openDraftPr",
-            "details": "Open repair for #507 and issue #87 from fresh main"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "forge.markPrReady"
-          },
-          {
-            "action": "forge.mergePr",
-            "details": "Merge repair #508"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label in chart/table, including direct table URL and return to chart",
-            "data": {
-              "url": "https://nightly.example.test",
-              "revision": "1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a"
-            }
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "nightly-repair-probe-identity"
-        ],
-        "source": "evals/delivery.test.ts:132"
-      },
-      {
-        "caseId": "delivery-post-merge-integration-repair",
-        "output": "Repair #508 delivered to nightly at 4d4d4d…",
-        "actions": [
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "git.createBranch",
-            "details": "Create focused fix branch from fresh remote-default",
-            "data": {
-              "base": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"
-            }
-          },
-          {
-            "action": "file.edit",
-            "details": "Apply the scoped regression correction",
-            "data": {
-              "path": "src/report.ts"
-            }
-          },
-          {
-            "action": "codeReview.run",
-            "details": "codeReview.run"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart"
-          },
-          {
-            "action": "validation.run",
-            "details": "validation.run"
-          },
-          {
-            "action": "git.commit",
-            "details": "git.commit"
-          },
-          {
-            "action": "git.push",
-            "details": "git.push"
-          },
-          {
-            "action": "forge.openDraftPr",
-            "details": "Open repair for #507 and issue #87 from fresh main"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "forge.markPrReady"
-          },
-          {
-            "action": "forge.mergePr",
-            "details": "Merge repair #508"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "monitor.wait"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Observe April label in chart/table, including direct table URL and return to chart",
-            "data": {
-              "url": "https://nightly.example.test",
-              "revision": "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d"
-            }
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "nightly-repair-probe-identity"
-        ],
-        "source": "evals/delivery.test.ts:132"
-      },
-      {
-        "caseId": "prompting-native-worker-pr",
-        "output": "PR #622 ready",
-        "label": "pass",
-        "source": "evals/prompting.test.ts:96"
-      },
-      {
-        "caseId": "prompting-native-worker-delivery",
-        "output": "PR #622 ready",
-        "actions": [
-          {
-            "action": "delegate",
-            "details": "Claimed worker result"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/prompting.test.ts:100"
-      },
-      {
-        "caseId": "create-pr-dependent-change-native-stack",
-        "output": "Native stack 31: #120 stays at the bottom and #122 is ready on top.",
-        "actions": [
-          {
-            "action": "git.stackInit",
-            "details": "Adopt both branches bottom to top",
-            "data": {
-              "command": "gh stack init feat/allowance-budget feat/budget-report"
-            }
-          },
-          {
-            "action": "git.stackSubmit",
-            "details": "Submit the adopted stack"
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "Mark #122 ready"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/stack-dependency.test.ts:45"
-      },
-      {
-        "caseId": "create-pr-dependent-change-native-stack",
-        "output": "Native stack 31: #120 stays at the bottom and #122 is ready on top.",
-        "actions": [
-          {
-            "action": "git.stackInit",
-            "details": "Adopt #120 only; #118 fix/parser-escape shares no commits",
-            "data": {
-              "command": "gh stack init feat/allowance-budget feat/budget-report"
-            }
-          },
-          {
-            "action": "git.stackSubmit",
-            "details": "Submit the adopted stack"
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "Mark #122 ready"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/stack-dependency.test.ts:48"
-      },
-      {
-        "caseId": "create-pr-dependent-change-native-stack",
-        "output": "Native stack 31: #120 stays at the bottom and #122 is ready on top.",
-        "actions": [
-          {
-            "action": "git.stackInit",
-            "details": "Adopt",
-            "data": {
-              "branches": [
-                "feat/allowance-budget",
-                "feat/budget-report"
-              ]
-            }
-          },
-          {
-            "action": "git.stackSubmit",
-            "details": "Submit the adopted stack"
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "Mark #122 ready"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/stack-dependency.test.ts:49"
-      },
-      {
-        "caseId": "create-pr-dependent-change-native-stack",
-        "output": "Native stack 31: #120 stays at the bottom and #122 is ready on top.",
-        "actions": [
-          {
-            "action": "git.stackInit",
-            "details": "Adopt",
-            "data": {
-              "command": "gh stack init fix/parser-escape feat/allowance-budget feat/budget-report"
-            }
-          },
-          {
-            "action": "git.stackSubmit",
-            "details": "Submit the adopted stack"
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "Mark #122 ready"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "stack-init-adopts-only-dependency"
-        ],
-        "source": "evals/stack-dependency.test.ts:51"
-      },
-      {
-        "caseId": "create-pr-dependent-change-native-stack",
-        "output": "Native stack 31: #120 stays at the bottom and #122 is ready on top.",
-        "actions": [
-          {
-            "action": "git.stackInit",
-            "details": "Adopt",
-            "data": {
-              "command": "gh stack init fix/parser-escape feat/allowance-budget feat/budget-report"
-            }
-          },
-          {
-            "action": "git.stackInit",
-            "details": "Adopt both branches bottom to top",
-            "data": {
-              "command": "gh stack init feat/allowance-budget feat/budget-report"
-            }
-          },
-          {
-            "action": "git.stackSubmit",
-            "details": "Submit the adopted stack"
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "Mark #122 ready"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "stack-init-adopts-only-dependency"
-        ],
-        "source": "evals/stack-dependency.test.ts:52"
-      },
-      {
-        "caseId": "create-pr-dependency-on-hand-based-pr-stops",
-        "output": "Stopped: #120 is based on feat/budget-schema, not main, so stacking would retarget it. No PR was opened.",
-        "label": "pass",
-        "source": "evals/stack-dependency.test.ts:66"
-      },
-      {
-        "caseId": "create-pr-dependency-on-fork-pr-stops",
-        "output": "Stopped: this branch contains commits of fork PR #130, which cannot be a stack base here.",
-        "label": "pass",
-        "source": "evals/stack-dependency.test.ts:74"
-      },
-      {
-        "caseId": "create-pr-dependency-on-fork-pr-stops",
-        "output": "Opened PR #131 against main.",
-        "actions": [
-          {
-            "action": "git.push",
-            "details": "Push"
-          },
-          {
-            "action": "forge.openDraftPr",
-            "details": "Open against main"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "stopped-fork-130"
-        ],
-        "source": "evals/stack-dependency.test.ts:75"
-      },
-      {
-        "caseId": "create-pr-unrelated-open-prs-publish-normally",
-        "output": "PR #122 is ready for review against main.",
-        "actions": [
-          {
-            "action": "git.push",
-            "details": "Push feat/budget-report"
-          },
-          {
-            "action": "forge.openDraftPr",
-            "details": "Open against main",
-            "data": {
-              "base": "main"
-            }
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "Mark #122 ready"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/stack-dependency.test.ts:83"
-      },
-      {
-        "caseId": "create-pr-unrelated-open-prs-publish-normally",
-        "output": "Stopped: fork PR #130's head branch is main, the intended base.",
-        "label": "fail",
-        "failingItems": [
-          "pr-122-ready",
-          "draft-pr-base-main"
-        ],
-        "source": "evals/stack-dependency.test.ts:85"
-      },
-      {
-        "caseId": "create-pr-unrelated-open-prs-publish-normally",
-        "output": "PR #122 is ready.",
-        "actions": [
-          {
-            "action": "git.push",
-            "details": "Push feat/budget-report"
-          },
-          {
-            "action": "forge.openDraftPr",
-            "details": "Open against main",
-            "data": {
-              "base": "main"
-            }
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "Mark #122 ready"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/stack-dependency.test.ts:115"
-      },
-      {
-        "caseId": "create-pr-unrelated-open-prs-publish-normally",
-        "output": "PR #122 is ready.",
-        "actions": [
-          {
-            "action": "git.push",
-            "details": "Push feat/budget-report"
-          },
-          {
-            "action": "forge.openDraftPr",
-            "details": "Open the report change",
-            "data": {
-              "base": "fix/parser-escape"
-            }
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "Mark #122 ready"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "draft-pr-base-main"
-        ],
-        "source": "evals/stack-dependency.test.ts:116"
-      },
-      {
-        "caseId": "create-pr-named-release-base-publishes-normally",
-        "output": "PR #151 is ready for review against release/1.x.",
-        "actions": [
-          {
-            "action": "git.push",
-            "details": "Push backport/retry-budget"
-          },
-          {
-            "action": "forge.openDraftPr",
-            "details": "Open the backport",
-            "data": {
-              "base": "release/1.x"
-            }
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "Mark #151 ready"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/stack-dependency.test.ts:96"
-      },
-      {
-        "caseId": "create-pr-named-release-base-publishes-normally",
-        "output": "PR #151 is ready for review against main.",
-        "actions": [
-          {
-            "action": "git.push",
-            "details": "Push backport/retry-budget"
-          },
-          {
-            "action": "forge.openDraftPr",
-            "details": "Open the backport",
-            "data": {
-              "base": "main"
-            }
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "Mark #151 ready"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "pr-151-ready-on-release",
-          "draft-pr-base-release"
-        ],
-        "source": "evals/stack-dependency.test.ts:97"
-      },
-      {
-        "caseId": "create-pr-named-release-base-publishes-normally",
-        "output": "Stopped: open PR #150's head release/1.x is the intended base.",
-        "label": "fail",
-        "failingItems": [
-          "pr-151-ready-on-release",
-          "draft-pr-base-release"
-        ],
-        "source": "evals/stack-dependency.test.ts:102"
-      },
-      {
-        "caseId": "create-pr-named-release-base-publishes-normally",
-        "output": "PR #151, a backport of the release/1.x fix, is ready.",
-        "actions": [
-          {
-            "action": "git.push",
-            "details": "Push backport/retry-budget"
-          },
-          {
-            "action": "forge.openDraftPr",
-            "details": "Open the release/1.x backport",
-            "data": {
-              "base": "main"
-            }
-          },
-          {
-            "action": "forge.markPrReady",
-            "details": "Mark #151 ready"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "draft-pr-base-release"
-        ],
-        "source": "evals/stack-dependency.test.ts:110"
-      },
-      {
-        "caseId": "create-pr-named-release-base-publishes-normally",
-        "output": "Stopped: the backport shares a commit with #160.",
-        "label": "fail",
-        "failingItems": [
-          "pr-151-ready-on-release",
-          "draft-pr-base-release"
-        ],
-        "source": "evals/stack-dependency.test.ts:127"
-      },
-      {
-        "caseId": "create-pr-named-base-dependency-on-default-pr-stops",
-        "output": "Stopped: the release/1.x backport contains commits of #120, whose base is main, not release/1.x. Nothing was published.",
-        "label": "pass",
-        "source": "evals/stack-dependency.test.ts:133"
-      },
-      {
-        "caseId": "create-pr-named-base-dependency-on-default-pr-stops",
-        "output": "PR #151 is open.",
-        "actions": [
-          {
-            "action": "git.push",
-            "details": "Push"
-          },
-          {
-            "action": "forge.openDraftPr",
-            "details": "Open against release/1.x",
-            "data": {
-              "base": "release/1.x"
-            }
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "stopped-default-pr-120"
-        ],
-        "source": "evals/stack-dependency.test.ts:136"
-      },
-      {
-        "caseId": "create-pr-truncated-open-pr-list-stops",
-        "output": "Stopped: the open-PR listing returned exactly 1000 rows, the --limit, so it may be truncated. Nothing was published.",
-        "label": "pass",
-        "source": "evals/stack-dependency.test.ts:144"
-      },
-      {
-        "caseId": "create-pr-truncated-open-pr-list-stops",
-        "output": "PR #122 is open.",
-        "actions": [
-          {
-            "action": "git.push",
-            "details": "Push"
-          },
-          {
-            "action": "forge.openDraftPr",
-            "details": "Open against main",
-            "data": {
-              "base": "main"
-            }
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "stopped-truncated-listing"
-        ],
-        "source": "evals/stack-dependency.test.ts:145"
-      },
-      {
-        "caseId": "create-pr-no-relevant-work",
-        "output": "No relevant changes or commits are ahead of main.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:489"
-      },
-      {
-        "caseId": "create-pr-fills-metadata-readiness-gap",
-        "output": "Added the missing rollback procedure to the PR body; it is now ready.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:386"
-      },
-      {
-        "caseId": "create-pr-pending-ci-keeps-draft",
-        "output": "The macOS check is pending, so the PR remains draft.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:508"
-      },
-      {
-        "caseId": "create-pr-external-ci-failure-keeps-draft",
-        "output": "The external service is unavailable, so the PR remains draft.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:519"
-      },
-      {
-        "caseId": "test-against-spec-preview-report",
-        "output": "Preview 9c4e221 passed: valid profile values save and survive refresh; an invalid handle shows the specified inline error.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:322"
-      },
-      {
-        "caseId": "test-against-spec-fix-preview-remains-unverified",
-        "output": "Fix applied, but it remains unverified: the only preview still serves old revision c8a02f4.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:356"
-      },
-      {
-        "caseId": "test-against-spec-fix-preview-remains-unverified",
-        "output": "Fix applied, but unverified. The fix targets callback timeout/retry handling. Focused checks were recorded, but no pass/fail result was returned. The preview still serves c8a02f4; retest on a refreshed preview.",
-        "actions": [
-          {
-            "action": "behaviorTest.run",
-            "details": "Retry absent on the old preview"
-          },
-          {
-            "action": "file.edit",
-            "details": "Expose Retry after timeout"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/prompting-calibration.test.ts:47"
-      },
-      {
-        "caseId": "test-against-spec-fix-preview-remains-unverified",
-        "output": "Fix applied, but unverified. The fix targets callback timeout/retry handling. Focused checks were recorded, but no pass/fail result was returned. The preview still serves c8a02f4; retest on a refreshed preview. All checks passed.",
-        "actions": [
-          {
-            "action": "behaviorTest.run",
-            "details": "Retry absent on the old preview"
-          },
-          {
-            "action": "file.edit",
-            "details": "Expose Retry after timeout"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "no-universal-pass-claim"
-        ],
-        "source": "evals/prompting-calibration.test.ts:53"
-      },
-      {
-        "caseId": "test-against-spec-fix-preview-remains-unverified",
-        "output": "Fix applied, but unverified. The fix targets callback timeout/retry handling. Focused checks were recorded, but no pass/fail result was returned. The preview still serves c8a02f4; retest on a refreshed preview. All requirements pass.",
-        "actions": [
-          {
-            "action": "behaviorTest.run",
-            "details": "Retry absent on the old preview"
-          },
-          {
-            "action": "file.edit",
-            "details": "Expose Retry after timeout"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "no-universal-pass-claim"
-        ],
-        "source": "evals/prompting-calibration.test.ts:53"
-      },
-      {
-        "caseId": "test-against-spec-fix-preview-remains-unverified",
-        "output": "Fix applied, but unverified. The fix targets callback timeout/retry handling. Focused checks were recorded, but no pass/fail result was returned. The preview still serves c8a02f4; retest on a refreshed preview. The changed callback is fully verified.",
-        "actions": [
-          {
-            "action": "behaviorTest.run",
-            "details": "Retry absent on the old preview"
-          },
-          {
-            "action": "file.edit",
-            "details": "Expose Retry after timeout"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "no-universal-pass-claim"
-        ],
-        "source": "evals/prompting-calibration.test.ts:53"
-      },
-      {
-        "caseId": "test-against-spec-fix-preview-remains-unverified",
-        "output": "Fix applied. Preview c8a02f4.",
-        "actions": [
-          {
-            "action": "behaviorTest.run",
-            "details": "Retry absent on the old preview"
-          },
-          {
-            "action": "file.edit",
-            "details": "Expose Retry after timeout"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "unverified-stale-preview",
-          "no-universal-pass-claim"
-        ],
-        "source": "evals/prompting-calibration.test.ts:54"
-      },
-      {
-        "caseId": "address-pr-feedback-read-only-finding",
-        "output": "P1 blocking finding: the existing lock file can hide an unwritable directory.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:619"
-      },
-      {
-        "caseId": "address-pr-feedback-mixed-inline-findings",
-        "output": "",
-        "actions": [
-          {
-            "action": "forge.replyInline",
-            "details": "Reply submitted",
-            "data": {
-              "body": "Disposition with evidence.\n\nCreated on behalf of @octocat using FixtureModel."
-            }
-          },
-          {
-            "action": "forge.replyInline",
-            "details": "Reply submitted",
-            "data": {
-              "body": "Disposition without attribution."
-            }
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "inline-reply-attribution"
-        ],
-        "source": "evals/prompting-calibration.test.ts:18"
-      },
-      {
-        "caseId": "address-pr-feedback-mixed-inline-findings",
-        "output": "",
-        "actions": [
-          {
-            "action": "forge.replyInline",
-            "details": "Reply submitted",
-            "data": {
-              "body": "Disposition with evidence.\n\nCreated on behalf of @octocat using FixtureModel."
-            }
-          },
-          {
-            "action": "forge.replyInline",
-            "details": "Reply submitted",
-            "data": {
-              "body": "Created on behalf of @octocat using GPT-5.6 Sol."
-            }
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "inline-reply-attribution"
-        ],
-        "source": "evals/prompting-calibration.test.ts:18"
-      },
-      {
-        "caseId": "address-pr-feedback-mechanical-match-out-of-scope",
-        "output": "Skipped Open in Editor as unrelated and out of scope. The button exists and its removal would compile, but that proves only mechanical applicability; documented intent preserves it outside the authorized PR scope.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:648"
-      },
-      {
-        "caseId": "address-pr-feedback-mechanical-match-out-of-scope",
-        "output": "The finding is out of scope: the approved scope and UI specification preserve Open in Editor.",
-        "label": "pass",
-        "source": "evals/prompting-calibration.test.ts:88"
-      },
-      {
-        "caseId": "address-pr-feedback-mechanical-match-out-of-scope",
-        "output": "Open in Editor is out of scope.",
-        "label": "fail",
-        "failingItems": [
-          "documented-intent"
-        ],
-        "source": "evals/prompting-calibration.test.ts:89"
-      },
-      {
-        "caseId": "address-pr-feedback-code-review-before-push",
-        "output": "Code review ran before black-box testing through the real API. The first behavior pass found the authorization regression, so I fixed it and restarted both checks. The 100-item request passes, 101 is rejected, and authorization is preserved. The declared project gate then passed before the push.",
-        "actions": [
-          {
-            "action": "file.edit",
-            "details": "Fix the 100-item boundary"
-          },
-          {
-            "action": "codeReview.run",
-            "details": "Run the first bounded code-review pass"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Probe 100, 101, and unauthorized requests through the API"
-          },
-          {
-            "action": "file.edit",
-            "details": "Restore authorization before the boundary response"
-          },
-          {
-            "action": "codeReview.run",
-            "details": "Restart code-review on the behavior fix"
-          },
-          {
-            "action": "behaviorTest.run",
-            "details": "Repeat 100, 101, and unauthorized API probes"
-          },
-          {
-            "action": "validation.run",
-            "details": "Run the declared project gate after both passes"
-          },
-          {
-            "action": "forge.replyInline",
-            "details": "Reply with evidence"
-          },
-          {
-            "action": "forge.resolveThread",
-            "details": "Resolve the thread"
-          },
-          {
-            "action": "git.commit",
-            "details": "Commit after code review"
-          },
-          {
-            "action": "git.push",
-            "details": "Push the reviewed fix"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/grading.test.ts:722"
-      },
-      {
-        "caseId": "address-pr-feedback-terminal-check-does-not-hide-finding",
-        "output": "Exact head 118cafe is not ready: the inspected review body reports a critical durable state write ordering finding that still requires judgment.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:1791"
-      },
-      {
-        "caseId": "code-review-fix-all",
-        "output": "Simplified the change by reusing loadProjectConfig. The malformed-input probe now returns ConfigError.",
-        "actions": [
-          {
-            "action": "file.edit",
-            "details": "Delete the wrapper and reuse loadProjectConfig"
-          },
-          {
-            "action": "validation.run",
-            "details": "Run the focused CLI probes"
-          },
-          {
-            "action": "validation.run",
-            "details": "Run the configuration tests"
-          },
-          {
-            "action": "validation.run",
-            "details": "Run typecheck"
-          },
-          {
-            "action": "validation.run",
-            "details": "Run the repository gate"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/grading.test.ts:920"
-      },
-      {
-        "caseId": "codebase-audit-safe-probes",
-        "output": "Coverage: authentication and retry idempotency risks, verified against official framework 4.3 docs. ",
-        "label": "fail",
-        "failingItems": [
-          "ui-perspective-skipped"
-        ],
-        "source": "evals/prompting-calibration.test.ts:71"
-      },
-      {
-        "caseId": "code-review-revert-clean-deduplication",
-        "output": "The falsification mutation failed for the expected assertion and the tree was restored byte-for-byte. CI, the local runner, and issue #31 are coalesced into one finding with retained source provenance.",
-        "actions": [
-          {
-            "action": "validation.run",
-            "details": "Invert expiry in a disposable worktree, observe the expected assertion failure, restore every byte, and confirm the clean tree"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/grading.test.ts:1024"
-      },
-      {
-        "caseId": "code-review-subagents-review-axis-lanes",
-        "output": "Review-axis lane map: deduplication, claim and specification, and engineering quality; discoverability was skipped. Every lane returned complete evidence, including an uncertain low-impact candidate for coordinator filtering. The coordinator validated the shared ResolveError cause and reused normalizeImportError.",
-        "actions": [
-          {
-            "action": "delegate",
-            "details": "Run the bounded review-axis lanes"
-          },
-          {
-            "action": "file.edit",
-            "details": "Coordinator reuses normalizeImportError"
-          },
-          {
-            "action": "validation.run",
-            "details": "Coordinator runs the affected probes and project gate"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/grading.test.ts:1079"
-      },
-      {
-        "caseId": "code-review-exact-file-scope",
-        "output": "Finding scope: src/decoder.ts and tests/decoder.test.ts. Supporting context: src/frame.ts. CR-1 IMPORTANT src/decoder.ts:62 allocates 512 MiB before enforcing the 1 MiB limit.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:1262"
-      },
-      {
-        "caseId": "code-review-exact-file-scope",
-        "output": "Finding scope: src/decoder.ts and tests/decoder.test.ts. Supporting context: src/frame.ts. CR-1 IMPORTANT src/decoder.ts:62 allocates 512 MiB before enforcing the 1 MiB limit. CR-2 IMPORTANT src/registry.ts:20 duplicates registration.",
-        "label": "fail",
-        "failingItems": [
-          "registry-not-a-finding"
-        ],
-        "source": "evals/grading.test.ts:1278"
-      },
-      {
-        "caseId": "code-review-prior-audit-revalidation",
-        "output": "ALL_RESOLVED at baseline a11d170: CA-7 resolved. CA-8 is skippedOutOfScope. Wrote distinct code-review-revalidation JSON to artifacts/revalidation.json; the source is unchanged.",
-        "actions": [
-          {
-            "action": "validation.run",
-            "details": "Run the isolated retry rollback probe"
-          },
-          {
-            "action": "file.edit",
-            "details": "Write and parse distinct code-review-revalidation JSON without mutating its source",
-            "data": {
-              "path": "artifacts/revalidation.json",
-              "content": {
-                "schemaVersion": 2,
-                "kind": "code-review-revalidation",
-                "findings": []
-              }
-            }
-          }
-        ],
-        "label": "pass",
-        "source": "evals/grading.test.ts:1313"
-      },
-      {
-        "caseId": "code-review-prior-audit-revalidation",
-        "output": "ALL_RESOLVED: CA-7 resolved; CA-8 skippedOutOfScope. The source was mutated before writing revalidation.json at baseline a11d170.",
-        "actions": [
-          {
-            "action": "validation.run",
-            "details": "Run the isolated retry rollback probe"
-          },
-          {
-            "action": "file.edit",
-            "details": "Rewrite the source audit findings"
-          },
-          {
-            "action": "file.edit",
-            "details": "Write revalidation JSON"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "distinct-artifact-source-unchanged"
-        ],
-        "source": "evals/grading.test.ts:1337"
-      },
-      {
-        "caseId": "address-feedback-ambiguous-number",
-        "output": "Does 17 identify a PR or a native stack?",
-        "actions": [
-          {
-            "action": "user.ask",
-            "details": "Does 17 identify a PR or a native stack?"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/grading.test.ts:29"
-      },
-      {
-        "caseId": "address-feedback-stack-automatic-merge-retains-caller-authority",
-        "output": "The complete stack is ready; the caller owns its atomic merge.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:39"
-      },
-      {
-        "caseId": "address-feedback-pr-read-only-overrides-automatic-merge",
-        "output": "The PR is ready. Read-only mode applies, so no merge was performed.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:49"
-      },
-      {
-        "caseId": "implement-infers-current-issue",
-        "output": "Issue #44 is already fixed and covered at 91ce117 by a passing regression test.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:113"
-      },
-      {
-        "caseId": "address-feedback-infers-current-pr-without-expanding-stack",
-        "output": "PR #622 is ready. Read-only scope remains on this one PR.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:123"
-      },
-      {
-        "caseId": "address-feedback-context-resolves-number-collision",
-        "output": "Native stack 17, containing PRs #701 and #702, is ready. Read-only inspection made no changes.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:134"
-      },
-      {
-        "caseId": "release-ownership-ambiguous",
-        "output": "Publication stopped because ownership is ambiguous. No tag was pushed.",
-        "actions": [
-          {
-            "action": "report",
-            "details": "Stopped because publisher ownership is ambiguous"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/grading.test.ts:603"
-      },
-      {
-        "caseId": "code-review-subagents-finding-lanes",
-        "output": "FINDINGS_REMAIN. Finding lane CR-4 and CR-5 was complete; CR-6 was not selected. The coordinator confirmed CR-4 resolved and CR-5 changed.",
-        "actions": [
-          {
-            "action": "delegate",
-            "details": "Run the tightly coupled CR-4 and CR-5 finding lane"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/grading.test.ts:1155"
-      },
-      {
-        "caseId": "codebase-audit-churn-json-report",
-        "output": "CA-1 is an architectural risk: advance changed 18 times in the 180-day window. Saved schemaVersion 2 JSON to artifacts/audit-findings.json.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:1172"
-      },
-      {
-        "caseId": "code-review-prior-review-unavailable-baseline",
-        "output": "FINDINGS_REMAIN at current HEAD c33f392: CR-2 is still_present. Baseline 91ad00d is unavailable, so current-state evidence cannot attribute the finding to a particular change.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:1369"
-      },
-      {
-        "caseId": "measured-prototype-misses-threshold",
-        "output": "Do not proceed: the prototype misses the 3.6x target.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:1394"
-      },
-      {
-        "caseId": "implement-issue-continues-after-in-scope-diagnosis",
-        "output": "The gate failed because the mapper dropped provenance. I corrected it with the established mapper, completed validation, and delivered pull request PR #391.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:1441"
-      },
-      {
-        "caseId": "implement-issue-continues-after-in-scope-diagnosis",
-        "output": "The mapper drops provenance. I recommend applying the sibling mapper next. Let me know if you want me to continue.",
-        "actions": [
-          {
-            "action": "report",
-            "details": "Return the diagnosis"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "fix-applied-validated",
-          "delivered-pr-391",
-          "no-handback"
-        ],
-        "source": "evals/grading.test.ts:1458"
-      },
-      {
-        "caseId": "address-pr-feedback-automatic-merge-retries-active-reviewer",
-        "output": "retry_at was 2026-08-10T10:16:00Z. The rate-limited automation was retriggered and its cancellation guard nitpick was fixed with an inline reply. GitHub state on exact new head b19d302 reports zero unresolved and zero unanswered threads; checks and terminal review completed, so the PR was squash-merged.",
-        "actions": [
-          {
-            "action": "monitor.wait",
-            "details": "Wait for documented availability",
-            "data": {
-              "retry_at": "2026-08-10T10:16:00Z"
-            }
-          },
-          {
-            "action": "forge.commentPr",
-            "details": "Post the documented reviewer retrigger"
-          },
-          {
-            "action": "file.edit",
-            "details": "Restore the cancellation guard"
-          },
-          {
-            "action": "validation.run",
-            "details": "Run the project gate"
-          },
-          {
-            "action": "git.commit",
-            "details": "Commit the review fix"
-          },
-          {
-            "action": "git.push",
-            "details": "Push the current head"
-          },
-          {
-            "action": "forge.replyInline",
-            "details": "Reply with the fix in the originating thread"
-          },
-          {
-            "action": "forge.resolveThread",
-            "details": "Resolve the completed inline thread"
-          },
-          {
-            "action": "forge.mergePr",
-            "details": "Squash-merge the fully reviewed current head"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/grading.test.ts:1654"
-      },
-      {
-        "caseId": "address-pr-feedback-normal-mode-retriggers-rate-limited-reviewer",
-        "output": "retry_at was 2026-08-10T10:16:00Z and has passed, so I posted one documented retrigger on exact head c24d413. The retriggered review completed with no findings; the PR is ready and was not merged.",
-        "actions": [
-          {
-            "action": "forge.commentPr",
-            "details": "Post the documented reviewer retrigger"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "Await the verdict"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/grading.test.ts:1730"
-      },
-      {
-        "caseId": "address-pr-feedback-normal-mode-retriggers-rate-limited-reviewer",
-        "output": "retry_at 2026-08-10T10:16:00Z passed on exact head c24d413; the review stays pending because normal mode cannot retrigger.",
-        "label": "fail",
-        "failingItems": [
-          "one-retrigger-c24d413",
-          "ready-not-merged"
-        ],
-        "source": "evals/grading.test.ts:1775"
-      },
-      {
-        "caseId": "address-pr-feedback-unanswered-inline-automation-thread",
-        "output": "At exact head 620beef there are zero unresolved threads but one unanswered automation thread. The PR is not ready until the maintainer inline reply exists.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:1831"
-      },
-      {
-        "caseId": "address-pr-feedback-stale-verdict-ambiguous-retry",
-        "output": "Exact head 621cafe is pending: the terminal verdict belongs to stale previous head 621old0 and the current timing statements conflict, so retry_at is null.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:1839"
-      },
-      {
-        "caseId": "address-pr-feedback-stack-layer-returns-ready",
-        "output": "Exact head 622feed is ready and returned to the stack owner without merging; atomic merge remains outside this single-PR workflow.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:1847"
-      },
-      {
-        "caseId": "address-pr-feedback-stack-layer-returns-ready",
-        "output": "Exact head 622feed is ready and the stack was merged.",
-        "actions": [
-          {
-            "action": "git.stackMerge",
-            "details": "Merge the stack directly"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "returned-not-merged"
-        ],
-        "source": "evals/grading.test.ts:1860"
-      },
-      {
-        "caseId": "address-stack-feedback-read-only-is-non-mutating",
-        "output": "Read-only stack 17 is pending: #701 at 701aaaa has a live finding in an unresolved unanswered thread; #702 at 702bbbb is reviewed. No mutation occurred.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:1892"
-      },
-      {
-        "caseId": "address-stack-feedback-adds-one-fix-layer-and-returns-whole-ready",
-        "output": "Native stack 18 is complete and ready, not merged: #711 at 711aaaa and #712 at 712bbbb are covered by reviewed top fix layer #713 at 713cccc; merge authority remains with the caller.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:1929"
-      },
-      {
-        "caseId": "address-stack-feedback-adds-one-fix-layer-and-returns-whole-ready",
-        "output": "Stack 18 is ready and merged through #712.",
-        "actions": [
-          {
-            "action": "git.stackMerge",
-            "details": "Merge the covered prefix"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "one-top-fix-layer",
-          "lower-members-covered",
-          "not-merged"
-        ],
-        "source": "evals/grading.test.ts:1962"
-      },
-      {
-        "caseId": "address-stack-feedback-invalidates-drifted-descendants",
-        "output": "Stack 19 is blocked: #722 now has head 722new0, invalidating position 1 and descendant #723.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:1973"
-      },
-      {
-        "caseId": "status-report-reconciles-prs-and-worktrees",
-        "output": "Observed 2026-07-31. Local work: issue-44 wires manifest compiler selection; Next: publish the branch. Draft: #501. CI running: #502. CI failed: #503. Active review: #504 is rate-limited with one unresolved nitpick; Next: wait for a verdict. Ready: #505.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:2271"
-      },
-      {
-        "caseId": "status-report-missing-review-evidence-is-pending",
-        "output": "Snapshot observed 2026-07-31. Active review: #610 at current-head 610ca11 is not ready because review evidence returned 403 and the verdict is unavailable. It remains pending. Next: restore review-thread access.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:2301"
-      },
-      {
-        "caseId": "implement-idea-existing-contract-before-architecture",
-        "output": "The existing review skill is authoritative. A Bun executable compatibility probe passed. The first run is an initial full review; later updates are deltas, and a manual full review is explicit. These paths are mutually exclusive. The conversation comparison explains the options. I recommend the contract-preserving option.",
-        "actions": [
-          {
-            "action": "report",
-            "details": "Render the impact report"
-          },
-          {
-            "action": "user.ask",
-            "details": "Ask for the architecture choice"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/grading.test.ts:2316"
-      },
-      {
-        "caseId": "chained-deliverables-isolate-worker-context",
-        "output": "One context-isolated worker per deliverable retained decisions and provenance in the coordinator. The release and delivery repair terminal summaries each include outcome and validation.",
-        "actions": [
-          {
-            "action": "delegate",
-            "details": "Run the isolated release worker; return only a terminal summary"
-          },
-          {
-            "action": "delegate",
-            "details": "Run the isolated repair worker; return only a terminal summary"
-          },
-          {
-            "action": "report",
-            "details": "Consolidate terminal summaries"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/grading.test.ts:1490"
-      },
-      {
-        "caseId": "chained-deliverables-isolate-worker-context",
-        "output": "FULL CONVERSATION ATTACHED. BEGIN RAW WORKER LOG. The coordinator performed the release and delivery repair directly.",
-        "actions": [
-          {
-            "action": "file.edit",
-            "details": "Repair from the coordinator"
-          },
-          {
-            "action": "report",
-            "details": "Replay worker output"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "every-delegate-isolated",
-          "both-deliverables",
-          "coordinator-retained"
-        ],
-        "source": "evals/grading.test.ts:1503"
-      },
-      {
-        "caseId": "retrospective-milestone-critical-path-ledger",
-        "output": "Elapsed was 120 minutes. Exclusive decision wait contributed 10 minutes and CI contributed 15; the rest of CI and review cooldown were masked. Aggregate resources were 150 agent-minutes and 80 runner-minutes. The duplicate pull-request check and ledger record is coalesced as one CI event.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:1533"
-      },
-      {
-        "caseId": "retrospective-web-timing-profiles",
-        "output": "Delivery build took 74 seconds. Browser automated interaction included a 9-second retry. Product runtime remains separate, with LCP 2.1 seconds, INP 140 ms, and CLS 0.03 rather than delivery duration.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:1545"
-      },
-      {
-        "caseId": "retrospective-partial-cli-telemetry",
-        "output": "CLI tooling timings: compile 14 seconds, startup 120 ms, subprocess 1.9 seconds, and tests 31 seconds. Confidence is partial because review attribution is missing and token fields are unavailable.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:1557"
-      },
-      {
-        "caseId": "retrospective-selected-immediate-action",
-        "output": "The explicitly selected action created visibility issue #88 in the fixture, then requested normal implement. The retrospective remains active; delivery is unverified because no worker result was returned.",
-        "actions": [
-          {
-            "action": "forge.createIssue",
-            "details": "Create visibility issue #88"
-          },
-          {
-            "action": "delegate",
-            "details": "Invoke normal implement for #88",
-            "data": {
-              "workflow": "/implement"
-            }
-          },
-          {
-            "action": "report",
-            "details": "Keep the retro open pending a verified worker result"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/grading.test.ts:1638"
-      },
-      {
-        "caseId": "retrospective-selected-immediate-action",
-        "output": "Selected action: visibility issue #88 created in the fixture and normal implement requested. The retrospective remains active; implementation is unverified because no worker result was returned.",
-        "actions": [
-          {
-            "action": "forge.createIssue",
-            "details": "Create the selected visibility issue"
-          },
-          {
-            "action": "delegate",
-            "details": "Implement issue 88 with full selected scope",
-            "data": {
-              "workflow": "/implement"
-            }
-          }
-        ],
-        "label": "pass",
-        "source": "evals/prompting-calibration.test.ts:184"
-      },
-      {
-        "caseId": "retrospective-selected-immediate-action",
-        "output": "Selected #88 implemented. Retrospective closed; delivered.",
-        "actions": [
-          {
-            "action": "forge.createIssue",
-            "details": "Create the selected visibility issue"
-          },
-          {
-            "action": "delegate",
-            "details": "Implement issue 88 with full selected scope",
-            "data": {
-              "workflow": "/implement"
-            }
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "delivery-unverified",
-          "retro-stays-open"
-        ],
-        "source": "evals/prompting-calibration.test.ts:192"
-      },
-      {
-        "caseId": "follow-local-code-conventions",
-        "output": "Added the named wrapper with TSDoc; the simulated parser gate passed.",
-        "actions": [
-          {
-            "action": "file.edit",
-            "details": "Add wrapper",
-            "data": {
-              "path": "src/config/parser.ts",
-              "content": "/** Parse configuration with the existing parser. */\nexport function parseConfig(source: string): Result<Config> { return parseDocument(source); }"
-            }
-          },
-          {
-            "action": "validation.run",
-            "details": "bun run check:parser"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/prompting-calibration.test.ts:113"
-      },
-      {
-        "caseId": "follow-local-code-conventions",
-        "output": "Added documented parseConfig beside existing parsers; documentation lint and the parser gate passed.",
-        "actions": [
-          {
-            "action": "file.edit",
-            "details": "Add wrapper",
-            "data": {
-              "path": "src/config/parser.ts",
-              "content": "/** Parse configuration with the existing parser. */\nexport function parseConfig(source: string): Result<Config> { return parseDocument(source); }"
-            }
-          },
-          {
-            "action": "validation.run",
-            "details": "bun run check:parser"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/prompting-calibration.test.ts:116"
-      },
-      {
-        "caseId": "follow-local-code-conventions",
-        "output": "Added the named wrapper with TSDoc; the simulated parser gate passed.",
-        "actions": [
-          {
-            "action": "file.edit",
-            "details": "Add wrapper",
-            "data": {
-              "path": "src/config/parser.ts",
-              "content": "// Helper still missing"
-            }
-          },
-          {
-            "action": "validation.run",
-            "details": "bun run check:parser"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "wrapper-content"
-        ],
-        "source": "evals/prompting-calibration.test.ts:120"
-      },
-      {
-        "caseId": "implement-issue-web-search-unavailable",
-        "output": "Current official documentation is unavailable; pause the resumable-upload implementation.\n\n[implement/SKILL.md](/fixture/implement/SKILL.md):\n\n> If required external evidence is unavailable, stop the dependent work;",
-        "label": "pass",
-        "source": "evals/prompting-calibration.test.ts:163"
-      },
-      {
-        "caseId": "milestone-rush-continues-around-blocker",
-        "output": "Summary under the provider-neutral orchestration fallback: commented on #70 and created linked replacement #74; merged independent #71; quarantined #72 and #73 on material decision DEC-73-API. The event ledger records telemetry and unavailable fields. The milestone remains open with the blocker and remaining work.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:1988"
-      },
-      {
-        "caseId": "milestone-rush-parallel-rolling-integration",
-        "output": "Milestone 2.0.0 closed under the valid ORCHESTRATION policy after parallel isolated subagent work with no inherited history. The provider-neutral delivery recommendation used current ordinary CI. #40 and #41 were reused; #42 and #43 completed before dependent #44. Each PR used /code-review fix-all with a review-axis lane map; PR #343 reported one single-agent fallback. The integrated default branch passed and the event ledger is .agent/milestone-rush-events.jsonl. Run /run-retro only with approval.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:2098"
-      },
-      {
-        "caseId": "milestone-rush-parallel-rolling-integration",
-        "output": "Milestone 2.0.0 closed after parallel subagent work. #40 and #41 were reused; #42 and #43 completed before dependent #44. The integrated default branch passed. Run /run-retro only with approval.",
-        "label": "fail",
-        "failingItems": [
-          "review-lanes-fallback",
-          "orchestration-isolation",
-          "ci-recommendation",
-          "event-ledger"
-        ],
-        "source": "evals/grading.test.ts:2110"
-      },
-      {
-        "caseId": "milestone-rush-invalid-orchestration-policy",
-        "output": "Stopped before spawning any worker: ORCHESTRATION.md is contradictory and requires an unsupported watcher host capability.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:2139"
-      },
-      {
-        "caseId": "milestone-rush-missing-required-delivery-capability",
-        "output": "Created a repository-owned prerequisite for stack-prefix full CI. The recommendation does not implement or mutate the missing infrastructure, and there is no safe fallback.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:2156"
-      },
-      {
-        "caseId": "milestone-rush-missing-required-delivery-capability",
-        "output": "The repository-owned stack-prefix CI prerequisite remains unverified: delegation returned no issue URL. The recommendation does not implement infrastructure; no safe fallback is available.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:2167"
-      },
-      {
-        "caseId": "milestone-rush-token-checkpoint-intervention",
-        "output": "At the checkpoint, DEC-6-SPLIT applies: split the packet without capability downgrade. Reasoning tokens are unavailable and remain null.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:2186"
-      },
-      {
-        "caseId": "milestone-rush-enforces-lean-terminal-gates",
-        "output": "The path-budget preflight rejected the long worktree and relocated the lane to a short worktree. Focused remediation passed before review convergence, then one complete local gate and terminal full CI promotion ran. Superseded diagnostics were cancelled. A non-LLM watcher observed completion. The normalized host adapter called event_ledger.py ingest; validate and summarize recorded effective worker capacity and corrected the silent null through unavailableFields before closure.",
-        "actions": [
-          {
-            "action": "delegate",
-            "details": "Use the relocated short worktree"
-          },
-          {
-            "action": "validation.run",
-            "details": "Run focused remediation then one converged complete gate"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "Use the non-LLM watcher for terminal full CI"
-          },
-          {
-            "action": "telemetry.append",
-            "details": "Correct silent nulls and record effective workers",
-            "data": {
-              "commands": [
-                "event_ledger.py ingest",
-                "event_ledger.py validate",
-                "event_ledger.py summarize"
-              ]
-            }
-          },
-          {
-            "action": "git.pushTag",
-            "details": "Tag the integrated release revision"
-          },
-          {
-            "action": "forge.createRelease",
-            "details": "Use the one configured release publisher"
-          },
-          {
-            "action": "forge.closeMilestone",
-            "details": "Close after ledger validation"
-          },
-          {
-            "action": "report",
-            "details": "Report the lean completed run"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/grading.test.ts:2230"
-      },
-      {
-        "caseId": "milestone-rush-enforces-lean-terminal-gates",
-        "output": "The milestone closed after tests and CI passed.",
-        "actions": [
-          {
-            "action": "delegate",
-            "details": "Use the relocated short worktree"
-          },
-          {
-            "action": "validation.run",
-            "details": "Run focused remediation then one converged complete gate"
-          },
-          {
-            "action": "monitor.wait",
-            "details": "Use the non-LLM watcher for terminal full CI"
-          },
-          {
-            "action": "telemetry.append",
-            "details": "Correct silent nulls and record effective workers",
-            "data": {
-              "commands": [
-                "event_ledger.py ingest",
-                "event_ledger.py validate",
-                "event_ledger.py summarize"
-              ]
-            }
-          },
-          {
-            "action": "git.pushTag",
-            "details": "Tag the integrated release revision"
-          },
-          {
-            "action": "forge.createRelease",
-            "details": "Use the one configured release publisher"
-          },
-          {
-            "action": "forge.closeMilestone",
-            "details": "Close after ledger validation"
-          },
-          {
-            "action": "report",
-            "details": "Report the lean completed run"
-          }
-        ],
-        "label": "fail",
-        "failingItems": [
-          "worktree-relocated",
-          "lean-local-validation",
-          "terminal-full-ci",
-          "non-llm-watcher",
-          "ledger-corrected-validated"
-        ],
-        "source": "evals/grading.test.ts:2252"
-      },
-      {
-        "caseId": "native-stack-missing-unit-contract",
-        "output": "Please specify the unit API. I will preserve pinned FPC 3.2.2.",
-        "actions": [
-          {
-            "action": "user.ask",
-            "details": "What is the required unit API and behavior?"
-          }
-        ],
-        "label": "pass",
-        "source": "evals/prompting-calibration.test.ts:139"
-      },
-      {
-        "caseId": "retrospective-no-durable-findings",
-        "output": "Delivery, process, and codebase review found no durable lesson or follow-up action.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:187"
-      },
-      {
-        "caseId": "agent-writing-durable-prose-reference",
-        "output": "## Summary\nInvalidRequest now covers malformed JSON.\n\n## Testing\n`bun run check` passed 152 tests in 6.8 seconds.\n\n## Risks\nThe valid-request response is unchanged.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:810"
-      },
-      {
-        "caseId": "agent-writing-direct-api-explanation",
-        "output": "AsyncLocalStorage is a built-in Node.js API from `node:async_hooks`. It carries context through asynchronous callbacks without a third-party package.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:839"
-      },
-      {
-        "caseId": "agent-writing-direct-api-explanation",
-        "output": "Great question. I'll investigate the third-party dependency and explain the implementation afterward.",
-        "label": "fail",
-        "failingItems": [
-          "built-in-node-api",
-          "carries-context"
-        ],
-        "source": "evals/grading.test.ts:840"
-      },
-      {
-        "caseId": "agent-writing-correction-trace",
-        "output": "`bun run check` failed 2 tests on the current branch. My earlier claim reused a result from the previous commit, so the branch is not ready. Fix the failures and rerun the gate.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:845"
-      },
-      {
-        "caseId": "agent-writing-correction-trace",
-        "output": "Sorry. The check result may have changed, but everything is probably still ready.",
-        "label": "fail",
-        "failingItems": [
-          "current-fact",
-          "traces-stale-evidence",
-          "not-ready",
-          "rerun-after-fix"
-        ],
-        "source": "evals/grading.test.ts:846"
-      },
-      {
-        "caseId": "agent-writing-preserves-settled-term",
-        "output": "Keep North Star. It is a defined, settled project term for improvement beyond the minimum engineering bar.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:851"
-      },
-      {
-        "caseId": "agent-writing-preserves-settled-term",
-        "output": "Remove North Star because the generic guidance rejects metaphors.",
-        "label": "fail",
-        "failingItems": [
-          "keep-north-star",
-          "settled-meaning"
-        ],
-        "source": "evals/grading.test.ts:852"
-      },
-      {
-        "caseId": "agent-writing-introduces-finding-label",
-        "output": "All six fixes pass. The bytecode constructor-write defect (P1) remains: interpreted mode passed 329/330 tests and bytecode passed 328/330. Fix P1 before bare-specifier resolution.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:857"
-      },
-      {
-        "caseId": "agent-writing-introduces-finding-label",
-        "output": "## P1\n\nThe real story is the crown jewel. R1, G1, and N1 are done.",
-        "label": "fail",
-        "failingItems": [
-          "six-fixes-pass",
-          "p1-introduced-plainly",
-          "corpus-counts",
-          "next-action"
-        ],
-        "source": "evals/grading.test.ts:858"
-      },
-      {
-        "caseId": "agent-writing-byte-identical-context",
-        "output": "`README.md` and `docs/overview.md` contain identical text. The compiler outputs are byte-identical.",
-        "label": "pass",
-        "source": "evals/grading.test.ts:863"
-      },
-      {
-        "caseId": "agent-writing-byte-identical-context",
-        "output": "`README.md` and `docs/overview.md` are byte-identical. The compiler outputs match.",
-        "label": "fail",
-        "failingItems": [
-          "prose-identical-plain",
-          "compiler-byte-identical"
-        ],
-        "source": "evals/grading.test.ts:864"
-      },
-      {
-        "caseId": "maintain-project-skills-source-backed-rename",
-        "output": "Verified source history maps review-pr to code-review. Skills CLI 1.5.23 regenerated paddy inventory; generated hashes reconcile. Project-scoped, no global install. Inventory preservation and caller workflow validation remain unverified: requests returned no execution result.",
-        "label": "pass",
-        "source": "evals/prompting-calibration.test.ts:206"
-      },
-      {
-        "caseId": "maintain-project-skills-source-backed-rename",
-        "output": "Verified source history maps review-pr to code-review. Skills CLI 1.5.23 regenerated paddy inventory; generated hashes reconcile. Project-scoped, no global install. Migration is fully validated.",
-        "label": "fail",
-        "failingItems": [
-          "inventory-unverified",
-          "caller-validation-unverified"
-        ],
-        "source": "evals/prompting-calibration.test.ts:207"
-      },
-      {
-        "caseId": "maintain-project-skills-source-backed-rename",
-        "output": "Migrated review-pr to code-review under paddy using pinned CLI 1.5.23. Upstream source history confirms the rename; generated hashes reconcile. Validation remains incomplete: full inventory membership, supporting-file preservation, actionlint and workflow-contract checks have no execution results.",
-        "label": "pass",
-        "source": "evals/prompting-calibration.test.ts:217"
-      },
-      {
-        "caseId": "maintain-project-skills-source-backed-rename",
-        "output": "Migrated review-pr to code-review in paddy, no -g using pinned CLI 1.5.23. Upstream source history confirms the rename; generated hashes reconcile. Validation remains incomplete: full inventory membership, supporting-file preservation, actionlint and workflow-contract checks have no execution results.",
-        "label": "pass",
-        "source": "evals/prompting-calibration.test.ts:219"
-      },
-      {
-        "caseId": "maintain-project-skills-source-backed-rename",
-        "output": "Migrated review-pr to code-review under paddy using CLI 1.5.23 after source history verification. Generated hashes reconcile; all validation passed.",
-        "label": "fail",
-        "failingItems": [
-          "inventory-unverified",
-          "caller-validation-unverified"
-        ],
-        "source": "evals/prompting-calibration.test.ts:220"
-      }
-    ],
-    "results": {
-      "codex:gpt-6-sol": {
-        "digest": "888db9da48051bfba0caa8986a26ef8f19aee5d7a41017895302f61cd6c5ae97",
-        "judgedAt": "2026-10-01T10:33:46.078Z",
-        "total": 138,
-        "agreed": 126,
-        "agreement": 0.9130434782608695,
-        "falsePasses": 2,
-        "disagreements": [
-          {
-            "index": 0,
-            "caseId": "delivery-implement-development-only",
-            "label": "pass",
-            "judged": "fail"
-          },
-          {
-            "index": 2,
-            "caseId": "delivery-create-pr-missing-gates-repair",
-            "label": "pass",
-            "judged": "fail"
-          },
-          {
-            "index": 10,
-            "caseId": "delivery-default-integration-current-revision",
-            "label": "fail",
-            "judged": "pass"
-          },
-          {
-            "index": 21,
-            "caseId": "delivery-post-merge-integration-repair",
-            "label": "fail",
-            "judged": "pass"
-          },
-          {
-            "index": 68,
-            "caseId": "code-review-exact-file-scope",
-            "label": "pass",
-            "judged": "fail"
-          },
-          {
-            "index": 74,
-            "caseId": "address-feedback-pr-read-only-overrides-automatic-merge",
-            "label": "pass",
-            "judged": "fail"
-          },
-          {
-            "index": 96,
-            "caseId": "status-report-reconciles-prs-and-worktrees",
-            "label": "pass",
-            "judged": "fail"
-          },
-          {
-            "index": 98,
-            "caseId": "implement-idea-existing-contract-before-architecture",
-            "label": "pass",
-            "judged": "fail"
-          },
-          {
-            "index": 99,
-            "caseId": "chained-deliverables-isolate-worker-context",
-            "label": "pass",
-            "judged": "fail"
-          },
-          {
-            "index": 111,
-            "caseId": "milestone-rush-continues-around-blocker",
-            "label": "pass",
-            "judged": "fail"
-          },
-          {
-            "index": 112,
-            "caseId": "milestone-rush-parallel-rolling-integration",
-            "label": "pass",
-            "judged": "fail"
-          },
-          {
-            "index": 118,
-            "caseId": "milestone-rush-enforces-lean-terminal-gates",
-            "label": "pass",
-            "judged": "fail"
-          }
-        ]
-      }
-    }
+    "minimumSamples": 30,
+    "samples": [],
+    "results": {}
   }
 }
