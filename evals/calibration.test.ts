@@ -24,7 +24,7 @@ const scenario = (expected: EvalCase["expected"]): EvalCase => ({
   id: "calibration",
   description: "",
   prompt: "",
-  fixture: { evidence: {} },
+  fixture: { environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } }, evidence: {} },
   expected: {
     rubric: [{ id: "outcome", question: "Does the answer report the outcome?" }],
     ...expected,

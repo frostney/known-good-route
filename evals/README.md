@@ -254,36 +254,29 @@ failed repeat fails it, errors or missing repeats leave it inconclusive, and
 untrusted judge failures leave it for human review. The process exits non-zero
 unless every case passes, because review rows still await a human decision.
 
-### Project instructions
+### Project instructions and environment
 
-Each eval workspace gets the `AGENTS.md` that the
+Every case declares the repository environment it runs in under
+`fixture.environment`, and its expected terminal state and rubric follow from
+it. `orchestration` gives the `ORCHESTRATION.md` frontmatter: `endpoint`
+(`ready-to-merge`, `merged` or `deployed`) and `entry-points` (`deliver` to
+continue an entry-point command through the development workflow to that
+endpoint, or `stop` to end after the command itself), plus an optional body.
+It is `null` when the repository has no `ORCHESTRATION.md`. `files` adds other
+configuration that changes the outcome, such as the integration destination.
+`validateCases` rejects a case without a valid environment.
+
+Before each run the runner writes the case's `ORCHESTRATION.md` and declared
+files into the eval workspace. It generates the AGENTS.md block with the
 [skills block generator](../.github/actions/update-project-skills/agents-block.mjs)
-writes for the skills installed in that run, as a consuming repository would
-carry it. Both CLIs isolate ambient project files, so the harness appends this
-file to the instructions of every candidate and worker run. The snapshot keeps
-the generator with the harness.
-
-Requested JSON artifact cases parse the actual submitted payload at the declared
-path and require the correct version, kind, and findings array. This validates
-the envelope, not every field or the truth of every finding; the rubric judges
-the artifact's content from the recorded edit.
-
-`calibration.json` records why each case was retained, corrected, or added.
-Some fixtures advance evidence only after a recorded action, such as waiting
-for checks or receiving a simulated user answer. These transitions test workflow
-decisions; they do not constitute a real forge state machine. `skills.migrate`
-likewise records use of the registered migration workflow without installing
-skills on the host.
-
-Cases with `requiredSkillCitations` check an actual Markdown link to the source
-path returned by `loadSkill` and the required quoted passage from its returned
-instructions. The link and quotation must appear together in a final response
-or a report/question's text fields; unrelated action data and metadata cannot
-supply them. Bare paths and guessed relative links fail. This gate supports
-ordinary inline Markdown links and block, double-quoted, or code quotations;
-semantic review still checks relevance and the surrounding explanation. Both
-`loadSkill` and `readSkillReference` return their actual absolute source paths;
-reference citations can therefore target the reference itself.
+in a project root holding those same files and the skills installed in that
+run, so a block line that reads the repository's configuration appears there.
+Both CLIs isolate ambient project files, so the harness also appends the
+AGENTS.md block and the configuration files to the instructions of every
+candidate and worker run. The snapshot keeps the generator with the harness.
+Each run record exposes `environment`: the files written, the AGENTS.md block
+injected, and the case's repository evidence. `eval:dry` counts the cases per
+environment.
 
 ## Independent semantic review
 

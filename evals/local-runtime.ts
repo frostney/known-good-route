@@ -344,6 +344,9 @@ export async function runLocal(options: {
   onExit?: () => Promise<void>;
   isolateProcessGroup?: boolean;
   server?: false | { path: string; args: string[]; approvedTools?: string[] };
+  // Repository files the case declares, written into the workspace before the
+  // run starts.
+  workspaceFiles?: Record<string, string>;
 }) {
   if (options.server === false && options.evalCase.worker)
     throw new Error("A tool-free evaluation cannot start a worker");
@@ -351,6 +354,10 @@ export async function runLocal(options: {
   const work = await mkdtemp(join(tmpdir(), "kgr-eval-"));
   const ledgerPath = join(work, "ledger.json");
   await Bun.write(join(work, "instructions.md"), options.instructions);
+  if (options.workspaceFiles) {
+    const { writeFiles } = await import("./agents-context.ts");
+    await writeFiles(work, options.workspaceFiles);
+  }
   const serverArgs = options.server
     ? [options.server.path, ...options.server.args, ledgerPath]
     : [

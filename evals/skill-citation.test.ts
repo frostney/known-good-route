@@ -8,7 +8,7 @@ import type { EvalCase, RunLedger } from "./types.ts";
 const passage = "If required external evidence is unavailable, stop the dependent work";
 const requirement = { skill: "implement", passage };
 const scenario: EvalCase = {
-  id: "citation", description: "", prompt: "", fixture: {evidence:{}},
+  id: "citation", description: "", prompt: "", fixture: { environment: { orchestration: null }, evidence: {} },
   expected: {
     requiredSkillCitations: [requirement],
     rubric: [{ id: "paused", question: "Does the answer pause the dependent work?" }],
