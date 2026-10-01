@@ -4,6 +4,7 @@ import { deliveryCases } from "./delivery-cases.ts";
 import { historyCases } from "./history-cases.ts";
 import { executionCases } from "./execution-cases.ts";
 import { stackDependencyCases } from "./stack-dependency-cases.ts";
+import { deepDiveCases } from "./deep-dive-cases.ts";
 import type { EvalCase } from "./types.ts";
 
 // Passing results that become available only after the run continues past a
@@ -26,6 +27,7 @@ export const evalCases: EvalCase[] = [
   ...promptingCases,
   ...executionCases,
   ...stackDependencyCases,
+  ...deepDiveCases,
   {
     id: "create-pr-already-committed",
     description: "A clean feature branch must not receive an empty commit.",

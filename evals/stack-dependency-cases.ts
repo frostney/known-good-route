@@ -248,7 +248,7 @@ export const stackDependencyCases: EvalCase[] = [
   {
     id: "create-pr-truncated-open-pr-list-stops",
     // Claude Code caps MCP tool output well below this 1000-row listing, so only Codex can read it live.
-    models: ["codex:gpt-6-astra", "codex:gpt-6-sol"],
+    models: ["codex:gpt-6-astra", "codex:gpt-6.1-sol"],
     description: "An open-PR listing that returns exactly its limit may be truncated, so publication does not proceed on it.",
     prompt: "/create-pr for issue #121.",
     fixture: {

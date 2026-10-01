@@ -96,3 +96,16 @@ test("the runner writes the environment into the workspace before the CLI starts
     await rm(work, { recursive: true, force: true });
   }
 });
+
+test("a project's own AGENTS.md text stays beside the generated skills block and is not listed twice", async () => {
+  const { loadSkills } = await import("./skill-loader.ts");
+  const { resolve } = await import("node:path");
+  const project = "# Agent Instructions\n\n- Always apply `deep-dive`: check what actually ran.\n";
+  const files = environmentFiles({ orchestration: { endpoint: "deployed", entryPoints: "stop" }, files: { "AGENTS.md": project } });
+  const agents = await agentsFileFor(await loadSkills(resolve(import.meta.dir, "..")), files);
+  expect(agents).toStartWith(project);
+  expect(agents).toContain("<!-- known-good-route:agents:begin -->");
+  const instructions = portableAgentInstructions("<catalog/>", agents, files);
+  expect(instructions).not.toContain('<file path="AGENTS.md">');
+  expect(instructions.split("Always apply `deep-dive`").length).toBe(2);
+});

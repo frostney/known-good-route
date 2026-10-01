@@ -5,7 +5,7 @@ import type { EvalCase, RunLedger } from "./types.ts";
 
 export const defaultModels = [
   "codex:gpt-6-astra",
-  "codex:gpt-6-sol",
+  "codex:gpt-6.1-sol",
   "claude:claude-fable-5-1",
   "claude:claude-opus-5-5",
 ];

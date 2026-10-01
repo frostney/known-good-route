@@ -2688,8 +2688,96 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "6ac8205fa2b46263c332b529f9d412edcc98d3893186047aaa89c8587e31f295",
+      "afterSha256": "0a166e97be16c654e49f651812716d9e181a346a0fce713982d3807ddd7c2a6f",
       "frozenCaseSha256": "60953bbb0fdd8f92940b9e0f5d438eb679a641cf93a78447a37834dfb25fce71"
+    },
+    {
+      "caseId": "deep-dive-wrong-lock-holder",
+      "status": "new",
+      "rationale": [
+        "Reconstructed with invented data: a process for the waiting PR looks like the flock holder; the lock file's epoch and a non-blocking flock probe identify the earlier PR, which waits on a CI job with no online runner. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer whose verdict file the result cites. Fresh native run required.",
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "84201b84c1f89da8695bee5982935c774af56d959c8c21d47d108153859a3215",
+      "frozenCaseSha256": "328f4268f2d2c145e5cce9a3c7b949b2c514b4499522c0981e1f10501ec41f39"
+    },
+    {
+      "caseId": "deep-dive-wrong-lock-holder-review",
+      "status": "new",
+      "rationale": [
+        "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer.",
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "59a8f304b28f5519f27b5699e11770cbb588f8254a07cff72bb42bc4a758b25a",
+      "frozenCaseSha256": "49d1c10d5474f580d7a49b198fbdad9d9db2d8e0b94aaa74c252018060d23a96"
+    },
+    {
+      "caseId": "deep-dive-unloaded-instruction-blamed",
+      "status": "new",
+      "rationale": [
+        "Reconstructed with invented data: a weakly worded reply-length skill looks responsible, but the session record shows it never loaded while always-loaded AGENTS.md demands long replies. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer whose verdict file the result cites. Fresh native run required.",
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "8d96b413c45d36653fee53e4d78fd5581f838c88889dfae2224185a1c59651a2",
+      "frozenCaseSha256": "71648b210e5264c120e6616c2043842b5cdcadd81002ce4415c5e0eadfb67968"
+    },
+    {
+      "caseId": "deep-dive-unloaded-instruction-blamed-review",
+      "status": "new",
+      "rationale": [
+        "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer.",
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "0a3fda0acc780339b937e2dba7b33754004bc4ee8d22e0630bde03f0cf47a625",
+      "frozenCaseSha256": "edea9fde8ae3e6613dd69a9f52776e4ff195484a1aec2bf0086b614117b86235"
+    },
+    {
+      "caseId": "deep-dive-private-data-leak",
+      "status": "new",
+      "rationale": [
+        "Reconstructed with invented data: a missed anonymization step looks responsible for private fixtures in a public repository; the session record shows it never ran, the brief never established either repository's visibility, and no check ran at publication. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer whose verdict file the result cites. Fresh native run required.",
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "43837bd6da2ca3a2da9acb7f11f98aa3d6eef7b85f0df3dd32b39c7245a5090b",
+      "frozenCaseSha256": "28be22afb337053e291e987008a22cb2dbea9159e0a2dc3b19e5940ec72154df"
+    },
+    {
+      "caseId": "deep-dive-private-data-leak-review",
+      "status": "new",
+      "rationale": [
+        "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer.",
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "54eca59e435ad1cd96a111b8d4c5579863e9919d4678df8b9a33cb1c52c61a31",
+      "frozenCaseSha256": "b4c75ee28bbe8eb9787ba8e987c45392ee8d34044aa3ff0d0e842e1b0cd03d7c"
+    },
+    {
+      "caseId": "deep-dive-script-error-masked-duplicate",
+      "status": "new",
+      "rationale": [
+        "Rebuilt from a real storefront investigation with every name, vendor, domain and number replaced: a site-wide \"Script error.\" blamed on a coincident checkout release is ruled out by its onset, page coverage and buyer rate, and traced to a referral script loaded twice behind a cross-origin mask. Requires the real cause without prompting, the ruled-out first explanation and a fresh review whose verdict file the result cites. Fresh native run required.",
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "26b29846d2c310c51aff60c23179e3f44d88b0ec60a4b9ea10877a136f955598",
+      "frozenCaseSha256": "58b294f42269c483c7858cd16a98f050f249e750847cb464a8cb60e00271dc98"
+    },
+    {
+      "caseId": "deep-dive-script-error-masked-duplicate-review",
+      "status": "new",
+      "rationale": [
+        "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer.",
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "5a351d958e4b5d95baf5e9303adc2542d9a280bb8378800fe3e42737bcf9b58c",
+      "frozenCaseSha256": "2a36b105550cd75961c0e265f47490eac89493b632b5da1324f67927b8a0d259"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",
