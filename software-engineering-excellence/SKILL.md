@@ -8,7 +8,7 @@ description: >-
 license: Unlicense OR MIT
 metadata:
   agents-role: ambient
-  agents-text: Keep the agreed scope, ground claims in current evidence, and finish verified work during substantial technical tasks.
+  agents-text: Keep the agreed scope, ground claims in current evidence, re-run checks that return nothing, and stop only for a secret, a paid or account action, or the person's decision.
 ---
 
 # Software engineering excellence

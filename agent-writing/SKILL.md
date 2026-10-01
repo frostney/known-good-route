@@ -8,7 +8,7 @@ description: >-
 license: Unlicense OR MIT
 metadata:
   agents-role: ambient
-  agents-text: Write replies, reports, PR and issue text, and docs that lead with the outcome and keep the evidence.
+  agents-text: Write replies, reports, PR and issue text, and docs that lead with the outcome and keep the evidence; a correction re-runs its check first.
 ---
 
 # Agent writing
