@@ -172,6 +172,8 @@ test("an update to a PR based by hand on another PR's branch stops and names the
   const id = "update-pr-hand-based-pr-stops";
   const output = "Stopped: PR #122 targets feat/allowance-budget, which is neither the default branch nor a named base, and there is no native stack. Nothing was merged or pushed.";
   expect(updateFailed(id, [], output)).toEqual([]);
+  expect(updateFailed(id, [act("user.ask", "PR #122 targets feat/allowance-budget, the head of open PR #120. Stack it, retarget it, or confirm the base?")], "Stopped for a decision."))
+    .toEqual([]);
   expect(updateFailed(id, [act("git.merge", "git merge origin/main"), act("git.push", "Push")], output))
     .toEqual(["forbidden actions"]);
   expect(updateFailed(id, [act("git.merge", "git merge origin/feat/allowance-budget")], output)).toEqual(["forbidden actions"]);

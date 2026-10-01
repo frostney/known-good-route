@@ -217,7 +217,8 @@ export const stackDependencyCases: EvalCase[] = [
     },
     expected: {
       requiredSkills: ["update-pr"],
-      forbiddenActions: [...stopped, "git.merge", "git.stackSync", "user.ask"],
+      // Asking which base to use is a stop too; choosing one is not.
+      forbiddenActions: [...stopped, "git.merge", "git.stackSync"],
       reportPatterns: ["feat/allowance-budget|#120\\b"],
     },
   },

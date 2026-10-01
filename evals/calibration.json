@@ -2509,11 +2509,12 @@
       "caseId": "update-pr-hand-based-pr-stops",
       "status": "new",
       "rationale": [
-        "A PR whose base was set by hand to another PR's feature branch has no base an update may merge: it stops and reports that base instead of merging the default branch or the feature branch. Fresh native run required."
+        "A PR whose base was set by hand to another PR's feature branch has no base an update may merge: it stops and reports that base instead of merging the default branch or the feature branch. Fresh native run required.",
+        "Grader corrected: a stop that asks which base to use is a justified pause, so user.ask is no longer forbidden. The original Opus run stopped, merged nothing, named the base and asked; its output is retained and passes regraded."
       ],
       "beforeSha256": null,
-      "afterSha256": "7d3c95b37b3087b9b97d9851768d8b9844d409dddbe199943cbf182e67bc1c3f",
-      "frozenCaseSha256": "7d3c95b37b3087b9b97d9851768d8b9844d409dddbe199943cbf182e67bc1c3f"
+      "afterSha256": "51d3461d9d0e1d25aae865feb30a43547e523ea386149670bc90dca34a9afa05",
+      "frozenCaseSha256": "51d3461d9d0e1d25aae865feb30a43547e523ea386149670bc90dca34a9afa05"
     },
     {
       "caseId": "create-pr-named-base-dependency-on-default-pr-stops",
