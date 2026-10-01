@@ -149,10 +149,13 @@ record policy-threshold checkpoints and interventions.
 
 Record work that a later head, base, topology, or decision made obsolete with
 a `work_superseded` event whose `spanId` names the superseded span. At closure
-that span must have a `span_finished` with result `cancelled`, or a non-empty
-`blocker` on the `work_superseded` event or on that `span_finished` saying why
-it could not be cancelled. `ingest` accepts superseded work that is still in
-flight.
+that span must be one the run started and finished, and either its
+`span_finished` has result `cancelled`, or a `blocker` string on the
+`work_superseded` event or on that `span_finished` says why it was not
+cancelled. Work that had already finished when it was superseded needs the
+blocker too. The `work_superseded` event's own `result` is not consulted, and
+a later `work_superseded` event for the same span can supply the blocker.
+`ingest` accepts superseded work that is still in flight.
 
 Before milestone closure, `validate` must succeed for the current `runId`.
 Missing or conflicting IDs, invalid measurement streams, unclosed spans,

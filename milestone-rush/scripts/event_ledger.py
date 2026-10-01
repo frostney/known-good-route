@@ -391,6 +391,11 @@ def metric_value(event: dict[str, Any], path: str) -> int | float | None:
     return event[group][field]
 
 
+def states_blocker(event: dict[str, Any]) -> bool:
+    blocker = event["blocker"]
+    return isinstance(blocker, str) and bool(blocker.strip())
+
+
 def validate_run(
     events: list[dict[str, Any]], run_id: str, *, closure: bool = True
 ) -> dict[str, Any]:
@@ -502,19 +507,19 @@ def validate_run(
         span_id = event["spanId"]
         if not isinstance(span_id, str) or not span_id:
             raise LedgerError(f"event {event['eventId']} work_superseded requires spanId")
-        superseded[span_id] = superseded.get(span_id, False) or bool(event["blocker"])
+        superseded[span_id] = superseded.get(span_id, False) or states_blocker(event)
     if closure:
+        unknown = sorted(set(superseded) - set(started))
+        if unknown:
+            raise LedgerError(
+                "superseded work names spans that never started: " + ", ".join(unknown)
+            )
         unaccounted = sorted(
             span_id
             for span_id, blocked in superseded.items()
             if not blocked
-            and not (
-                span_id in finished
-                and (
-                    finished[span_id]["result"] == "cancelled"
-                    or finished[span_id]["blocker"]
-                )
-            )
+            and finished[span_id]["result"] != "cancelled"
+            and not states_blocker(finished[span_id])
         )
         if unaccounted:
             raise LedgerError(

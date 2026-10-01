@@ -325,8 +325,8 @@ class EventLedgerTest(unittest.TestCase):
         self,
         *,
         finish_result: str | None = None,
-        finish_blocker: str | None = None,
-        superseded_blocker: str | None = None,
+        finish_blocker: Any = None,
+        superseded_blocker: Any = None,
     ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
         events = [
             event(
@@ -381,19 +381,58 @@ class EventLedgerTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, output)
         self.assertTrue(output["valid"])
 
-    def test_an_empty_blocker_does_not_account_for_superseded_work(self) -> None:
-        result, output = self.superseded_span(
-            finish_result="failed", superseded_blocker=""
+    def test_a_blocker_that_states_nothing_does_not_account_for_superseded_work(self) -> None:
+        for index, blocker in enumerate(("", "  ", True, 1, {"reason": "none"})):
+            with self.subTest(blocker=blocker):
+                self.ledger = self.directory / f"events-{index}.jsonl"
+                result, output = self.superseded_span(
+                    finish_result="failed", superseded_blocker=blocker
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("superseded work without", output["reason"])
+
+    def test_a_later_superseded_event_can_supply_the_blocker(self) -> None:
+        result, output = self.superseded_span(finish_result="succeeded")
+        self.assertEqual(result.returncode, 2)
+        for event_id, blocker in (("event-4", "the run had already finished"), ("event-5", None)):
+            repair = event(
+                event_id, event_type="work_superseded", sequence=None,
+                span_id="span-1", span_kind="ci",
+            )
+            repair["blocker"] = blocker
+            result, output = self.ingest(repair)
+            self.assertEqual(result.returncode, 0, output)
+        result, output = self.command(
+            "validate", "--ledger", str(self.ledger), "--run-id", "run-1"
+        )
+        self.assertEqual(result.returncode, 0, output)
+
+    def test_superseded_work_must_name_a_span_of_the_run(self) -> None:
+        superseded = event(
+            "event-1", event_type="work_superseded", sequence=None,
+            span_id="span-typo", span_kind="ci",
+        )
+        superseded["blocker"] = "the CI service cannot cancel a queued run"
+        result, output = self.ingest(superseded)
+        self.assertEqual(result.returncode, 0, output)
+        result, output = self.command(
+            "validate", "--ledger", str(self.ledger), "--run-id", "run-1"
         )
         self.assertEqual(result.returncode, 2)
-        self.assertIn("superseded work without", output["reason"])
+        self.assertIn(
+            "superseded work names spans that never started: span-typo",
+            output["reason"],
+        )
 
     def test_ingest_accepts_superseded_work_that_is_still_in_flight(self) -> None:
-        # The helper asserts that ingest, which validates without closure,
-        # accepted the unfinished superseded span.
-        result, output = self.superseded_span()
+        # Ingest validates without closure; the helper asserts it accepted the
+        # unfinished superseded span. A blocker does not close the span.
+        result, output = self.superseded_span(
+            superseded_blocker="the CI service cannot cancel a queued run"
+        )
         self.assertEqual(result.returncode, 2)
         self.assertIn("unclosed spans: span-1", output["reason"])
+        self.assertEqual(len(self.ledger.read_text().splitlines()), 2)
 
     def test_superseded_work_must_name_its_span(self) -> None:
         result, output = self.ingest(
