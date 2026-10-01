@@ -11,16 +11,16 @@ the recorded history:
 
 - `completion`: a head is complete only when CodeRabbit posted a findings
   review of that exact head, or a matching coverage marker followed by a
-  `Review completed` status on it;
+  `Review completed` status on it, after the head's latest push, open or
+  ready event and the latest trigger on the pull request;
 - `refused-trigger`: no trigger while the head's latest refusal states a wait
-  that is still running, and, with the suffix `:account`, none while another
-  refusal's stated wait on the account was still running and the next status
-  on the head is a rate limit; a recorded trigger at that point that
-  CodeRabbit accepted excuses either;
+  that is still running, unless a recorded trigger at that point was
+  accepted;
 - `automatic-review`: no trigger while CodeRabbit's own review of the head
   starts within 120 s;
 - `unbounded`: every decision is final, a trigger, or a wait with a bound or
-  retry time; and
+  retry time;
+- `expired-bound`: a wait's bound or retry time is still ahead; and
 - `error`: the adapter never fails on recorded data.
 
 Exits 1 when it finds a violation that `fixtures/coderabbit_replay_pinned.json`
@@ -54,6 +54,7 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 CORPUS = FIXTURES / "coderabbit_recorded.json"
 PINNED = FIXTURES / "coderabbit_replay_pinned.json"
 TRIGGER_STATES = {"trigger-incremental", "trigger-full"}
+REVIEW_COMMANDS = {"@coderabbitai review", "@coderabbitai full review"}
 
 
 def at(value: str) -> float:
@@ -281,15 +282,6 @@ class History:
         self.by_repo: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for pull in pulls:
             self.by_repo[pull["repo"]].append(pull)
-        # Every stated wait on each owner's account.
-        self.waits: dict[str, list[tuple[float, float]]] = defaultdict(list)
-        for pull in pulls:
-            for head in pull["heads"].values():
-                for status in head["statuses"]:
-                    if ADAPTER.status_kind(status) == "rate-limited":
-                        wait = stated_wait([pull], status)
-                        if wait:
-                            self.waits[pull["repo"].split("/")[0]].append(wait)
 
     def statuses(self, repo: str, sha: str) -> list[dict[str, Any]]:
         found = {
@@ -300,18 +292,34 @@ class History:
         }
         return sorted(found.values(), key=lambda item: (item["created_at"], item["id"]))
 
-    def triggers(self, pull: dict[str, Any]) -> list[float]:
-        """Every comment that asked CodeRabbit for a review, including ones with more text."""
-        commands = {f"[mentions] {body}" for body in ADAPTER.TRIGGERS.values()} | set(ADAPTER.TRIGGERS.values())
+    def triggers(self, pull: dict[str, Any], whole_line: bool = False) -> list[float]:
+        """Every comment that mentions a review command, or, when `whole_line`, has a line that is one."""
+
+        def asks(body: str) -> bool:
+            lines = [line.strip().lower() for line in body.splitlines()]
+            if whole_line:
+                return any(line in REVIEW_COMMANDS for line in lines)
+            return any(command in line for line in lines for command in REVIEW_COMMANDS)
+
         return [
             at(item["created_at"])
             for item in pull["comments"]
-            if item["user"]["login"] == "maintainer" and item["versions"][0][1].lower() in commands
+            if item["user"]["login"] == "maintainer" and asks(item["versions"][0][1])
         ]
 
+    def cycle_start(self, pull: dict[str, Any], sha: str, now: float) -> float:
+        """The head's latest push, open or ready event or trigger on the pull request by `now`."""
+        arrival = next(time for time, head in head_timeline(pull) if head == sha)
+        moments = [arrival, at(pull["createdAt"])]
+        moments += [at(event["at"]) for event in pull["events"] if event["type"] == "ready"]
+        moments += [time for time in self.triggers(pull, whole_line=True) if time >= arrival]
+        return max(moment for moment in moments if moment <= now)
+
     def completed_with_evidence(self, pull: dict[str, Any], sha: str, now: float) -> bool:
+        cutoff = self.cycle_start(pull, sha, now)
         for review in pull["reviews"]:
-            if review["commit_id"] == sha and at(review["submitted_at"]) <= now and ADAPTER.findings_review([review], sha):
+            submitted = at(review["submitted_at"])
+            if review["commit_id"] == sha and cutoff < submitted <= now and ADAPTER.findings_review([review], sha):
                 return True
         parents = pull["heads"][sha]["parents"]
         covered = {sha} | ({parents[0]} if len(parents) > 1 else set())
@@ -325,7 +333,7 @@ class History:
         completed = [
             at(status["created_at"])
             for status in self.statuses(pull["repo"], sha)
-            if ADAPTER.status_kind(status) == "completed" and at(status["created_at"]) <= now
+            if ADAPTER.status_kind(status) == "completed" and cutoff < at(status["created_at"]) <= now
         ]
         return any(marker <= done for marker in markers for done in completed)
 
@@ -334,8 +342,12 @@ class History:
         found = []
         if state in ADAPTER.COMPLETE_STATES and not self.completed_with_evidence(pull, sha, now):
             found.append("completion")
-        if state not in ADAPTER.FINAL_STATES | TRIGGER_STATES and not (decision.get("boundAt") or decision.get("retryAt")):
-            found.append("unbounded")
+        if state not in ADAPTER.FINAL_STATES | TRIGGER_STATES:
+            bound = decision.get("retryAt") or decision.get("boundAt")
+            if not bound:
+                found.append("unbounded")
+            elif at(bound) <= now:
+                found.append("expired-bound")
         if state not in TRIGGER_STATES:
             return found
         statuses = self.statuses(pull["repo"], sha)
@@ -354,10 +366,6 @@ class History:
         own = stated_wait(sharing, refusals[-1]) if refusals else None
         if own and now < own[1] and not accepted:
             found.append("refused-trigger")
-        elif after and ADAPTER.status_kind(after[0]) == "rate-limited" and not accepted:
-            owner = pull["repo"].split("/")[0]
-            if any(wait[0] <= now < wait[1] for wait in self.waits[owner]):
-                found.append("refused-trigger:account")
         for status in after:
             started = at(status["created_at"])
             if started > now + ADAPTER.AUTOMATIC_REVIEW_SECONDS:
