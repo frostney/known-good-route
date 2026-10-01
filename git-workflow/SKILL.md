@@ -62,7 +62,8 @@ new repository or operation needs its own scope.
   `git commit -F FILE`, and report what it rewrote.
 - Before each push, run `python3 scripts/publication_guard.py outgoing --base
   REMOTE/DEFAULT` and commit anything it stages. If the guard exits 2, fix the
-  error it prints and rerun it before publishing.
+  error it prints and rerun it before publishing. Report each earlier commit it
+  names: the push publishes those commits as they are.
 - Use concise Conventional Commit subjects in imperative mood. Each commit title
   must state its observable impact, not only the mechanism changed.
 - Let hooks run unless the user explicitly asks otherwise.

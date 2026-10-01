@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Rewrite private GitHub references out of content bound for a public repository.
+"""Rewrite private GitHub references and local machine paths out of content bound
+for a public repository.
+
+Local paths become neutral forms: a path inside the repository checkout or one
+of its worktrees becomes ./relative, the home directory becomes ~, an agent
+session or per-user temporary directory becomes /tmp, and a dash-encoded project
+folder becomes example-project.
 
 Standard library only. Exits 0 after rewriting (or finding nothing to rewrite)
 and 2 when Git or GitHub cannot answer a question the guard depends on. The
@@ -9,6 +15,7 @@ expressions in .github/publication-guard.json as {"keep": ["^Ticket:"]}.
 from __future__ import annotations
 
 import argparse
+import getpass
 import hashlib
 import json
 import os
@@ -41,6 +48,20 @@ NOT_REPOSITORY_OWNERS = {
     "organizations", "pricing", "pulls", "readme", "search", "security", "settings", "site", "sponsors",
     "topics", "trending", "users",
 }
+# A path prefix ends where a name cannot continue; it starts where no other path or word does.
+NAME_END = r"(?![\w-]|\.\w)"
+PATH_START = r"(?<![\w.~-])"
+SEPARATOR = r"(?:/|\\{1,2})"  # Also matches backslashes escaped inside JSON strings.
+SEGMENT = r"[^\s/\\\"'`)\]>|,;]"
+# Per-session and per-user temporary roots. /tmp and /private/tmp on their own
+# name nothing personal and code uses them literally, so they stay.
+TEMP_ROOTS = re.compile(
+    rf"{PATH_START}(?:(?:/private)?/tmp/claude-[\w.-]+(?=[/\\])"
+    rf"|(?:/private)?/var/folders/[\w+.-]+/[\w+.-]+(?:/[A-Z0-9]{NAME_END})?{NAME_END})"
+)
+# Agent tools name session folders after the working directory with every
+# separator turned into a dash, such as -Users-<name>-<project>.
+ENCODED_PROJECT = re.compile(rf"(?<![\w.-])(?:[A-Za-z]-)?-(?:Users|home)-[A-Za-z0-9_.]+-{SEGMENT}*")
 STATUS = r"pass(?:ed|ing)?|fail(?:ed|ing|ure)?|ok|error|success(?:ful)?|pending|skipped|cancell?ed|timed[ -]out|neutral|queued|in[ _-]progress|completed|blocked|merged|closed|open"
 DEFAULT_KEEP = (
     r"^\s*(?:>\s*)?(?:\*\*[^*\n]{1,80}:\*\*|<!--.*-->|\[![A-Z]+\])",
@@ -154,11 +175,101 @@ class Mapper:
             os.replace(temporary, self.path)
 
 
+def path_variants(path):
+    """The spellings one directory can appear under, such as macOS /private/tmp and /tmp."""
+    path = str(path).rstrip("/\\")
+    if not path:
+        return set()
+    found = {path, os.path.realpath(path)} if path.startswith("/") else {path}
+    return found | {item[len("/private"):] for item in found if item.startswith("/private/")}
+
+
+def prefix_pattern(path):
+    parts = [part for part in re.split(r"[/\\]+", path) if part]
+    drive = re.fullmatch(r"[A-Za-z]:", parts[0]) is not None
+    return PATH_START + ("" if drive else SEPARATOR) + SEPARATOR.join(re.escape(part) for part in parts) + NAME_END
+
+
+def literal_rules(paths, replacement, alone=None):
+    """Rules for each spelling of PATHS, longest first; ALONE replaces a path with nothing after it."""
+    variants = {variant for path in paths for variant in path_variants(path)}
+    rules = []
+    for variant in sorted(variants, key=len, reverse=True):
+        pattern = prefix_pattern(variant)
+        if alone is None:
+            rules.append((re.compile(pattern, re.I), replacement))
+        else:
+            rules.append((re.compile(pattern + r"(?=[/\\])", re.I), replacement))
+            rules.append((re.compile(pattern + r"(?![/\\])", re.I), alone))
+    return rules
+
+
+class LocalPaths:
+    """Rewrites absolute paths that name this machine's user, folders or agent session."""
+
+    def __init__(self, main_checkout=None, linked_worktrees=(), temp_dirs=(), homes=(), username=None):
+        homes = {home for home in homes if home and home.strip("/\\")}
+        self.rules = literal_rules(temp_dirs, "/tmp")
+        self.rules.append((TEMP_ROOTS, "/tmp"))
+        if username:
+            self.rules.append((re.compile(
+                rf"{PATH_START}(?:[A-Za-z]:|/mnt/[A-Za-z]|/[A-Za-z](?=[/\\]))?{SEPARATOR}(?:Users|home)"
+                rf"{SEPARATOR}{re.escape(username)}{NAME_END}", re.I), "~"))
+        self.rules += literal_rules(homes, "~")
+        for home in sorted(homes):
+            encoded = re.escape(re.sub(r"[^A-Za-z0-9]", "-", home.rstrip("/\\")))
+            self.rules.append((re.compile(rf"(?<![\w.-]){encoded}(?:-{SEGMENT}*)?(?!{SEGMENT})"), "example-project"))
+        self.rules.append((ENCODED_PROJECT, "example-project"))
+        # A main checkout outside the home and temporary folders, such as /app in
+        # a container, names nothing personal, and files there often mean that
+        # path literally (WORKDIR /app), so only checkouts these rules would
+        # rewrite anyway become relative.
+        checkouts = list(linked_worktrees)
+        if main_checkout and any(self.rewrite(variant)[1] or re.match(r"(?:/private)?(?:/var)?/tmp/.", variant)
+                                 for variant in path_variants(main_checkout)):
+            checkouts.append(main_checkout)
+        # ./ for the checkout on its own, so "in <checkout>." does not read as "in .."
+        self.rules[:0] = literal_rules(checkouts, ".", alone="./")
+
+    @classmethod
+    def from_environment(cls, root):
+        worktrees = [str(root)]
+        result = run(["git", "worktree", "list", "--porcelain"], cwd=root, check=False)
+        if result.returncode == 0:
+            worktrees = [line[len("worktree "):] for line in result.stdout.decode(errors="replace").split("\n")
+                         if line.startswith("worktree ")] or worktrees
+        homes = [str(Path.home()), os.environ.get("HOME", ""), os.environ.get("USERPROFILE", "")]
+        try:
+            username = getpass.getuser()
+        except Exception:  # getuser raises OSError or KeyError when no user can be named.
+            username = None
+        temp_dirs = [os.environ.get(name, "") for name in ("TMPDIR", "TEMP", "TMP")]
+        return cls(worktrees[0], worktrees[1:], temp_dirs, homes, username)
+
+    def rewrite(self, text):
+        count = 0
+
+        def substitute(replacement):
+            def apply(match):
+                nonlocal count
+                count += match.group(0) != replacement
+                return replacement
+            return apply
+
+        for pattern, replacement in self.rules:
+            text = pattern.sub(substitute(replacement), text)
+        return text, count
+
+    def present(self, texts):
+        return any(self.rewrite(text)[1] for text in texts)
+
+
 class Sanitiser:
-    def __init__(self, private, mapper, keep):
+    def __init__(self, private, mapper, keep, local=None):
         self.private = private
         self.mapper = mapper
         self.keep = keep
+        self.local = local
         self.counts = {}
         self.placeholders = set()
 
@@ -198,6 +309,17 @@ class Sanitiser:
             return self.neutral(match) + trailing
 
         return REFERENCE.sub(reference, MARKDOWN_LINK.sub(link, text))
+
+    def local_paths(self, text):
+        if self.local is None:
+            return text
+        text, count = self.local.rewrite(text)
+        if count:
+            self.bump("paths", count)
+        return text
+
+    def metadata(self, text):
+        return self.prose(self.local_paths(text))
 
     def data_string(self, text):
         def sha(match):
@@ -261,6 +383,8 @@ class Sanitiser:
         return node
 
     def document(self, path, text):
+        # Path rewrites stop at quotes and escapes, so they never break JSON syntax.
+        text = self.local_paths(text)
         if path.lower().endswith(".json"):
             try:
                 original = json.loads(text)
@@ -290,6 +414,31 @@ def added_lines(diff):
         elif in_hunk and line.startswith("+"):
             lines.append(line[1:])
     return lines
+
+
+def added_lines_by_path(diff):
+    found, path, in_hunk = {}, None, False
+    for line in diff.decode("utf-8", errors="replace").split("\n"):
+        if line.startswith("diff --git"):
+            path, in_hunk = None, False
+        elif not in_hunk and line.startswith("+++ "):
+            path = line[6:] if line.startswith("+++ b/") else None
+        elif line.startswith("@@"):
+            in_hunk = True
+        elif in_hunk and path and line.startswith("+"):
+            found.setdefault(path, []).append(line[1:])
+    return found
+
+
+def outgoing_commits(root, base):
+    """Each commit after BASE with its message and the lines it adds, per file."""
+    commits = []
+    for sha in git("rev-list", "--reverse", "--no-merges", f"{base}..HEAD", cwd=root).decode().split():
+        message = git("show", "-s", "--format=%B", sha, cwd=root).decode("utf-8", errors="replace")
+        diff = git("-c", "core.quotePath=false", "diff-tree", "-p", "-r", "--root", "--no-commit-id", "--unified=0",
+                   "--no-color", "--no-ext-diff", "--no-renames", sha, cwd=root)
+        commits.append((sha, message, added_lines_by_path(diff)))
+    return commits
 
 
 def changed_paths(root, spec):
@@ -397,35 +546,50 @@ def guard(args):
     for name in ("message_file", "title_file", "body_file"):
         if getattr(args, name, None):
             texts[name] = Path(getattr(args, name)).read_text(encoding="utf-8")
+    history = outgoing_commits(root, args.base) if outgoing else []
     found = {}
-    for path, lines in files:
+    for path, lines in files + [item for _, _, by_path in history for item in by_path.items()]:
         for slug, forms in candidates(lines, root, str(Path(path).parent)).items():
             found.setdefault(slug, set()).update(forms)
-    for slug, forms in candidates(texts.values(), root).items():
+    for slug, forms in candidates(list(texts.values()) + [message for _, message, _ in history], root).items():
         found.setdefault(slug, set()).update(forms)
     resolver = Resolver(destination)
     private = {slug.lower() for slug, forms in found.items() if resolver.is_private(slug, forms)}
-    if not private:
+    local = LocalPaths.from_environment(root)
+
+    def carries(lines):
+        return local.present(lines) or any(
+            slug_of(match)[1].lower() in private for line in lines for match in REFERENCE.finditer(line))
+
+    named_commits = False
+    for sha, message, by_path in history:
+        targets = [path for path, lines in by_path.items() if carries(lines)]
+        targets += ["its message"] if carries([message]) else []
+        if targets:
+            named_commits = True
+            report["warnings"].append(f"commit {sha[:7]} adds a private reference or local path to "
+                                      f"{', '.join(targets)}; pushing publishes that commit unchanged")
+    if not private and not any(carries(lines) for _, lines in files) and not carries(list(texts.values())):
         return report
     mapper = Mapper(state_path)
     keep = load_keep(root, report["warnings"])
     placeholders = set()
     for path, _ in files:
-        sanitiser = Sanitiser(private, mapper, keep)
+        sanitiser = Sanitiser(private, mapper, keep, local)
         if rewrite_index(root, path, sanitiser):
             report["rewritten"].append({"target": path, "staged": True, **sanitiser.counts})
             placeholders |= sanitiser.placeholders
     labels = {"message_file": "commit message", "title_file": "PR title", "body_file": "PR body"}
     for name, text in texts.items():
-        sanitiser = Sanitiser(private, mapper, keep)
-        rewritten = sanitiser.prose(text)
+        sanitiser = Sanitiser(private, mapper, keep, local)
+        rewritten = sanitiser.metadata(text)
         if rewritten != text:
             Path(getattr(args, name)).write_text(rewritten, encoding="utf-8")
             report["rewritten"].append({"target": labels[name], **sanitiser.counts})
     mapper.save()
     report["placeholders"] = sorted(placeholders)
-    if outgoing and report["rewritten"]:
-        report["warnings"].append("earlier commits on the branch still contain the original references")
+    if outgoing and report["rewritten"] and not named_commits:
+        report["warnings"].append("earlier commits on the branch still hold the original text")
     return report
 
 
@@ -437,7 +601,8 @@ def render(report):
         lines.append("nothing to rewrite")
     for row in report["rewritten"]:
         details = ", ".join(f"{label} {row[k]}" for k, label in (
-            ("references", "references"), ("numbers", "PR numbers"), ("shas", "SHAs"), ("stubbedLines", "stubbed lines"))
+            ("references", "references"), ("paths", "local paths"), ("numbers", "PR numbers"), ("shas", "SHAs"),
+            ("stubbedLines", "stubbed lines"))
             if row.get(k))
         lines.append(f"rewrote {row['target']}{' (staged)' if row.get('staged') else ''}: {details}")
     lines += [f"placeholder {name} stands for a private repository" for name in report.get("placeholders", [])]

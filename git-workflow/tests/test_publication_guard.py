@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -13,6 +14,20 @@ PRIVATE = "example-private/secret-repo"
 PUBLIC = "octocat/Hello-World"
 SHA = "3f786850e387550fdab836ed7e6dc881de23001b"
 GONE = "example-gone/vanished"  # Answers 404, so a URL to it counts as private.
+SPEC = importlib.util.spec_from_file_location("publication_guard", HELPER)
+publication_guard = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(publication_guard)
+
+# The guard runs as an invented user; its home is outside /Users and /home so
+# the home directory and the username rules can fail separately.
+HOME = "/srv/example-home"
+USER = "example-user"
+TMPDIR = "/private/var/example-tmp/T"
+# Built from parts so that committing this file through the guard keeps them as written.
+AGENT_TMP = "/tmp/" + "claude-1000"
+MAC_TMP = "/var/" + "folders/ab/cd123ef/T"
+ENCODED = "-" + "Users-example-user-Documents-Projects-example-lifecycle-example-project--claude-worktrees-example-worktree"
+SESSION = f"/private{AGENT_TMP}/{ENCODED}/0b6f5a2e-1c3d-4e5f-8a9b-0c1d2e3f4a5b"
 
 # Repositories absent from this table answer 404; example-flaky answers 502.
 FAKE_GH = textwrap.dedent(f"""\
@@ -53,6 +68,8 @@ class PublicationGuardTests(unittest.TestCase):
         (bin_dir / "gh").chmod(0o755 | stat.S_IXUSR)
         self.log = self.base / "gh.log"
         self.env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "FAKE_GH_LOG": str(self.log)}
+        self.guard_env = {key: value for key, value in self.env.items() if key not in {"TEMP", "TMP", "USERPROFILE"}}
+        self.guard_env.update({"HOME": HOME, "TMPDIR": TMPDIR, **{name: USER for name in ("LOGNAME", "USER", "LNAME", "USERNAME")}})
         self.repo = self.base / "repository"
         self.repo.mkdir()
         self.git("init", "--initial-branch=main")
@@ -67,10 +84,11 @@ class PublicationGuardTests(unittest.TestCase):
 
     def guard(self, *args, repo=PUBLIC):
         result = subprocess.run([sys.executable, str(HELPER), *args, "--repo", repo], cwd=self.repo,
-                                capture_output=True, text=True, env=self.env)
+                                capture_output=True, text=True, env=self.guard_env)
         self.assertEqual(result.returncode, 0, result.stderr)
         if repo == PUBLIC:
             self.assertNotIn("secret-repo", result.stdout)
+            self.assertNotIn(USER, result.stdout)
         return result.stdout
 
     def stage(self, files):
@@ -93,13 +111,14 @@ class PublicationGuardTests(unittest.TestCase):
 
     def test_private_destination_is_a_no_op(self):
         other = f"https://github.com/{GONE}/pull/2"
-        self.stage({"a.json": {"repo": PRIVATE, "pr": 4, "from": other}, "notes.md": f"See {PRIVATE}#4 and {other}.\n"})
-        message = self.write("message", f"fix: sync {PRIVATE} from {other}\n")
+        notes = f"See {PRIVATE}#4 and {other} in /Users/{USER}/notes.md.\n"
+        self.stage({"a.json": {"repo": PRIVATE, "pr": 4, "from": other}, "notes.md": notes})
+        message = self.write("message", f"fix: sync {PRIVATE} from {other} via {SESSION}/out.txt\n")
         output = self.guard("staged", "--message-file", str(message), repo=PRIVATE)
         self.assertIn("not public", output)
         self.assertEqual(self.staged_json("a.json"), {"repo": PRIVATE, "pr": 4, "from": other})
-        self.assertEqual(self.staged("notes.md"), f"See {PRIVATE}#4 and {other}.\n")
-        self.assertEqual(message.read_text(), f"fix: sync {PRIVATE} from {other}\n")
+        self.assertEqual(self.staged("notes.md"), notes)
+        self.assertEqual(message.read_text(), f"fix: sync {PRIVATE} from {other} via {SESSION}/out.txt\n")
         self.assertEqual(self.log.read_text().count("repos/"), 1)
 
     def test_public_reference_is_untouched(self):
@@ -229,9 +248,9 @@ class PublicationGuardTests(unittest.TestCase):
 
     def test_second_run_changes_nothing_more(self):
         self.stage({"a.json": {"about": f"From {PRIVATE} with a long free-text sentence", "pr": 8, "head": SHA,
-                               "url": f"https://github.com/{PRIVATE}/pull/8"},
-                    "notes.md": f"See {PRIVATE}#8.\n"})
-        message = self.write("message", f"fix: sync {PRIVATE}\n")
+                               "url": f"https://github.com/{PRIVATE}/pull/8", "log": f"{SESSION}/run.log"},
+                    "notes.md": f"See {PRIVATE}#8 and {self.repo}/notes.md in /Users/{USER}.\n"})
+        message = self.write("message", f"fix: sync {PRIVATE} from {HOME}/notes.md\n")
         body = self.write("body", f"See https://github.com/{PRIVATE}/pull/8\n")
         self.guard("staged", "--message-file", str(message))
         self.guard("pr", "--body-file", str(body))
@@ -240,9 +259,102 @@ class PublicationGuardTests(unittest.TestCase):
         self.assertIn("nothing to rewrite", self.guard("pr", "--body-file", str(body)))
         self.assertEqual((self.staged("a.json"), self.staged("notes.md"), message.read_text(), body.read_text()), first)
 
+    def test_home_directory_and_username_become_a_tilde(self):
+        self.stage({"notes.md": textwrap.dedent(f"""\
+            Config at {HOME}/.config/example-tool.toml.
+            Notes in /Users/{USER}/Documents/notes.md, /home/{USER}/src/app.py and C:\\Users\\{USER}\\AppData\\log.txt.
+            Session log: {HOME}/.claude/projects/-srv-example-home-work-example-project/log.jsonl
+            Untouched: /Users/{USER}name/a, /home/user/b and ~/c.
+            """)})
+        self.assertIn("local paths 6", self.guard("staged"))
+        self.assertEqual(self.staged("notes.md"), textwrap.dedent("""\
+            Config at ~/.config/example-tool.toml.
+            Notes in ~/Documents/notes.md, ~/src/app.py and ~\\AppData\\log.txt.
+            Session log: ~/.claude/projects/example-project/log.jsonl
+            Untouched: /Users/example-username/a, /home/user/b and ~/c.
+            """))
+
+    def test_temporary_folders_become_tmp(self):
+        self.stage({"notes.md": textwrap.dedent(f"""\
+            Answer cites [create-pr/SKILL.md]({SESSION}/scratchpad/create-pr/SKILL.md).
+            Also {AGENT_TMP}/build/out.txt, {MAC_TMP}/report.txt, /private{MAC_TMP}/x.txt,
+            /var/example-tmp/T/cache/a.bin and {TMPDIR}/b.bin.
+            Untouched: /tmp/scratch.txt, /tmp/claude-notes.txt and /private/tmp/run.log.
+            """)})
+        self.guard("staged")
+        self.assertEqual(self.staged("notes.md"), textwrap.dedent("""\
+            Answer cites [create-pr/SKILL.md](/tmp/example-project/0b6f5a2e-1c3d-4e5f-8a9b-0c1d2e3f4a5b/scratchpad/create-pr/SKILL.md).
+            Also /tmp/build/out.txt, /tmp/report.txt, /tmp/x.txt,
+            /tmp/cache/a.bin and /tmp/b.bin.
+            Untouched: /tmp/scratch.txt, /tmp/claude-notes.txt and /private/tmp/run.log.
+            """))
+
+    def test_checkout_and_worktree_paths_become_relative_in_json(self):
+        worktree = self.base / "example-worktree"
+        self.git("worktree", "add", "-b", "example-branch", str(worktree))
+        alias = str(self.repo).removeprefix("/private")  # macOS also spells /private/var as /var.
+        self.stage({"evals/answers.json": {
+            "answers": [{"text": f"Edited [SKILL.md]({self.repo}/create-pr/SKILL.md) and {worktree}/evals/a.json",
+                         "cwd": str(self.repo), "guide": f"{alias}/docs/guide.md"}],
+            "windows": f"C:\\Users\\{USER}\\notes.txt"}})
+        self.guard("staged")
+        expected = {"answers": [{"text": "Edited [SKILL.md](./create-pr/SKILL.md) and ./evals/a.json",
+                                 "cwd": "./", "guide": "./docs/guide.md"}], "windows": "~\\notes.txt"}
+        self.assertEqual(self.staged("evals/answers.json"), json.dumps(expected, indent=2) + "\n")
+
+    def test_main_checkout_outside_home_and_temporary_folders_stays_literal(self):
+        container = publication_guard.LocalPaths("/srv/example-app", ["/srv/example-app/.claude/worktrees/example-worktree"],
+                                                 [], [f"/home/{USER}"], USER)
+        self.assertEqual(container.rewrite("WORKDIR /srv/example-app\n/srv/example-app/.claude/worktrees/example-worktree/a.md"),
+                         ("WORKDIR /srv/example-app\n./a.md", 1))
+        personal = publication_guard.LocalPaths(f"/home/{USER}/src/example-app", [], [], [f"/home/{USER}"], USER)
+        self.assertEqual(personal.rewrite(f"/home/{USER}/src/example-app/a.md and /home/{USER}/b"), ("./a.md and ~/b", 2))
+        scratch = publication_guard.LocalPaths("/var/tmp/example-app")
+        self.assertEqual(scratch.rewrite("/var/tmp/example-app/a.md"), ("./a.md", 1))
+
+    def test_windows_home_and_resolved_spellings_are_recognised(self):
+        windows = publication_guard.LocalPaths(homes=[f"C:\\Users\\{USER}"])
+        self.assertEqual(windows.rewrite(f"C:/Users/{USER}/a and c:\\users\\{USER}\\b"), ("~/a and ~\\b", 2))
+        target = self.base / "session-target"
+        target.mkdir()
+        (self.base / "session-link").symlink_to(target)
+        linked = publication_guard.LocalPaths(temp_dirs=[str(self.base / "session-link")])
+        self.assertEqual(linked.rewrite(f"{target}/log.txt"), ("/tmp/log.txt", 1))
+        self.assertEqual(publication_guard.LocalPaths(temp_dirs=["/tmp"]).rewrite("/tmp/log.txt"), ("/tmp/log.txt", 0))
+
+    def test_local_paths_leave_commit_messages_and_pr_metadata(self):
+        message = self.write("message", f"fix: read /Users/{USER}/notes.txt\n")
+        self.assertIn("rewrote commit message: local paths 1", self.guard("staged", "--message-file", str(message)))
+        self.assertEqual(message.read_text(), "fix: read ~/notes.txt\n")
+        title = self.write("title", f"docs: logs in {SESSION}")
+        body = self.write("body", f"Logs: {SESSION}/out.txt\n")
+        self.guard("pr", "--title-file", str(title), "--body-file", str(body))
+        self.assertEqual(title.read_text(), "docs: logs in /tmp/example-project/0b6f5a2e-1c3d-4e5f-8a9b-0c1d2e3f4a5b")
+        self.assertEqual(body.read_text(), "Logs: /tmp/example-project/0b6f5a2e-1c3d-4e5f-8a9b-0c1d2e3f4a5b/out.txt\n")
+
+    def test_outgoing_names_commits_that_already_hold_the_original_text(self):
+        self.stage({"notes.md": f"Read /Users/{USER}/notes.txt\n", "ported.md": f"Ported from {PRIVATE}.\n"})
+        self.git("commit", "-m", "docs: add notes")
+        leaked = self.git("rev-parse", "--short=7", "HEAD").strip()
+        self.stage({"notes.md": "Read the notes\n"})
+        self.git("rm", "-q", "ported.md")
+        self.git("commit", "-m", "docs: drop the path")
+        clean = self.git("rev-parse", "--short=7", "HEAD").strip()
+        self.stage({"other.md": f"Ported from /home/{USER}/src.\n"})
+        self.git("commit", "-m", f"docs: port from https://github.com/{GONE}/pull/2")
+        both = self.git("rev-parse", "--short=7", "HEAD").strip()
+        output = self.guard("outgoing", "--base", "HEAD~3")
+        self.assertIn(f"commit {leaked} adds a private reference or local path to notes.md, ported.md; "
+                      "pushing publishes that commit unchanged", output)
+        self.assertIn(f"commit {both} adds a private reference or local path to other.md, its message", output)
+        self.assertNotIn(clean, output)
+        self.assertNotIn("earlier commits on the branch", output)
+        self.assertEqual(self.staged("notes.md"), "Read the notes\n")
+        self.assertEqual(self.staged("other.md"), "Ported from ~/src.\n")
+
     def test_unknown_destination_is_an_operational_error(self):
         result = subprocess.run([sys.executable, str(HELPER), "pr", "--repo", "example-gone/nowhere"],
-                                cwd=self.repo, capture_output=True, text=True, env=self.env)
+                                cwd=self.repo, capture_output=True, text=True, env=self.guard_env)
         self.assertEqual(result.returncode, 2)
         self.assertIn("cannot ask GitHub", result.stderr)
 
