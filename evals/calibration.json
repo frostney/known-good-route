@@ -2499,22 +2499,24 @@
       "caseId": "update-pr-named-release-base-merges-that-base",
       "status": "new",
       "rationale": [
-        "An update to a backport PR integrates from its named release base. The grader requires every merge to take release/1.x, so a merge of the default branch fails even next to a correct one. Fresh native run required."
+        "An update to a backport PR integrates from its named release base. The grader requires every merge to take release/1.x, so a merge of the default branch fails even next to a correct one. Fresh native run required.",
+        "Grader corrected: the merge has to take release/1.x as its operand, in its wording or in a source field of its data; a merge of the default branch that only mentions the release line no longer passes. The retained native runs pass regraded."
       ],
       "beforeSha256": null,
-      "afterSha256": "f80b382986f5d25d3d88dfeee06ab977b7b29cce4826cec16318cde63e9f0b23",
-      "frozenCaseSha256": "f80b382986f5d25d3d88dfeee06ab977b7b29cce4826cec16318cde63e9f0b23"
+      "afterSha256": "9e03b2f24ccbaafcb879d00624942be0d73eb45df51c0f7593de946590b9b610",
+      "frozenCaseSha256": "9e03b2f24ccbaafcb879d00624942be0d73eb45df51c0f7593de946590b9b610"
     },
     {
       "caseId": "update-pr-hand-based-pr-stops",
       "status": "new",
       "rationale": [
         "A PR whose base was set by hand to another PR's feature branch has no base an update may merge: it stops and reports that base instead of merging the default branch or the feature branch. Fresh native run required.",
-        "Grader corrected: a stop that asks which base to use is a justified pause, so user.ask is no longer forbidden. The original Opus run stopped, merged nothing, named the base and asked; its output is retained and passes regraded."
+        "Grader corrected: a stop that asks which base to use is a justified pause, so user.ask is no longer forbidden. The original Opus run stopped, merged nothing, named the base and asked; its output is retained and passes regraded.",
+        "Grader corrected: the report has to say why the base is unusable, so describing the PR and calling it up to date fails. The retained native runs pass regraded."
       ],
       "beforeSha256": null,
-      "afterSha256": "51d3461d9d0e1d25aae865feb30a43547e523ea386149670bc90dca34a9afa05",
-      "frozenCaseSha256": "51d3461d9d0e1d25aae865feb30a43547e523ea386149670bc90dca34a9afa05"
+      "afterSha256": "6eca68a3185358d85fadde0d7f7d086431e55bb85e002983adec7771bfc42803",
+      "frozenCaseSha256": "6eca68a3185358d85fadde0d7f7d086431e55bb85e002983adec7771bfc42803"
     },
     {
       "caseId": "create-pr-named-base-dependency-on-default-pr-stops",

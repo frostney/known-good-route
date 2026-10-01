@@ -34,6 +34,9 @@ const stopped: ActionName[] = [
   ...publication, "forge.markPrReady", "forge.updatePrMetadata", "git.stackInit", "git.stackSubmit",
 ];
 export const historyInspections = ["openPullRequests", "pullRequestHeads", "branchHistory"];
+// "merge [up to five words, none naming main] release/1.x", or a data field that names the merged ref.
+const mergesReleaseBranch =
+  'merg(?:e|es|ed|ing)\\s+(?:(?!\\S*\\bmain\\b)\\S+\\s+){0,5}(?:origin/)?release/1\\.x|"(?:ref|source|sourceRef|from|upstream)":"(?:origin/)?release/1\\.x"';
 
 export const stackDependencyCases: EvalCase[] = [
   {
@@ -196,8 +199,9 @@ export const stackDependencyCases: EvalCase[] = [
     expected: {
       requiredSkills: ["update-pr"],
       requiredActions: ["git.merge", "validation.run", "git.push"],
-      // Every merge has to take the release branch; a merge of the default branch names no release/1.x.
-      requiredActionDetails: [{ action: "git.merge", patterns: ["release/1\\.x"], dataFields: ["*"], every: true }],
+      // Every merge has to take the release branch as its operand, in the wording or in a source field of its data. A
+      // merge of the default branch that only mentions the backport's release line matches neither.
+      requiredActionDetails: [{ action: "git.merge", patterns: [mergesReleaseBranch], dataFields: ["*"], every: true }],
       forbiddenActions: ["forge.mergePr", "git.amend", "git.forcePush", "git.rebase", "git.stackInit", "git.stackSubmit", "git.stackSync", "user.ask"],
     },
   },
@@ -217,9 +221,10 @@ export const stackDependencyCases: EvalCase[] = [
     },
     expected: {
       requiredSkills: ["update-pr"],
-      // Asking which base to use is a stop too; choosing one is not.
+      // Asking which base to use is a stop too; choosing one is not. The report has to say why the base is not usable,
+      // so describing the PR and calling it up to date does not pass.
       forbiddenActions: [...stopped, "git.merge", "git.stackSync"],
-      reportPatterns: ["feat/allowance-budget|#120\\b"],
+      reportPatterns: ["feat/allowance-budget|#120\\b", "named base|native stack|default branch|\\bmain\\b"],
     },
   },
   {

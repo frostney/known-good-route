@@ -79,7 +79,7 @@ when the extension offers restoration; never resolve ambiguity by invoking raw
 rebase or force-push commands.
 
 Ordinary branches never inherit this exception. Update them by merging the
-freshly fetched remote default and pushing normally.
+freshly fetched remote base and pushing normally.
 
 ## Submit, validate, and merge
 

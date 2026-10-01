@@ -36,8 +36,7 @@ not block the update.
    as `git-workflow` defines it. Resolve a behind-base or conflicting branch
    before deciding whether missing CI needs any action.
 2. Stop if on the base branch or no open PR exists; report the required next
-   workflow. Stop and report the base when the PR targets a non-default branch
-   that is neither a named base nor a layer of a verified native stack.
+   workflow. Stop likewise when `git-workflow` gives the PR no remote base.
 3. When an ordinary branch is behind the remote base, merge it into the branch.
    Preserve both sides' required behavior in additive conflicts; regenerate
    generated files using the project's tool. Continue through validation when
