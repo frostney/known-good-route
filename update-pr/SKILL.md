@@ -1,7 +1,7 @@
 ---
 name: update-pr
 description: >-
-  Commits relevant changes, merges the remote default when needed, pushes the
+  Commits relevant changes, merges the remote base when needed, pushes the
   current pull-request branch, and refreshes stale PR metadata. Use when asked
   to update or push changes to an existing pull request, or when the user runs
   /update-pr.
@@ -31,11 +31,13 @@ media, refresh the affected parts using
 reuse media that still shows the current behavior. Media tooling gaps alone do
 not block the update.
 
-1. Apply `git-workflow`. Inspect the current PR, branch, relevant local changes,
-   recent commits and fetched remote default. Resolve a behind-base or
-   conflicting branch before deciding whether missing CI needs any action.
+1. Apply `git-workflow`. Inspect the current PR and its base branch, the
+   branch, relevant local changes, recent commits and the fetched remote base
+   as `git-workflow` defines it. Resolve a behind-base or conflicting branch
+   before deciding whether missing CI needs any action.
 2. Stop if on the base branch or no open PR exists; report the required next
-   workflow.
+   workflow. Stop and report the base when the PR targets a non-default branch
+   that is neither a named base nor a layer of a verified native stack.
 3. When an ordinary branch is behind the remote base, merge it into the branch.
    Preserve both sides' required behavior in additive conflicts; regenerate
    generated files using the project's tool. Continue through validation when

@@ -137,6 +137,47 @@ test("a backport that contains a default-branch PR's commits stops instead of st
     .toEqual(expect.arrayContaining(["forbidden actions"]));
 });
 
+const updateFailed = (id: string, actions: RunLedger["actions"], output: string) =>
+  gradeRun(
+    byId(id),
+    {
+      actions,
+      loadedSkills: ["update-pr", "git-workflow"],
+      loadedReferences: [],
+      registeredSkillCalls: [],
+      inspections: [],
+      events: actions.map((a) => ({ kind: "action" as const, name: a.action })),
+    },
+    output,
+  )
+    .checks.filter((c) => !c.passed)
+    .map((c) => c.name);
+
+test("an update to a backport PR merges its named base, never the default branch", () => {
+  const id = "update-pr-named-release-base-merges-that-base";
+  const gate = act("validation.run", "Run the declared gate");
+  const push = act("git.push", "Push backport/retry-budget");
+  const output = "PR #151 is up to date with release/1.x.";
+  expect(updateFailed(id, [act("git.merge", "git merge origin/release/1.x"), gate, push], output)).toEqual([]);
+  expect(updateFailed(id, [act("git.merge", "Merge the PR base", { ref: "origin/release/1.x" }), gate, push], output)).toEqual([]);
+  expect(updateFailed(id, [act("git.merge", "git merge origin/main"), gate, push], "PR #151, the release/1.x backport, is up to date."))
+    .toEqual(["git.merge evidence"]);
+  // A merge of the release branch does not excuse a second merge of the default branch.
+  expect(updateFailed(id, [act("git.merge", "git merge origin/release/1.x"), act("git.merge", "git merge origin/main"), gate, push], output))
+    .toEqual(["git.merge evidence"]);
+  expect(updateFailed(id, [gate, push], output)).toEqual(expect.arrayContaining(["required actions", "git.merge evidence"]));
+});
+
+test("an update to a PR based by hand on another PR's branch stops and names the base", () => {
+  const id = "update-pr-hand-based-pr-stops";
+  const output = "Stopped: PR #122 targets feat/allowance-budget, which is neither the default branch nor a named base, and there is no native stack. Nothing was merged or pushed.";
+  expect(updateFailed(id, [], output)).toEqual([]);
+  expect(updateFailed(id, [act("git.merge", "git merge origin/main"), act("git.push", "Push")], output))
+    .toEqual(["forbidden actions"]);
+  expect(updateFailed(id, [act("git.merge", "git merge origin/feat/allowance-budget")], output)).toEqual(["forbidden actions"]);
+  expect(updateFailed(id, [], "Stopped: the PR's base needs a decision.")).toEqual(expect.arrayContaining([expect.stringContaining("report evidence")]));
+});
+
 test("a listing that fills the limit is treated as truncated", () => {
   const id = "create-pr-truncated-open-pr-list-stops";
   expect(JSON.parse(byId(id).fixture.evidence.openPullRequests!)).toHaveLength(1000);

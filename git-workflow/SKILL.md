@@ -43,12 +43,18 @@ new repository or operation needs its own scope.
   freshly fetched remote-default tip. Do not configure a focused branch to
   track the remote default; set its upstream only when pushing that focused
   branch.
-- When entering an existing focused branch or worktree, merge the freshly
-  fetched remote default before editing.
+- When entering an existing focused branch or worktree, merge its freshly
+  fetched remote base before editing.
 
 ## Update, commit, and push
 
-- Merge the remote base to update a branch. Never rebase.
+- Merge the remote base to update a branch. Never rebase. A branch's remote
+  base is the remote default, unless its open PR targets a named base as
+  [create-pr](../create-pr/SKILL.md) step 1 defines it, such as a release
+  branch for a backport. Then that branch is the remote base, and the remote
+  default is never merged into the branch. When an open PR targets any other
+  non-default branch outside a native stack, stop and report that base instead
+  of choosing one.
 - During an authorized PR update, resolve conflicts whose intended behavior is
   established by the selected change and current base. Preserve both sides'
   required behavior, regenerate generated files with the project tool, and

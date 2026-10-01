@@ -2496,6 +2496,26 @@
       "frozenCaseSha256": "0696f9efdb7b52eb2bffb7a3ac68d1fc03a18d75c83119c73426935ea10d25d2"
     },
     {
+      "caseId": "update-pr-named-release-base-merges-that-base",
+      "status": "new",
+      "rationale": [
+        "An update to a backport PR integrates from its named release base. The grader requires every merge to take release/1.x, so a merge of the default branch fails even next to a correct one. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "f80b382986f5d25d3d88dfeee06ab977b7b29cce4826cec16318cde63e9f0b23",
+      "frozenCaseSha256": "f80b382986f5d25d3d88dfeee06ab977b7b29cce4826cec16318cde63e9f0b23"
+    },
+    {
+      "caseId": "update-pr-hand-based-pr-stops",
+      "status": "new",
+      "rationale": [
+        "A PR whose base was set by hand to another PR's feature branch has no base an update may merge: it stops and reports that base instead of merging the default branch or the feature branch. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "7d3c95b37b3087b9b97d9851768d8b9844d409dddbe199943cbf182e67bc1c3f",
+      "frozenCaseSha256": "7d3c95b37b3087b9b97d9851768d8b9844d409dddbe199943cbf182e67bc1c3f"
+    },
+    {
       "caseId": "create-pr-named-base-dependency-on-default-pr-stops",
       "status": "new",
       "rationale": [
