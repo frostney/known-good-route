@@ -74,7 +74,24 @@ export interface EvalExpectations {
   discoverySkills?: string[];
   allowedEditPaths?: string[];
   // Answer correctness, judged by a model of the other family (judge.ts).
+  // Exact values never go in the rubric; they are the code checks below.
   rubric?: RubricItem[];
+  // Each value must appear as a whole token in the answer's communication: the
+  // final response, report and question actions, and posted replies and
+  // comments. An inner array lists accepted spellings of one value.
+  requiredAnswerValues?: ExactValue[];
+  // Values that must not appear as a whole token in that communication.
+  forbiddenAnswerValues?: string[];
+  // Each value must be carried by a recorded action of that kind: equal to one
+  // of the named data fields (or an element of an array field), or, without
+  // fields, a whole token in its details or data. With every, all such actions
+  // must carry it; otherwise one is enough.
+  requiredActionValues?: Array<{
+    action: ActionName;
+    values: ExactValue[];
+    fields?: string[];
+    every?: boolean;
+  }>;
 
   requiredWorker?: boolean;
   requiredSkills?: string[];
@@ -102,6 +119,8 @@ export interface EvalExpectations {
   minActionCounts?: Partial<Record<ActionName, number>>;
   maxActionCounts?: Partial<Record<ActionName, number>>;
 }
+
+export type ExactValue = string | string[];
 
 export interface RubricItem {
   id: string;

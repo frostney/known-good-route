@@ -3,6 +3,7 @@ import { toolReceiptSchema } from "./tool-receipts.ts";
 import type {
   ActionName,
   EvalCase,
+  ExactValue,
   GradeCheck,
   GradeResult,
   RunLedger,
@@ -14,6 +15,56 @@ function includesEvery(actual: string[], expected: string[]): boolean {
 
 function actionCount(ledger: RunLedger, action: ActionName): number {
   return ledger.actions.filter((record) => record.action === action).length;
+}
+
+const communication = new Set<ActionName>([
+  "report",
+  "user.ask",
+  "forge.replyInline",
+  "forge.commentPr",
+  "forge.commentIssue",
+]);
+
+const isWordCharacter = (c: string | undefined) => !!c && /[A-Za-z0-9_]/.test(c);
+
+// An exact value counts only as a whole token: "503" is not inside "1503" and a
+// 40-character revision is not inside a 42-character one.
+export function containsValue(text: string, value: string): boolean {
+  for (let at = text.indexOf(value); at >= 0; at = text.indexOf(value, at + 1)) {
+    const before = text[at - 1];
+    const after = text[at + value.length];
+    if (
+      (!isWordCharacter(value[0]) || !isWordCharacter(before)) &&
+      (!isWordCharacter(value.at(-1)) || !isWordCharacter(after))
+    )
+      return true;
+  }
+  return false;
+}
+
+const spellings = (value: ExactValue) => (Array.isArray(value) ? value : [value]);
+const describe = (value: ExactValue) => spellings(value).join(" | ");
+const rendered = (value: unknown) =>
+  typeof value === "string" ? value : JSON.stringify(value) ?? "";
+
+function fieldCarries(field: unknown, value: string): boolean {
+  if (Array.isArray(field)) return field.some((item) => rendered(item) === value);
+  return field !== undefined && rendered(field) === value;
+}
+
+function actionCarries(
+  record: RunLedger["actions"][number],
+  value: ExactValue,
+  fields: string[] | undefined,
+): boolean {
+  return spellings(value).some((spelling) =>
+    fields
+      ? fields.some((field) => fieldCarries(record.data?.[field], spelling))
+      : containsValue(
+          [record.details, ...Object.values(record.data ?? {}).map(rendered)].join("\n"),
+          spelling,
+        ),
+  );
 }
 
 export function gradeRun(
@@ -213,6 +264,37 @@ export function gradeRun(
             ),
         ),
       detail: `observed workers=${workers.length}; require the configured task/mode, actual response identity, completed output and consistently passing worker checks; transcript binding is verified separately`,
+    });
+  }
+
+  const said = [
+    output,
+    ...ledger.actions
+      .filter((a) => communication.has(a.action) && a.source !== "final-response")
+      .map((a) => [a.details, ...Object.values(a.data ?? {}).map(rendered)].join("\n")),
+  ].join("\n");
+  for (const value of expected.requiredAnswerValues ?? [])
+    checks.push({
+      name: `answer states ${describe(value)}`,
+      passed: spellings(value).some((spelling) => containsValue(said, spelling)),
+      detail: "Exact value as a whole token in the final response or communication actions.",
+    });
+  for (const value of expected.forbiddenAnswerValues ?? [])
+    checks.push({
+      name: `answer omits ${value}`,
+      passed: !containsValue(said, value),
+      detail: "Exact value must not appear in the final response or communication actions.",
+    });
+  for (const requirement of expected.requiredActionValues ?? []) {
+    const records = ledger.actions.filter((a) => a.action === requirement.action);
+    const carriesAll = (record: RunLedger["actions"][number]) =>
+      requirement.values.every((value) => actionCarries(record, value, requirement.fields));
+    checks.push({
+      name: `${requirement.action} carries ${requirement.values.map(describe).join(", ")}`,
+      passed:
+        records.length > 0 &&
+        (requirement.every ? records.every(carriesAll) : records.some(carriesAll)),
+      detail: `${requirement.every ? "every" : "one"} of ${records.length} recorded; fields=${requirement.fields?.join(",") ?? "details or any data"}`,
     });
   }
 
@@ -424,6 +506,20 @@ const listFields = new Set([
   "allowedDelegateWorkflows",
 ]);
 
+function validateExactValues(evalCase: EvalCase): void {
+  const valid = (value: ExactValue) =>
+    spellings(value).length > 0 && spellings(value).every((v) => typeof v === "string" && v.trim() === v && v.length > 0);
+  const expected = evalCase.expected;
+  if (
+    !(expected.requiredAnswerValues ?? []).every(valid) ||
+    !(expected.forbiddenAnswerValues ?? []).every(valid) ||
+    !(expected.requiredActionValues ?? []).every(
+      (r) => r.values.length > 0 && r.values.every(valid) && (r.fields ?? ["x"]).length > 0 && (r.fields ?? []).every((f) => f.trim()),
+    )
+  )
+    throw new Error(`${evalCase.id}: invalid exact value check`);
+}
+
 export function validateRubric(evalCase: EvalCase): void {
   for (const field of removedAnswerPatterns)
     if (Object.hasOwn(evalCase.expected, field))
@@ -460,6 +556,7 @@ export function validateCases(
     ids.add(evalCase.id);
 
     validateRubric(evalCase);
+    validateExactValues(evalCase);
     for (const [field, values] of Object.entries(evalCase.expected))
       if (listFields.has(field) && Array.isArray(values) &&
           new Set(values).size !== values.length)
