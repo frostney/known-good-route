@@ -147,6 +147,13 @@ merge, rework, and run transitions when they occur. Pair
 `decision_requested` and `decision_resolved` with one stable decision ID and
 record policy-threshold checkpoints and interventions.
 
+Record work that a later head, base, topology, or decision made obsolete with
+a `work_superseded` event whose `spanId` names the superseded span. At closure
+that span must have a `span_finished` with result `cancelled`, or a non-empty
+`blocker` on the `work_superseded` event or on that `span_finished` saying why
+it could not be cancelled. `ingest` accepts superseded work that is still in
+flight.
+
 Before milestone closure, `validate` must succeed for the current `runId`.
 Missing or conflicting IDs, invalid measurement streams, unclosed spans,
 missing transition classes, silent nulls, absent command or CI identities the

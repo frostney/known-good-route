@@ -495,6 +495,33 @@ def validate_run(
                     )
                 previous = current
 
+    superseded: dict[str, bool] = {}
+    for event in by_id.values():
+        if event["type"] != "work_superseded":
+            continue
+        span_id = event["spanId"]
+        if not isinstance(span_id, str) or not span_id:
+            raise LedgerError(f"event {event['eventId']} work_superseded requires spanId")
+        superseded[span_id] = superseded.get(span_id, False) or bool(event["blocker"])
+    if closure:
+        unaccounted = sorted(
+            span_id
+            for span_id, blocked in superseded.items()
+            if not blocked
+            and not (
+                span_id in finished
+                and (
+                    finished[span_id]["result"] == "cancelled"
+                    or finished[span_id]["blocker"]
+                )
+            )
+        )
+        if unaccounted:
+            raise LedgerError(
+                "superseded work without a terminal cancellation or blocker: "
+                + ", ".join(unaccounted)
+            )
+
     return {
         "schemaVersion": 2,
         "runId": run_id,
