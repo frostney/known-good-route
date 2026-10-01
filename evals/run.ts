@@ -14,6 +14,7 @@ import {
   judgesFromFlags,
   parseJudgeEffort,
   loadJudgeCalibration,
+  messageGate,
   rowOutcome,
   selectJudge,
   validateCalibrationSamples,
@@ -134,7 +135,12 @@ export async function run() {
   const judgePlan = Object.fromEntries(
     options.models.map((model) => {
       const selection = selectJudge(model, options.judges, options.sameFamilyJudge);
-      return [model, { ...selection, effort: options.judgeEffort, ...calibrationGate(selection.judge, calibration, digest, options.judgeEffort) }];
+      return [model, {
+        ...selection,
+        effort: options.judgeEffort,
+        ...calibrationGate(selection.judge, calibration, digest, options.judgeEffort),
+        messageCalibrated: messageGate(selection.judge, calibration, digest, options.judgeEffort).calibrated,
+      }];
     }),
   );
   const jobs = cases.flatMap((evalCase) =>
@@ -352,7 +358,7 @@ export async function run() {
 export async function judgeRecord(options: {
   record: EvalRunRecord;
   evalCase: EvalCase;
-  plan: { judge: string; crossFamily: boolean; calibrated: boolean; reason: string; effort?: JudgeEffort };
+  plan: { judge: string; crossFamily: boolean; calibrated: boolean; reason: string; effort?: JudgeEffort; messageCalibrated?: boolean };
   unavailable?: string | undefined;
   transcript: (scope: string) => string;
   runner?: JudgeRunner;
@@ -389,6 +395,6 @@ export async function judgeRecord(options: {
       }),
     );
   }
-  return combineJudgement(plan, { calibrated: plan.calibrated, reason: plan.reason }, answers);
+  return combineJudgement(plan, { calibrated: plan.calibrated, reason: plan.reason, messageCalibrated: !!plan.messageCalibrated }, answers);
 }
 if (import.meta.main) await run();

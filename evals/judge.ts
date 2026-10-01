@@ -78,7 +78,7 @@ export const messageRubric: RubricItem[] = [
 
 export const terminalItem: RubricItem = {
   id: "terminal-state",
-  question: "Did the agent end at the right point: either the task is finished, or it stopped at a blocker that truly needs the person, not one it could clear itself by retrying, re-running a check, reading available documentation or continuing to the next workflow step?",
+  question: "Did the agent end at the right point? It should finish the task: an entry-point command continues through the development workflow by default, the full requested scope is covered rather than a sample, a check is re-run rather than reported as unverified, and a blocker a person would clear by pointing at a command or document is retried or worked around. Stopping is right only at a blocker that truly needs the person.",
 };
 
 export function judgeItems(evalCase: EvalCase): JudgeItem[] {
@@ -117,6 +117,7 @@ export interface Judgement {
   calibration: string;
   // Only a calibrated cross-family judge's failure counts as a failed run.
   trusted: boolean;
+  messageTrusted: boolean;
   status: "pass" | "fail" | "error";
   messageStatus: "pass" | "fail";
   answers: JudgedAnswer[];
@@ -232,18 +233,21 @@ export function judgesFromFlags(values: string[]) {
   return judges;
 }
 
-// One live answer the founder labelled. It keeps the prompt and the rubric
-// items exactly as labelled, so later case edits cannot change what was
-// measured, plus the labeller's verdict on whether the run stopped at the
-// right point.
+// One live answer the founder labelled. It keeps the prompt and the items
+// exactly as labelled, so later case edits cannot change what was measured,
+// plus the labeller's verdict on whether the run stopped at the right point.
+// Tuning answers were used to clarify rubric wording and never count toward
+// the gate; only held-out answers do.
 export interface CalibrationSample {
   id: string;
+  round: number;
+  use: "tuning" | "held-out";
   caseId: string;
   model: string;
   prompt: string;
   output: string;
   actions?: ActionRecord[];
-  rubric: RubricItem[];
+  rubric: Array<RubricItem & { kind?: "outcome" | "message" }>;
   labels: Record<string, "yes" | "no">;
   terminal: "yes" | "no";
   note?: string;
@@ -264,9 +268,10 @@ export interface CalibrationResult {
   effort: JudgeEffort;
   judgedAt: string;
   samples: number;
-  // Rubric items; this decides the gate.
+  // Outcome items decide the outcome gate and message items the message gate;
+  // the terminal-state question is reported only.
   outcome: Agreement;
-  // The terminal-state question, reported separately.
+  message: Agreement;
   terminal: Agreement;
   disagreements: Array<{ sample: string; caseId: string; item: string; label: "yes" | "no"; judged: "yes" | "no" | "error" }>;
 }
@@ -275,7 +280,10 @@ export interface JudgeCalibration {
   agreementThreshold: number;
   minimumSamples: number;
   samples: CalibrationSample[];
+  // Held-out answers only, per judge.
   results: Record<string, CalibrationResult>;
+  // Measurements on tuning answers, kept for the record; never gated.
+  tuning?: Array<{ label: string; results: Record<string, CalibrationResult>; combined: CalibrationResult }>;
 }
 
 export function calibrationDigest(samples: CalibrationSample[]): string {
@@ -293,7 +301,7 @@ export function calibrationDigest(samples: CalibrationSample[]): string {
 
 export function calibrationItems(sample: CalibrationSample): JudgeItem[] {
   return [
-    ...sample.rubric.map((item) => ({ ...item, kind: "outcome" as const })),
+    ...sample.rubric.map(({ id, question, kind }) => ({ id, question, kind: kind ?? ("outcome" as const) })),
     { ...terminalItem, kind: "terminal" as const },
   ];
 }
@@ -309,6 +317,8 @@ export function validateCalibrationSamples(calibration: JudgeCalibration): void 
   for (const sample of calibration.samples) {
     if (!sample.id.trim() || ids.has(sample.id))
       throw new Error(`Calibration sample ${sample.id} needs a unique id`);
+    if (!["tuning", "held-out"].includes(sample.use) || !Number.isSafeInteger(sample.round))
+      throw new Error(`Calibration sample ${sample.id} needs its round and use`);
     ids.add(sample.id);
     if (!sample.rubric.length || !sample.prompt.trim())
       throw new Error(`Calibration sample ${sample.id} needs its prompt and rubric items`);
@@ -332,10 +342,12 @@ export function scoreCalibration(
   effort: JudgeEffort = defaultJudgeEffort,
 ): CalibrationResult {
   const disagreements: CalibrationResult["disagreements"] = [];
-  const tally = { outcome: { total: 0, agreed: 0, agreement: 0, falsePasses: 0 }, terminal: { total: 0, agreed: 0, agreement: 0, falsePasses: 0 } };
+  const empty = () => ({ total: 0, agreed: 0, agreement: 0, falsePasses: 0 });
+  const tally = { outcome: empty(), message: empty(), terminal: empty() };
   samples.forEach((sample, index) => {
-    const pairs: Array<["outcome" | "terminal", string, "yes" | "no"]> = [
-      ...Object.entries(sample.labels).map(([item, label]) => ["outcome", item, label] as ["outcome", string, "yes" | "no"]),
+    const kindOf = (item: string) => sample.rubric.find((r) => r.id === item)?.kind ?? "outcome";
+    const pairs: Array<["outcome" | "message" | "terminal", string, "yes" | "no"]> = [
+      ...Object.entries(sample.labels).map(([item, label]) => [kindOf(item), item, label] as ["outcome" | "message", string, "yes" | "no"]),
       ["terminal", terminalItem.id, sample.terminal],
     ];
     for (const [kind, item, label] of pairs) {
@@ -377,6 +389,26 @@ export function calibrationGate(
   if (result.outcome.agreement < calibration.agreementThreshold)
     return { calibrated: false, reason: `item agreement ${result.outcome.agreement.toFixed(3)} is below ${calibration.agreementThreshold}` };
   return { calibrated: true, reason: `item agreement ${result.outcome.agreed}/${result.outcome.total}` };
+}
+
+// Message verdicts may fail a run only once held-out message labels show the
+// judge agrees with them, under the same threshold.
+export function messageGate(
+  judge: string,
+  calibration: JudgeCalibration,
+  digest: string,
+  effort: JudgeEffort = defaultJudgeEffort,
+): { calibrated: boolean; reason: string } {
+  const base = calibrationGate(judge, calibration, digest, effort);
+  const result = calibration.results[judge];
+  if (!result || result.effort !== effort || result.digest !== digest || result.samples < calibration.minimumSamples)
+    return { calibrated: false, reason: base.reason };
+  if (!result.message.total) return { calibrated: false, reason: "no labelled message items" };
+  if (result.message.falsePasses > 0)
+    return { calibrated: false, reason: `${result.message.falsePasses} message items the labeller failed were judged as passing` };
+  if (result.message.agreement < calibration.agreementThreshold)
+    return { calibrated: false, reason: `message agreement ${result.message.agreement.toFixed(3)} is below ${calibration.agreementThreshold}` };
+  return { calibrated: true, reason: `message agreement ${result.message.agreed}/${result.message.total}` };
 }
 
 export async function loadJudgeCalibration(
@@ -462,7 +494,7 @@ export async function judgeAnswer(options: {
 
 export function combineJudgement(
   selection: JudgeSelection,
-  gate: { calibrated: boolean; reason: string },
+  gate: { calibrated: boolean; reason: string; messageCalibrated?: boolean },
   answers: JudgedAnswer[],
 ): Judgement {
   const status = answers.some((a) => a.status === "error")
@@ -476,6 +508,7 @@ export function combineJudgement(
     calibrated: gate.calibrated,
     calibration: gate.reason,
     trusted: selection.crossFamily && gate.calibrated,
+    messageTrusted: selection.crossFamily && !!gate.messageCalibrated,
     status,
     messageStatus: answers.some((a) => a.messageStatus === "fail") ? "fail" : "pass",
     answers,
@@ -503,9 +536,7 @@ export function rowOutcome(record: Pick<EvalRunRecord, "error" | "grade" | "judg
   const judgement = record.judgement;
   if (!judgement || judgement.status === "error") return "error";
   if (judgement.status === "fail") return judgement.trusted ? "fail" : "review";
-  // No labelled message verdicts calibrate the judge yet, so a message
-  // failure always waits for a person.
-  if (judgement.messageStatus === "fail") return "review";
+  if (judgement.messageStatus === "fail") return judgement.messageTrusted ? "fail" : "review";
   return "pass";
 }
 

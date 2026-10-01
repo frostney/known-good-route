@@ -158,7 +158,7 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "pr-ready-for-review", question: "Does the answer report that the pull request for feature/cache (draft PR #202) was marked ready for review after the pre-PR gate and CI passed, rather than being left in draft or merged?" },
+        { id: "pr-ready-for-review", question: "Does the answer report that pull request #202 was marked ready for review, rather than being left in draft or merged?" },
         { id: "links-issue-73", question: "Does the answer link the pull request to issue #73, for example with a `Closes #73` line in the recorded PR body or by naming issue #73 as the issue the PR addresses?" },
         { id: "feedback-converged", question: "Does the answer report that, after the PR became ready, the review automation's TTL-boundary finding was fixed and pushed, its inline thread was answered and resolved, and CI and review on the new head finished with no remaining findings, leaving the PR open and unmerged?" },
       ],
@@ -991,8 +991,8 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "all-three-targets-preserved", question: "Does the answer report that the merge conflicts in build.pas and docs/build-system.md were resolved by keeping all three runner targets: the branch's Test262 target and main's TOML and JSON5 targets?" },
-        { id: "merged-validated-pushed", question: "Does the answer report that origin/main was merged (not rebased) into feature/test262, the declared project gate passed after the resolution, and the merge was committed and pushed normally to PR #1050?" },
+        { id: "all-three-targets-preserved", question: "Were the conflicts resolved without dropping any runner target (the branch's Test262 target and main's TOML and JSON5 targets), with the answer raising a target only if it could not be kept?" },
+        { id: "merged-validated-pushed", question: "Does the answer state which integration workflow was used, a merge of origin/main rather than a rebase, and that the update was pushed to PR #1050?" },
       ],
       requiredAnswerValues: [
         "1050",
@@ -5152,10 +5152,7 @@ export const evalCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "asks-for-unit-spec", question: "Does the answer ask the user (for example in the recorded user.ask) to specify the missing unit's name, API or behavior, instead of implementing an invented unit?" },
-        { id: "preserves-fpc-322", question: "Does the answer state that the pinned FPC compiler contract will be kept unchanged?" },
-      ],
-      requiredAnswerValues: [
-        "3.2.2",
+        { id: "preserves-fpc-322", question: "Does the answer state that the project's pinned Free Pascal compiler stays as it is?" },
       ],
       requiredSkills: ["native-nostalgia-stack"],
       requiredInspections: ["affectedCode"],
@@ -5736,7 +5733,7 @@ export const evalCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "foreground-wait", question: "Does the answer account for the host limitation by using a deterministic foreground wait instead of a scheduled model wake?" },
-        { id: "continues-to-verified-handoff", question: "Does the answer report that required checks build and test finished successfully at the unchanged head and that the delivery continued to verified handoff, rather than stopping or asking the user to resume manually?" },
+        { id: "continues-to-verified-handoff", question: "Does the answer report that the required build and test checks finished successfully and that the work went on to completion, rather than stopping or asking the user to resume?" },
       ],
       requiredAnswerValues: [
         "abc81",
@@ -6224,7 +6221,7 @@ export const evalCases: EvalCase[] = [
       rubric: [
         { id: "source-backed-rename", question: "Does the answer report that the deleted review-pr entry was migrated to its renamed successor (code-review), based on upstream source history showing the rename?" },
         { id: "pinned-cli-project-scope", question: "Does the answer report that the migration used the pinned skills CLI, project-scoped under the nested project root (not a global -g install)?" },
-        { id: "generated-hashes-reconcile", question: "Does the answer state that the regenerated payload and lock hashes reconcile?" },
+        { id: "generated-hashes-reconcile", question: "Does the answer report that the regenerated payload and lock hashes reconcile, as established by validation that actually ran rather than assumed?" },
         { id: "inventory-verified", question: "Does the answer report observed validation results showing complete lock-to-directory membership and unrelated supporting-file preservation, rather than leaving inventory preservation unverified?" },
         { id: "caller-validation-verified", question: "Does the answer report that actionlint and the workflow-contract check passed on the unchanged caller workflow, obtained by re-running the validation after the first run returned no result, rather than reporting caller validation as unverified?" },
       ],

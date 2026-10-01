@@ -167,9 +167,9 @@ happy-path step; no stated defaults such as "read-only"; no specifics the
 outcome does not depend on, such as a compiler version when only the compiler
 matters; clear rather than confusing; and no "unverified" report where the
 agent could have re-run the check. A case may add its own items under
-`messageRubric`. Message verdicts are reported as `message` checks. No
-labelled message verdicts calibrate the judge yet, so a message failure is
-always reported as needs human review, never as a failure. Workers are judged
+`messageRubric`. Message verdicts are reported as `message` checks. A message
+failure fails a run only once the judge's message gate opens on held-out
+labels; until then it is reported as needs human review. Workers are judged
 on their outcome items only.
 
 ### Judging
@@ -199,7 +199,11 @@ are recorded but never trusted.
 ### Calibration gate
 
 `calibration.json` holds the founder's labelled answers under
-`judgeCalibration.samples`. Each sample is one live answer and is
+`judgeCalibration.samples`, each tagged with its labelling `round` and its
+`use`. Round 1 is `tuning`: it was used to clarify ambiguous rubric wording, so
+it never counts toward the gate, and its measurements before and after the
+clarification are kept under `judgeCalibration.tuning`. Later rounds are
+`held-out` and are never used for tuning. Each sample is one live answer and is
 self-contained: the prompt, the candidate model, the final response and
 recorded actions, the rubric items exactly as they were labelled, a `yes` or
 `no` for each item, the founder's `terminal` verdict on whether the run stopped
@@ -209,17 +213,22 @@ and rubrics are not tuned against the labels. A later edit to a case does not
 change what a sample measured.
 
 Calibration judges every sample with the judge of the other family, as a run
-would, asking its labelled items plus one terminal-state question. Agreement
+would, asking its labelled outcome and message items plus one terminal-state
+question. Only held-out answers produce the per-judge `results` the gate
+reads; outcome items, message items and the terminal question are scored
+separately. Agreement
 is counted per item: the judge agrees when an item passes exactly where the
 label says `yes`. A judge error disagrees on every item of that answer. Each
 judge's result covers the samples it judged; the outcome items and the
 terminal question are scored separately.
 
-The gate opens for a judge only when its recorded result matches the current
+The outcome gate opens for a judge only when its recorded held-out result matches the current
 labels and judge protocol (a digest), covers at least `minimumSamples` (20)
 labelled answers, agrees on at least `agreementThreshold` (0.9) of the rubric
 items, and passed no item the labeller failed. The terminal question is
-reported, not gated. Until the gate opens, a run that passes every
+reported, not gated. A separate message gate applies the same threshold, minimum
+and zero-false-pass rule to the labelled message items; until it opens, a
+message failure is left for human review. Until the outcome gate opens, a run that passes every
 deterministic check but fails its rubric is reported as **needs human review**,
 not as a failure. A same-family judge's failures are treated the same way.
 Deterministic failures always fail.
@@ -228,7 +237,7 @@ Import a labelled set, then calibrate locally; calibration makes one judge call
 per labelled answer:
 
 ```bash
-bun run eval:calibrate-judge -- --import-labels labelling-set.json --labels-dir labels --labelled-by founder
+bun run eval:calibrate-judge -- --import-labels labelling-set-2.json --labels-dir labels --labelled-by founder --round 2 --use held-out
 bun run eval:calibrate-judge -- --output .eval-results/calibration --concurrency 4 --write
 ```
 
