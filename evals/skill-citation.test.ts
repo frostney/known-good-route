@@ -9,7 +9,10 @@ const passage = "If required external evidence is unavailable, stop the dependen
 const requirement = { skill: "implement", passage };
 const scenario: EvalCase = {
   id: "citation", description: "", prompt: "", fixture: {evidence:{}},
-  expected: { requiredSkillCitations: [requirement] },
+  expected: {
+    requiredSkillCitations: [requirement],
+    rubric: [{ id: "paused", question: "Does the answer pause the dependent work?" }],
+  },
 };
 async function recorded(path = "/fixture/implement/SKILL.md") {
   const ledger: RunLedger = {
@@ -101,7 +104,7 @@ test("invented, unavailable and mismatched loaded-source observations cannot sup
 
 test("citation preflight rejects unknown, empty and forbidden source requirements", () => {
   expect(() => validateCases([scenario], new Set())).toThrow("invalid skill citation");
-  expect(() => validateCases([{...scenario, expected:{requiredSkillCitations:[{skill:"implement",passage:" "}]}}], new Set(["implement"]))).toThrow("invalid skill citation");
+  expect(() => validateCases([{...scenario, expected:{...scenario.expected,requiredSkillCitations:[{skill:"implement",passage:" "}]}}], new Set(["implement"]))).toThrow("invalid skill citation");
   expect(() => validateCases([{...scenario, expected:{...scenario.expected,forbiddenSkills:["implement"]}}], new Set(["implement"]))).toThrow("cited skill is forbidden");
   expect(() => validateCases([scenario], new Set(["implement"]))).not.toThrow();
 });

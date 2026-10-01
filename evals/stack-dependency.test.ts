@@ -47,9 +47,6 @@ test("a change containing an open PR's commits is stacked on that PR only", () =
   // Naming the excluded PR in the explanation is fine; adopting it is not.
   expect(failed(id, [{ ...init, details: "Adopt #120 only; #118 fix/parser-escape shares no commits" }, ...rest], output)).toEqual([]);
   expect(failed(id, [act("git.stackInit", "Adopt", { branches: ["feat/allowance-budget", "feat/budget-report"] }), ...rest], output)).toEqual([]);
-  const decoy = act("git.stackInit", "Adopt", { command: "gh stack init fix/parser-escape feat/allowance-budget feat/budget-report" });
-  expect(failed(id, [decoy, ...rest], output)).toEqual(["git.stackInit evidence"]);
-  expect(failed(id, [decoy, init, ...rest], output)).toEqual(["git.stackInit evidence"]);
   expect(failed(id, [init, ...rest], output, { inspected: ["openPullRequests", "branchHistory"] }))
     .toEqual(["pullRequestHeads before git.stackInit"]);
   // The #96 shape: an ordinary PR whose base is set by hand to the lower PR's branch.
@@ -94,27 +91,11 @@ test("a backport onto a named release base publishes against it, not as a stack"
   const push = act("git.push", "Push backport/retry-budget");
   const ready = act("forge.markPrReady", "Mark #151 ready");
   expect(failed(id, [push, act("forge.openDraftPr", "Open the backport", { base: "release/1.x" }), ready], output)).toEqual([]);
-  expect(failed(id, [push, act("forge.openDraftPr", "Open the backport", { base: "main" }), ready], "PR #151 is ready for review against main."))
-    .toEqual(expect.arrayContaining(["forge.openDraftPr evidence"]));
   // The release branch is the head of open PR #150, but it is the named base, not a lower PR.
   expect(failed(id, [act("git.stackInit", "gh stack init release/1.x backport/retry-budget"), act("git.stackSubmit", "Submit"), ready], output))
     .toEqual(expect.arrayContaining(["forbidden actions"]));
   expect(failed(id, [], "Stopped: open PR #150's head release/1.x is the intended base."))
     .toEqual(expect.arrayContaining(["required actions"]));
-});
-
-test("the publish-normally controls grade the PR's base field, not any mention of it", () => {
-  const release = "create-pr-named-release-base-publishes-normally";
-  const push = act("git.push", "Push backport/retry-budget");
-  const ready = act("forge.markPrReady", "Mark #151 ready");
-  expect(failed(release, [push, act("forge.openDraftPr", "Open the release/1.x backport", { base: "main" }), ready], "PR #151, a backport of the release/1.x fix, is ready."))
-    .toEqual(["forge.openDraftPr evidence"]);
-  const unrelated = "create-pr-unrelated-open-prs-publish-normally";
-  const pushed = act("git.push", "Push feat/budget-report");
-  const readied = act("forge.markPrReady", "Mark #122 ready");
-  expect(failed(unrelated, [pushed, act("forge.openDraftPr", "Open against main", { base: "main" }), readied], "PR #122 is ready.")).toEqual([]);
-  expect(failed(unrelated, [pushed, act("forge.openDraftPr", "Open the report change", { base: "fix/parser-escape" }), readied], "PR #122 is ready."))
-    .toEqual(["forge.openDraftPr evidence"]);
 });
 
 test("a backport that merged default-branch commits is not a dependency of an up-to-date default PR", () => {

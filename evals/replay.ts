@@ -3,6 +3,13 @@ import { resolve } from "node:path";
 import { evalCases } from "./cases.ts";
 import { gradeRun } from "./grading.ts";
 import {
+  calibrationDigest,
+  calibrationGate,
+  loadJudgeCalibration,
+  rowOutcome,
+  withJudgement,
+} from "./judge.ts";
+import {
   nativeAgentEvidence,
   parseEvents,
   parseModel,
@@ -60,6 +67,10 @@ export async function replay(
     )
   ).evalCases as EvalCase[];
   const records: EvalRunRecord[] = [];
+  const calibration = await loadJudgeCalibration();
+  const digest = calibrationDigest(calibration.samples, evalCases);
+  const sameRubric = (a: EvalCase | undefined, b: EvalCase | undefined) =>
+    JSON.stringify(a?.expected.rubric) === JSON.stringify(b?.expected.rubric);
   for (const id of caseIds) {
     if (!document.records.some((record: EvalRunRecord) => record.caseId === id))
       throw new Error(`Case absent from source: ${id}`);
@@ -117,6 +128,24 @@ export async function replay(
       }
     }
     record.grade = gradeRun(current, record.ledger, record.output);
+    // Recorded verdicts stay valid only for the rubric they answered; the
+    // calibration gate is re-read so trust reflects the current labels.
+    const workerCase = (c: EvalCase, from: EvalCase[]) =>
+      c.worker ? from.find((w) => w.id === c.worker!.caseId) : undefined;
+    if (
+      original.judgement &&
+      sameRubric(old, current) &&
+      sameRubric(workerCase(old, previous), workerCase(current, evalCases))
+    ) {
+      const gate = calibrationGate(original.judgement.judge, calibration, digest);
+      record.judgement = {
+        ...original.judgement,
+        calibrated: gate.calibrated,
+        calibration: gate.reason,
+        trusted: original.judgement.crossFamily && gate.calibrated,
+      };
+    } else delete record.judgement;
+    record.grade = withJudgement(record.grade, record.judgement);
     if (record.error) {
       record.grade.passed = false;
       record.grade.checks.push({
@@ -125,6 +154,7 @@ export async function replay(
         detail: record.error,
       });
     }
+    record.grade.passed = rowOutcome(record) === "pass";
     records.push(record);
   }
   await Bun.write(
@@ -147,7 +177,7 @@ export async function replay(
   );
   await Bun.write(
     output.replace(/\.json$/, "") + ".md",
-    renderSummary(records),
+    renderSummary(records, document.repeat ?? 1),
   );
   console.log(
     `Replayed ${records.length} rows; ${records.filter((r) => r.grade.passed).length} pass. No model calls.`,

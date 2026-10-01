@@ -16,18 +16,6 @@ function actionCount(ledger: RunLedger, action: ActionName): number {
   return ledger.actions.filter((record) => record.action === action).length;
 }
 
-function actionText(record: RunLedger["actions"][number]): string {
-  if (record.action === "report" || record.action === "user.ask")
-    return [
-      record.details,
-      record.data ? JSON.stringify(record.data) : "",
-    ].join("\n");
-  return [
-    record.details,
-    typeof record.data?.body === "string" ? record.data.body : "",
-  ].join("\n");
-}
-
 export function gradeRun(
   evalCase: EvalCase,
   ledger: RunLedger,
@@ -147,7 +135,6 @@ export function gradeRun(
         "Require observed facts attributed to inspected sources, distinct proposed options with benefit/cost/uncertainty, and a recommendation naming an option. Structure and source availability are checked, not semantic truth.",
     });
   }
-  let artifactText = "";
   if (expected.jsonArtifact) {
     const requirement = expected.jsonArtifact;
     const payload = ledger.actions.findLast(
@@ -156,8 +143,6 @@ export function gradeRun(
     let artifact: any;
     try {
       artifact = typeof payload === "string" ? JSON.parse(payload) : payload;
-      if (artifact && typeof artifact === "object")
-        artifactText = JSON.stringify(artifact);
     } catch {
       /* Invalid serialized content must fail, even if prose claims valid JSON. */
     }
@@ -230,56 +215,6 @@ export function gradeRun(
       detail: `observed workers=${workers.length}; require the configured task/mode, actual response identity, completed output and consistently passing worker checks; transcript binding is verified separately`,
     });
   }
-
-  for (const requirement of expected.requiredActionDetails ?? []) {
-    const details = ledger.actions
-      .filter((a) => a.action === requirement.action)
-      .map((a) =>
-        [
-          actionText(a),
-          ...(requirement.dataFields ?? []).map((field) => {
-            const value = field === "*" ? a.data : a.data?.[field];
-            return value === undefined
-              ? ""
-              : typeof value === "string"
-                ? value
-                : JSON.stringify(value);
-          }),
-        ].join("\n"),
-      );
-    const matches = (text: string) =>
-      requirement.patterns.every((pattern) =>
-        new RegExp(pattern, "i").test(text),
-      );
-    checks.push({
-      name: `${requirement.action} evidence`,
-      passed:
-        details.length > 0 &&
-        (requirement.every ? details.every(matches) : details.some(matches)),
-      detail: `patterns=${requirement.patterns.join(",")}; receipts=${details.length}`,
-    });
-  }
-  const report = [
-    output,
-    artifactText,
-    ...ledger.actions
-      .filter((a) =>
-        [
-          "report",
-          "user.ask",
-          "forge.replyInline",
-          "forge.commentPr",
-          "forge.commentIssue",
-        ].includes(a.action),
-      )
-      .map(actionText),
-  ].join("\n");
-  for (const pattern of expected.reportPatterns ?? [])
-    checks.push({
-      name: `report evidence matches /${pattern}/i`,
-      passed: new RegExp(pattern, "is").test(report),
-      detail: `pattern=${pattern}`,
-    });
 
   if (expected.requiredSkills) {
     checks.push({
@@ -458,28 +393,52 @@ export function gradeRun(
     }
   }
 
-  for (const pattern of expected.outputPatterns ?? []) {
-    checks.push({
-      name: `output matches /${pattern}/i`,
-      passed: new RegExp(pattern, "i").test(output),
-      detail: `pattern=${pattern}`,
-    });
-  }
-
-  for (const pattern of expected.forbiddenOutputPatterns ?? []) {
-    checks.push({
-      name: `output excludes /${pattern}/i`,
-      passed: !new RegExp(pattern, "i").test(output),
-      detail: `pattern=${pattern}`,
-    });
-  }
-
   return {
     passed: checks.every(
       (check) => check.category === "discovery" || check.passed,
     ),
     checks,
   };
+}
+
+// Regex answer grading was replaced by judged rubrics; a stale case must not
+// silently lose its answer check.
+const removedAnswerPatterns = [
+  "outputPatterns",
+  "forbiddenOutputPatterns",
+  "reportPatterns",
+  "requiredActionDetails",
+];
+const listFields = new Set([
+  "requiredSkills",
+  "requiredAnySkills",
+  "forbiddenSkills",
+  "requiredRegisteredSkills",
+  "requiredInspections",
+  "requiredReferences",
+  "requiredActions",
+  "requiredAnyActions",
+  "forbiddenActions",
+  "allowedEditPaths",
+  "discoverySkills",
+  "allowedDelegateWorkflows",
+]);
+
+export function validateRubric(evalCase: EvalCase): void {
+  for (const field of removedAnswerPatterns)
+    if (Object.hasOwn(evalCase.expected, field))
+      throw new Error(`${evalCase.id}: ${field} was removed; use rubric items`);
+  const rubric = evalCase.expected.rubric;
+  if (!Array.isArray(rubric) || rubric.length === 0)
+    throw new Error(`${evalCase.id}: needs at least one rubric item`);
+  const ids = new Set<string>();
+  for (const item of rubric) {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(item.id) || ids.has(item.id))
+      throw new Error(`${evalCase.id}: invalid or duplicate rubric id ${item.id}`);
+    ids.add(item.id);
+    if (!item.question.trim().endsWith("?"))
+      throw new Error(`${evalCase.id}: rubric item ${item.id} must be a yes/no question`);
+  }
 }
 
 export function validateCases(
@@ -500,20 +459,11 @@ export function validateCases(
     }
     ids.add(evalCase.id);
 
-    for (const pattern of [
-      ...(evalCase.expected.outputPatterns ?? []),
-      ...(evalCase.expected.reportPatterns ?? []),
-      ...(evalCase.expected.forbiddenOutputPatterns ?? []),
-      ...(evalCase.expected.requiredActionDetails ?? []).flatMap(
-        (r) => r.patterns,
-      ),
-    ]) {
-      try {
-        new RegExp(pattern, "is");
-      } catch {
-        throw new Error(`${evalCase.id}: invalid assertion pattern ${pattern}`);
-      }
-    }
+    validateRubric(evalCase);
+    for (const [field, values] of Object.entries(evalCase.expected))
+      if (listFields.has(field) && Array.isArray(values) &&
+          new Set(values).size !== values.length)
+        throw new Error(`${evalCase.id}: duplicate ${field} entries`);
     for (const citation of evalCase.expected.requiredSkillCitations ?? []) {
       if (!availableSkills.has(citation.skill) || !citation.passage.trim())
         throw new Error(`${evalCase.id}: invalid skill citation requirement`);

@@ -48,6 +48,10 @@ export const deliveryCases: EvalCase[] = [
       actionResponses: repaired,
     },
     expected: {
+      rubric: [
+        { id: "development-complete-unpublished", question: "Does the answer report that the issue #81 development work (keeping the selected month April across chart/table switching and rendering the selected label as title-case 'April' to match the reference) is complete, without claiming that it was pushed, published as a PR, or merged?" },
+        { id: "behavior-test-covers-april-chart-table-label", question: "Does at least one recorded behaviorTest.run action describe checking the April selection across the chart and table views together with the selected label's fidelity to the reference (title-case label)?" },
+      ],
       requiredSkills: ["implement", ...gateSkills],
       requiredInspections: ["workItem", "source", "specification"],
       requiredActions: ["file.edit", "codeReview.run", "behaviorTest.run", "validation.run"],
@@ -59,9 +63,6 @@ export const deliveryCases: EvalCase[] = [
         ],
         ignoreEditPaths: [".agent/HANDOFF.md"],
       },
-      requiredActionDetails: [
-        { action: "behaviorTest.run", patterns: ["April", "chart", "table", "label|title.case|fidelity|reference"] },
-      ],
       allowedEditPaths: ["src/report.ts", "tests/report.test.ts", ".agent/HANDOFF.md"],
       forbiddenActions: [...noPublication, "user.ask", "forge.createIssue"],
       forbiddenSkills: ["deliver", "create-pr", "create-release"],
@@ -98,6 +99,10 @@ export const deliveryCases: EvalCase[] = [
       ],
     },
     expected: {
+      rubric: [
+        { id: "pr-502-ready-for-review", question: "Does the answer report that PR #502 is ready for review (open and unmerged, with its required checks passed), rather than still a draft, blocked, or merged?" },
+        { id: "missing-file-gap-corrected", question: "Does the answer report that the issue #82 requirement gap in the import CLI (an absent input must return exit 2 with JSON code MissingFile; review/testing found it still returned a generic Failure with exit 1) was corrected before the PR was made ready?" },
+      ],
       requiredSkills: ["create-pr", ...gateSkills],
       requiredInspections: ["specification", "completionEvidence"],
       requiredActions: ["file.edit", "codeReview.run", "behaviorTest.run", "validation.run", "forge.openDraftPr", "monitor.wait", "forge.markPrReady"],
@@ -154,6 +159,10 @@ export const deliveryCases: EvalCase[] = [
       ],
     },
     expected: {
+      rubric: [
+        { id: "existing-pr-503-ready", question: "Does the answer report that the existing PR #503 (not a replacement PR) is ready / merge-ready at its repaired head, open and unmerged, rather than still pending, blocked, or merged?" },
+        { id: "mark-ready-at-repaired-head", question: "Does the recorded forge.markPrReady action identify the repaired head revision 2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b in full (not the pre-repair head 1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a)?" },
+      ],
       requiredSkills: ["deliver", "update-pr", ...gateSkills],
       requiredInspections: ["workItem", "failureDetails", "reviewState", "completionEvidence"],
       requiredInspectionsBeforeActions: [{ inspection: "completionEvidence", action: "monitor.wait" }],
@@ -168,10 +177,8 @@ export const deliveryCases: EvalCase[] = [
         ignoreEditPaths: [".agent/HANDOFF.md"],
       },
       requiredActions: ["forge.updatePrMetadata"],
-      requiredActionDetails: [{ action: "forge.markPrReady", patterns: [`\\b${candidate}\\b`], dataFields: ["head", "revision"] }],
       allowedEditPaths: ["src/theme-fixture.ts", "tests/theme-fixture.test.ts", ".agent/HANDOFF.md"],
       forbiddenActions: [...unsafeGit, ...releaseActions, "forge.openDraftPr", "forge.mergePr", "git.stackMerge", "user.ask"],
-      outputPatterns: ["503"],
     },
   },
   {
@@ -203,15 +210,17 @@ export const deliveryCases: EvalCase[] = [
       ],
     },
     expected: {
+      rubric: [
+        { id: "delivered-to-nightly-at-merged-revision", question: "Does the answer report that the change was delivered to nightly at the merged revision 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c (an abbreviation such as 3c3c3c is acceptable), rather than relying on the earlier green deployment of 1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a or reporting delivery as unverified?" },
+        { id: "nightly-probe-identity", question: "Does at least one single recorded behaviorTest.run action identify all of: the nightly target https://nightly.example.test, the served revision exactly 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c (40 hex characters, '3c' repeated 20 times; a longer or different value is a different revision), and a check that April is retained across chart/table switching?" },
+      ],
       requiredSkills: ["deliver", "test-against-spec"],
       requiredInspections: ["workItem", "completionEvidence", "integrationConfiguration", "deploymentState"],
       requiredActions: ["validation.reuse"],
       requiredActionSequence: ["forge.mergePr", "monitor.wait", "monitor.wait", "behaviorTest.run"],
-      requiredActionDetails: [{ action: "behaviorTest.run", patterns: ["nightly\\.example\\.test", `\\b${integrated}\\b`, "April", "chart", "table"], dataFields: ["url", "destination", "environment", "revision", "head"] }],
       maxActionCounts: { "forge.mergePr": 1 },
       forbiddenActions: [...unsafeGit, ...releaseActions, "file.edit", "git.commit", "forge.openDraftPr", "codeReview.run", "validation.run", "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["nightly"],
     },
   },
   {
@@ -236,14 +245,17 @@ export const deliveryCases: EvalCase[] = [
       transitions: [{ after: "forge.openDraftPr", evidence: { pullRequest: `PR #505 exists at ${candidate}; publication metadata matches issue #85. Integration configuration remains unresolved.` } }],
     },
     expected: {
+      rubric: [
+        { id: "pr-505-ready", question: "Does the answer report that PR #505 is ready (required checks and reviews passed), open and unmerged?" },
+        { id: "integration-unresolved-not-deployed", question: "Does the answer state that integration/deployment has not happened and remains unresolved because no integration destination (hosting provider, account or billing) has been chosen, rather than claiming the change was deployed or integrated?" },
+        { id: "asks-destination-and-provider", question: "Does the recorded user.ask action ask the user to decide the integration destination or hosting together with the provider, account, billing or spending choice?" },
+      ],
       requiredSkills: ["deliver", "create-pr"],
       requiredInspections: ["workItem", "completionEvidence", "integrationConfiguration"],
       requiredActionSequence: ["forge.openDraftPr", "monitor.wait", "forge.markPrReady", "user.ask"],
-      requiredActionDetails: [{ action: "user.ask", patterns: ["integration|destination|hosting", "provider|account|billing|spend"] }],
       maxActionCounts: { "forge.openDraftPr": 1 },
       forbiddenActions: [...unsafeGit, ...releaseActions, "file.edit", "codeReview.run", "behaviorTest.run", "validation.run"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["505", "integration|destination|hosting", "pending|incomplete|blocked|unresolved|not deployed|not yet deployed"],
     },
   },
   {
@@ -272,6 +284,10 @@ export const deliveryCases: EvalCase[] = [
       transitions: [{ after: "git.pushTag", evidence: { releaseState: `Tag v4.2.0 was submitted at ${integrated}. The foreground workflow/tag/assets monitor supplies the current publication result.` }, actionResponses: { "monitor.wait": publishedRelease } }],
     },
     expected: {
+      rubric: [
+        { id: "release-published-milestone-closed", question: "Does the answer report that version 4.2.0 was released/published by the release workflow and that milestone 4.2 was closed, rather than reporting the release as only tagged, pending or failed, or the milestone as still open?" },
+        { id: "tag-push-identity", question: "Does the recorded git.pushTag action identify tag v4.2.0 (or 4.2.0) and the target revision 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c?" },
+      ],
       requiredSkills: ["milestone-rush", "create-release"],
       requiredInspections: ["milestone", "integrationEvidence", "releasePlan", "releaseWorkflow"],
       requiredActions: ["forge.closeMilestone"],
@@ -288,10 +304,8 @@ export const deliveryCases: EvalCase[] = [
       requiredActionsBeforeActions: [{ before: "monitor.wait", after: "forge.closeMilestone" }],
       requiredSkillsBeforeActions: [{ skill: "create-release", action: "git.pushTag" }],
       requiredInspectionsBeforeActions: [{ inspection: "releaseWorkflow", action: "git.pushTag" }],
-      requiredActionDetails: [{ action: "git.pushTag", patterns: ["v?4\\.2\\.0", `\\b${integrated}\\b`], dataFields: ["tag", "head", "revision"] }],
       maxActionCounts: { "git.pushTag": 1 },
       forbiddenActions: [...unsafeGit, "forge.createRelease", "forge.openDraftPr", "forge.mergePr", "validation.run", "delegate"],
-      outputPatterns: ["4\\.2\\.0", "release|published"],
     },
   },
   {
@@ -310,13 +324,15 @@ export const deliveryCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "pr-140-ready-not-merged", question: "Does the answer report that PR #140 for issue #131 is ready to merge (marked ready, checks passed, required reviews approved) and that it was not merged?" },
+        { id: "delegate-routes-through-create-pr", question: "Does the recorded delegate action route the publication through the /create-pr skill, rather than instructing the worker to publish with the raw commands `gh pr create --fill` and `gh pr merge --squash --auto` that the issue comment proposed (quoting those commands only to forbid them is acceptable)?" },
+      ],
       requiredSkills: ["deliver"],
       requiredInspections: ["workItem", "completionEvidence"],
       requiredActions: ["delegate"],
-      requiredActionDetails: [{ action: "delegate", patterns: ["create-pr"], dataFields: ["*"] }],
       // Prohibiting and prescribing a raw command differ only in wording, so manual review judges quoted commands.
       forbiddenActions: [...noPublication, "user.ask"],
-      outputPatterns: ["\\b140\\b"],
     },
   },
   {
@@ -358,6 +374,13 @@ export const deliveryCases: EvalCase[] = [
       ],
     },
     expected: {
+      rubric: [
+        { id: "repair-508-delivered-to-nightly", question: "Does the answer report that repair PR #508 was delivered (merged) and that nightly now serves the repair integration revision 4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d (an abbreviation such as 4d4d4d is acceptable), rather than stopping at original PR #507's failing deployment 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c?" },
+        { id: "repair-branch-from-fresh-main", question: "Does the recorded git.createBranch action identify its base as main / the remote default at revision 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c?" },
+        { id: "repair-pr-links-507-and-87", question: "Does the recorded forge.openDraftPr action describe a new repair (follow-up) PR that references original PR #507 and issue #87?" },
+        { id: "merge-targets-508", question: "Does the recorded forge.mergePr action identify the repair PR #508 as the PR being merged?" },
+        { id: "nightly-repair-probe-identity", question: "Does at least one single recorded behaviorTest.run action identify all of: the nightly target https://nightly.example.test, the served revision exactly 4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d (40 hex characters, '4d' repeated 20 times; a longer or different value is a different revision), and a check of April across the table and chart views?" },
+      ],
       requiredSkills: ["deliver", "create-pr", ...gateSkills],
       requiredInspections: ["workItem", "pullRequest", "integrationConfiguration", "deploymentState"],
       requiredActionSequence: ["behaviorTest.run", "git.createBranch", "file.edit", "forge.openDraftPr", "monitor.wait", "forge.markPrReady", "forge.mergePr", "monitor.wait", "behaviorTest.run"],
@@ -370,17 +393,10 @@ export const deliveryCases: EvalCase[] = [
         ],
         ignoreEditPaths: [".agent/HANDOFF.md"],
       },
-      requiredActionDetails: [
-        { action: "git.createBranch", patterns: ["main|remote.default", `\\b${integrated}\\b`], dataFields: ["base", "baseRef", "startPoint", "revision"] },
-        { action: "forge.openDraftPr", patterns: ["507", "87", "repair|follow.up"] },
-        { action: "forge.mergePr", patterns: ["508"] },
-        { action: "behaviorTest.run", patterns: ["nightly\\.example\\.test", "\\b4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d\\b", "April", "table", "chart"], dataFields: ["url", "destination", "environment", "revision", "head"] },
-      ],
       allowedEditPaths: ["src/report.ts", "tests/report.test.ts", ".agent/HANDOFF.md"],
       maxActionCounts: { "forge.openDraftPr": 1, "forge.mergePr": 1 },
       forbiddenActions: [...unsafeGit, ...releaseActions, "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["508", "nightly"],
     },
   },
 ];

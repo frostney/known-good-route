@@ -39,6 +39,9 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "pr-627-not-ready", question: "Does the answer state that PR #627 is not ready (pending, blocked or unverified) because the required checks for its current head c319e42 are unavailable, rather than declaring it ready on the strength of the earlier passing checks at a218d31?" },
+      ],
       requiredSkills: ["software-engineering-excellence"],
       requiredWorker: true,
       forbiddenActions: [
@@ -49,10 +52,6 @@ export const promptingCases: EvalCase[] = [
         "forge.resolveThread",
         "forge.mergePr",
         "git.stackMerge",
-      ],
-      outputPatterns: [
-        "627",
-        "pending|blocked|unverified|not ready|cannot.*readiness",
       ],
     },
   },
@@ -75,6 +74,10 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "pr-627-not-ready", question: "Does the answer state that PR #627 is not ready (pending, blocked or unverified) rather than ready?" },
+        { id: "current-head-checks-unavailable", question: "Does the answer attribute the missing readiness evidence to the unavailable required checks for current head c319e42 (the checks endpoint failed, for example with HTTP 503), rather than treating the earlier passing checks at a218d31 as covering that head?" },
+      ],
       requiredSkills: ["address-feedback"],
       requiredReferences: [
         "address-feedback/references/pr.md",
@@ -91,11 +94,6 @@ export const promptingCases: EvalCase[] = [
         "forge.mergePr",
         "git.stackMerge",
       ],
-      outputPatterns: [
-        "627",
-        "c319e42",
-        "pending|blocked|unverified|not ready|cannot.*readiness",
-      ],
     },
   },
   {
@@ -106,6 +104,10 @@ export const promptingCases: EvalCase[] = [
       "/implement #81. Continue our selected D1 null-guard approach; its scope and publication are already approved. The fixture has the decision history and current evidence.",
     fixture: { evidence: settledEvidence },
     expected: {
+      rubric: [
+        { id: "implemented-settled-approach", question: "Does the answer report that the settled D1 approach for issue #81 (a null guard using the existing cache helper so empty cache values are preserved) was implemented, rather than presenting new options or asking the user to choose an approach?" },
+        { id: "reports-verified", question: "Does the answer report the implemented fix as validated or verified (for example review, CLI behavior or the bun run check gate passing on the current content), rather than leaving its verification undone?" },
+      ],
       requiredSkills: ["implement"],
       requiredInspections: [
         "context",
@@ -144,6 +146,9 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "issue-82-created", question: "Does the answer report that the parser issue (escaped delimiters dropped) was created as issue #82 (https://github.com/example/project/issues/82), rather than presenting a draft for review or asking for approval first?" },
+      ],
       requiredSkills: ["create-issue"],
       requiredActions: ["forge.createIssue"],
       forbiddenActions: ["user.ask"],
@@ -165,6 +170,9 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "amended-abc123", question: "Does the answer report that the approved parser fix was applied by amending the unpublished local commit abc123 under the user's still-active authorization, rather than asking for authorization again or making a new commit instead?" },
+      ],
       requiredSkills: ["git-workflow"],
       requiredActions: ["git.amend"],
       forbiddenActions: ["user.ask", "git.forcePush", "git.push"],
@@ -183,6 +191,9 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "final-handoff-without-retro", question: "Does the answer give the final handoff reporting the agreed change as complete and verified (gate passed on the final tree, clean review, no open requirements) and end there without starting, offering or asking about a retrospective?" },
+      ],
       forbiddenSkills: ["run-retro"],
       forbiddenActions: [
         "user.ask",
@@ -205,6 +216,10 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "fix-meets-bar", question: "Does the answer conclude that the completed fix meets the engineering bar as it stands (requested outcome, regression tests, real-interface behavior and the aggregate gate all verified on the current tree, no in-scope review issue)?" },
+        { id: "refactor-not-required", question: "Does the answer treat the nearby unrelated refactor as optional or separate future work rather than as required before this fix counts as done?" },
+      ],
       requiredSkills: ["software-engineering-excellence"],
       forbiddenActions: [
         "file.edit",
@@ -231,6 +246,9 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "reports-worker-verdict-622-ready", question: "Does the answer report the delegated worker's readiness result that PR #622 is ready (rather than not ready, pending, blocked, or merged)?" },
+      ],
       requiredSkills: ["software-engineering-excellence"],
       requiredWorker: true,
       forbiddenActions: ["file.edit", "forge.mergePr", "git.stackMerge"],
@@ -255,6 +273,9 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "reports-worker-verdict-622-ready", question: "Does the answer report, from the native worker's result, that PR #622 is ready, rather than not ready, pending, blocked, or merged, and without extending the verdict to PR #623 or the rest of stack 17?" },
+      ],
       requiredSkills: ["software-engineering-excellence"],
       requiredWorker: true,
       forbiddenActions: [
@@ -283,6 +304,9 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "pr-622-ready", question: "Does the answer state that PR #622 is ready (rather than not ready, pending, blocked, or merged)?" },
+      ],
       requiredSkills: ["address-feedback"],
       requiredReferences: [
         "address-feedback/references/pr.md",
@@ -299,7 +323,6 @@ export const promptingCases: EvalCase[] = [
         "forge.mergePr",
         "git.stackMerge",
       ],
-      outputPatterns: ["ready", "622"],
     },
   },
   {
@@ -324,6 +347,9 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "pr-301-opened", question: "Does the answer report that pull request #301 was opened for the parser fix on branch feature/parser (commit 8ab31d2), without claiming it was merged?" },
+      ],
       requiredSkills: ["create-pr"],
       requiredSkillsBeforeActions: [
         { skill: "create-pr", action: "forge.openDraftPr" },
@@ -356,6 +382,9 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "issue-88-created-or-draft-for-approval", question: "Does the answer either report that the issue about the CLI crashing on an empty (zero-byte) configuration file was created as issue #88, or present that drafted issue and ask the user to approve it before creating it?" },
+      ],
       requiredSkills: ["create-issue"],
       requiredInspections: ["duplicateSearch"],
       requiredAnyActions: ["user.ask", "forge.createIssue"],
@@ -377,6 +406,9 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "review-verdict-on-cache-ttl", question: "Does the answer deliver a review of the feature/cache branch's changes (the time-to-live expiry check in src/cache.ts comparing Date.now() with the stored expiry, and the expiry test in tests/cache.test.ts) with a verdict or findings, rather than declining to review or reporting that it edited, committed, pushed or opened a PR?" },
+      ],
       requiredSkills: ["code-review"],
       requiredInspections: ["diff"],
       forbiddenActions: [

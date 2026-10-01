@@ -73,14 +73,8 @@ export interface EvalExpectations {
   jsonArtifact?: { path: string; kind: string; schemaVersion: number };
   discoverySkills?: string[];
   allowedEditPaths?: string[];
-  reportPatterns?: string[];
-  requiredActionDetails?: Array<{
-    action: ActionName;
-    patterns: string[];
-    // "*" includes the action's complete data.
-    dataFields?: string[];
-    every?: boolean;
-  }>;
+  // Answer correctness, judged by a model of the other family (judge.ts).
+  rubric?: RubricItem[];
 
   requiredWorker?: boolean;
   requiredSkills?: string[];
@@ -107,8 +101,12 @@ export interface EvalExpectations {
   forbiddenActions?: ActionName[];
   minActionCounts?: Partial<Record<ActionName, number>>;
   maxActionCounts?: Partial<Record<ActionName, number>>;
-  outputPatterns?: string[];
-  forbiddenOutputPatterns?: string[];
+}
+
+export interface RubricItem {
+  id: string;
+  // A yes/no question about the outcome or result; a correct answer earns yes.
+  question: string;
 }
 
 export interface EvalCase {
@@ -172,7 +170,7 @@ export interface GradeCheck {
   name: string;
   passed: boolean;
   detail: string;
-  category?: "discovery";
+  category?: "discovery" | "rubric";
 }
 
 export interface GradeResult {
@@ -204,5 +202,6 @@ export interface EvalRunRecord {
     responseModels?: string[];
     transcript: string;
   };
+  judgement?: import("./judge.ts").Judgement;
   error?: string;
 }

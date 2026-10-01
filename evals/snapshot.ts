@@ -1,5 +1,5 @@
 import { cp, mkdir, readdir, readlink, realpath, stat } from "node:fs/promises";
-import { resolve, join, relative, isAbsolute } from "node:path";
+import { dirname, resolve, join, relative, isAbsolute } from "node:path";
 import { createHash } from "node:crypto";
 import { loadSkills } from "./skill-loader.ts";
 import { readProcessText } from "./process-output.ts";
@@ -106,6 +106,15 @@ export async function installSnapshotDependencies(snapshot: string) {
   );
   return dependencies;
 }
+// Repository files outside evals/ that a frozen harness needs to run.
+export const harnessSupportFiles = [
+  "package.json",
+  "bun.lock",
+  "tsconfig.json",
+  // The harness generates each fixture's AGENTS.md block with this generator.
+  ".github/actions/update-project-skills/agents-block.mjs",
+  ".github/actions/update-project-skills/agents-block.d.mts",
+];
 export async function freezeSnapshot(
   snapshot: string,
   skillsRoot = process.cwd(),
@@ -115,8 +124,10 @@ export async function freezeSnapshot(
   for (const skill of (await loadSkills(skillsRoot)).values())
     await cp(skill.directory, join(snapshot, skill.name), { recursive: true });
   await cp(harnessRoot, join(snapshot, "evals"), { recursive: true });
-  for (const name of ["package.json", "bun.lock", "tsconfig.json"])
+  for (const name of harnessSupportFiles) {
+    await mkdir(dirname(join(snapshot, name)), { recursive: true });
     await cp(resolve(harnessRoot, "..", name), join(snapshot, name));
+  }
   await installSnapshotDependencies(snapshot);
   const all = await treeManifest(snapshot);
   const hashes = Object.fromEntries(

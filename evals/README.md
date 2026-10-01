@@ -83,8 +83,10 @@ Fable to exercise its actual Opus worker contract.
 Unavailable authentication, unsupported models, and incomplete runs are errors;
 no fallback model is configured. Native host behavior is part of this evaluation.
 
-Use repeated `--case` flags to select scenarios, `--repeat 3` for repeated runs,
-and repeated `--effort medium --effort high` to compare effort levels. The
+Each selected case runs three times per model by default, and a case passes for
+a model only when every repeat passes. `--repeat` changes the count. Use
+repeated `--case` flags to select scenarios and repeated
+`--effort medium --effort high` to compare effort levels. The
 runtime must support the requested model and effort. `--concurrency` controls
 independent scenario processes; the default is one. There is no fixed tool-step
 budget or hidden effort substitution.
@@ -118,25 +120,96 @@ Missing model metadata remains unavailable rather than being inferred from a
 model's self-description. Errors and behavior failures are distinguished; both
 produce a non-zero exit status.
 
-The graders evaluate observed fixture tool calls before output patterns. A native
+Deterministic checks grade what the fixture observed: required and forbidden
+actions, required, alternative and forbidden skills, inspections, current gates,
+the native worker contract, exact edit paths and ordering. A native
 final response counts as a report, never as evidence of a mutation or a report
 that preceded an earlier question. A user decision must be enqueued with an actual
 `performAction` call using `user.ask`; the final answer alone is not a fixture
-question receipt. Communication assertions can inspect both
-the final response, intermediate decision packets, structured report/question
-payloads, and recorded review replies. Dedicated writing cases
-still grade the final response itself. Optional skill discovery has a separate
+question receipt. Optional skill discovery has a separate
 diagnostic result; explicitly requested skills and required workflow contracts
 remain outcome gates. Exact allowed edit paths are checked from structured
-tool arguments, not path mentions in prose.
+tool arguments, not path mentions in prose. Whether the answer is right is
+judged against the case's rubric, described next.
+
+## Judged answers
+
+Every case carries a `rubric` of yes/no questions in its case file, written
+before any run. Each question names the facts a correct answer must establish:
+the verdict, the reported state, revisions, numbers, or the content of a
+recorded action such as a PR body, a wait deadline or a reply. Prose style is
+not judged. `validateCases` rejects a case without a rubric, a statement that is
+not a question, and the removed regex fields (`outputPatterns`,
+`forbiddenOutputPatterns`, `reportPatterns` and `requiredActionDetails`).
+
+After a run completes, a judge model reads the scenario prompt as context and
+the answer as evidence. The answer is the final response plus every recorded
+action, with its details and each data field printed raw. The judge returns
+`yes` or `no` for every item, each with an exact quote from the answer. A `no`,
+or a `yes` whose quote is empty or not found in the answer, fails the run.
+Quotes are compared after collapsing whitespace. Missing, repeated, unknown or
+malformed verdicts are judge errors, which are inconclusive rather than passes
+or failures. A worker's answer is judged separately against its own case's
+rubric.
+
+The judge comes from the other model family: Claude judges Codex runs and Codex
+judges Claude runs. The defaults are `claude:claude-opus-5-5` and
+`codex:gpt-6-sol`; `--judge <cli:model>` replaces the judge for that family.
+Judges run through the same native CLIs and saved logins as candidates, with no
+tools, at medium effort. `--same-family-judge` judges each run with its own
+family's judge, for diagnosis when the other CLI is unavailable. Its verdicts
+are recorded but never trusted.
+
+### Calibration gate
+
+`calibration.json` holds human-labelled answers under
+`judgeCalibration.samples`. Each sample names a case, the answer (final output
+and, where content matters, actions), its `pass` or `fail` label, the rubric
+items a failing answer misses, and the committed test it came from. A judge
+agrees with a sample when it passes every item of a `pass` answer, or fails at
+least one labelled item of a `fail` answer. A judge error disagrees.
+
+The gate opens for a judge only when its recorded result covers the current
+samples, their rubrics and the judge protocol (a digest), includes at least
+`minimumSamples` samples, agrees on at least `agreementThreshold` (0.9) of them,
+and passed no answer a human labelled as failing. Until then, a run that passes
+every deterministic check but fails its rubric is reported as **needs human
+review**, not as a failure. A same-family judge's failures are treated the same
+way. Deterministic failures always fail.
+
+Calibrate a judge locally; it makes one judge call per sample:
+
+```bash
+bun run eval:calibrate-judge -- --judge codex:gpt-6-sol --output .eval-results/calibration-sol --concurrency 4 --write
+```
+
+`--write` records the result in `calibration.json`; commit it with the labels it
+measured. Any change to the samples, a sampled case's rubric or the judge
+instructions changes the digest and closes the gate until the judge is
+recalibrated.
+
+### Results
+
+Each row records its judge, whether the judge was cross-family and calibrated,
+every verdict with its quote, and the judge transcripts. The summary groups rows
+by model, effort and case. A case passes only when all its repeats pass; any
+failed repeat fails it, errors or missing repeats leave it inconclusive, and
+untrusted judge failures leave it for human review. The process exits non-zero
+unless every case passes, because review rows still await a human decision.
+
+### Project instructions
+
+Each eval workspace gets the `AGENTS.md` that the
+[skills block generator](../.github/actions/update-project-skills/agents-block.mjs)
+writes for the skills installed in that run, as a consuming repository would
+carry it. Both CLIs isolate ambient project files, so the harness appends this
+file to the instructions of every candidate and worker run. The snapshot keeps
+the generator with the harness.
 
 Requested JSON artifact cases parse the actual submitted payload at the declared
-path and require the correct version, kind, and findings array. Their other
-report assertions can inspect that parsed artifact; the final answer need not
-repeat its contents. This validates the envelope, not every field or the truth
-of every finding. Action-specific evidence can inspect explicitly named
-structured payload fields, such as a behavior probe's cases or a wait's deadline.
-Unrelated metadata cannot supply those fields implicitly.
+path and require the correct version, kind, and findings array. This validates
+the envelope, not every field or the truth of every finding; the rubric judges
+the artifact's content from the recorded edit.
 
 `calibration.json` records why each case was retained, corrected, or added.
 Some fixtures advance evidence only after a recorded action, such as waiting
@@ -348,7 +421,10 @@ explicit customization controls instead.
 ## Replay a corrected grader
 
 After an assertion correction, regrade a trusted result produced by this runner
-without making new model calls:
+without making new model calls. A row keeps its recorded rubric verdicts only
+while its case's rubric is unchanged; the calibration gate is re-read. Rows whose
+rubric changed, or that predate judged rubrics, are reported as not judged and
+need a fresh run:
 
 ```bash
 bun evals/replay.ts .eval-results/original.json .eval-results/regraded.json

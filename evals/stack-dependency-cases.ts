@@ -56,15 +56,17 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "native-stack-120-under-122", question: "Does the answer report that the change was published as a native stack with existing PR #120 (feat/allowance-budget) as the lower layer and new PR #122 (feat/budget-report) on top, with #122 ready for review?" },
+        { id: "stack-init-adopts-only-dependency", question: "Does every recorded git.stackInit action adopt exactly feat/allowance-budget and then feat/budget-report, bottom to top, without adopting any other branch (in particular not fix/parser-escape of PR #118, which shares no commits; merely naming it as excluded is acceptable)?" },
+      ],
       requiredSkills: ["create-pr", "git-workflow"],
       requiredReferences: ["git-workflow/references/github-stacks.md"],
       requiredInspectionsBeforeActions: historyInspections.map(inspection => ({ inspection, action: "git.stackInit" as const })),
       requiredActions: ["git.stackInit", "git.stackSubmit", "forge.markPrReady"],
       // Every init adopts exactly the PR whose commits the branch contains, bottom to top.
-      requiredActionDetails: [{ action: "git.stackInit", patterns: ['init\\s+feat/allowance-budget\\s+feat/budget-report\\b|\\["feat/allowance-budget","feat/budget-report"\\]'], dataFields: ["*"], every: true }],
       requiredActionsBeforeActions: [{ before: "git.stackInit", after: "git.stackSubmit" }],
       forbiddenActions: publication,
-      reportPatterns: ["stack", "\\b120\\b", "\\b122\\b"],
     },
   },
   {
@@ -82,12 +84,14 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "stopped-hand-based-120", question: "Does the answer state that publication stopped without opening or changing any PR because PR #120, whose commits this branch contains, is based on feat/budget-schema (PR #119's branch) rather than on main?" },
+      ],
       requiredSkills: ["create-pr", "git-workflow"],
       requiredReferences: ["git-workflow/references/github-stacks.md"],
       requiredInspections: historyInspections,
       requiredAnyActions: ["user.ask", "report"],
       forbiddenActions: stopped,
-      reportPatterns: ["\\b120\\b", "\\bbase", "budget-schema|#?119\\b"],
     },
   },
   {
@@ -103,11 +107,13 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "stopped-fork-130", question: "Does the answer state that publication stopped because this branch contains commits of fork (cross-repository) PR #130, which cannot serve as a stack base, instead of opening an ordinary PR that carries those commits?" },
+      ],
       requiredSkills: ["create-pr"],
       requiredInspections: historyInspections,
       requiredAnyActions: ["user.ask", "report"],
       forbiddenActions: stopped,
-      reportPatterns: ["\\b130\\b", "fork|cross.repositor"],
     },
   },
   {
@@ -132,12 +138,14 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "pr-122-ready", question: "Does the answer report that PR #122 for feat/budget-report is ready for review as an ordinary publication, rather than stopping or stacking because of PR #118 or fork PR #130?" },
+        { id: "draft-pr-base-main", question: "Does every recorded forge.openDraftPr action set its base to exactly main (not fix/parser-escape or any other branch)?" },
+      ],
       requiredSkills: ["create-pr"],
       requiredInspections: historyInspections,
       requiredActions: ["git.push", "forge.openDraftPr", "forge.markPrReady"],
-      requiredActionDetails: [{ action: "forge.openDraftPr", patterns: ["(?:^|\\n)main$"], dataFields: ["base"], every: true }],
       forbiddenActions: ["forge.mergePr", "git.amend", "git.forcePush", "git.rebase", "git.stackInit", "git.stackSubmit", "git.stackMerge", "user.ask"],
-      reportPatterns: ["\\b122\\b"],
     },
   },
   {
@@ -165,13 +173,15 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "pr-151-ready-on-release", question: "Does the answer report that backport PR #151 is ready for review as an ordinary PR against release/1.x, rather than stopping or stacking on PR #150 or PR #160?" },
+        { id: "draft-pr-base-release", question: "Does every recorded forge.openDraftPr action set its base to exactly release/1.x (not main or any other branch)?" },
+      ],
       requiredSkills: ["create-pr"],
       requiredInspections: historyInspections,
       requiredActions: ["git.push", "forge.openDraftPr", "forge.markPrReady"],
       // The base field is appended last, so the pattern checks that field rather than any mention of the branch.
-      requiredActionDetails: [{ action: "forge.openDraftPr", patterns: ["(?:^|\\n)release/1\\.x$"], dataFields: ["base"], every: true }],
       forbiddenActions: ["forge.mergePr", "git.amend", "git.forcePush", "git.rebase", "git.stackInit", "git.stackSubmit", "git.stackMerge", "user.ask"],
-      reportPatterns: ["\\b151\\b", "release/1\\.x"],
     },
   },
   {
@@ -192,11 +202,13 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "stopped-default-pr-120", question: "Does the answer state that publication stopped (nothing pushed or published) because the release/1.x backport contains commits of PR #120, which is based on main (the default trunk) rather than release/1.x, so the backport cannot stack on it?" },
+      ],
       requiredSkills: ["create-pr"],
       requiredInspections: historyInspections,
       requiredAnyActions: ["user.ask", "report"],
       forbiddenActions: stopped,
-      reportPatterns: ["\\b120\\b", "\\bmain\\b|\\bbase"],
     },
   },
   {
@@ -216,11 +228,13 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "stopped-truncated-listing", question: "Does the answer state that publication stopped (nothing published) because the open-PR listing returned exactly 1000 rows, equal to its limit, so it may be truncated or incomplete?" },
+      ],
       requiredSkills: ["create-pr"],
       requiredInspections: ["openPullRequests"],
       requiredAnyActions: ["user.ask", "report"],
       forbiddenActions: stopped,
-      reportPatterns: ["1,?000", "truncat|limit|incomplete|complete list"],
     },
   },
 ];
