@@ -487,6 +487,10 @@ describe("tuning and held-out rounds", () => {
     expect(rowOutcome({ grade, judgement: closed })).toBe("review");
     expect(rowOutcome({ grade, judgement: sameFamily })).toBe("review");
   });
+  test("labelled answers carry no local machine paths, because the repository is public", async () => {
+    const text = await Bun.file(new URL("./calibration.json", import.meta.url)).text();
+    expect(text).not.toMatch(/\/(?:private\/tmp|Users|home)\/[^"\s]*/);
+  });
   test("the committed round-1 labels are tuning-only", async () => {
     const committed = await loadJudgeCalibration();
     const round1 = committed.samples.filter((s) => s.round === 1);
