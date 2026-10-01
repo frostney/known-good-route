@@ -8,9 +8,12 @@ import {
   aggregateRepeats,
   calibrationDigest,
   calibrationGate,
+  calibrationItems,
   combineJudgement,
   judgeAnswer,
   judgeInput,
+  judgeItems,
+  messageRubric,
   judgesFromFlags,
   loadJudgeCalibration,
   parseJudgeOutput,
@@ -18,10 +21,12 @@ import {
   rowOutcome,
   scoreCalibration,
   selectJudge,
+  terminalItem,
   validateCalibrationSamples,
   withJudgement,
   type CalibrationSample,
   type JudgeCalibration,
+  type JudgeItem,
   type JudgeRunner,
   type RubricVerdict,
 } from "./judge.ts";
@@ -32,6 +37,7 @@ const rubric: RubricItem[] = [
   { id: "blocked", question: "Does the answer report that PR #7 is blocked by the failing check?" },
   { id: "head", question: "Does the answer name head revision abc1234?" },
 ];
+const items: JudgeItem[] = rubric.map((item) => ({ ...item, kind: "outcome" }));
 const answer = renderAnswer("PR #7 is blocked: lint failed at head abc1234.", [
   { action: "forge.commentPr", details: "Status note", data: { body: "Blocked on lint.\nNext: fix lint.", pr: 7 } },
 ]);
@@ -47,7 +53,7 @@ describe("judge parsing", () => {
     expect(answer).toContain("[1] forge.commentPr\ndetails: Status note");
     expect(answer).toContain("data.body: Blocked on lint.\nNext: fix lint.");
     expect(answer).toContain("data.pr: 7");
-    expect(JSON.parse(judgeInput("Task", rubric, answer))).toEqual({ task: "Task", rubric, answer });
+    expect(JSON.parse(judgeInput("Task", items, answer))).toEqual({ task: "Task", items, answer });
   });
   test("every rubric item gets exactly one verdict in rubric order", () => {
     const parsed = parseJudgeOutput(
@@ -55,7 +61,7 @@ describe("judge parsing", () => {
         { id: "head", verdict: "yes", quote: "head abc1234" },
         { id: "blocked", verdict: "yes", quote: "PR #7 is blocked" },
       ]),
-      rubric,
+      items,
       answer,
     );
     expect(parsed.map((v) => [v.id, v.passed])).toEqual([["blocked", true], ["head", true]]);
@@ -77,7 +83,7 @@ describe("judge parsing", () => {
         { id: "head", verdict: "yes", quote: "abc1234" },
       ]),
     ])
-      expect(() => parseJudgeOutput(raw, rubric, answer)).toThrow();
+      expect(() => parseJudgeOutput(raw, items, answer)).toThrow();
   });
 });
 
@@ -88,7 +94,7 @@ describe("quote enforcement", () => {
         { id: "blocked", verdict, quote },
         { id: "head", verdict: "yes", quote: "abc1234" },
       ]),
-      rubric,
+      items,
       answer,
     )[0]!;
   test("a yes needs a quote that is in the answer", () => {
@@ -110,7 +116,7 @@ describe("quote enforcement", () => {
         { id: "blocked", verdict: "yes", quote: "Report the PR state" },
         { id: "head", verdict: "yes", quote: "abc1234" },
       ]),
-      rubric,
+      items,
       answer,
     );
     expect(parsed[0]!.passed).toBeFalse();
@@ -142,55 +148,67 @@ describe("cross-family judge choice", () => {
   });
 });
 
-const sample = (labels: Record<string, "yes" | "no">, id = "s1"): CalibrationSample => ({
-  id, caseId: "c", model: "codex:m", output: "x", labels, labelledBy: "founder",
+const sample = (labels: Record<string, "yes" | "no">, id = "s1", terminal: "yes" | "no" = "yes"): CalibrationSample => ({
+  id, caseId: "c", model: "codex:m", prompt: "Task", output: "x",
+  rubric: Object.keys(labels).map((key) => ({ id: key, question: `Is ${key} right?` })),
+  labels, terminal, labelledBy: "founder",
 });
 const verdict = (id: string, passed: boolean): RubricVerdict => ({
   id, question: "?", verdict: passed ? "yes" : "no", quote: passed ? "x" : "", quoteFound: passed, passed,
 });
 
 describe("calibration gate", () => {
-  test("agreement is per item against the labeller's yes or no", () => {
+  test("agreement is per item against the labeller, with the terminal question counted apart", () => {
     const result = scoreCalibration(
-      [sample({ a: "yes", b: "no" }, "s1"), sample({ a: "no", b: "yes" }, "s2"), sample({ a: "yes" }, "s3")],
-      [[verdict("a", true), verdict("b", false)], [verdict("a", true), verdict("b", true)], undefined],
+      [sample({ a: "yes", b: "no" }, "s1", "no"), sample({ a: "no", b: "yes" }, "s2"), sample({ a: "yes" }, "s3")],
+      [
+        [verdict("a", true), verdict("b", false), verdict("terminal-state", true)],
+        [verdict("a", true), verdict("b", true), verdict("terminal-state", true)],
+        undefined,
+      ],
       "digest", "2026-10-01T00:00:00Z",
     );
-    expect(result).toMatchObject({ samples: 3, total: 5, agreed: 3, falsePasses: 1 });
-    expect(result.disagreements).toEqual([
-      { sample: "s2", caseId: "c", item: "a", label: "no", judged: "yes" },
-      { sample: "s3", caseId: "c", item: "a", label: "yes", judged: "error" },
-    ]);
+    expect(result.samples).toBe(3);
+    expect(result.outcome).toEqual({ total: 5, agreed: 3, agreement: 0.6, falsePasses: 1 });
+    expect(result.terminal).toEqual({ total: 3, agreed: 1, agreement: 1 / 3, falsePasses: 1 });
+    expect(result.disagreements).toContainEqual({ sample: "s1", caseId: "c", item: "terminal-state", label: "no", judged: "yes" });
+    expect(result.disagreements).toContainEqual({ sample: "s3", caseId: "c", item: "a", label: "yes", judged: "error" });
   });
   const calibration = (results: JudgeCalibration["results"]): JudgeCalibration => ({
     agreementThreshold: 0.9, minimumSamples: 10, samples: [], results,
   });
-  const scored = (agreeing: number, total: number, falsePass = false) => {
+  const scored = (agreeing: number, total: number, falsePass = false, terminalAgrees = true) => {
     const samples = Array.from({ length: total }, (_, i) => sample({ a: i === 0 && falsePass ? "no" : "yes" }, `s${i}`));
-    const judged = samples.map((_, i) => [verdict("a", i < agreeing || (i === 0 && falsePass))]);
+    const judged = samples.map((_, i) => [verdict("a", i < agreeing || (i === 0 && falsePass)), verdict("terminal-state", terminalAgrees)]);
     return scoreCalibration(samples, judged, "digest", "2026-10-01T00:00:00Z");
   };
-  test("the gate opens only for a current, sufficient, accurate calibration", () => {
+  test("the gate opens only for a current, sufficient, accurate calibration on the rubric items", () => {
     expect(calibrationGate("codex:j", calibration({}), "digest").calibrated).toBeFalse();
     const good = scored(10, 10);
-    expect(good).toMatchObject({ agreed: 10, total: 10, agreement: 1, falsePasses: 0 });
+    expect(good.outcome).toMatchObject({ agreed: 10, total: 10, agreement: 1, falsePasses: 0 });
     expect(calibrationGate("codex:j", calibration({ "codex:j": good }), "digest").calibrated).toBeTrue();
+    // The terminal question is reported, not gated.
+    expect(calibrationGate("codex:j", calibration({ "codex:j": scored(10, 10, false, false) }), "digest").calibrated).toBeTrue();
     expect(calibrationGate("codex:j", calibration({ "codex:j": good }), "changed").reason).toContain("predates");
     expect(calibrationGate("codex:other", calibration({ "codex:j": good }), "digest").calibrated).toBeFalse();
-    const few = scored(9, 9);
-    expect(calibrationGate("codex:j", calibration({ "codex:j": few }), "digest").reason).toContain("required labelled answers");
-    const low = scored(8, 10);
-    expect(calibrationGate("codex:j", calibration({ "codex:j": low }), "digest").reason).toContain("below 0.9");
+    expect(calibrationGate("codex:j", calibration({ "codex:j": scored(9, 9) }), "digest").reason).toContain("required labelled answers");
+    expect(calibrationGate("codex:j", calibration({ "codex:j": scored(8, 10) }), "digest").reason).toContain("below 0.9");
     const lenient = scored(10, 10, true);
-    expect(lenient.falsePasses).toBe(1);
-    expect(lenient.agreement).toBe(0.9);
+    expect(lenient.outcome.falsePasses).toBe(1);
     expect(calibrationGate("codex:j", calibration({ "codex:j": lenient }), "digest").reason).toContain("judged as passing");
   });
-  test("the digest covers labels, their rubrics and the judge protocol", () => {
-    const c = { id: "c", description: "", prompt: "", fixture: { evidence: {} }, expected: { rubric } } as EvalCase;
-    const base = calibrationDigest([sample({ blocked: "yes", head: "yes" })], [c]);
-    expect(calibrationDigest([sample({ blocked: "yes", head: "no" })], [c])).not.toBe(base);
-    expect(calibrationDigest([sample({ blocked: "yes", head: "yes" })], [{ ...c, expected: { rubric: rubric.slice(1) } }])).not.toBe(base);
+  test("the digest covers the labels, the labelled items and the judge protocol", () => {
+    const base = calibrationDigest([sample({ blocked: "yes", head: "yes" })]);
+    expect(calibrationDigest([sample({ blocked: "yes", head: "no" })])).not.toBe(base);
+    expect(calibrationDigest([sample({ blocked: "yes", head: "yes" }, "s1", "no")])).not.toBe(base);
+    const reworded = sample({ blocked: "yes", head: "yes" });
+    reworded.rubric[0]!.question = "Reworded?";
+    expect(calibrationDigest([reworded])).not.toBe(base);
+  });
+  test("calibration asks each labelled item as an outcome item plus the terminal question", () => {
+    expect(calibrationItems(sample({ a: "yes" })).map((item) => [item.id, item.kind])).toEqual([
+      ["a", "outcome"], [terminalItem.id, "terminal"],
+    ]);
   });
   test("an uncalibrated judge's failure needs human review instead of failing", () => {
     const grade = { passed: true, checks: [{ name: "required actions", passed: true, detail: "" }] };
@@ -209,28 +227,72 @@ describe("calibration gate", () => {
     expect(rowOutcome({ grade: withJudgement(grade, errored), judgement: errored })).toBe("error");
     expect(rowOutcome({ grade: withJudgement(grade, undefined) })).toBe("error");
   });
-  test("labels must come from a named labeller and cover exactly the case's rubric", async () => {
-    const committed = await loadJudgeCalibration();
-    validateCalibrationSamples(committed, evalCases);
-    const target = evalCases[0]!;
-    const all = Object.fromEntries(target.expected.rubric!.map((item) => [item.id, "yes" as const]));
-    const labelled = { ...sample(all), caseId: target.id };
-    expect(() => validateCalibrationSamples({ ...committed, samples: [labelled] }, evalCases)).not.toThrow();
-    expect(() => validateCalibrationSamples({ ...committed, samples: [{ ...labelled, labelledBy: " " }] }, evalCases)).toThrow("labeller");
-    expect(() => validateCalibrationSamples({ ...committed, samples: [{ ...labelled, labels: { nope: "yes" } }] }, evalCases)).toThrow("exactly");
-    expect(() => validateCalibrationSamples({ ...committed, samples: [labelled, labelled] }, evalCases)).toThrow("unique id");
+  test("a message item failure is reported apart and waits for a person even with a calibrated judge", () => {
+    const grade = { passed: true, checks: [] };
+    const message = { ...verdict("concise", false), kind: "message" as const };
+    const judged = { scope: "parent", status: "pass" as const, messageStatus: "fail" as const, items: [{ ...verdict("a", true), kind: "outcome" as const }, message] };
+    const judgement = combineJudgement({ judge: "claude:j", crossFamily: true }, { calibrated: true, reason: "ok" }, [judged]);
+    expect(judgement.status).toBe("pass");
+    expect(judgement.messageStatus).toBe("fail");
+    const checked = withJudgement(grade, judgement);
+    expect(checked.checks.find((c) => c.name === "message concise")?.category).toBe("message");
+    expect(rowOutcome({ grade: checked, judgement })).toBe("review");
   });
-  test("label import refuses an item whose wording changed after labelling", async () => {
-    const { importLabels } = await import("./judge-calibration.ts");
+  test("every case is judged on its outcome items plus the shared message items", () => {
     const target = evalCases[0]!;
-    const entry = {
-      id: "l1", caseId: target.id, model: "codex:gpt-6-astra", finalAnswer: "Done.",
-      rubricItems: target.expected.rubric!.map((r) => ({ key: r.id, text: r.question })),
-      labels: Object.fromEntries(target.expected.rubric!.map((r) => [r.id, "no" as const])),
-    };
-    expect(importLabels([entry], "founder")[0]).toMatchObject({ id: "l1", output: "Done.", labelledBy: "founder" });
-    const changed = { ...entry, rubricItems: [{ ...entry.rubricItems[0]!, text: "Reworded?" }, ...entry.rubricItems.slice(1)] };
-    expect(() => importLabels([changed], "founder")).toThrow("rubric changed");
+    const judged = judgeItems({ ...target, expected: { ...target.expected, messageRubric: [{ id: "names-the-pr", question: "Does the message name the PR?" }] } });
+    expect(judged.filter((item) => item.kind === "outcome").map((item) => item.id)).toEqual(target.expected.rubric!.map((item) => item.id));
+    expect(judged.filter((item) => item.kind === "message").map((item) => item.id)).toEqual([...messageRubric.map((item) => item.id), "names-the-pr"]);
+    expect(messageRubric.length).toBeLessThanOrEqual(6);
+    expect(() => validateRubric({ ...target, expected: { ...target.expected, messageRubric: [{ id: "concise", question: "Again?" }] } })).toThrow("duplicate rubric id");
+  });
+  test("labels must come from a named labeller and cover exactly the labelled items", async () => {
+    const committed = await loadJudgeCalibration();
+    validateCalibrationSamples(committed);
+    const labelled = sample({ a: "yes", b: "no" });
+    expect(() => validateCalibrationSamples({ ...committed, samples: [labelled] })).not.toThrow();
+    expect(() => validateCalibrationSamples({ ...committed, samples: [{ ...labelled, labelledBy: " " }] })).toThrow("labeller");
+    expect(() => validateCalibrationSamples({ ...committed, samples: [{ ...labelled, labels: { a: "yes" } }] })).toThrow("exactly");
+    expect(() => validateCalibrationSamples({ ...committed, samples: [{ ...labelled, terminal: "maybe" as "yes" }] })).toThrow("yes or no");
+    expect(() => validateCalibrationSamples({ ...committed, samples: [labelled, labelled] })).toThrow("unique id");
+  });
+  test("an imported label keeps the items, terminal verdict and notes as labelled", async () => {
+    const { toSample } = await import("./judge-calibration.ts");
+    const imported = toSample(
+      { id: "L01", caseId: "c", model: "codex:gpt-6-astra", prompt: "Task", finalAnswer: "Done.", rubricItems: [{ key: "a", text: "Is a right?" }] },
+      { items: { a: "no" }, terminal: "no", note: " Too long. ", terminalNote: "" },
+      "founder",
+    );
+    expect(imported).toEqual({
+      id: "L01", caseId: "c", model: "codex:gpt-6-astra", prompt: "Task", output: "Done.",
+      rubric: [{ id: "a", question: "Is a right?" }], labels: { a: "no" }, terminal: "no", note: "Too long.", labelledBy: "founder",
+    });
+  });
+  test("each labelled answer is judged by the other family and scored per judge", async () => {
+    const { calibrateJudges } = await import("./judge-calibration.ts");
+    const work = await mkdtemp(join(tmpdir(), "kgr-calibrate-"));
+    try {
+      const path = join(work, "calibration.json");
+      const samples = [
+        { ...sample({ a: "yes" }, "c1"), model: "codex:gpt-6-astra" },
+        { ...sample({ a: "no" }, "c2", "no"), model: "claude:claude-fable-5-1" },
+      ];
+      await Bun.write(path, JSON.stringify({ judgeCalibration: { agreementThreshold: 0.9, minimumSamples: 1, samples, results: {} } }));
+      const seen: string[] = [];
+      const runner: JudgeRunner = async ({ target, input }) => {
+        seen.push(target);
+        const { items: asked, answer } = JSON.parse(input);
+        expect(asked.map((item: JudgeItem) => item.kind)).toEqual(["outcome", "terminal"]);
+        return { output: verdicts(asked.map((item: JudgeItem) => ({ id: item.id, verdict: "yes", quote: answer.slice(0, 10) }))), responseModels: ["claude-opus-5-5"] };
+      };
+      const { results, combined } = await calibrateJudges({ directory: work, runner, calibrationPath: path });
+      expect(seen.sort()).toEqual(["claude:claude-opus-5-5", "codex:gpt-6.1-sol"]);
+      expect(results["claude:claude-opus-5-5"]!.outcome).toEqual({ total: 1, agreed: 1, agreement: 1, falsePasses: 0 });
+      expect(results["codex:gpt-6.1-sol"]!.outcome).toEqual({ total: 1, agreed: 0, agreement: 0, falsePasses: 1 });
+      expect(combined.terminal).toEqual({ total: 2, agreed: 1, agreement: 0.5, falsePasses: 1 });
+    } finally {
+      await rm(work, { recursive: true, force: true });
+    }
   });
 });
 
@@ -250,22 +312,24 @@ describe("every case can fail on the answer", () => {
   });
   test("for every case, any no verdict fails a run that passes every deterministic check", async () => {
     for (const c of evalCases) {
-      const items = c.expected.rubric!;
-      for (let flipped = -1; flipped < items.length; flipped++) {
+      const caseItems = judgeItems(c);
+      for (let flipped = -1; flipped < caseItems.length; flipped++) {
         const runner: JudgeRunner = async ({ input }) => {
           const { answer } = JSON.parse(input);
           return {
-            output: verdicts(items.map((item, i) => ({ id: item.id, verdict: i === flipped ? "no" : "yes", quote: answer.slice(0, 15) }))),
+            output: verdicts(caseItems.map((item, i) => ({ id: item.id, verdict: i === flipped ? "no" : "yes", quote: answer.slice(0, 15) }))),
             responseModels: ["claude-opus-5-5"],
           };
         };
         const judged = await judgeAnswer({
-          scope: "parent", judge: "claude:claude-opus-5-5", task: c.prompt, rubric: items,
+          scope: "parent", judge: "claude:claude-opus-5-5", task: c.prompt, items: caseItems,
           output: "A final answer.", actions: [], transcript: "/dev/null", runner,
         });
         const judgement = combineJudgement({ judge: "claude:claude-opus-5-5", crossFamily: true }, { calibrated: true, reason: "ok" }, [judged]);
         const outcome = rowOutcome({ grade: withJudgement({ passed: true, checks: [] }, judgement), judgement });
-        expect(outcome, `${c.id} flipped=${flipped}`).toBe(flipped < 0 ? "pass" : "fail");
+        // An outcome no fails the run; a message no waits for a person.
+        const expected = flipped < 0 ? "pass" : caseItems[flipped]!.kind === "outcome" ? "fail" : "review";
+        expect(outcome, `${c.id} flipped=${flipped}`).toBe(expected);
       }
     }
   });
@@ -278,7 +342,7 @@ describe("judging a run through the judge CLI", () => {
       "const text = await new Response(Bun.stdin.stream()).text();",
       "const input = JSON.parse(text.replace(/^Scenario request:\\n\\n/, ''));",
       "const mode = process.env.FAKE_JUDGE_MODE ?? 'yes';",
-      "const items = input.rubric.map((item, i) => ({ id: item.id, verdict: mode === 'no' && i === 0 ? 'no' : 'yes', quote: mode === 'noquote' ? '' : input.answer.split('\\n')[1].slice(0, 12) }));",
+      "const items = input.items.map((item, i) => ({ id: item.id, verdict: mode === 'no' && i === 0 ? 'no' : 'yes', quote: mode === 'noquote' ? '' : input.answer.split('\\n')[1].slice(0, 12) }));",
       format === "codex"
         ? "for (const event of [{type:'item.completed',item:{type:'agent_message',text:JSON.stringify({items})}},{type:'turn.completed',usage:{input_tokens:1,output_tokens:1}}]) process.stdout.write(JSON.stringify(event)+'\\n');"
         : "for (const event of [{type:'assistant',message:{model:'claude-opus-5-5',content:[]}},{type:'result',structured_output:{items},modelUsage:{'claude-opus-5-5':{}}}]) process.stdout.write(JSON.stringify(event)+'\\n');",
@@ -318,7 +382,7 @@ describe("judging a run through the judge CLI", () => {
         });
         expect(judgement.judge).toBe(model.startsWith("codex") ? "claude:claude-opus-5-5" : "codex:gpt-6.1-sol");
         expect(judgement.answers.map((a) => [a.scope, a.items.map((i) => i.id)])).toEqual([
-          ["parent", ["blocked", "head"]],
+          ["parent", ["blocked", "head", ...messageRubric.map((item) => item.id)]],
           ["child", ["head"]],
         ]);
         expect(judgement.status, `${model} ${mode}`).toBe(status);

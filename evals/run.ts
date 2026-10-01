@@ -10,6 +10,7 @@ import {
   calibrationGate,
   combineJudgement,
   judgeAnswer,
+  judgeItems,
   judgesFromFlags,
   loadJudgeCalibration,
   rowOutcome,
@@ -17,6 +18,7 @@ import {
   validateCalibrationSamples,
   withJudgement,
   type JudgedAnswer,
+  type JudgeItem,
   type JudgeRunner,
 } from "./judge.ts";
 import {
@@ -123,8 +125,8 @@ export async function run() {
     if (!cases.some((c) => c.id === id)) throw new Error(`Unknown case: ${id}`);
   validateCases(cases, new Set(skills.keys()), evalCases);
   const calibration = await loadJudgeCalibration();
-  validateCalibrationSamples(calibration, evalCases);
-  const digest = calibrationDigest(calibration.samples, evalCases);
+  validateCalibrationSamples(calibration);
+  const digest = calibrationDigest(calibration.samples);
   const judgePlan = Object.fromEntries(
     options.models.map((model) => {
       const selection = selectJudge(model, options.judges, options.sameFamilyJudge);
@@ -353,13 +355,15 @@ export async function judgeRecord(options: {
   cases?: EvalCase[];
 }) {
   const { record, evalCase, plan } = options;
-  const units: Array<{ scope: string; scenario: EvalCase; task: string; output: string; ledger: RunLedger }> = [
-    { scope: "parent", scenario: evalCase, task: evalCase.prompt, output: record.output, ledger: record.ledger },
+  // Message items judge what the person reads, so a worker's answer to its
+  // parent is judged on its outcome items only.
+  const units: Array<{ scope: string; items: JudgeItem[]; task: string; output: string; ledger: RunLedger }> = [
+    { scope: "parent", items: judgeItems(evalCase), task: evalCase.prompt, output: record.output, ledger: record.ledger },
   ];
   for (const worker of record.ledger.workers ?? []) {
     const scenario = (options.cases ?? evalCases).find((c) => c.id === worker.caseId);
     if (scenario)
-      units.push({ scope: scenario.id, scenario, task: worker.context, output: worker.output, ledger: worker.ledger });
+      units.push({ scope: scenario.id, items: judgeItems(scenario).filter((item) => item.kind === "outcome"), task: worker.context, output: worker.output, ledger: worker.ledger });
   }
   const answers: JudgedAnswer[] = [];
   for (const unit of units) {
@@ -372,7 +376,7 @@ export async function judgeRecord(options: {
         scope: unit.scope,
         judge: plan.judge,
         task: unit.task,
-        rubric: unit.scenario.expected.rubric ?? [],
+        items: unit.items,
         output: unit.output,
         actions: unit.ledger.actions,
         transcript: options.transcript(unit.scope),

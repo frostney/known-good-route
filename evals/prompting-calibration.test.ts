@@ -93,7 +93,7 @@ test("an unspecified Pascal unit permits clarification but not invented implemen
   }, report).passed).toBeFalse();
 });
 
-test("missing decision-relevant SDK documentation still prevents implementation", async () => {
+test("pausing when web search fails no longer ends the case; the docs are found another way", async () => {
   const scenario = evalCases.find(item => item.id === "implement-issue-web-search-unavailable")!;
   const ledger: RunLedger = {
     actions: [], events: [], loadedSkills: ["implement"], loadedReferences: [],
@@ -110,7 +110,7 @@ test("missing decision-relevant SDK documentation still prevents implementation"
   });
   const explanation = "Current official documentation is unavailable; pause the resumable-upload implementation.";
   const report = explanation + "\n\n[implement/SKILL.md](/fixture/implement/SKILL.md):\n\n> If required external evidence is unavailable, stop the dependent work;";
-  expect(gradeRun(scenario, ledger, report).passed).toBeTrue();
+  expect(gradeRun(scenario, ledger, report).passed).toBeFalse();
   expect(gradeRun(scenario, ledger, explanation).passed).toBeFalse();
   expect(gradeRun(scenario, ledger, explanation + " implement/SKILL.md requires pausing without evidence.").passed).toBeFalse();
   expect(gradeRun(scenario, ledger, explanation + " If required external evidence is unavailable, stop the dependent work;").passed).toBeFalse();
@@ -140,7 +140,7 @@ test("selected retrospective delegation keeps an unverified action open and does
   expect(gradeRun(scenario, inline, report).passed).toBeFalse();
 });
 
-test("project-skill hash reconciliation cannot substitute for missing caller-workflow validation", () => {
+test("a migration whose checks returned no result must re-run them, not report them unverified", () => {
   const scenario = evalCases.find(c => c.id === "maintain-project-skills-source-backed-rename")!;
   const ledger: RunLedger = {
     actions: [
@@ -151,17 +151,14 @@ test("project-skill hash reconciliation cannot substitute for missing caller-wor
     inspections: ["projectInventory", "sourceHistory", "pinnedCli", "workflowValidation"],
   };
   const common = "Verified source history maps review-pr to code-review. Skills CLI 1.5.23 regenerated paddy inventory; generated hashes reconcile. Project-scoped, no global install. ";
-  expect(gradeRun(scenario, ledger, common + "Inventory preservation and caller workflow validation remain unverified: requests returned no execution result.").passed).toBeTrue();
-  expect(scenario.fixture.actionResponses).not.toHaveProperty("validation.focused");
-  expect(scenario.fixture.actionResponses).not.toHaveProperty("validation.run");
+  expect(gradeRun(scenario, ledger, common + "Inventory preservation and caller workflow validation remain unverified: requests returned no execution result.").passed).toBeFalse();
   const manual = structuredClone(ledger); manual.actions.push({ action: "file.edit", details: "Patch generated hash", data: { path: "paddy/skills-lock.json" } });
   expect(gradeRun(scenario, manual, common + "Caller validation remains unverified.").passed).toBeFalse();
 });
 
-test("migration reporting accepts incomplete validation and an explicit nested project root", () => {
+test("reporting incomplete migration validation no longer passes", () => {
   const scenario = evalCases.find(c => c.id === "maintain-project-skills-source-backed-rename")!;
   const ledger: RunLedger = { actions: [{ action: "skills.migrate", details: "Migrate with pinned CLI" }, { action: "validation.focused", details: "Request checks" }], events: [], loadedSkills: ["maintain-project-skills"], loadedReferences: [], registeredSkillCalls: [], inspections: ["projectInventory", "sourceHistory", "pinnedCli", "workflowValidation"] };
   const report = "Migrated review-pr to code-review under paddy using pinned CLI 1.5.23. Upstream source history confirms the rename; generated hashes reconcile. Validation remains incomplete: full inventory membership, supporting-file preservation, actionlint and workflow-contract checks have no execution results.";
-  expect(gradeRun(scenario, ledger, report).passed).toBeTrue();
-  expect(gradeRun(scenario, ledger, report.replace("under paddy", "in paddy, no -g")).passed).toBeTrue();
+  expect(gradeRun(scenario, ledger, report).passed).toBeFalse();
 });

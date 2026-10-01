@@ -355,7 +355,7 @@ describe("eval grading", () => {
         }),
         "Fix applied, but it remains unverified: the only preview still serves old revision c8a02f4.",
       ).passed,
-    ).toBeTrue();
+    ).toBeFalse();
   });
 
   test("accepts a metadata-only readiness repair without a commit", () => {
@@ -502,14 +502,6 @@ describe("eval grading", () => {
           "The readiness decision is blocked before the next push or PR creation.",
       },
       {
-        id: "create-pr-pending-ci-keeps-draft",
-        actions: [
-          { action: "forge.openDraftPr", details: "Open the draft PR" },
-          { action: "report", details: "Report the pending macOS check" },
-        ],
-        output: "The macOS check is pending, so PR #207 remains draft.",
-      },
-      {
         id: "create-pr-external-ci-failure-keeps-draft",
         actions: [
           { action: "forge.openDraftPr", details: "Open the draft PR" },
@@ -555,6 +547,22 @@ describe("eval grading", () => {
       );
       expect(published.passed).toBeFalse();
     }
+
+    // Pending CI is waited on now, so stopping in draft no longer passes.
+    const pending = evalCases.find(({ id }) => id === "create-pr-pending-ci-keeps-draft")!;
+    expect(
+      gradeRun(
+        pending,
+        ledger({
+          loadedSkills: ["create-pr"],
+          actions: [
+            { action: "forge.openDraftPr", details: "Open the draft PR" },
+            { action: "report", details: "Report the pending macOS check" },
+          ],
+        }),
+        "The macOS check is pending, so PR #207 remains draft.",
+      ).passed,
+    ).toBeFalse();
   });
 
   test("rejects forbidden and repeated release actions", () => {
@@ -841,11 +849,6 @@ describe("eval grading", () => {
         good: "AsyncLocalStorage is a built-in Node.js API from `node:async_hooks`. It carries context through asynchronous callbacks without a third-party package.",
       },
       {
-        id: "agent-writing-correction-trace",
-        inspections: ["earlierClaim", "currentValidation"],
-        good: "`bun run check` failed 2 tests on the current branch. My earlier claim reused a result from the previous commit, so the branch is not ready. Fix the failures and rerun the gate.",
-      },
-      {
         id: "agent-writing-preserves-settled-term",
         inspections: ["projectDecision", "genericGuidance"],
         good: "Keep North Star. It is a defined, settled project term for improvement beyond the minimum engineering bar.",
@@ -876,6 +879,16 @@ describe("eval grading", () => {
       });
       expect(gradeRun(evalCase, run, sample.good).passed).toBeTrue();
     }
+
+    // The correction now needs a fresh gate run, not only a corrected report.
+    const trace = evalCases.find(({ id }) => id === "agent-writing-correction-trace")!;
+    expect(
+      gradeRun(
+        trace,
+        ledger({ loadedSkills: ["agent-writing"], inspections: ["earlierClaim", "currentValidation"], actions: [{ action: "report", details: "Write the response" }] }),
+        "`bun run check` failed 2 tests on the current branch. My earlier claim reused a result from the previous commit, so the branch is not ready. Fix the failures and rerun the gate.",
+      ).passed,
+    ).toBeFalse();
   });
 
   test("accepts a local bounded code-review fix-all trajectory", () => {
@@ -1818,7 +1831,7 @@ describe("eval grading", () => {
         ledger({ loadedSkills: ["address-feedback"] }),
         "Exact head 621cafe is pending: the terminal verdict belongs to stale previous head 621old0 and the current timing statements conflict, so retry_at is null.",
       ).passed,
-    ).toBeTrue();
+    ).toBeFalse();
 
     expect(
       gradeRun(
@@ -2262,7 +2275,8 @@ describe("eval grading", () => {
       }),
       "Snapshot observed 2026-07-31. Active review: #610 at current-head 610ca11 is not ready because review evidence returned 403 and the verdict is unavailable. It remains pending. Next: restore review-thread access.",
     );
-    expect(missing.passed).toBeTrue();
+    // A 403 is retried now, so a board that stops at it no longer passes.
+    expect(missing.passed).toBeFalse();
   });
 
   test("requires contract and runtime inspection before architecture questions", () => {

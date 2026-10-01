@@ -158,6 +158,22 @@ them (it confused a 40-character revision with a 42-character one):
 A whole token is not preceded or followed by a letter, digit or underscore, so
 `503` does not match `1503`. Matching is literal and case-sensitive.
 
+### Message items
+
+Every case's final message is also judged against a small shared set of
+message items in `judge.ts`, separate from its outcome items: concise without
+repetition; nothing the person can already see, such as committed files or a
+happy-path step; no stated defaults such as "read-only"; no specifics the
+outcome does not depend on, such as a compiler version when only the compiler
+matters; clear rather than confusing; and no "unverified" report where the
+agent could have re-run the check. A case may add its own items under
+`messageRubric`. Message verdicts are reported as `message` checks. No
+labelled message verdicts calibrate the judge yet, so a message failure is
+always reported as needs human review, never as a failure. Workers are judged
+on their outcome items only.
+
+### Judging
+
 After a run completes, a judge model reads the scenario prompt as context and
 the answer as evidence. The answer is the final response plus every recorded
 action, with its details and each data field printed raw. The judge returns
@@ -179,37 +195,42 @@ are recorded but never trusted.
 ### Calibration gate
 
 `calibration.json` holds the founder's labelled answers under
-`judgeCalibration.samples`. Each sample is one live answer: its case, the
-candidate model, the final response and recorded actions, the labeller, and a
-`yes` or `no` for every rubric item of its case. Labels come only from the
-labeller; generated or test-derived labels are not calibration evidence, and
-rubrics are not tuned against the labels after they are recorded. Agreement is
-counted per item: the judge agrees when an item passes exactly where the label
-says `yes`. A judge error disagrees on every item of that answer.
+`judgeCalibration.samples`. Each sample is one live answer and is
+self-contained: the prompt, the candidate model, the final response and
+recorded actions, the rubric items exactly as they were labelled, a `yes` or
+`no` for each item, the founder's `terminal` verdict on whether the run stopped
+at the right point, and the founder's notes where given. Labels come only from
+the labeller; generated or test-derived labels are not calibration evidence,
+and rubrics are not tuned against the labels. A later edit to a case does not
+change what a sample measured.
 
-The gate opens for a judge only when its recorded result covers the current
-labels, their cases' rubrics and the judge protocol (a digest), covers at least
-`minimumSamples` (30) labelled answers, agrees on at least
-`agreementThreshold` (0.9) of the items, and passed no item the labeller
-failed. Until then, a run that passes every deterministic check but fails its
-rubric is reported as **needs human review**, not as a failure. A same-family
-judge's failures are treated the same way. Deterministic failures always fail.
+Calibration judges every sample with the judge of the other family, as a run
+would, asking its labelled items plus one terminal-state question. Agreement
+is counted per item: the judge agrees when an item passes exactly where the
+label says `yes`. A judge error disagrees on every item of that answer. Each
+judge's result covers the samples it judged; the outcome items and the
+terminal question are scored separately.
 
-Import the labelled set, then calibrate each judge locally; calibration makes
-one judge call per labelled answer:
+The gate opens for a judge only when its recorded result matches the current
+labels and judge protocol (a digest), covers at least `minimumSamples` (20)
+labelled answers, agrees on at least `agreementThreshold` (0.9) of the rubric
+items, and passed no item the labeller failed. The terminal question is
+reported, not gated. Until the gate opens, a run that passes every
+deterministic check but fails its rubric is reported as **needs human review**,
+not as a failure. A same-family judge's failures are treated the same way.
+Deterministic failures always fail.
+
+Import a labelled set, then calibrate locally; calibration makes one judge call
+per labelled answer:
 
 ```bash
-bun run eval:calibrate-judge -- --import-labels labelled-set.json --labelled-by founder
-bun run eval:calibrate-judge -- --judge codex:gpt-6.1-sol --output .eval-results/calibration-sol --concurrency 4 --write
+bun run eval:calibrate-judge -- --import-labels labelling-set.json --labels-dir labels --labelled-by founder
+bun run eval:calibrate-judge -- --output .eval-results/calibration --concurrency 4 --write
 ```
 
-The import takes labelling-set entries (`id`, `caseId`, `model`, `finalAnswer`,
-`actions`, `rubricItems` and the labeller's `labels` keyed by item) and refuses
-an entry whose rubric items no longer read as they did when labelled. `--write`
-records the result in `calibration.json`; commit it with the labels it
-measured. Any change to the labels, a labelled case's rubric or the judge
-instructions changes the digest and closes the gate until the judge is
-recalibrated.
+The import pairs each labelling-set entry with its label file (`items`,
+`terminal`, `note`, `terminalNote`). `--write` records each judge's result in
+`calibration.json`.
 
 ### Results
 
