@@ -16,9 +16,10 @@ metadata:
 Establish whether the delivered behavior matches the explicit specification.
 Report by default. With the exact `fix` qualifier, fix observed in-scope gaps
 and retest them. Started directly, continue under the
-[delivery settings](../deliver/SKILL.md#delivery-settings). This skill does not replace
-source review or the repository's full project gate; the caller owns that aggregate gate, and source review and
-unit-test success alone are not behavior evidence.
+[delivery settings](../deliver/SKILL.md#delivery-settings). This skill does not
+replace source review or the repository's full project gate; the caller owns
+that aggregate gate, and source review and unit-test success alone are not
+behavior evidence.
 
 Reuse recorded real-interface evidence when the implementation, requirement,
 environment, and inputs match, except that fix mode reproduces each failure
@@ -30,8 +31,8 @@ changes, failures, or unresolved concerns.
 - Derive expected behavior only from the user request, issue, confirmed
   mini-spec, product documentation, ADR, or another explicit decision. Never
   infer it from the implementation. Stop for a
-  [material](../software-engineering-excellence/SKILL.md#blockers-and-decisions) conflict or
-  ambiguity.
+  [material](../software-engineering-excellence/SKILL.md#blockers-and-decisions)
+  conflict or ambiguity.
 - Test externally observable outcomes. Use the rendered product for user-facing
   behavior and the real API, CLI, library entry point, job, package, migration,
   or deployed service for other behavior.
@@ -48,8 +49,8 @@ changes, failures, or unresolved concerns.
   Use existing black-box automation when it exercises the real delivered
   interface and its result is current.
 - This step does not commit, push, deploy, publish, or change external data
-  unless the user separately authorized that action. Use disposable test data where possible
-  and ask before a test would create a material external side effect.
+  unless the user separately authorized that action. Use disposable test data
+  where possible and ask before a test would create a material external side effect.
 
 ## Workflow
 

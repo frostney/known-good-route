@@ -18,9 +18,9 @@ inside the specified behavior; the boundaries in the skill still apply.
    or scope decision, and report the decision with the evidence gathered.
 6. When a fix can be exercised only through a preview, the project's docs and
    scripts offer no other route, and no preview contains the changed revision,
-   report the fix as applied but unverified. The caller
-   owns any authorized push or deployment and must invoke this skill again on
-   the resulting exact-revision preview.
+   report the fix as applied but unverified. The caller owns any authorized push
+   or deployment and must invoke this skill again on the resulting
+   exact-revision preview.
 
 Report the changed files and, for each fix, the failure it addressed and its
 status: `applied and verified` with the rerun evidence, or `applied but

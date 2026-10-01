@@ -42,8 +42,9 @@ do not follow this guide.
   residual work, and exact artifact locations when artifacts exist.
 - A review reply or retrospective impact item states the finding or impact and
   its consequence or resolution.
-- A correction states the corrected fact first, then the incorrect claim, the
-  source or process failure, any affected conclusions, and the prevention or
+- A correction first re-runs the check behind the claim when it can. It states
+  the corrected fact first, then the incorrect claim, the source or process
+  failure, each affected conclusion, such as readiness, and the prevention or
   next validation step. It does not lead with an apology.
 - A durable artifact follows its project template and preserves the complete
   decision surface, evidence, and lifecycle state. When drafting or
@@ -118,7 +119,8 @@ for reader effort.
   vague attribution, filler, process narration, repeated conclusions, and
   unnecessary implementation detail.
 - Leave out what the reader can already see, such as files they committed.
-- Keep the happy path brief; spend words on what went differently.
+- Keep the happy path brief; spend words on what went differently, such as a
+  check that failed before it passed or a source found another way.
 - Do not state a default, such as that a review edited nothing.
 - Leave out specifics the outcome does not depend on, such as a tool's version
   when only the tool matters.

@@ -24,12 +24,15 @@ the confirmed native stack layers owned by the change, required review and
 behavior testing, in-scope fixes, and transitions to ready for review. This
 includes the project's existing PR preview path when required to test the
 change. Merge and integration delivery belong to `/deliver`, which a direct
-request continues into under the [delivery settings](../deliver/SKILL.md#delivery-settings);
-the request does not add unrelated changes.
+request continues into under the
+[delivery settings](../deliver/SKILL.md#delivery-settings); the request does not add
+unrelated changes.
 
 A failed check, review or CI run routes to repair, not a stop. Stop only when
-there is nothing to publish, a [material](../software-engineering-excellence/SKILL.md#blockers-and-decisions) unresolved
-choice or new authority is needed, or an external blocker remains after safe alternatives are exhausted.
+there is nothing to publish, a
+[material](../software-engineering-excellence/SKILL.md#blockers-and-decisions)
+unresolved choice or new authority is needed, or an external blocker remains
+after safe alternatives are exhausted.
 A material choice found before publication stops before any push or draft PR.
 Keep the PR draft while any required evidence or CI is missing, pending or
 failing.
@@ -163,4 +166,5 @@ readiness. Recording a walkthrough does not replace behavior testing.
     applicable, final states, metadata changes, supplied completion evidence,
     and observed readiness and CI evidence. Include incomplete walkthrough
     requirements and actionable remedies, even when the PR is ready. Started
-    directly, continue under the [delivery settings](../deliver/SKILL.md#delivery-settings).
+    directly, continue under the
+    [delivery settings](../deliver/SKILL.md#delivery-settings).

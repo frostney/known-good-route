@@ -20,8 +20,9 @@ metadata:
 Develop the smallest complete change that satisfies the agreed requirements.
 Reuse settled scope, approach and authorization. A failed check, diagnosis or
 available fix does not end implementation. Only a
-[material](../software-engineering-excellence/SKILL.md#blockers-and-decisions) unresolved decision, new authority or an external blocker after safe alternatives are
-exhausted can stop dependent work; complete independent work before asking. If
+[material](../software-engineering-excellence/SKILL.md#blockers-and-decisions)
+unresolved decision, new authority or an external blocker after safe
+alternatives are exhausted can stop dependent work; complete independent work before asking. If
 a skill requires a pause, link its loaded file as a Markdown link and quote the
 rule verbatim in a block quote; a paraphrase or a bare path does not let the
 user check the rule.
@@ -88,6 +89,6 @@ owns that operation and resumes testing afterward.
 Finish when every verified requirement gap is resolved and applicable gates
 pass; unrelated improvements do not extend the task. Return the implemented
 result and observed requirement evidence to the caller, or continue under the
-[delivery settings](../deliver/SKILL.md#delivery-settings) when started directly. Report unresolved
-required behavior as incomplete; never waive it because its finding is low
+[delivery settings](../deliver/SKILL.md#delivery-settings) when started
+directly. Report unresolved required behavior as incomplete; never waive it because its finding is low
 severity.

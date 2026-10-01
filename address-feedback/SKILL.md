@@ -22,8 +22,8 @@ selected delivery endpoint. Started directly, continue under the
 Reuse authorization and settled decisions within their scope across turns.
 Before a required pause, complete independent authorized work, then link the
 exact skill file as a Markdown link and quote the rule requiring a new
-[material](../software-engineering-excellence/SKILL.md#blockers-and-decisions) decision or authority verbatim in a
-block quote.
+[material](../software-engineering-excellence/SKILL.md#blockers-and-decisions)
+decision or authority verbatim in a block quote.
 
 ## Resolve the scope from context
 

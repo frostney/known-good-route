@@ -104,7 +104,9 @@ interface or artifact for claimed behavior. Qualitative acceptance requires
 judgment against the user's reference or criteria; test counts, performance
 metrics and a worker's success report do not establish the whole outcome.
 
-Use focused checks while editing. The caller owns the final aggregate gate;
+Use focused checks while editing. A code change is finished only when an
+independent review of its final diff, such as `/code-review`, and the project
+gate pass on the final content. The caller owns the final aggregate gate;
 subskills contribute applicable evidence without rerunning it. Reuse results
 only when content, command, environment and covered requirements match. Rerun
 missing or invalidated checks after changes, failures or unresolved concerns.
@@ -131,8 +133,8 @@ from behavioral acceptance.
 
 Re-run a check that returned no result, with two retries; use `delivery-wait`
 for GitHub transitions. Report it as unverified only when a re-run is
-impossible, and state why. Keep implementation, local validation, external validation and
-publication status distinct. Read a gate result before performing the dependent
+impossible, and state why. Keep implementation, local validation, external
+validation and publication status distinct. Read a gate result before performing the dependent
 action. Capture shell exit status before another command can overwrite it.
 
 ## Performance and maintainability
