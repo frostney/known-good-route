@@ -38,11 +38,23 @@ Use `/deliver` for one work item: a feature, bug, refactor, issue, or existing P
 It infers the target from context and resumes at its current state. No issue/idea
 or PR/stack selector is required, and filing an issue is optional.
 
-The default endpoint is **deployed and verified in the project's configured
-integration destination**. That may be production, staging, a nightly build, or
-another established target. Request **ready to merge** or **merged** for an
-earlier endpoint. Missing integration configuration is an unresolved decision,
-not permission to invent infrastructure or claim deployment succeeded.
+The frontmatter of the project's `ORCHESTRATION.md` sets the endpoint and
+whether entry points continue into `/deliver`. These values are also the
+defaults when the file or a key is missing, so nothing is merged unless the
+project sets `merged` or `deployed`:
+
+```yaml
+---
+endpoint: ready-to-merge # or merged, or deployed
+entry-points: deliver # or stop
+---
+```
+
+An explicit instruction in a request narrows that run. `deployed` means deployed
+and verified in the project's configured integration destination: production,
+staging, a nightly build, or another established target. Missing integration
+configuration is an unresolved decision, not permission to invent
+infrastructure or claim deployment succeeded.
 
 ```mermaid
 flowchart TD
@@ -72,10 +84,10 @@ against agreed references and affected states, not inferred from passing tests.
 Optional improvements do not expand the task. Current evidence is reused;
 changes invalidate only the checks they affect.
 
-Individual skills retain their endpoints. `/create-issue` files an issue;
-`/implement` completes development; `/create-pr` fills required review and
-behavior evidence, repairs in-scope failures and reaches a ready PR. These
-commands do not silently start merge or deployment. `/deliver` connects them.
+With `entry-points: deliver`, `/implement`, `/code-review`, `/test-against-spec`,
+`/create-pr`, `/update-pr` and `/address-feedback` continue through `/deliver`
+from their own stage to the endpoint; with `stop`, each ends after its own
+step. Other skills, such as `/create-issue`, finish their own job.
 
 `milestone-rush` coordinates multiple `/deliver` work items and triggers
 `create-release` for the milestone. Integration delivery and release are distinct:

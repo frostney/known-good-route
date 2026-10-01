@@ -18,10 +18,11 @@ metadata:
 
 Update the established PR through integration, relevant commits, a normal push
 and current metadata. The request includes resolving routine conflicts and
-running the declared PR gate; it does not authorize merging. Reuse the selected
-target and prior authorization. Ask only when the intended PR, a material
-conflict-resolution choice or another material choice within this update
-remains unclear.
+running the declared PR gate; merging belongs to `/deliver` under the
+[delivery settings](../deliver/SKILL.md#delivery-settings). Reuse the selected target and prior
+authorization. Ask only when the intended PR, a
+[material](../software-engineering-excellence/SKILL.md#blockers-and-decisions) conflict-resolution choice or
+another material choice within this update remains unclear.
 
 When the current PR belongs to a native GitHub stack, read
 [../git-workflow/references/github-stacks.md](../git-workflow/references/github-stacks.md).
@@ -66,5 +67,6 @@ not block the update.
    validation. Include stack position and rewritten branches when applicable.
    Distinguish passed local checks from pending current-head CI. Return the
    exact current head and next transition to the active publication or delivery
-   caller; that caller continues through CI and feedback. Report missing
+   caller; that caller continues through CI and feedback. Started directly,
+   continue under the [delivery settings](../deliver/SKILL.md#delivery-settings). Report missing
    walkthrough requirements with remedies.

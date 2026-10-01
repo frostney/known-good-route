@@ -7,7 +7,8 @@ description: >-
 license: Unlicense OR MIT
 compatibility: >-
   Uses the project's implementation, GitHub and integration tools and available
-  workflow skills; needs access to the selected delivery destination.
+  workflow skills; needs access to the selected delivery destination. Reads the
+  delivery settings with Node.js 20 or newer.
 metadata:
   agents-role: entry-point
   agents-text: Carry one feature, bug, issue, branch, or PR to its verified delivery endpoint.
@@ -26,9 +27,9 @@ confirmed idea, current branch or PR. Verify identities and existing work before
 mutation. Use `/create-issue` only when tracking is requested or required; an
 unfiled idea can go directly to `/implement`.
 
-Honor an explicit endpoint: `ready-to-merge`, `merged`, or `deployed`. The default
-is `deployed` to the project's configured default integration destination, which
-may be production, staging, nightly or another established target. Read project
+The endpoint comes from the [delivery settings](#delivery-settings). `deployed`
+means the project's configured default integration destination, which may be
+production, staging, nightly or another established target. Read project
 instructions, delivery documentation and actual workflows to identify it; do not
 assume production or choose among ambiguous destinations.
 
@@ -38,9 +39,31 @@ and the configured integration path for `deployed`. Preserve explicit limits,
 repository protections and existing authorization. An earlier endpoint does not
 authorize later operations. Complete independent work before asking for a
 specific unresolved destination, provider, new infrastructure, spending or other
-material choice. Repair an existing integration workflow when an established
+[material](../software-engineering-excellence/SKILL.md#blockers-and-decisions)
+choice. Repair an existing integration workflow when an established
 in-scope defect blocks delivery; do not replace its provider or invent a new
 service as an incidental fix.
+
+## Delivery settings
+
+Run `node scripts/delivery-settings.mjs <project root>`; the path is relative to
+this skill directory. It reads the frontmatter of `ORCHESTRATION.md` beside
+`AGENTS.md` and prints:
+
+- `endpoint`: `ready-to-merge`, `merged` or `deployed`, default `ready-to-merge`;
+- `entry-points`: `deliver` or `stop`, default `deliver`.
+
+A missing file or key takes its default, so nothing is merged unless the project
+sets `merged` or `deployed`. A failed read is a blocker: report its error. An
+explicit instruction in the request narrows one run, for example to an earlier
+endpoint, read-only or one step; only an explicit request goes past the
+configured endpoint.
+
+With `entry-points: deliver`, `/implement`, `/code-review`, `/test-against-spec`,
+`/create-pr`, `/update-pr` and `/address-feedback` started directly continue
+through `/deliver` from their own stage to the endpoint, instead of stopping
+after their own step. With `stop`, each returns after its own step. A skill that
+`/deliver` or another workflow invoked returns to its caller.
 
 ## Coordinate the existing workflows
 

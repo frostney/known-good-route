@@ -109,8 +109,8 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    source as proof of behavior. Prefer an exact-revision preview deployment when
    available, then use the local environment. Record each requirement,
    environment, setup, action or command, input, expected result, observed
-   result, and limitation. If neither environment can reproduce required
-   behavior, report it as unverified. When testing requires a preview containing
+   result, and limitation. If neither environment nor a route in the project's
+   docs and scripts can reproduce required behavior, report it as unverified. When testing requires a preview containing
    the fix, publish a draft update through `/update-pr`, test that exact revision,
    and resume the loop before claiming readiness.
 7. If step 5 or 6 changes the implementation or reports incomplete work,

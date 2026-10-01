@@ -19,8 +19,8 @@ metadata:
 
 Develop the smallest complete change that satisfies the agreed requirements.
 Reuse settled scope, approach and authorization. A failed check, diagnosis or
-available fix does not end implementation. Only a material unresolved
-decision, new authority or an external blocker after safe alternatives are
+available fix does not end implementation. Only a
+[material](../software-engineering-excellence/SKILL.md#blockers-and-decisions) unresolved decision, new authority or an external blocker after safe alternatives are
 exhausted can stop dependent work; complete independent work before asking. If
 a skill requires a pause, link its loaded file as a Markdown link and quote the
 rule verbatim in a block quote; a paraphrase or a bare path does not let the
@@ -57,7 +57,7 @@ conclusively failed readiness threshold blocks dependent work the same way.
 
 ## Develop and verify
 
-This loop covers development only: `/deliver` owns end-to-end delivery and
+This loop covers development: `/deliver` owns end-to-end delivery and
 `/create-pr` owns publication. Reuse the confirmed requirements and approach.
 
 1. Reuse or create a focused branch/worktree under `git-workflow`. Apply its
@@ -81,13 +81,13 @@ This loop covers development only: `/deliver` owns end-to-end delivery and
 Continue safe in-scope repair; reconsider an approach that is not advancing
 acceptance. If required behavior needs an unavailable exact-revision preview,
 return the specific publication need to the active delivery or PR caller, which
-owns that operation and resumes testing afterward. A standalone implementation
-asks only for the missing authority or environment.
+owns that operation and resumes testing afterward.
 
 ## Finish
 
 Finish when every verified requirement gap is resolved and applicable gates
 pass; unrelated improvements do not extend the task. Return the implemented
-result and observed requirement evidence to the caller. Report unresolved
+result and observed requirement evidence to the caller, or continue under the
+[delivery settings](../deliver/SKILL.md#delivery-settings) when started directly. Report unresolved
 required behavior as incomplete; never waive it because its finding is low
 severity.

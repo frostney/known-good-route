@@ -22,7 +22,9 @@ answers instead of reopening them.
 
 Read applicable project instructions, relevant code, tests and durable decisions.
 Run the named reproduction or inspect the requested artifact when possible.
-Treat historical notes and issue descriptions as leads to verify.
+Treat historical notes and issue descriptions as leads to verify. Use the full
+data; split it across workers when it is too big for one context. Sample only
+when the person asks.
 
 Before replacing a selected toolkit's capabilities, inspect its overview and
 consumer guidance as well as the immediate subcommand. Reuse project build,
@@ -53,25 +55,44 @@ registered `diagnosing-bugs` skill when available and relevant. After a
 correction, revisit the failed assumption and take the practical next action;
 reconsider the strategy if repeated work is not advancing the goal.
 
-Return control when the requested outcome is verified, safe in-scope progress
-is exhausted by an external blocker, or a material unresolved decision or new
-authority is needed. A known available fix is not a reason to stop. Complete
-independent authorized work before asking. None of these ends a turn while
-authorized work remains:
+Return control when the requested outcome is verified or one of the stops below
+applies. A known available fix is not a reason to stop. None of these ends a
+turn while authorized work remains:
 
 - a summary that announces the next step instead of taking it;
 - an offer to continue unless the user prefers otherwise;
 - a list of decisions when none of them blocks the remaining work;
 - a long turn or a completed milestone.
 
-Put status notes and recommendations on open decisions in the same message as
-the next action, and continue the work that does not depend on the answer. When
-a skill requires a pause, link the exact loaded file as a Markdown link, quote
-its rule verbatim in a block quote, and explain the missing decision or
-permission. Risky or irreversible actions keep their
-confirmation gates.
+Put status notes in the same message as the next action.
+
+### Blockers and decisions
+
+Before stopping at a blocker, search the repository's docs and scripts for how
+to clear it, and try that route. Retry a failed API call or lookup twice before
+reporting it. Stop only for a secret, a paid action, an account action, or a
+decision that belongs to the person.
+
+A decision belongs to the person, and is what other skills call material, only
+when both hold:
+
+1. Nothing settles it: not the request, issue, docs, ADRs, `ORCHESTRATION.md`,
+   existing code or a conventional default.
+2. It matters if wrong: it changes product or user-facing behavior beyond the
+   request, or it is hard to reverse or outward-facing, such as merging past
+   the configured endpoint, deleting data, publishing, sending messages,
+   spending money, or changing access or security.
+
+Fact lookups, equivalent implementations behind one interface, retries and
+re-runs are never the person's. When a decision is theirs, finish all
+independent work first, then bring one recommendation. When a skill requires a
+pause, link the exact loaded file as a Markdown link, quote its rule verbatim in
+a block quote, and explain the missing decision or permission. Risky or
+irreversible actions keep their confirmation gates.
 
 Assessment-only work can finish with findings; it does not authorize remediation.
+Delivery-chain skills continue under
+[deliver's delivery settings](../deliver/SKILL.md#delivery-settings).
 Stop adding work once the agreed acceptance criteria hold. When work spans
 turns, compaction, external waits or workers, keep the record in
 [references/workstream-continuity.md](references/workstream-continuity.md).
@@ -108,8 +129,9 @@ project gate covers it. Validate fixture preconditions so a failed setup
 cannot masquerade as a product failure. Keep structural/schema checks distinct
 from behavioral acceptance.
 
-A requested check or recorded action without a returned result remains
-unverified. Keep implementation, local validation, external validation and
+Re-run a check that returned no result, with two retries; use `delivery-wait`
+for GitHub transitions. Report it as unverified only when a re-run is
+impossible, and state why. Keep implementation, local validation, external validation and
 publication status distinct. Read a gate result before performing the dependent
 action. Capture shell exit status before another command can overwrite it.
 

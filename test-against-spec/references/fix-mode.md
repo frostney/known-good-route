@@ -16,8 +16,9 @@ inside the specified behavior; the boundaries in the skill still apply.
 4. Repeat while available access and environments allow safe progress.
 5. Stop fixing for a material product, architecture, security, compatibility,
    or scope decision, and report the decision with the evidence gathered.
-6. When a fix can be exercised only through a preview and no preview contains
-   the changed revision, report the fix as applied but unverified. The caller
+6. When a fix can be exercised only through a preview, the project's docs and
+   scripts offer no other route, and no preview contains the changed revision,
+   report the fix as applied but unverified. The caller
    owns any authorized push or deployment and must invoke this skill again on
    the resulting exact-revision preview.
 

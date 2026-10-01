@@ -117,6 +117,11 @@ for reader effort.
 - Remove praise before the answer, forced enthusiasm, promotional framing,
   vague attribution, filler, process narration, repeated conclusions, and
   unnecessary implementation detail.
+- Leave out what the reader can already see, such as files they committed.
+- Keep the happy path brief; spend words on what went differently.
+- Do not state a default, such as that a review edited nothing.
+- Leave out specifics the outcome does not depend on, such as a tool's version
+  when only the tool matters.
 - State the literal point. When a metaphor, aphorism, dramatic framing, or
   other flourish stands in for a claim, replace it with the mechanism,
   evidence, or consequence it gestures at.
