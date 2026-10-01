@@ -7,8 +7,8 @@ description: >-
   /update-pr.
 license: Unlicense OR MIT
 compatibility: >-
-  Requires git and the GitHub CLI (gh) authenticated to the target repository,
-  plus network access.
+  Requires git, Python 3.11 or newer, and the GitHub CLI (gh) authenticated to
+  the target repository, plus network access.
 ---
 
 # Update PR
@@ -48,8 +48,10 @@ not block the update.
    resume testing on that exact revision before claiming readiness.
 5. When relevant changes exist, commit them under `git-workflow`: stage only
    those files, use a concise Conventional Commit subject, and never amend or
-   skip hooks.
-6. When the branch has commits its remote lacks, push an ordinary branch
+   skip hooks. Run `git-workflow`'s `scripts/publication_guard.py staged
+   --message-file FILE` before each commit and commit with `git commit -F FILE`.
+6. When the branch has commits its remote lacks, run the guard's `outgoing
+   --base REMOTE/DEFAULT` and commit what it stages, then push an ordinary branch
    normally, setting upstream when needed. Push a verified stack only through
    the guarded official stack workflow.
 7. Reconcile the PR title and body with the complete current diff, scope, linked
@@ -58,9 +60,12 @@ not block the update.
    widened scope may also change its type. Follow
    [../agent-writing/references/pr-descriptions.md](../agent-writing/references/pr-descriptions.md),
    preserving explicit project-template requirements and replacing obsolete
-   summaries or intermediate development history.
-8. Report the updated PR, any new commit, metadata changes and observed
-   validation. Include stack position and rewritten branches when applicable.
+   summaries or intermediate development history. Before `gh pr edit`, write the
+   title and body to files, run the guard's `pr --title-file FILE --body-file
+   FILE`, and edit the PR from those files.
+8. Report the updated PR, any new commit, metadata changes, what the
+   publication guard rewrote and observed validation. Include stack position
+   and rewritten branches when applicable.
    Distinguish passed local checks from pending current-head CI. Return the
    exact current head and next transition to the active publication or delivery
    caller; that caller continues through CI and feedback. Report missing

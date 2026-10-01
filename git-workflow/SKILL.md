@@ -8,8 +8,8 @@ description: >-
 license: Unlicense OR MIT
 compatibility: >-
   Requires git; pull-request operations also require the GitHub CLI (gh) and
-  network access. Protected native stack publication also requires Python 3.11+
-  and a POSIX shell.
+  network access. Publishing to GitHub also requires Python 3.11+; protected
+  native stack publication also requires a POSIX shell.
 ---
 
 # Git workflow
@@ -57,6 +57,12 @@ new repository or operation needs its own scope.
 - Never amend commits. Add a new commit for every correction.
 - Never force-push. Stop if a plain push is rejected by divergent history.
 - Stage only relevant files and exclude secrets or unrelated local work.
+- Before each commit to a GitHub repository, write the message to a file, run
+  `python3 scripts/publication_guard.py staged --message-file FILE`, commit with
+  `git commit -F FILE`, and report what it rewrote.
+- Before each push, run `python3 scripts/publication_guard.py outgoing --base
+  REMOTE/DEFAULT` and commit anything it stages. If the guard exits 2, fix the
+  error it prints and rerun it before publishing.
 - Use concise Conventional Commit subjects in imperative mood. Each commit title
   must state its observable impact, not only the mechanism changed.
 - Let hooks run unless the user explicitly asks otherwise.
