@@ -104,7 +104,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "30e9ca770fae4c64f14f2dbcd468cf44849f74bd9b3f87f8b876c7fc38a46eb7",
-      "afterSha256": "d1a3490bb79c7ffa1960cd843d499322709522e1faaa812117d0aa171262505b",
+      "afterSha256": "270f727b88f82bd79f53a10a1d93cbe0226d53e6659546bfbaac1941acd2bf70",
       "frozenCaseSha256": "4173add14875c06e8a075b4d1e6238e4d18458cc62117816f97f7d1fe46ce333"
     },
     {
@@ -205,7 +205,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "2d025147d9c13d443c71cef1f8d27c83875488dd2e4f4bf8cb477a7f07d7a50b",
-      "afterSha256": "09623962f7e1fc402690b8037c953061b4ecf6b7576d4a1289706f6c6073cf9d",
+      "afterSha256": "50a6c73e1b92b4a5d9fac0ba0d938b2bedd055a67a63efb0ec0d73bf4b7e327c",
       "frozenCaseSha256": "19607c37b1d3187f8568eb140244945b9031f984b97e3cc105dfa56e953dee50"
     },
     {
@@ -264,7 +264,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "f15f3e9754b57ca99175653a1e23ae985bb9fe290517e45893da2c65a222a80e",
-      "afterSha256": "6b89c9baff2e02c170ee9f77f6e8541640aa102f4533af5a0113a14744c19192",
+      "afterSha256": "1a7d8f6a6711b3c0f44a64098bbdc979243b22b7a515d0681627ef5b53ceb9af",
       "frozenCaseSha256": "e7a1178babb4c69f40b54a284ae8445683759132c912a5228535657e248a6a3d",
       "revisions": [
         {
@@ -816,7 +816,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "9042efa9980fe53aae0f2c1bb5867f3cff9f45c14f088468fab3a23b6bf5d61c",
-      "afterSha256": "05ba67d78e79d1dac9f0964e5fdb48de88eafa4a48cfd32a8cb112bec945e912",
+      "afterSha256": "8a3063b5542f7e2f54d2d226b1ebe0f5984cb3f348f0422938377f77fefe5473",
       "frozenCaseSha256": "16e2ea18df5e6be63c2f4df6b68405b4330f16ddd773ea8aa6a17d4b965511f5"
     },
     {
@@ -978,7 +978,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "0dbf72ef2f57549b7db5917369777a1524504bac44b86b93f92065ec8d4eae53",
-      "afterSha256": "9572849405902bdae7d2908ff96b5ab9e149c2b6d4fe1675b0aa2bd38c262b75",
+      "afterSha256": "eac22c1f83e17f5b71c255ff2f9f915082063bbebc0b3be2bd646ca6a5d97770",
       "frozenCaseSha256": "f58c93cade555316705581319ddeeaa171eb0a9b7f499bc6b4f21ee2249207a6"
     },
     {
@@ -1277,7 +1277,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "b7adf58a14d5347b01ec9c726e51d7ba44f44150372784c2dcffcfacc4ec0ba7",
-      "afterSha256": "73a0d345f8e2a9c1c571638e32f4ed0d42b10aec41fccdf33835ecdc8c8059bc",
+      "afterSha256": "2ed1a192ce1f69732e17faa1cdca34ac23277744c179da39e1452827a2f008ae",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1380,7 +1380,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "79e851dc4c980bdc7803f640b5e6ca59b52dfd7fe8ad39351dc02210301c4f3f",
-      "afterSha256": "4e8bd97f5840adf5d37bd3bb081239ac38a92b35ea74fe27793a936799792a3c",
+      "afterSha256": "c1a32bca80de9c18047d60203e7dbce4e34c917e1c64cda805e0b02a6450c4ac",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1662,7 +1662,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "f7f4c49580242958106e7408e5e4c4947d3eec04c52da040e0799f9b2a6871c0",
-      "afterSha256": "bc931e0d75f6b682c9a0bdbd2970cac52eb318a0d96ec8ddf5da774f97f6942e",
+      "afterSha256": "205a0e69046da133bf9b23de37159fc1bb1cc2c1c8034afedaafbc6eda7decee",
       "frozenCaseSha256": "7f0ecd811bd03a42f763b0a5a290770ca6ba4f05654c69ac1f0c1800280c8382"
     },
     {
@@ -1673,7 +1673,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "906d5bcf80024dcf3a433138b1e40bb0ebcfff78dcc0e634e6b2fab936d2b61a",
-      "afterSha256": "18c81af7f5b40a6437ad83a227f76cd36bf648e331866b28803ec33bda66be86",
+      "afterSha256": "76609ae74b711c2c8172a65c60edd882ed0efbea52d9aa454d514b415b9cc1ab",
       "frozenCaseSha256": "788837a82ecf9f8e16e98129501db6678d1449744ba199369f0102fd0fe44cf4"
     },
     {
@@ -1765,7 +1765,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "79e1e36e585a1b3f77c8fd1532114f80aa66547524fa7fe82be3d1945d772cbc",
-      "afterSha256": "bce6716d49b1779b4c96355c588bc54f8a7805bdb7ccc2b5ff74e67470fe8b20",
+      "afterSha256": "815e7b55d019ae647ad28f2a80b80a534246f71cbe2e437af476aacc3edd1fc2",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1910,7 +1910,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "d0239c04c195d2eba2db9055f6974fc6c3978253fe3eedd4fc68f165e07d6ca8",
-      "afterSha256": "38911f841d1b851203e3a36b4f4b0b510fc1d43d93585e8a6ed9b4197782a90b",
+      "afterSha256": "df328774306bed1cce108a0aa1b2ea0d358d7a404092e335b37f02af33f19176",
       "frozenCaseSha256": "6b8005bf9f1fc15394c8a82839d6514815787de45f085851e97b636432713362",
       "postFreezeChangedFields": [
         "expected"
@@ -1988,7 +1988,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "fc24628b3a6645d80fefb45103cee88bb4df7a000675b926a5cbfdc1ca35f858",
-      "afterSha256": "b39425b2d1dc38c1c0101555577df47d7ba1a226aaa030608ca77bc2f442935f",
+      "afterSha256": "7a0b29a7a94e9878e1b06575512b25d1607f5a9c960b281ce370de01d0cbffd9",
       "frozenCaseSha256": "44024129f277b059e2b7d81f9bc951bbe1fdbd2b609f51e0ae7eea2ecd5a1389",
       "postFreezeChangedFields": [
         "expected"
