@@ -436,8 +436,8 @@ def render(report):
     if not report["rewritten"]:
         lines.append("nothing to rewrite")
     for row in report["rewritten"]:
-        details = ", ".join(f"{row[k]} {label}" for k, label in (
-            ("references", "references"), ("numbers", "PR numbers"), ("shas", "SHAs"), ("stubbedLines", "lines stubbed"))
+        details = ", ".join(f"{label} {row[k]}" for k, label in (
+            ("references", "references"), ("numbers", "PR numbers"), ("shas", "SHAs"), ("stubbedLines", "stubbed lines"))
             if row.get(k))
         lines.append(f"rewrote {row['target']}{' (staged)' if row.get('staged') else ''}: {details}")
     lines += [f"placeholder {name} stands for a private repository" for name in report.get("placeholders", [])]

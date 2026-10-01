@@ -159,7 +159,7 @@ class PublicationGuardTests(unittest.TestCase):
         self.assertEqual(variant["title"], "Short")
         self.assertEqual(self.staged_json("a.json")["about"], "[redacted]")
         self.assertEqual(self.staged_json("b.json")["text"], "A long sentence unrelated to any private repository at all")
-        self.assertIn("lines stubbed", output)
+        self.assertIn("stubbed lines 3", output)
 
     def test_prose_references_are_neutralised(self):
         self.stage({"notes.md": textwrap.dedent(f"""\
