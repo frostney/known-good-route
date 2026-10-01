@@ -46,7 +46,24 @@ export interface ActionRecord {
   data?: Record<string, unknown>;
 }
 
+export const orchestrationEndpoints = ["ready-to-merge", "merged", "deployed"] as const;
+export const orchestrationEntryPoints = ["deliver", "stop"] as const;
+
+// The repository configuration a case runs in. Its expected terminal state and
+// rubric follow from it, and the runner writes it into the eval workspace.
+export interface EvalEnvironment {
+  // ORCHESTRATION.md frontmatter and body; null when the repository has none.
+  orchestration: {
+    endpoint: (typeof orchestrationEndpoints)[number];
+    entryPoints: (typeof orchestrationEntryPoints)[number];
+    body?: string;
+  } | null;
+  // Other repository files that change the expected outcome, by path.
+  files?: Record<string, string>;
+}
+
 export interface EvalFixture {
+  environment?: EvalEnvironment;
   evidence: Record<string, string>;
   registeredSkills?: Record<string, string>;
   actionResponses?: Partial<Record<ActionName, string | string[]>>;
@@ -224,5 +241,12 @@ export interface EvalRunRecord {
     transcript: string;
   };
   judgement?: import("./judge.ts").Judgement;
+  // Exactly what the run saw: the written configuration files, the injected
+  // AGENTS.md and the case's repository evidence.
+  environment?: {
+    files: Record<string, string>;
+    agentsMd: string;
+    repoContext: Record<string, string>;
+  };
   error?: string;
 }

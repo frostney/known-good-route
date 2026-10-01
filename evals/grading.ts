@@ -1,6 +1,7 @@
 import { messageRubric } from "./judge.ts";
 import { hasSkillCitation } from "./skill-citation.ts";
 import { toolReceiptSchema } from "./tool-receipts.ts";
+import { orchestrationEndpoints, orchestrationEntryPoints } from "./types.ts";
 import type {
   ActionName,
   EvalCase,
@@ -521,6 +522,24 @@ function validateExactValues(evalCase: EvalCase): void {
     throw new Error(`${evalCase.id}: invalid exact value check`);
 }
 
+// Every case declares the repository configuration it runs in, because its
+// expected terminal state depends on it.
+export function validateEnvironment(evalCase: EvalCase): void {
+  const environment = evalCase.fixture.environment;
+  if (!environment || !Object.hasOwn(environment, "orchestration"))
+    throw new Error(`${evalCase.id}: declare fixture.environment with orchestration (or null)`);
+  const orchestration = environment.orchestration;
+  if (
+    orchestration !== null &&
+    (!(orchestrationEndpoints as readonly string[]).includes(orchestration.endpoint) ||
+      !(orchestrationEntryPoints as readonly string[]).includes(orchestration.entryPoints))
+  )
+    throw new Error(`${evalCase.id}: invalid orchestration endpoint or entry-points`);
+  for (const path of Object.keys(environment.files ?? {}))
+    if (!path.trim() || path.startsWith("/") || path.split("/").includes("..") || path === "ORCHESTRATION.md")
+      throw new Error(`${evalCase.id}: invalid environment file ${path}`);
+}
+
 export function validateRubric(evalCase: EvalCase): void {
   for (const field of removedAnswerPatterns)
     if (Object.hasOwn(evalCase.expected, field))
@@ -653,5 +672,6 @@ export function validateCases(
         );
       }
     }
+    validateEnvironment(evalCase);
   }
 }

@@ -167,9 +167,9 @@ happy-path step; no stated defaults such as "read-only"; no specifics the
 outcome does not depend on, such as a compiler version when only the compiler
 matters; clear rather than confusing; and no "unverified" report where the
 agent could have re-run the check. A case may add its own items under
-`messageRubric`. Message verdicts are reported as `message` checks. No
-labelled message verdicts calibrate the judge yet, so a message failure is
-always reported as needs human review, never as a failure. Workers are judged
+`messageRubric`. Message verdicts are reported as `message` checks. A message
+failure fails a run only once the judge's message gate opens on held-out
+labels; until then it is reported as needs human review. Workers are judged
 on their outcome items only.
 
 ### Judging
@@ -188,14 +188,22 @@ The judge comes from the other model family: Claude judges Codex runs and Codex
 judges Claude runs. The defaults are `claude:claude-opus-5-5` and
 `codex:gpt-6.1-sol`; `--judge <cli:model>` replaces the judge for that family.
 Judges run through the same native CLIs and saved logins as candidates, with no
-tools, at medium effort. `--same-family-judge` judges each run with its own
+tools, at `--judge-effort` (default `medium`). The default moves only to the
+lowest effort at which both default judges clear the calibration gate; at
+`high` and `xhigh` both still agree on 83/95 rubric items with 8 false passes,
+so it stays `medium`. A calibration result records its effort, and the gate
+opens only for runs at that effort. `--same-family-judge` judges each run with its own
 family's judge, for diagnosis when the other CLI is unavailable. Its verdicts
 are recorded but never trusted.
 
 ### Calibration gate
 
 `calibration.json` holds the founder's labelled answers under
-`judgeCalibration.samples`. Each sample is one live answer and is
+`judgeCalibration.samples`, each tagged with its labelling `round` and its
+`use`. Round 1 is `tuning`: it was used to clarify ambiguous rubric wording, so
+it never counts toward the gate, and its measurements before and after the
+clarification are kept under `judgeCalibration.tuning`. Later rounds are
+`held-out` and are never used for tuning. Each sample is one live answer and is
 self-contained: the prompt, the candidate model, the final response and
 recorded actions, the rubric items exactly as they were labelled, a `yes` or
 `no` for each item, the founder's `terminal` verdict on whether the run stopped
@@ -205,17 +213,22 @@ and rubrics are not tuned against the labels. A later edit to a case does not
 change what a sample measured.
 
 Calibration judges every sample with the judge of the other family, as a run
-would, asking its labelled items plus one terminal-state question. Agreement
+would, asking its labelled outcome and message items plus one terminal-state
+question. Only held-out answers produce the per-judge `results` the gate
+reads; outcome items, message items and the terminal question are scored
+separately. Agreement
 is counted per item: the judge agrees when an item passes exactly where the
 label says `yes`. A judge error disagrees on every item of that answer. Each
 judge's result covers the samples it judged; the outcome items and the
 terminal question are scored separately.
 
-The gate opens for a judge only when its recorded result matches the current
+The outcome gate opens for a judge only when its recorded held-out result matches the current
 labels and judge protocol (a digest), covers at least `minimumSamples` (20)
 labelled answers, agrees on at least `agreementThreshold` (0.9) of the rubric
 items, and passed no item the labeller failed. The terminal question is
-reported, not gated. Until the gate opens, a run that passes every
+reported, not gated. A separate message gate applies the same threshold, minimum
+and zero-false-pass rule to the labelled message items; until it opens, a
+message failure is left for human review. Until the outcome gate opens, a run that passes every
 deterministic check but fails its rubric is reported as **needs human review**,
 not as a failure. A same-family judge's failures are treated the same way.
 Deterministic failures always fail.
@@ -224,7 +237,7 @@ Import a labelled set, then calibrate locally; calibration makes one judge call
 per labelled answer:
 
 ```bash
-bun run eval:calibrate-judge -- --import-labels labelling-set.json --labels-dir labels --labelled-by founder
+bun run eval:calibrate-judge -- --import-labels labelling-set-2.json --labels-dir labels --labelled-by founder --round 2 --use held-out
 bun run eval:calibrate-judge -- --output .eval-results/calibration --concurrency 4 --write
 ```
 
@@ -241,36 +254,29 @@ failed repeat fails it, errors or missing repeats leave it inconclusive, and
 untrusted judge failures leave it for human review. The process exits non-zero
 unless every case passes, because review rows still await a human decision.
 
-### Project instructions
+### Project instructions and environment
 
-Each eval workspace gets the `AGENTS.md` that the
+Every case declares the repository environment it runs in under
+`fixture.environment`, and its expected terminal state and rubric follow from
+it. `orchestration` gives the `ORCHESTRATION.md` frontmatter: `endpoint`
+(`ready-to-merge`, `merged` or `deployed`) and `entry-points` (`deliver` to
+continue an entry-point command through the development workflow to that
+endpoint, or `stop` to end after the command itself), plus an optional body.
+It is `null` when the repository has no `ORCHESTRATION.md`. `files` adds other
+configuration that changes the outcome, such as the integration destination.
+`validateCases` rejects a case without a valid environment.
+
+Before each run the runner writes the case's `ORCHESTRATION.md` and declared
+files into the eval workspace. It generates the AGENTS.md block with the
 [skills block generator](../.github/actions/update-project-skills/agents-block.mjs)
-writes for the skills installed in that run, as a consuming repository would
-carry it. Both CLIs isolate ambient project files, so the harness appends this
-file to the instructions of every candidate and worker run. The snapshot keeps
-the generator with the harness.
-
-Requested JSON artifact cases parse the actual submitted payload at the declared
-path and require the correct version, kind, and findings array. This validates
-the envelope, not every field or the truth of every finding; the rubric judges
-the artifact's content from the recorded edit.
-
-`calibration.json` records why each case was retained, corrected, or added.
-Some fixtures advance evidence only after a recorded action, such as waiting
-for checks or receiving a simulated user answer. These transitions test workflow
-decisions; they do not constitute a real forge state machine. `skills.migrate`
-likewise records use of the registered migration workflow without installing
-skills on the host.
-
-Cases with `requiredSkillCitations` check an actual Markdown link to the source
-path returned by `loadSkill` and the required quoted passage from its returned
-instructions. The link and quotation must appear together in a final response
-or a report/question's text fields; unrelated action data and metadata cannot
-supply them. Bare paths and guessed relative links fail. This gate supports
-ordinary inline Markdown links and block, double-quoted, or code quotations;
-semantic review still checks relevance and the surrounding explanation. Both
-`loadSkill` and `readSkillReference` return their actual absolute source paths;
-reference citations can therefore target the reference itself.
+in a project root holding those same files and the skills installed in that
+run, so a block line that reads the repository's configuration appears there.
+Both CLIs isolate ambient project files, so the harness also appends the
+AGENTS.md block and the configuration files to the instructions of every
+candidate and worker run. The snapshot keeps the generator with the harness.
+Each run record exposes `environment`: the files written, the AGENTS.md block
+injected, and the case's repository evidence. `eval:dry` counts the cases per
+environment.
 
 ## Independent semantic review
 

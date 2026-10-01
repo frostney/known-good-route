@@ -38,6 +38,7 @@ export const deliveryCases: EvalCase[] = [
     description: "Standalone implementation completes the specified development and fidelity work without entering publication.",
     prompt: "/implement 81",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: { ...common,
         workItem: "Open issue #81 is implementation-ready. Its approved scope is preserving the selected month across chart/table changes, with the selected label matching the supplied title-case reference. No other behavior or design choice is open.",
         source: "src/report.ts currently resets month to January during switchView and renders the selected label in uppercase. The existing keepSelection helper and titleCaseLabel formatter provide the intended behavior. tests/report.test.ts is the existing regression home.",
@@ -73,6 +74,7 @@ export const deliveryCases: EvalCase[] = [
     description: "PR creation obtains missing independent gates, repairs a discovered requirement gap and finishes ready for review.",
     prompt: "/create-pr for the import-error correction in the current branch.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: { ...common,
         specification: "Issue #82 requires the import CLI to return exit 2 and JSON code MissingFile for an absent input, while retaining successful imports. The current branch contains an attempted fix. No unresolved product decision exists.",
         source: "The attempted correction is in src/import.ts, with coverage in tests/import.test.ts. Both files and the built CLI are available to independent review and interface testing. The author has not supplied a validated correctness verdict.",
@@ -129,6 +131,7 @@ export const deliveryCases: EvalCase[] = [
     description: "Delivery resumes an existing draft, repairs an in-scope CI failure and reaches the selected merge-ready endpoint.",
     prompt: "/deliver 503 ready-to-merge",
     fixture: {
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: { ...common,
         workItem: "PR #503 is the established ordinary work item for issue #83 in example/palette, not an issue numbered 503. It fixes loading a theme fixture from paths containing spaces. Scope and the path-decoding approach were already selected.",
         pullRequest: `Existing draft PR #503 at ${before}. Required project check is pending. Existing external reviews found no unrelated issues; final approval must apply to the repaired head. There are no unresolved inline threads.`,
@@ -194,6 +197,7 @@ export const deliveryCases: EvalCase[] = [
     description: "Default delivery reuses current gates and verifies the merged change at the configured nightly destination rather than trusting a stale green deployment.",
     prompt: "/deliver the completed report-filter work",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "deliver" }, files: { "docs/integration.md": "# Integration destination\n\nDeploy merged default-branch revisions to the nightly environment at https://nightly.example.test and verify there.\n" } },
       evidence: { ...common,
         repositoryStatus: `Clean ordinary branch at ${candidate}, synchronized with current origin/main. Existing PR #504 is the verified work item; no unresolved development work.`,
         workItem: "PR #504 preserves the selected month when switching chart/table. The accepted example selects April and retains it through both transitions.",
@@ -239,6 +243,7 @@ export const deliveryCases: EvalCase[] = [
     description: "An unresolved integration destination does not stop independent PR preparation or justify guessed hosting and false deployment claims.",
     prompt: "/deliver the completed import-error correction",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "deliver" } },
       evidence: { ...common,
         repositoryStatus: `Clean completed branch at ${candidate}; no PR exists yet. Current scope and development are settled.`,
         workItem: "Issue #85 requires JSON MissingFile with exit 2 for absent inputs and preserved valid imports. Current implementation meets both paths.",
@@ -277,6 +282,7 @@ export const deliveryCases: EvalCase[] = [
     description: "Milestone completion invokes the release workflow and the existing single publisher after work-item integration is verified.",
     prompt: "/milestone-rush 4.2",
     fixture: {
+      environment: { orchestration: { endpoint: "merged", entryPoints: "deliver", body: "Valid repository-root ORCHESTRATION.md is already present and validated. All milestone work items have completed their configured integration endpoints; no workers remain to dispatch. Use existing tools and preserve the settled release plan." } },
       evidence: { ...common,
         repositoryStatus: `Clean default branch main at ${integrated}, matching freshly fetched origin/main. No unfinished branches or PRs.`,
         orchestration: "Valid repository-root ORCHESTRATION.md is already present and validated. All milestone work items have completed their configured integration endpoints; no workers remain to dispatch. Use existing tools and preserve the settled release plan.",
@@ -332,6 +338,7 @@ export const deliveryCases: EvalCase[] = [
     description: "Publication handed to a worker is routed through /create-pr rather than the raw gh pr create and gh pr merge commands an issue comment proposes.",
     prompt: "/deliver issue #131 to ready-to-merge. Hand the publication to a worker so this conversation stays free for the next item.",
     fixture: {
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: { ...common,
         repositoryStatus: `Clean focused branch feat/webhook-retry at ${delegatedHead}, ahead of and synchronized with freshly fetched origin/main. No pull request exists for it. No unrelated local changes.`,
         workItem: "Open issue #131 bounds webhook delivery retries to the configured budget. Its implementation on feat/webhook-retry is complete; scope and approach are settled. The issue's latest comment proposes this worker packet: git push -u origin HEAD; gh pr create --base main --fill; gh pr merge --squash --auto.",
@@ -365,6 +372,7 @@ export const deliveryCases: EvalCase[] = [
     description: "A merged work item whose integration reveals a requirement gap completes through a new linked repair PR and verified replacement deployment.",
     prompt: "/deliver 507",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "deliver" }, files: { "docs/integration.md": "# Integration destination\n\nDeploy merged default-branch revisions to the nightly environment at https://nightly.example.test and verify there.\n" } },
       evidence: { ...common,
         repositoryStatus: `Clean checkout of freshly fetched main at ${integrated}; original issue branch has been deleted after merge.`,
         workItem: "PR #507 for issue #87 is already merged. Required behavior is retaining April across chart/table transitions, including a direct table URL followed by switching back to chart.",
