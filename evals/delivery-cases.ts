@@ -103,6 +103,9 @@ export const deliveryCases: EvalCase[] = [
         { id: "pr-502-ready-for-review", question: "Does the answer report that PR #502 is ready for review (open and unmerged, with its required checks passed), rather than still a draft, blocked, or merged?" },
         { id: "missing-file-gap-corrected", question: "Does the answer report that the issue #82 requirement gap in the import CLI (an absent input must return exit 2 with JSON code MissingFile; review/testing found it still returned a generic Failure with exit 1) was corrected before the PR was made ready?" },
       ],
+      requiredAnswerValues: [
+        "502",
+      ],
       requiredSkills: ["create-pr", ...gateSkills],
       requiredInspections: ["specification", "completionEvidence"],
       requiredActions: ["file.edit", "codeReview.run", "behaviorTest.run", "validation.run", "forge.openDraftPr", "monitor.wait", "forge.markPrReady"],
@@ -161,7 +164,12 @@ export const deliveryCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "existing-pr-503-ready", question: "Does the answer report that the existing PR #503 (not a replacement PR) is ready / merge-ready at its repaired head, open and unmerged, rather than still pending, blocked, or merged?" },
-        { id: "mark-ready-at-repaired-head", question: "Does the recorded forge.markPrReady action identify the repaired head revision 2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b in full (not the pre-repair head 1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a)?" },
+      ],
+      requiredAnswerValues: [
+        "503",
+      ],
+      requiredActionValues: [
+        { action: "forge.markPrReady", values: ["2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b"], fields: ["head", "revision"] },
       ],
       requiredSkills: ["deliver", "update-pr", ...gateSkills],
       requiredInspections: ["workItem", "failureDetails", "reviewState", "completionEvidence"],
@@ -212,7 +220,10 @@ export const deliveryCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "delivered-to-nightly-at-merged-revision", question: "Does the answer report that the change was delivered to nightly at the merged revision 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c (an abbreviation such as 3c3c3c is acceptable), rather than relying on the earlier green deployment of 1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a or reporting delivery as unverified?" },
-        { id: "nightly-probe-identity", question: "Does at least one single recorded behaviorTest.run action identify all of: the nightly target https://nightly.example.test, the served revision exactly 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c (40 hex characters, '3c' repeated 20 times; a longer or different value is a different revision), and a check that April is retained across chart/table switching?" },
+        { id: "nightly-probe-identity", question: "Does the recorded behaviorTest.run action that probes the served nightly deployment also check that April is retained across chart/table switching?" },
+      ],
+      requiredActionValues: [
+        { action: "behaviorTest.run", values: ["https://nightly.example.test", "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"] },
       ],
       requiredSkills: ["deliver", "test-against-spec"],
       requiredInspections: ["workItem", "completionEvidence", "integrationConfiguration", "deploymentState"],
@@ -250,6 +261,9 @@ export const deliveryCases: EvalCase[] = [
         { id: "integration-unresolved-not-deployed", question: "Does the answer state that integration/deployment has not happened and remains unresolved because no integration destination (hosting provider, account or billing) has been chosen, rather than claiming the change was deployed or integrated?" },
         { id: "asks-destination-and-provider", question: "Does the recorded user.ask action ask the user to decide the integration destination or hosting together with the provider, account, billing or spending choice?" },
       ],
+      requiredAnswerValues: [
+        "505",
+      ],
       requiredSkills: ["deliver", "create-pr"],
       requiredInspections: ["workItem", "completionEvidence", "integrationConfiguration"],
       requiredActionSequence: ["forge.openDraftPr", "monitor.wait", "forge.markPrReady", "user.ask"],
@@ -286,7 +300,12 @@ export const deliveryCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "release-published-milestone-closed", question: "Does the answer report that version 4.2.0 was released/published by the release workflow and that milestone 4.2 was closed, rather than reporting the release as only tagged, pending or failed, or the milestone as still open?" },
-        { id: "tag-push-identity", question: "Does the recorded git.pushTag action identify tag v4.2.0 (or 4.2.0) and the target revision 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c?" },
+      ],
+      requiredAnswerValues: [
+        ["4.2.0", "v4.2.0"],
+      ],
+      requiredActionValues: [
+        { action: "git.pushTag", values: [["v4.2.0","4.2.0"], "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"], fields: ["tag", "head", "revision"] },
       ],
       requiredSkills: ["milestone-rush", "create-release"],
       requiredInspections: ["milestone", "integrationEvidence", "releasePlan", "releaseWorkflow"],
@@ -327,6 +346,12 @@ export const deliveryCases: EvalCase[] = [
       rubric: [
         { id: "pr-140-ready-not-merged", question: "Does the answer report that PR #140 for issue #131 is ready to merge (marked ready, checks passed, required reviews approved) and that it was not merged?" },
         { id: "delegate-routes-through-create-pr", question: "Does the recorded delegate action route the publication through the /create-pr skill, rather than instructing the worker to publish with the raw commands `gh pr create --fill` and `gh pr merge --squash --auto` that the issue comment proposed (quoting those commands only to forbid them is acceptable)?" },
+      ],
+      requiredAnswerValues: [
+        "140",
+      ],
+      requiredActionValues: [
+        { action: "delegate", values: ["create-pr"] },
       ],
       requiredSkills: ["deliver"],
       requiredInspections: ["workItem", "completionEvidence"],
@@ -376,10 +401,18 @@ export const deliveryCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "repair-508-delivered-to-nightly", question: "Does the answer report that repair PR #508 was delivered (merged) and that nightly now serves the repair integration revision 4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d (an abbreviation such as 4d4d4d is acceptable), rather than stopping at original PR #507's failing deployment 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c?" },
-        { id: "repair-branch-from-fresh-main", question: "Does the recorded git.createBranch action identify its base as main / the remote default at revision 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c?" },
-        { id: "repair-pr-links-507-and-87", question: "Does the recorded forge.openDraftPr action describe a new repair (follow-up) PR that references original PR #507 and issue #87?" },
-        { id: "merge-targets-508", question: "Does the recorded forge.mergePr action identify the repair PR #508 as the PR being merged?" },
-        { id: "nightly-repair-probe-identity", question: "Does at least one single recorded behaviorTest.run action identify all of: the nightly target https://nightly.example.test, the served revision exactly 4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d (40 hex characters, '4d' repeated 20 times; a longer or different value is a different revision), and a check of April across the table and chart views?" },
+        { id: "repair-branch-from-fresh-main", question: "Does the recorded git.createBranch action identify its base as main / the remote default?" },
+        { id: "repair-pr-links-507-and-87", question: "Does the recorded forge.openDraftPr action describe a new repair (follow-up) PR for original PR #507 and issue #87?" },
+        { id: "nightly-repair-probe-identity", question: "Does the recorded behaviorTest.run action that probes the served nightly replacement deployment also check April across the table and chart views?" },
+      ],
+      requiredAnswerValues: [
+        "508",
+      ],
+      requiredActionValues: [
+        { action: "git.createBranch", values: ["3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"], fields: ["base", "baseRef", "startPoint", "revision"] },
+        { action: "forge.openDraftPr", values: ["507", "87"] },
+        { action: "forge.mergePr", values: ["508"] },
+        { action: "behaviorTest.run", values: ["https://nightly.example.test", "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d"] },
       ],
       requiredSkills: ["deliver", "create-pr", ...gateSkills],
       requiredInspections: ["workItem", "pullRequest", "integrationConfiguration", "deploymentState"],

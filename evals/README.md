@@ -135,12 +135,28 @@ judged against the case's rubric, described next.
 ## Judged answers
 
 Every case carries a `rubric` of yes/no questions in its case file, written
-before any run. Each question names the facts a correct answer must establish:
-the verdict, the reported state, revisions, numbers, or the content of a
-recorded action such as a PR body, a wait deadline or a reply. Prose style is
-not judged. `validateCases` rejects a case without a rubric, a statement that is
-not a question, and the removed regex fields (`outputPatterns`,
+before any run. Each question asks whether the outcome or result is right: the
+verdict, the reported state, or what a recorded action such as a PR body, a wait
+or a reply does. Prose style is not judged, and neither is any exact value.
+`validateCases` rejects a case without a rubric, a statement that is not a
+question, and the removed regex fields (`outputPatterns`,
 `forbiddenOutputPatterns`, `reportPatterns` and `requiredActionDetails`).
+
+Exact values are code checks, because a model judge cannot reliably compare
+them (it confused a 40-character revision with a 42-character one):
+
+- `requiredAnswerValues` lists numbers, ids, versions, paths or literal lines
+  the answer must state. Each must appear as a whole token in the final
+  response or a report, question, reply or comment action; an inner array
+  lists accepted spellings.
+- `forbiddenAnswerValues` lists values that must not appear there.
+- `requiredActionValues` lists values a recorded action must carry, either as
+  the exact value of a named data field (or an element of an array field) or
+  as a whole token in its details or data. `every` applies it to every such
+  action.
+
+A whole token is not preceded or followed by a letter, digit or underscore, so
+`503` does not match `1503`. Matching is literal and case-sensitive.
 
 After a run completes, a judge model reads the scenario prompt as context and
 the answer as evidence. The answer is the final response plus every recorded
@@ -154,7 +170,7 @@ rubric.
 
 The judge comes from the other model family: Claude judges Codex runs and Codex
 judges Claude runs. The defaults are `claude:claude-opus-5-5` and
-`codex:gpt-6-sol`; `--judge <cli:model>` replaces the judge for that family.
+`codex:gpt-6.1-sol`; `--judge <cli:model>` replaces the judge for that family.
 Judges run through the same native CLIs and saved logins as candidates, with no
 tools, at medium effort. `--same-family-judge` judges each run with its own
 family's judge, for diagnosis when the other CLI is unavailable. Its verdicts
@@ -162,29 +178,36 @@ are recorded but never trusted.
 
 ### Calibration gate
 
-`calibration.json` holds human-labelled answers under
-`judgeCalibration.samples`. Each sample names a case, the answer (final output
-and, where content matters, actions), its `pass` or `fail` label, the rubric
-items a failing answer misses, and the committed test it came from. A judge
-agrees with a sample when it passes every item of a `pass` answer, or fails at
-least one labelled item of a `fail` answer. A judge error disagrees.
+`calibration.json` holds the founder's labelled answers under
+`judgeCalibration.samples`. Each sample is one live answer: its case, the
+candidate model, the final response and recorded actions, the labeller, and a
+`yes` or `no` for every rubric item of its case. Labels come only from the
+labeller; generated or test-derived labels are not calibration evidence, and
+rubrics are not tuned against the labels after they are recorded. Agreement is
+counted per item: the judge agrees when an item passes exactly where the label
+says `yes`. A judge error disagrees on every item of that answer.
 
 The gate opens for a judge only when its recorded result covers the current
-samples, their rubrics and the judge protocol (a digest), includes at least
-`minimumSamples` samples, agrees on at least `agreementThreshold` (0.9) of them,
-and passed no answer a human labelled as failing. Until then, a run that passes
-every deterministic check but fails its rubric is reported as **needs human
-review**, not as a failure. A same-family judge's failures are treated the same
-way. Deterministic failures always fail.
+labels, their cases' rubrics and the judge protocol (a digest), covers at least
+`minimumSamples` (30) labelled answers, agrees on at least
+`agreementThreshold` (0.9) of the items, and passed no item the labeller
+failed. Until then, a run that passes every deterministic check but fails its
+rubric is reported as **needs human review**, not as a failure. A same-family
+judge's failures are treated the same way. Deterministic failures always fail.
 
-Calibrate a judge locally; it makes one judge call per sample:
+Import the labelled set, then calibrate each judge locally; calibration makes
+one judge call per labelled answer:
 
 ```bash
-bun run eval:calibrate-judge -- --judge codex:gpt-6-sol --output .eval-results/calibration-sol --concurrency 4 --write
+bun run eval:calibrate-judge -- --import-labels labelled-set.json --labelled-by founder
+bun run eval:calibrate-judge -- --judge codex:gpt-6.1-sol --output .eval-results/calibration-sol --concurrency 4 --write
 ```
 
-`--write` records the result in `calibration.json`; commit it with the labels it
-measured. Any change to the samples, a sampled case's rubric or the judge
+The import takes labelling-set entries (`id`, `caseId`, `model`, `finalAnswer`,
+`actions`, `rubricItems` and the labeller's `labels` keyed by item) and refuses
+an entry whose rubric items no longer read as they did when labelled. `--write`
+records the result in `calibration.json`; commit it with the labels it
+measured. Any change to the labels, a labelled case's rubric or the judge
 instructions changes the digest and closes the gate until the judge is
 recalibrated.
 

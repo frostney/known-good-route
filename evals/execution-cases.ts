@@ -59,6 +59,9 @@ export const executionCases: EvalCase[] = [
         { id: "reproduced-then-verified", question: "Do the recorded actions show the real cli-regressions check failing on the original app.mjs before the edit (reproducing the defect) and a cli-regressions check passing after the final edit?" },
         { id: "boundary-fixed-auth-first", question: "Does the answer state that authenticated requests now accept counts 0 through 100 and reject counts above 100 (including 101) with error 'limit' (e.g. changing `count > 101` to `count > 100`), while every unauthenticated request still returns 'unauthorized' regardless of count?" },
       ],
+      requiredAnswerValues: [
+        "100",
+      ],
       requiredSkills: ["implement"],
       requiredActions: ["file.edit"],
       forbiddenActions: [

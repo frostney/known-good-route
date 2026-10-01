@@ -234,7 +234,7 @@ describe("eval grading", () => {
           },
         ],
       }),
-      "Draft pull request opened.",
+      "Draft pull request #201 opened and marked ready.",
     );
 
     expect(result.passed).toBeTrue();
@@ -250,7 +250,7 @@ describe("eval grading", () => {
   test("requires repair of generated-artifact gaps before PR readiness", () => {
     const evalCase = evalCases.find(c => c.id === "create-pr-reports-implementation-gap")!;
     const actions: RunLedger["actions"] = [
-      { action: "file.edit", details: "Generate the required docs index" },
+      { action: "file.edit", details: "Generate the required docs index", data: { path: "docs/index.md" } },
       { action: "codeReview.run", details: "Review the corrected artifact" },
       { action: "validation.run", details: "Validate the generated index" },
       { action: "git.commit", details: "Commit the generated artifact" },
@@ -262,7 +262,7 @@ describe("eval grading", () => {
     const state = ledger({loadedSkills:["create-pr","code-review","test-against-spec"],
       inspections:["completionEvidence","specification"],actions,
       events:actions.map(a=>({kind:"action",name:a.action}))});
-    expect(gradeRun(evalCase,state,"PR203 is ready after generating and validating the index.").passed).toBeTrue();
+    expect(gradeRun(evalCase,state,"PR #203 is ready after generating and validating the index.").passed).toBeTrue();
     expect(gradeRun(evalCase,{...state,actions:[],events:[]},"The generated index is missing; return to implementation.").passed).toBeFalse();
     const skipped = actions.filter(a=>a.action!=="file.edit");
     expect(gradeRun(evalCase,{...state,actions:skipped,events:skipped.map(a=>({kind:"action",name:a.action}))},"PR203 is ready.").passed).toBeFalse();
@@ -281,7 +281,7 @@ describe("eval grading", () => {
     const state = ledger({loadedSkills:["create-pr","code-review","test-against-spec"],
       inspections:["specification","completionEvidence"],actions,
       events:actions.map(a=>({kind:"action",name:a.action}))});
-    expect(gradeRun(evalCase,state,"CLI acceptance passed; PR209 is ready.").passed).toBeTrue();
+    expect(gradeRun(evalCase,state,"CLI acceptance passed: missing input exits 2. PR #209 is ready.").passed).toBeTrue();
     const skipped = actions.filter(a=>a.action!=="behaviorTest.run");
     expect(gradeRun(evalCase,{...state,actions:skipped,events:skipped.map(a=>({kind:"action",name:a.action}))},"PR209 is ready.").passed).toBeFalse();
     expect(gradeRun(evalCase,{...state,actions:[],events:[]},"Missing CLI evidence; no PR created.").passed).toBeFalse();
@@ -339,7 +339,7 @@ describe("eval grading", () => {
               action: "behaviorTest.run",
               details: "Reproduce the missing Retry action on preview c8a02f4",
             },
-            { action: "file.edit", details: "Apply the focused Retry fix" },
+            { action: "file.edit", details: "Apply the focused Retry fix", data: { path: "src/deployment/callback.ts" } },
             {
               action: "behaviorTest.run",
               details: "Check available environments after the fix",
@@ -376,6 +376,7 @@ describe("eval grading", () => {
           {
             action: "forge.updatePrMetadata",
             details: "Add the required rollback procedure",
+            data: { body: "Rollback: disable cache.rollout, restart the service, confirm the prior cache path." },
           },
           {
             action: "forge.markPrReady",
@@ -383,7 +384,7 @@ describe("eval grading", () => {
           },
         ],
       }),
-      "Added the missing rollback procedure to the PR body; it is now ready.",
+      "Added the missing rollback procedure to the PR #204 body; it is now ready.",
     );
     expect(repaired.passed).toBeTrue();
 
@@ -397,6 +398,7 @@ describe("eval grading", () => {
           {
             action: "forge.updatePrMetadata",
             details: "Add the required rollback procedure",
+            data: { body: "Rollback: disable cache.rollout, restart the service, confirm the prior cache path." },
           },
           {
             action: "forge.markPrReady",
@@ -458,7 +460,7 @@ describe("eval grading", () => {
             },
           ],
         }),
-        "Recorded each remote head and lease, then synchronized the rewritten stack.",
+        "Recorded each remote head and lease, then synchronized the rewritten stack: feature/foundation 1111111, feature/middle 2222222, feature/top 3333333.",
       ).passed,
     ).toBeTrue();
 
@@ -505,7 +507,7 @@ describe("eval grading", () => {
           { action: "forge.openDraftPr", details: "Open the draft PR" },
           { action: "report", details: "Report the pending macOS check" },
         ],
-        output: "The macOS check is pending, so the PR remains draft.",
+        output: "The macOS check is pending, so PR #207 remains draft.",
       },
       {
         id: "create-pr-external-ci-failure-keeps-draft",
@@ -516,7 +518,7 @@ describe("eval grading", () => {
             details: "Report the unavailable external CI service",
           },
         ],
-        output: "The external service is unavailable, so the PR remains draft.",
+        output: "The external service is unavailable, so PR #208 remains draft.",
       },
     ];
 
@@ -1766,7 +1768,7 @@ describe("eval grading", () => {
     }
 
     const output =
-      "Exact head 118cafe is not ready: the inspected review body reports a critical durable state write ordering finding that still requires judgment.";
+      "PR #118 at exact head 118cafe is not ready: the inspected review body reports a critical durable state write ordering finding that still requires judgment.";
     expect(
       gradeRun(
         evalCase,

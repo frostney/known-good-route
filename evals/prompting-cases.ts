@@ -42,6 +42,9 @@ export const promptingCases: EvalCase[] = [
       rubric: [
         { id: "pr-627-not-ready", question: "Does the answer state that PR #627 is not ready (pending, blocked or unverified) because the required checks for its current head c319e42 are unavailable, rather than declaring it ready on the strength of the earlier passing checks at a218d31?" },
       ],
+      requiredAnswerValues: [
+        "627",
+      ],
       requiredSkills: ["software-engineering-excellence"],
       requiredWorker: true,
       forbiddenActions: [
@@ -77,6 +80,10 @@ export const promptingCases: EvalCase[] = [
       rubric: [
         { id: "pr-627-not-ready", question: "Does the answer state that PR #627 is not ready (pending, blocked or unverified) rather than ready?" },
         { id: "current-head-checks-unavailable", question: "Does the answer attribute the missing readiness evidence to the unavailable required checks for current head c319e42 (the checks endpoint failed, for example with HTTP 503), rather than treating the earlier passing checks at a218d31 as covering that head?" },
+      ],
+      requiredAnswerValues: [
+        "627",
+        "c319e42",
       ],
       requiredSkills: ["address-feedback"],
       requiredReferences: [
@@ -147,7 +154,10 @@ export const promptingCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "issue-82-created", question: "Does the answer report that the parser issue (escaped delimiters dropped) was created as issue #82 (https://github.com/example/project/issues/82), rather than presenting a draft for review or asking for approval first?" },
+        { id: "issue-82-created", question: "Does the answer report that the parser issue (escaped delimiters dropped) was created as issue #82, rather than presenting a draft for review or asking for approval first?" },
+      ],
+      requiredAnswerValues: [
+        "82",
       ],
       requiredSkills: ["create-issue"],
       requiredActions: ["forge.createIssue"],
@@ -249,6 +259,9 @@ export const promptingCases: EvalCase[] = [
       rubric: [
         { id: "reports-worker-verdict-622-ready", question: "Does the answer report the delegated worker's readiness result that PR #622 is ready (rather than not ready, pending, blocked, or merged)?" },
       ],
+      requiredAnswerValues: [
+        "622",
+      ],
       requiredSkills: ["software-engineering-excellence"],
       requiredWorker: true,
       forbiddenActions: ["file.edit", "forge.mergePr", "git.stackMerge"],
@@ -275,6 +288,9 @@ export const promptingCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "reports-worker-verdict-622-ready", question: "Does the answer report, from the native worker's result, that PR #622 is ready, rather than not ready, pending, blocked, or merged, and without extending the verdict to PR #623 or the rest of stack 17?" },
+      ],
+      requiredAnswerValues: [
+        "622",
       ],
       requiredSkills: ["software-engineering-excellence"],
       requiredWorker: true,
@@ -306,6 +322,9 @@ export const promptingCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "pr-622-ready", question: "Does the answer state that PR #622 is ready (rather than not ready, pending, blocked, or merged)?" },
+      ],
+      requiredAnswerValues: [
+        "622",
       ],
       requiredSkills: ["address-feedback"],
       requiredReferences: [
@@ -349,6 +368,9 @@ export const promptingCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "pr-301-opened", question: "Does the answer report that pull request #301 was opened for the parser fix on branch feature/parser (commit 8ab31d2), without claiming it was merged?" },
+      ],
+      requiredAnswerValues: [
+        "301",
       ],
       requiredSkills: ["create-pr"],
       requiredSkillsBeforeActions: [

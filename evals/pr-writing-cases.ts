@@ -33,7 +33,13 @@ export const prWritingCases: EvalCase[] = [
         { id: "body-describes-change", question: "Does the body of the recorded forge.openDraftPr action describe the change as the report page now keeping the selected month when switching between the chart and table views (previously it reset to January)?" },
         { id: "body-discloses-missing-media", question: "Does the recorded PR body briefly state that before/after media or a walkthrough is not included (unavailable), rather than presenting a comparison or video as provided or linking local files?" },
         { id: "handoff-media-gaps-remedies", question: "Does the final response name the incomplete media requirements (no before/after comparison including the target-branch baseline, no narrated/subtitled walkthrough, no attachment upload), give the observed reason (headless Wayland session without recorder, speech synthesizer, video assembler/subtitle renderer or gh attachment support; baseline cannot be launched), and give concrete remedies such as enabling a headless browser recorder or the Wayland ScreenCast portal, installing eSpeak NG and an FFmpeg build with ffprobe/subtitles, configuring a GitHub attachment client, or providing a runnable target-branch preview?" },
-        { id: "pr-ready-not-blocked", question: "Does the final response report that PR #71 was published and marked ready for review after the required checks passed on head 1111111111111111111111111111111111111111 (the media gap did not keep it draft), without claiming it was merged?" },
+        { id: "pr-ready-not-blocked", question: "Does the final response report that PR #71 was published and marked ready for review after the required checks passed on its current head (the media gap did not keep it draft), without claiming it was merged?" },
+      ],
+      requiredAnswerValues: [
+        "71",
+      ],
+      requiredActionValues: [
+        { action: "monitor.wait", values: ["1111111111111111111111111111111111111111"] },
       ],
       requiredSkills: ["create-pr"],
       requiredReferences: ["create-pr/references/walkthroughs.md", "agent-writing/references/pr-descriptions.md"],
@@ -55,10 +61,15 @@ export const prWritingCases: EvalCase[] = [
     }, actionResponses: createResponses },
     expected: {
       rubric: [
-        { id: "template-headings", question: "Does the body of the recorded forge.openDraftPr action contain the required template headings `## Summary` and `## Testing`?" },
         { id: "summary-cache-reads-writes", question: "Does the recorded PR body explain that the docs/configuration.md correction says cache.enabled=false bypasses both cache reads and cache writes (the guide previously said it disabled writes only)?" },
         { id: "testing-link-check", question: "Does the Testing section of the recorded PR body state the observed docs link check result (docs:links passed with zero broken links)?" },
         { id: "pr-ready", question: "Does the final response report that PR #71 was opened and marked ready for review after the required checks passed, without claiming it was merged?" },
+      ],
+      requiredAnswerValues: [
+        "71",
+      ],
+      requiredActionValues: [
+        { action: "forge.openDraftPr", values: ["## Summary", "## Testing"] },
       ],
       requiredSkills: ["create-pr"], requiredReferences: ["agent-writing/references/pr-descriptions.md"],
       requiredInspections: ["finalDiff", "template", "completionEvidence"],
@@ -85,10 +96,16 @@ export const prWritingCases: EvalCase[] = [
     } },
     expected: {
       rubric: [
-        { id: "benchmark-table", question: "Does the body of the recorded forge.updatePrMetadata action contain a visible (not collapsed) before/after table comparing target main (3333333...) at a median parse time of 100 ms with the PR candidate (2222222...) at a median of 70 ms?" },
-        { id: "benchmark-conditions", question: "Does the recorded PR body state the measurement conditions that make the comparison meaningful, including the fixed 10,000-name corpus and 15 alternating warm runs per revision (other conditions such as the Apple M3 host, Node 24.18.0 and release build may also appear)?" },
+        { id: "benchmark-table", question: "Does the body of the recorded forge.updatePrMetadata action contain a visible (not collapsed) before/after table comparing the median parse time of target main (3333333...) with that of the PR candidate (2222222...)?" },
+        { id: "benchmark-conditions", question: "Does the recorded PR body state the measurement conditions that make the comparison meaningful, including the fixed name corpus and the number of alternating warm runs per revision (other conditions such as the Apple M3 host, Node 24.18.0 and release build may also appear)?" },
         { id: "final-aggregate-change", question: "Does the recorded PR body describe the final change (reusing the existing interned-name index for repeated identifier lookup, observable results unchanged) instead of recounting development history such as the temporary wrapper, the 480-line removal, the reverted cache prototype or the five test reruns?" },
         { id: "ci-pending-open", question: "Does the final response report that PR #72's metadata was updated while current-head CI is still pending and the PR remains open and unmerged, rather than claiming CI passed, the PR is ready, or it was merged?" },
+      ],
+      requiredAnswerValues: [
+        "72",
+      ],
+      requiredActionValues: [
+        { action: "forge.updatePrMetadata", values: [["100","100ms"], ["70","70ms"], ["10,000","10000","10k"], "15"] },
       ],
       requiredSkills: ["update-pr"], requiredReferences: ["agent-writing/references/pr-descriptions.md"],
       requiredInspections: ["finalDiff", "benchmark", "projectGate", "template"],
@@ -112,10 +129,17 @@ export const prWritingCases: EvalCase[] = [
     } }] },
     expected: {
       rubric: [
-        { id: "attachments-requested", question: "Does the recorded forge.openDraftPr action request all three existing assets as attachments: /tmp/report-before.png, /tmp/report-after.png and /tmp/report-filter.mp4?" },
-        { id: "body-comparison-table", question: "Does the body of the recorded forge.updatePrMetadata action contain a labelled before/after table using the uploaded image URLs https://github.com/user-attachments/assets/before71.png and https://github.com/user-attachments/assets/after71.png (not local /tmp paths)?" },
-        { id: "body-walkthrough-link", question: "Does the recorded forge.updatePrMetadata body include the uploaded walkthrough video https://github.com/user-attachments/assets/walkthrough71.mp4 (not a local /tmp path)?" },
+        { id: "attachments-requested", question: "Does the recorded forge.openDraftPr action request all three existing assets (the before image, the after image and the walkthrough video) as attachments?" },
+        { id: "body-comparison-table", question: "Does the body of the recorded forge.updatePrMetadata action contain a labelled before/after table using the uploaded image URLs (not local /tmp paths)?" },
+        { id: "body-walkthrough-link", question: "Does the recorded forge.updatePrMetadata body include the uploaded walkthrough video (not a local /tmp path)?" },
         { id: "pr-ready", question: "Does the final response report that PR #71 was marked ready for review after the required checks passed, with the uploaded before/after images and narrated walkthrough verified as accessible to reviewers, without claiming it was merged?" },
+      ],
+      requiredAnswerValues: [
+        "71",
+      ],
+      requiredActionValues: [
+        { action: "forge.openDraftPr", values: ["/tmp/report-before.png", "/tmp/report-after.png", "/tmp/report-filter.mp4"] },
+        { action: "forge.updatePrMetadata", values: ["https://github.com/user-attachments/assets/before71.png", "https://github.com/user-attachments/assets/after71.png", "https://github.com/user-attachments/assets/walkthrough71.mp4"] },
       ],
       requiredSkills: ["create-pr"], requiredReferences: ["create-pr/references/walkthroughs.md", "agent-writing/references/pr-descriptions.md"],
       requiredInspections: ["mediaCapabilities", "publishedAssets"],
