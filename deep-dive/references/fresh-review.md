@@ -40,7 +40,9 @@ claimed review without a verdict file to cite is unreviewed.
   that each source says what is claimed, and write `agree` or `disagree` with
   the evidence for it to a verdict file once, through its verdict tool when it
   has one, and return that file's path. However you word the packet, keep
-  this: the reviewer's reply is not the verdict file.
+  this: the reviewer's reply is not the verdict file. You do not know the
+  reviewer's tools, so do not name a tool or a path for the write; the
+  reviewer picks the one that writes the file.
 - The boundary: read-only except for that one verdict file, and no further
   reviewer.
 
