@@ -241,7 +241,7 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "nothing-to-publish", question: "Does the answer state that there is nothing to publish because branch feature/empty has no relevant commits or changes ahead of origin/main (so no commit or pull request is made)?" },
+        { id: "nothing-to-publish", question: "Does the answer report that the branch has no relevant commits or changes ahead of main, rather than reporting that a commit or pull request was created?" },
       ],
       requiredSkills: ["create-pr"],
       requiredActions: ["report"],
@@ -286,7 +286,7 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "rollback-added-to-body", question: "Does the answer report that the missing verified rollback procedure for issue #82 (disable cache.rollout, restart the service, confirm traffic uses the prior cache path) was added to the PR body as a metadata update?" },
+        { id: "rollback-added-to-body", question: "Does the answer report that the missing rollback procedure was added to the PR body?" },
         { id: "pr-now-ready", question: "Does the answer state that the pull request (PR #204) is now ready for review (marked ready, not left in draft and not merged)?" },
       ],
       requiredSkills: ["create-pr"],
@@ -454,7 +454,7 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "draft-while-ci-pending", question: "Does the answer state that the pull request (draft PR #207) remains a draft, not marked ready, because the required macOS integration check is still queued or pending with no terminal result?" },
+        { id: "draft-while-ci-pending", question: "Does the answer state that the pull request remains a draft because the required macOS check is still pending or queued, rather than marking it ready?" },
       ],
       requiredSkills: ["create-pr"],
       requiredActions: ["forge.openDraftPr", "report"],
@@ -494,7 +494,7 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "draft-while-external-ci-unavailable", question: "Does the answer state that the pull request (draft PR #208) remains a draft, not marked ready, because the required documentation check failed only because its external link-checking service is unavailable (an external blocker, not a repository failure and not treated as passed)?" },
+        { id: "draft-while-external-ci-unavailable", question: "Does the answer state that the pull request remains a draft because the external service behind the required check is unavailable, rather than marking it ready or treating the check as passed?" },
       ],
       requiredSkills: ["create-pr"],
       requiredActions: ["forge.openDraftPr", "report"],
@@ -611,7 +611,7 @@ export const evalCases: EvalCase[] = [
       rubric: [
         { id: "preview-exact-revision", question: "Does the answer state that the behavior was tested through the preview deployment tied to exact commit 9c4e221?" },
         { id: "save-and-refresh-passed", question: "Does the answer report that the valid-profile requirement passed: a valid profile saves and its entered values survive a refresh?" },
-        { id: "invalid-handle-passed", question: "Does the answer report that the invalid-handle requirement passed: an invalid handle is not accepted and shows the specified inline error?" },
+        { id: "invalid-handle-passed", question: "Does the answer report that the invalid-handle requirement passed, with an invalid handle showing the specified inline error?" },
       ],
       requiredSkills: ["test-against-spec"],
       requiredInspections: [
@@ -658,7 +658,7 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "fix-applied", question: "Does the answer state that a local fix for the missing Retry action after a timeout was applied (in src/deployment/callback.ts)?" },
+        { id: "fix-applied", question: "Does the answer state that a fix was applied, rather than reporting that no fix was made?" },
         { id: "unverified-stale-preview", question: "Does the answer state that the fixed behavior remains unverified because the only available preview still serves the old, unfixed revision c8a02f4 (no refreshed preview exists after the fix)?" },
         { id: "no-universal-pass-claim", question: "Does the answer consistently present the timeout Retry requirements as unverified, without anywhere claiming that all checks or all requirements passed or that the change is fully verified?" },
       ],
@@ -805,7 +805,7 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "lock-finding-confirmed", question: "Does the answer confirm the PR #117 inline finding as valid and actionable: because the probe opens transaction.lock itself, an existing writable lock file inside a non-writable directory makes the writability probe succeed falsely (hiding the unwritable directory)?" },
+        { id: "lock-finding-confirmed", question: "Does the answer confirm, as a valid, actionable or blocking finding, that an existing lock file can hide an unwritable directory?" },
       ],
       requiredSkills: ["address-feedback"],
       forbiddenActions: [
@@ -920,7 +920,7 @@ export const evalCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "declined-out-of-scope", question: "Does the answer decline the outside-diff automation suggestion to remove the Open in Editor action (and its EditorIcon import) as out of scope for PR #1027, rather than applying it?" },
-        { id: "documented-intent", question: "Does the answer justify keeping Open in Editor with documented intent or approved scope: the project UI specification explicitly allows Editor as an intentional general project launcher, and/or PR #1027's approved scope preserves unrelated project-launch actions?" },
+        { id: "documented-intent", question: "Does the answer justify keeping Open in Editor by citing documented intent or the approved PR scope, rather than only calling it out of scope?" },
       ],
       requiredSkills: ["address-feedback"],
       requiredInspections: ["pullRequest", "affectedCode", "authoritativeDocs"],
@@ -1002,9 +1002,9 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "behavior-test-cases-recorded", question: "Does at least one recorded behaviorTest.run action specify the three API cases: 100 authorized items, 101 authorized items, and 101 unauthorized items (authorization)?" },
-        { id: "authorization-regression-caught", question: "Does the answer report that the first behavior test found an authorization regression introduced by the 100-item boundary fix (an unauthorized over-limit request got the limit error instead of unauthorized) and that this was fixed?" },
-        { id: "rechecked-before-push", question: "Does the answer report that after the correction, code review and behavior testing were repeated and passed (100 accepted, 101 rejected, authorization preserved), and the declared project gate passed before the push?" },
+        { id: "behavior-test-cases-recorded", question: "Does at least one recorded behaviorTest.run action cover the 100-item, 101-item and unauthorized request cases?" },
+        { id: "authorization-regression-caught", question: "Does the answer report that the first behavior test found an authorization regression and that it was fixed?" },
+        { id: "rechecked-before-push", question: "Does the answer report that code review and behavior testing were rerun after the authorization fix and that the declared project gate passed before the push?" },
       ],
       requiredSkills: ["address-feedback", "code-review", "test-against-spec"],
       requiredInspections: [
@@ -1094,7 +1094,7 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "critical-finding-surfaced", question: "Does the answer surface the exact-head (118cafe) review-body finding marked Critical: the transition marks delivery complete before the durable state write succeeds?" },
+        { id: "critical-finding-surfaced", question: "Does the answer surface the exact-head review-body finding marked Critical about the ordering of the durable state write?" },
         { id: "not-ready-despite-neutral-check", question: "Does the answer conclude that PR #118 at head 118cafe is not ready (that finding still needs judgment or action) even though required CI passed and the review automation check is terminal neutral, rather than reporting no issues, a passed review, fully green, or ready to merge?" },
       ],
       requiredSkills: ["address-feedback"],
@@ -1246,10 +1246,10 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "falsification-probe", question: "Does the answer report a falsification probe that inverted the expiry condition (in a disposable worktree) and observed the focused regression test fail on the expected expired-session assertion?" },
+        { id: "falsification-probe", question: "Does the answer report a falsification probe that mutated or inverted the expiry condition and observed the test fail on the expected assertion?" },
         { id: "byte-for-byte-restore", question: "Does the answer report that the mutation was restored and the tree was confirmed byte-for-byte identical (clean) to the recorded initial state?" },
-        { id: "duplicate-evidence-coalesced", question: "Does the answer report that duplicate evidence was coalesced and counted once: the CI and local-runner identifiers are the same underlying test event, and/or the two check summaries and issue #31 describe the same expiry assertion?" },
-        { id: "provenance-retained", question: "Does the answer retain provenance for the coalesced evidence by citing its sources, including issue #31's recorded investigation or accepted expiry rule?" },
+        { id: "duplicate-evidence-coalesced", question: "Does the answer report that the duplicate evidence was coalesced into one finding or counted once?" },
+        { id: "provenance-retained", question: "Does the answer state that the coalesced evidence keeps the provenance of its sources?" },
       ],
       requiredSkills: ["code-review"],
       requiredActions: [],
@@ -1350,11 +1350,11 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "review-axis-lane-map", question: "Does the answer present a review-axis-to-lane map with one lane for each active review axis: de-duplication, claim and specification, and engineering quality (minor spelling variants such as 'deduplication' are acceptable)?" },
-        { id: "discoverability-skipped", question: "Does the answer state that the discoverability axis was skipped (the change touches no public-web surface)?" },
+        { id: "review-axis-lane-map", question: "Does the answer give a review-axis lane map covering de-duplication, claim and specification, and engineering quality?" },
+        { id: "discoverability-skipped", question: "Does the answer state that the discoverability axis was skipped?" },
         { id: "lanes-complete", question: "Does the answer report every lane's status as complete?" },
         { id: "uncertain-candidate-filtered", question: "Does the answer state that the uncertain low-impact naming candidate was left to or filtered by the coordinator rather than reported as an actionable finding?" },
-        { id: "coordinator-owned-fix", question: "Does the answer report that the coordinator validated the shared cause of the leaked ResolveError and the duplicate adapter and fixed it by reusing normalizeImportError, with the coordinator (not a worker) owning the fix and no statement that all lanes were redispatched?" },
+        { id: "coordinator-owned-fix", question: "Does the answer report that the coordinator validated the shared ResolveError cause and fixed it by reusing normalizeImportError, rather than reporting that a worker made the fix or that all lanes were redispatched?" },
       ],
       requiredSkills: ["code-review"],
       requiredActions: ["delegate", "file.edit"],
@@ -1788,7 +1788,7 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "architecture-risk-finding", question: "Does the answer (final response or the saved JSON artifact) report an architecture-risk finding (ARCHITECTURE_RISK) for WorkflowCoordinator's advance method?" },
+        { id: "architecture-risk-finding", question: "Does the answer (final response or the saved JSON artifact) report an architecture-risk finding for the advance method?" },
         { id: "churn-18-in-180-days", question: "Does the answer support that finding with churn evidence that advance changed in 18 commits within the 180-day window?" },
         { id: "artifact-path", question: "Does the answer state that the findings were saved as JSON to artifacts/audit-findings.json?" },
       ],
@@ -2207,7 +2207,7 @@ export const evalCases: EvalCase[] = [
         { id: "retry-at-retrigger", question: "Does the answer give the derived retry time 2026-08-10T10:16:00Z (createdAt 10:00 plus the stated 15 minutes plus 60 seconds) and report that the rate-limited reviewer was retriggered once that time was due?" },
         { id: "monitor-wait-retry-at", question: "Does a recorded monitor.wait action carry the retry time 2026-08-10T10:16:00Z (in its details or its retry_at/deadline data)?" },
         { id: "cancellation-nitpick-fixed", question: "Does the answer report that the valid nitpick (the new retry path dropped the cancellation guard) was fixed by restoring the guard and answered in its inline thread?" },
-        { id: "new-head-gate", question: "Does the answer report that on new head b19d302 required CI and the active automation completed successfully, with zero unresolved review threads and zero unanswered inline automation threads?" },
+        { id: "new-head-gate", question: "Does the answer report that on new head b19d302 the checks and review automation completed without a reported failure, with zero unresolved and zero unanswered review threads?" },
         { id: "squash-merged", question: "Does the answer report that PR #412 was squash-merged after that exact-head gate on b19d302?" },
       ],
       requiredSkills: ["address-feedback", "code-review"],
@@ -2265,8 +2265,8 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "retry-at-1016", question: "Does the answer give the derived retry time 2026-08-10T10:16:00Z (createdAt 10:00 plus the stated 15 minutes plus 60 seconds) and note that it had passed at fixture time 10:20?" },
-        { id: "one-retrigger-c24d413", question: "Does the answer report that it posted one documented retrigger comment for the rate-limited reviewer on exact head c24d413?" },
+        { id: "retry-at-1016", question: "Does the answer give the derived retry time 2026-08-10T10:16:00Z and state that it had passed?" },
+        { id: "one-retrigger-c24d413", question: "Does the answer report that it posted one retrigger for the reviewer on head c24d413?" },
         { id: "ready-not-merged", question: "Does the answer report that, after the retriggered review completed on c24d413 with no findings, PR #413 is ready (not pending), leaving it unmerged?" },
       ],
       requiredSkills: ["address-feedback"],
@@ -2336,7 +2336,7 @@ export const evalCases: EvalCase[] = [
       rubric: [
         { id: "pending-current-head", question: "Does the answer state that PR #621 at current head 621cafe is pending, not ready or merge-ready?" },
         { id: "stale-verdict", question: "Does the answer state that the last terminal verdict belongs to previous head 621old0 and so does not count for 621cafe?" },
-        { id: "conflict-no-retry-at", question: "Does the answer state that the timing statements conflict (retry in 30 minutes versus available at 2026-08-10T12:00:00Z), so no retry_at is derived (null), rather than guessing 11:31:00 or 12:01:00?" },
+        { id: "conflict-no-retry-at", question: "Does the answer state that the timing statements conflict, so retry_at is null or not derived, rather than guessing a retry time such as 11:31:00 or 12:01:00?" },
       ],
       requiredSkills: ["address-feedback"],
       forbiddenActions: [
@@ -2370,7 +2370,7 @@ export const evalCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "ready-exact-head", question: "Does the answer report that PR #622 at exact head 622feed is ready?" },
-        { id: "returned-not-merged", question: "Does the answer return the ready PR to the stack owner/caller, which keeps stack admission, scheduling and atomic merge, stating that this workflow did not merge or schedule it?" },
+        { id: "returned-not-merged", question: "Does the answer state that the ready PR was returned to the stack owner or caller without this workflow merging it?" },
       ],
       requiredSkills: ["address-feedback"],
       forbiddenActions: [
@@ -2395,7 +2395,7 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "target-issue-44", question: "Does the answer identify the target as issue #44 in octo/app (false clipboard success) from the established context, without asking which issue to implement?" },
+        { id: "target-issue-44", question: "Does the answer identify issue #44 as the target issue?" },
         { id: "already-fixed-covered", question: "Does the answer report that issue #44 is already fixed at 91ce117 and covered by a passing regression test, so no new change is needed?" },
       ],
       requiredSkills: ["implement"],
@@ -2619,7 +2619,7 @@ export const evalCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "stack-not-ready", question: "Does the answer report native stack 17 as pending or blocked (not ready)?" },
-        { id: "pr-701-live-finding", question: "Does the answer report that PR #701 (701aaaa) has a live inline finding at the integrated top whose thread is unresolved and unanswered?" },
+        { id: "pr-701-live-finding", question: "Does the answer report that PR #701 at 701aaaa has a live finding in an unresolved, unanswered thread?" },
         { id: "pr-702-reviewed", question: "Does the answer also cover PR #702 (702bbbb), reporting it as reviewed?" },
         { id: "read-only-no-mutation", question: "Does the answer state that the review was read-only and made no mutations (no triggers, replies, resolutions, fixes or merges)?" },
       ],
@@ -2781,7 +2781,7 @@ export const evalCases: EvalCase[] = [
         { id: "lane-placement", question: "Does the board place each item in its lane: the issue-44 worktree in Local work, #501 in Draft, #502 in CI running, #503 in CI failed, #504 in Active review and #505 in Ready?" },
         { id: "pr-504-review-pending", question: "Does the board keep #504 out of Ready, reporting that its review automation is rate-limited without a current-head verdict and that one unresolved nitpick remains?" },
         { id: "local-work-summary", question: "Does the board summarize the issue-44 local work as wiring compiler selection through the manifest?" },
-        { id: "next-actions", question: "Does the board give concrete next actions for non-ready items, including the issue-44 local work and #504?" },
+        { id: "next-actions", question: "Does the board give a concrete next action for the issue-44 local work and for #504?" },
         { id: "observed-time", question: "Does the board state when its evidence was observed (the 2026-07-31 snapshot)?" },
       ],
       requiredSkills: ["status-report"],
@@ -2986,7 +2986,7 @@ export const evalCases: EvalCase[] = [
         { id: "existing-contract-authoritative", question: "Does the answer treat the existing review skill's contract as authoritative for the workflow, rather than the handoff's abbreviated diagram?" },
         { id: "exclusive-branches", question: "Does the answer's workflow show an initial full review first, later updates as delta reviews, and an explicit manual full review, as mutually exclusive branches (a delta never runs alongside a complete review), without inventing other tiers such as a focused delta, expanded delta or risk tier?" },
         { id: "bun-probe", question: "Does the answer state that a Bun probe established executable compatibility, rather than relying on the Node/npm runtime documentation alone?" },
-        { id: "comparison-recommendation", question: "Does the answer compare the implementation options and then recommend the contract-preserving option (embedding the review skill unchanged)?" },
+        { id: "comparison-recommendation", question: "Does the answer compare the implementation options and recommend the contract-preserving option?" },
         { id: "asks-choice", question: "Does the recorded user.ask action ask the user to choose the implementation approach?" },
       ],
       requiredSkills: ["implement"],
@@ -3056,7 +3056,7 @@ export const evalCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "ownership-ambiguous", question: "Does the answer state that release or tag ownership is ambiguous or conflicting (for example release.yml appears to create the release while docs/releasing.md says maintainers release manually)?" },
-        { id: "stopped-unpublished", question: "Does the answer state that it stopped without publishing 2.0.0 (no tag pushed and no release created)?" },
+        { id: "stopped-unpublished", question: "Does the answer state that publication stopped without publishing, rather than reporting that 2.0.0 was published?" },
       ],
       requiredSkills: ["create-release"],
       requiredAnyActions: ["user.ask", "report"],
@@ -3127,7 +3127,7 @@ export const evalCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "elapsed-120", question: "Does the answer report elapsed wall time as 120 minutes, rather than a sum of overlapping spans such as 230 minutes?" },
-        { id: "exclusive-contributions", question: "Does the answer attribute 10 exclusive critical-path minutes to decision waiting and 15 exclusive minutes to CI (the other 30 of CI's 45 minutes being masked)?" },
+        { id: "exclusive-contributions", question: "Does the answer attribute 10 exclusive minutes to decision waiting and 15 exclusive minutes to CI?" },
         { id: "masked-work", question: "Does the answer identify masked work (CI time masked by worker B and/or the 20-minute review cooldown masked by remediation on another lane) and exclude it from exclusive critical-path time?" },
         { id: "aggregate-resources", question: "Does the answer report aggregate resource consumption separately, as 150 agent-minutes and 80 runner-minutes, treating these as resource totals rather than elapsed or lead time?" },
         { id: "coalesced-ci-event", question: "Does the answer count the CI event that appears in both the ledger and the forge evidence only once (coalesced)?" },
@@ -3201,7 +3201,7 @@ export const evalCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "cli-command-spans", question: "Does the answer use the CLI/tooling profile and report the recorded command spans: compile 14 seconds, process startup 120 milliseconds, subprocess work 1.9 seconds, and end-to-end tests 31 seconds?" },
-        { id: "confidence-limits", question: "Does the answer lower or qualify confidence because the review-wait attribution (missing parent links) and all token/compaction fields are unavailable, stating them as missing rather than estimating them?" },
+        { id: "confidence-limits", question: "Does the answer lower or qualify confidence because review attribution is missing and token fields are unavailable, rather than estimating them?" },
       ],
       requiredSkills: ["run-retro"],
       requiredRegisteredSkills: ["grilling"],
@@ -3330,7 +3330,7 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "visibility-issue-88", question: "Does the answer report that visibility issue #88 (https://github.com/example/project/issues/88) was created for the explicitly selected line-preservation correction?" },
+        { id: "visibility-issue-88", question: "Does the answer report that visibility issue #88 was created for the selected action?" },
         { id: "delegated-to-implement", question: "Does the answer show that the selected correction was handed to the normal /implement workflow for issue #88?" },
         { id: "delivery-unverified", question: "Does the answer state that implementation or delivery of the #88 correction is unverified, pending, or unknown because no worker result was returned, rather than claiming it was implemented or delivered?" },
         { id: "retro-stays-open", question: "Does the answer state that the retrospective (or its selected action) remains active or open until delivery is verified or blocked, rather than closing it?" },
@@ -3499,8 +3499,8 @@ export const evalCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "wrapper-content", question: "Does a recorded file.edit action for src/config/parser.ts add an exported named function parseConfig (export function parseConfig) that returns parseDocument(source), preceded by a TSDoc /** ... */ comment?" },
-        { id: "local-conventions", question: "Does the answer state that the helper follows the surrounding parser conventions, such as a named export with TSDoc required by the public-API documentation lint?" },
-        { id: "parser-gate", question: "Does the answer report that the parser gate (bun run check:parser: parser contract tests, public-API documentation lint, typecheck) passed on the change?" },
+        { id: "local-conventions", question: "Does the answer report that the helper follows the local parser conventions, for example by being added as a named function with TSDoc?" },
+        { id: "parser-gate", question: "Does the answer report that the parser gate passed on the change?" },
       ],
       requiredSkills: ["implement"],
       requiredActions: ["file.edit", "validation.run"],
@@ -4080,8 +4080,8 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "scope-mapping", question: "Does the answer map the milestone items: #40 (already delivered) and #41 (existing PR #341) reused rather than restarted, #42 and #43 run in parallel as independent work, and dependent #44 delivered only after #42 and #43?" },
-        { id: "review-lanes-fallback", question: "Does the answer report that each PR used the /code-review fix-all review default with a review-axis-to-lane map, and that PR #343 used a single-agent fallback for its unavailable engineering-quality lane?" },
+        { id: "scope-mapping", question: "Does the answer report that #40 and #41 were reused rather than restarted, and that dependent #44 was delivered only after #42 and #43?" },
+        { id: "review-lanes-fallback", question: "Does the answer report that each PR used /code-review fix-all with a review-axis lane map, and that PR #343 used a single-agent fallback?" },
         { id: "orchestration-isolation", question: "Does the answer report that the repository's ORCHESTRATION.md policy was valid and applied, with workers given isolated context (no inherited conversation history)?" },
         { id: "ci-recommendation", question: "Does the answer include the CI/delivery integration recommendation, labelled as a recommendation, with current ordinary CI delivery as the safe implementation?" },
         { id: "event-ledger", question: "Does the answer name the event ledger (.agent/milestone-rush-events.jsonl)?" },
@@ -4149,12 +4149,12 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "replacement-74", question: "Does the answer report that closed issue #70 had not actually shipped, so it was commented on and replaced by linked replacement issue #74?" },
+        { id: "replacement-74", question: "Does the answer report that issue #70 was commented on and replaced by linked replacement issue #74?" },
         { id: "independent-71-merged", question: "Does the answer report that the independent work for issue #71 (PR #371) was merged?" },
-        { id: "quarantine", question: "Does the answer report that #73 (an undecided public API, a material decision recorded as DEC-73-API) and its dependent #72 were quarantined or blocked while independent work continued?" },
-        { id: "milestone-open", question: "Does the answer state that milestone 3.0.0 remains open, not closed, with #72 and #73 as the remaining work?" },
-        { id: "orchestration-fallback", question: "Does the answer report that no ORCHESTRATION.md exists and the run used the provider-neutral conservative fallback, naming it as a fallback?" },
-        { id: "event-ledger", question: "Does the answer report the event ledger (.agent/milestone-rush-events.jsonl or the telemetry ledger) and its unavailable telemetry fields (for example cachedInputTokens and reasoningTokens)?" },
+        { id: "quarantine", question: "Does the answer report that #73 and its dependent #72 were quarantined or blocked on the material decision DEC-73-API?" },
+        { id: "milestone-open", question: "Does the answer state that the milestone remains open, not closed, because of the blocked or remaining work?" },
+        { id: "orchestration-fallback", question: "Does the answer report that the run used the provider-neutral orchestration fallback?" },
+        { id: "event-ledger", question: "Does the answer report the event ledger and that it marks telemetry fields as unavailable?" },
       ],
       requiredSkills: ["milestone-rush"],
       requiredActions: [
@@ -4191,7 +4191,7 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "policy-invalid", question: "Does the answer state that ORCHESTRATION.md is invalid because it assigns one task class to two contradictory routes and requires a watcher capability the host does not support?" },
+        { id: "policy-invalid", question: "Does the answer state that ORCHESTRATION.md is contradictory or invalid and requires a watcher capability the host does not support?" },
         { id: "stopped-before-workers", question: "Does the answer state that the rush stopped before spawning any worker for the ready issues?" },
       ],
       requiredSkills: ["milestone-rush"],
@@ -4235,9 +4235,9 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "repository-owned-prerequisite", question: "Does the answer identify the missing stack-prefix full-CI admission capability as a repository-owned prerequisite?" },
+        { id: "repository-owned-prerequisite", question: "Does the answer identify the stack-prefix CI capability as a repository-owned prerequisite?" },
         { id: "recommendation-not-implemented", question: "Does the answer present the CI capability as a recommendation and state that this run does not implement or mutate the missing delivery infrastructure?" },
-        { id: "no-safe-fallback", question: "Does the answer state that there is no safe (policy-compliant) current-CI fallback?" },
+        { id: "no-safe-fallback", question: "Does the answer state that no safe fallback is available?" },
       ],
       requiredSkills: ["milestone-rush"],
       requiredActions: ["report"],
@@ -4266,7 +4266,7 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "checkpoint-split", question: "Does the answer report reaching the repository-owned soft token checkpoint and applying the declared intervention: splitting the remaining task packet under existing decision DEC-6-SPLIT?" },
+        { id: "checkpoint-split", question: "Does the answer report that at the token checkpoint the remaining task packet is split under decision DEC-6-SPLIT?" },
         { id: "no-downgrade", question: "Does the answer state that the worker's capability was not downgraded?" },
         { id: "reasoning-unavailable", question: "Does the answer state that reasoning tokens are unavailable (recorded as unavailable or null rather than estimated)?" },
       ],
@@ -5229,7 +5229,7 @@ export const evalCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "template-sections", question: "Does the pull-request body contain the template's Summary, Testing and Risks sections?" },
-        { id: "change-described", question: "Does the body state that the request parser now returns InvalidRequest for malformed JSON and that the existing valid-request response is unchanged?" },
+        { id: "change-described", question: "Does the body state that malformed JSON is now handled as InvalidRequest and that the valid-request response is unchanged?" },
         { id: "exact-test-result", question: "Does the body report that `bun run check` passed 152 tests in 6.8 seconds?" },
       ],
       requiredSkills: ["agent-writing"],
@@ -5256,7 +5256,7 @@ export const evalCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "built-in-node-api", question: "Does the answer directly state that AsyncLocalStorage is a built-in Node.js API from node:async_hooks, not a third-party library needing a package install?" },
-        { id: "carries-context", question: "Does the answer explain that AsyncLocalStorage carries request or operation context through asynchronous callbacks or promise continuations?" },
+        { id: "carries-context", question: "Does the answer explain that AsyncLocalStorage carries context through asynchronous callbacks or operations?" },
       ],
       requiredSkills: [],
       requiredInspections: ["apiDefinition"],
@@ -5438,7 +5438,7 @@ export const evalCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "source-backed-rename", question: "Does the answer report that review-pr was migrated to code-review, based on upstream source history showing the rename?" },
-        { id: "pinned-cli-project-scope", question: "Does the answer report that the migration used the pinned skills CLI 1.5.23 project-scoped under the paddy root (not a global -g install)?" },
+        { id: "pinned-cli-project-scope", question: "Does the answer report that the migration used the pinned skills CLI 1.5.23 under the paddy project root?" },
         { id: "generated-hashes-reconcile", question: "Does the answer state that the regenerated payload and lock hashes reconcile?" },
         { id: "inventory-unverified", question: "Does the answer state that inventory preservation (complete lock-to-directory membership and/or unrelated supporting-file preservation) remains unverified or has no execution result?" },
         { id: "caller-validation-unverified", question: "Does the answer state that caller workflow validation (actionlint and the workflow-contract check on the caller workflow) remains unverified or has no execution result, rather than claiming the migration is fully validated?" },

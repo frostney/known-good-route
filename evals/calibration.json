@@ -153,7 +153,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "91f1574297bde316d19cefa96744a2bfc490a662b453e9c9f3e3765147ae872e",
-      "afterSha256": "1eec3329a252915a3b9476c24703aca1c597dbb6d297a43260b6c041232e8691",
+      "afterSha256": "326a5eba9362728b623d6b9d335035d1241693cf872c4fb4e409cd82440041f8",
       "frozenCaseSha256": "464d952c11b6d072c8878045b823974bcdd126ba534caedd668b0bdc219af768"
     },
     {
@@ -164,7 +164,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "76fd226f3bcf160de6614ffb9e3b70a97e172954e7eda2eaf00c339d14040919",
-      "afterSha256": "93ae438b7330db7f5e8e8745c87769cdc89088e56f3a08afed922576cc7f8c9e",
+      "afterSha256": "b5125bd3b2fb5edf95dbb1b0f413b560ae3740dbc5ace6d2139df9071f5b015e",
       "frozenCaseSha256": "9150981935d89f49a70fdd35453c5d3f29775bbd8b3badbe8b29b65ebd2a63e6"
     },
     {
@@ -205,7 +205,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "2d025147d9c13d443c71cef1f8d27c83875488dd2e4f4bf8cb477a7f07d7a50b",
-      "afterSha256": "aa83adb1355ecf073561ecd8820eb5d0cf0fcb68a9abd0e0d0a0fdaf05582d5f",
+      "afterSha256": "3442acbb86308cc464af937484297aab3c39a81ee39d2314713386a76adc8865",
       "frozenCaseSha256": "19607c37b1d3187f8568eb140244945b9031f984b97e3cc105dfa56e953dee50"
     },
     {
@@ -217,7 +217,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "907648cc4955236886c84565b623a0975242aa3bafa9bb580f1676db73b6f816",
-      "afterSha256": "71e61c78534435c3d402515899624db49badd212f2f32a95114986527f16a170",
+      "afterSha256": "e8edf6c9f2646b2f53db9ab76fc35747268847a378c61196faf6c0ecb57a1aa5",
       "frozenCaseSha256": "2e94c6431cd280a93d7171c01b85a24cb083eb4eef27a5fbcdea2bda617c9766"
     },
     {
@@ -251,7 +251,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "c129c0668c66cab64a2513696b076df05b87a99f6f616c9f29e5882087ca2ced",
-      "afterSha256": "c2e2fa6f42480c5821ba07fc5db60d43d8603494a6f39385eb76dce2c8dcba9f",
+      "afterSha256": "7d04e44b3c24ed29eea78ea17190ec688fdef6b03db8d79c6c99f4fc3272f100",
       "frozenCaseSha256": "6359a23f46b488be11300659b47264bc174a4010c53a21fa736c203d532e91c0"
     },
     {
@@ -264,7 +264,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "f15f3e9754b57ca99175653a1e23ae985bb9fe290517e45893da2c65a222a80e",
-      "afterSha256": "6eae66ed8417c7ffbb40e2ebaff9a5c450eaeab462b1d41c5621df232e413520",
+      "afterSha256": "13d4ae72fe3f9f294b2f495dc49711c30fd5931042deb86f3d373c2f360e42d8",
       "frozenCaseSha256": "e7a1178babb4c69f40b54a284ae8445683759132c912a5228535657e248a6a3d",
       "revisions": [
         {
@@ -334,7 +334,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "4eb75902e5ae5c5e9ef33ff14ec77b7d76697005b8e0802e7871bf857402c398",
-      "afterSha256": "bea0606c99da7d4841613bcefafceab7e25513681f392c96a095280452ff25a7",
+      "afterSha256": "de10d4df011bf74ecd9d025ee1947e9c930d814132e3cff69bf07dc984af392e",
       "frozenCaseSha256": "866b59a28db8eb1bf63b32679a2b22285979f9aef15a7848d1e88dc8a9362bb4"
     },
     {
@@ -373,7 +373,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "b79d974c56b737ad830799de7f90a88659f2a0c16a53c1c45ac9ce8707a35bf7",
-      "afterSha256": "a61483c75ba28b841ffc697114d491a77048001218a800770d8f60323dc37312",
+      "afterSha256": "bcd6a5285822e62f408675e2d99edb75ba4fccdd54b051f4b290c33873de4229",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -396,7 +396,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "815c3f2c5f33019ba1a7afef03b1dc6f0b35a9fa3a714283527a7a2061591e0e",
-      "afterSha256": "27e0e5fc233760751c0d0fb311ec9bf48127c4a4529d3078aba3eed1a5c48c02",
+      "afterSha256": "9fb43563ac231c836b0e50965fafc2cc97a00927a42b08be47acebcfee5440d4",
       "postFreezeChangedFields": [
         "fixture",
         "expected"
@@ -418,7 +418,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "9aa8ec998c3114d12c75f82a21c9e88bc585e28deff6eed8936c5d683101acd1",
-      "afterSha256": "42a36138515c44739f59499885f8d9124145ce70ec5e8d37fae390ad9748d6ac",
+      "afterSha256": "c6aa1abd056839fdc22d00858d5774afcf912f393db57bd67d4583612ab0761f",
       "frozenCaseSha256": "53b30b3e453e0d5e437be3cbe5934b04751f1da2ccfdb3280b746ea36401ad96"
     },
     {
@@ -476,7 +476,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "b2fc4c8f13feac7c8b775c464917988b9e0651e0f9aa89038d0617d47ddc9873",
-      "afterSha256": "2e99b1c14318a47f4905b3713382e6cc86da140cb5399a8083cf54a7c8edbc9c",
+      "afterSha256": "d321e7db42f8b2018e980a2fc96ea2345e20656d11cd211a2afc9b0e020c7b61",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -513,7 +513,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "c5210db2cdf40ad2f2911d7c59075deb3512271f75c6d47e03196594a8b97b8c",
-      "afterSha256": "03117f08f1b15ec5fdd19de464f1f495fadf69a6326c822121cb8a52367d882c",
+      "afterSha256": "f10e60f246330f7f10d6586f70afd8b9036dbb70c8ef48899ccc732d7f26d6d4",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -657,7 +657,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "bcd63fa4cd357c8c753c018fb4e1a48e1f2a18cbb71e0386ab07b7d2b26faf9c",
-      "afterSha256": "72447bb0240514cb748d87bcebb914f0d098ffa314b2b6ed4c1a0804f51efa17",
+      "afterSha256": "cbc0b5d4b0bb017ab3740895ac941fae8964784f331c350a5f60114fd6a3cfba",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -781,7 +781,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "34b83e0912c8638480a795363891d569271678fef05a001adce7554ed78ce5af",
-      "afterSha256": "08267a8e7e8e02bf51c7b60aa6ae3374deb079e026370af837e9a96ecd0889d5",
+      "afterSha256": "f8afd5b317ef18169484bbb8e75ec1e9ae7ede20b5a0d6b7b4ec733dd19e6f94",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -794,7 +794,7 @@
         "Normal single-PR mode may post one documented retrigger for a rate-limited active reviewer after its derived retry_at, under the same evidence conditions as automatic-merge, and still never merges.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
-      "afterSha256": "b9203534ec5c6be683099c5aa41f18903a31e1ab30eee37fe4cd5e58537c393d",
+      "afterSha256": "37fb1519915d69d292a210b51c01e5d33962773a1c15bb6b1e865073028df476",
       "frozenCaseSha256": "91f2c0173f31fe3d3ecf17c3ba26fd073eeb1cf21a135c8300e831848128abee"
     },
     {
@@ -816,7 +816,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "9042efa9980fe53aae0f2c1bb5867f3cff9f45c14f088468fab3a23b6bf5d61c",
-      "afterSha256": "2d9b09d3cdea1734e979142efb1403fd7684571b69e8dac6fd55def07d393f20",
+      "afterSha256": "458b11853b055d13b83260d5ec7a998fea91179941544b6fcbc79d39e64c6f86",
       "frozenCaseSha256": "16e2ea18df5e6be63c2f4df6b68405b4330f16ddd773ea8aa6a17d4b965511f5"
     },
     {
@@ -828,7 +828,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "be707d3b154fe81c4a3dbfc7e0e38e815adb1aaadc06eb1f8d3b974e9a1dcb9b",
-      "afterSha256": "05c64d7f9a133f141104ef62938ab4cbe68db3895e409a5aafc0205ecd2f386a",
+      "afterSha256": "cddff8d40ff1716cbb9b8a86a6f870e9429cb99b8ab3ecf1032fbb5620bd1347",
       "postFreezeChangedFields": [
         "fixture"
       ],
@@ -842,7 +842,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "53ec4f345210e5fc286e48910ee6c05888d556f22c9d7d1906e7f375806c4add",
-      "afterSha256": "0460f40cbb00e74db6b9b0f9091b1697aaed281bf2f1d1f67285b0c3d98badf7",
+      "afterSha256": "a56c6195cde5d7760e05185947c5398aea3b28886182e3fc6ae6e41d84db29e4",
       "frozenCaseSha256": "9df393f63b61201b13e24b65d42cd4fd493ff922e60333491fd11b5737ed8554"
     },
     {
@@ -922,7 +922,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "2426ae425c19ac2386c4eda6f9750b26a0ec3b84c512710c9b9832b9e5471a4d",
-      "afterSha256": "62a4d946de21e1856e45b47e99c35c160029a6f55b3fea9894db6da1dcfa2003",
+      "afterSha256": "b86f36a15441e5536c96bc1202708768c311062956047fdcf3e1d5d28cec7ba0",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -964,7 +964,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "3ecf85957088ad9c1f37ae684aad702e9b39a88ad2e9a6e75c75c18c4534b8f6",
-      "afterSha256": "fbdf09a5af053b2ebbc10610f38731070e71afe348f52756c6d55c8b007bd254",
+      "afterSha256": "ce7d2960eeb47ec20103a23cd45806a3f2943f44f971324193f37771f5908714",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1020,7 +1020,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "232af01c1707853a8c64f7873b0ab77cec9b6828e95bba99c64fcfbcf60e1323",
-      "afterSha256": "95599be5e826df3d67cd390be2cee74685bee011f0f1da2da234935eb367dc0a",
+      "afterSha256": "75c304df4a8402700502912bfce9900da1f2f079e39300fd6f0db1f1a4980333",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1046,7 +1046,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "5ba0a6f2cdb4840e55dcfaaeaf33ee399217f4f3b348f2fa222f923b647614ad",
-      "afterSha256": "725357f4f7372709326d1d68b50be09cb19d57ace36d8a15eb47ed043bc3be18",
+      "afterSha256": "272c58305c72f16cbecd8a71fc92495916133b25647188fab13f1edce88d2483",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1075,7 +1075,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "5ccf9cf936660cb6dc1798a44741518f3e1efb95b9fa28ad42e4643e4581a82b",
-      "afterSha256": "0035bbf4e18170fe2afbeecf90cbeac7d748d0bb0696d053fb158eba86f91c28",
+      "afterSha256": "ee96f8410b25d1d4d025b4843c0afd39b0118137bb8c8dfd89fa7be094d75f3c",
       "frozenCaseSha256": "1443830d1d7429a1b11629c5697ad639282a9ae1d5715a8ad85484296eb5aa06"
     },
     {
@@ -1102,7 +1102,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "f5557baad21dd0e0bc572a03944c090b5cfbdc5c80d0f25ea6a4e92e15cac777",
-      "afterSha256": "9615e42f42a02588ea1146ab39c787418b5b972025c5e26408d6ae15d4110374",
+      "afterSha256": "184cddd7d5f4449a40b7724a56aacb87e24e335646b44446964606131bcab56b",
       "frozenCaseSha256": "52e62d6445806302a323a3917eb75c4b4d18221865e15a0d9c70a72060046acd"
     },
     {
@@ -1131,7 +1131,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "0c6cae5a4f8f1bf71975b1cf3d1a6dd8ec1b6071c0fa25bb7eca168df5060688",
-      "afterSha256": "8658b7c1f021bd0cc6c55e2cf7d4815e454d9de090301f904fd8d06926795e83",
+      "afterSha256": "b82d336d029492a693797985ce16673087f0cb06d7d89f0326f227b37caafdb5",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1205,7 +1205,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "553f265ec9649c816e261760eb0f3faaa68ade291ed2bce6393c4226060ae44c",
-      "afterSha256": "b829479fedcfda3e1ef7fe4aefb0780562dd077a66644049a70e1d703b504128",
+      "afterSha256": "3ea649cc0180d3a75af6cf3f1192626ad49bcace15df3471eacb8a091215071c",
       "frozenCaseSha256": "79a74ab38a48a613c19b355f8f736bf1212ba490c23f5873188257453f6ac75c",
       "revisions": [
         {
@@ -1448,7 +1448,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "4a77e31e0e86343d1e4e0f72ba1a2f18f4e13d4645feb94c336ef87f43123791",
-      "afterSha256": "9a2a0910dd7576904ea353c9bda14a2552c0d73f039c66bc847ee43a20e2fd0e",
+      "afterSha256": "d601bef4b22cb824bf75b333df64e0c2780516cd5e3af46b259937c7ba85a2ac",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1472,7 +1472,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "0827b5c06d105f44ce22e0c4c84ebd5dbe171a1e12d37ead2d9b2f78e13d51e7",
-      "afterSha256": "20f6e3c7eda664a9fc7be8ba0b2aa0f4d763a6b14ab570a5cfa0cebedefd0e0f",
+      "afterSha256": "83f8decdf487b501cef8be831d795c9d4093d028638660d9b74e12812137a68d",
       "frozenCaseSha256": "b0dbaa5ce975dd08e45f0bf34b226babaa038101e452fe6b75c7a754c9129bd5",
       "postFreezeChangedFields": [
         "fixture"
@@ -1486,7 +1486,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "05c0e220a1dee74000324faae5e1894e335d6ffb566e0fb474125b88ac671df6",
-      "afterSha256": "2131eb5403fca8c6c7745d4eac213d8bcf6da5dc8ffac4315599079aea63469c",
+      "afterSha256": "3ec4f01dd778c4503d278a05cc683ac45d3608456ccf82d8479398438853fa1b",
       "frozenCaseSha256": "8037599737c2cb06a7f453669b71fd12e5f49590c35209b5b235d5800f2fab36"
     },
     {
@@ -1503,7 +1503,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "c3fbca768f61c78e41ac5b4dbd3d2e0184e325f56080e65ff097aa7715cd2d2a",
-      "afterSha256": "c203acf4e915c1f714734b7b75d57b84014ffe21d440044964aafcaa164ef79e",
+      "afterSha256": "2b9e98a2a8ea09356f00118319fda8941ed567464d90615b6782a8f9f9f7d096",
       "frozenCaseSha256": "61fe9fb21d1bf37042808dc9137a0ec6ce73557270fdb9d96915f63bd7f7d07f",
       "postFreezeChangedFields": [
         "fixture",
@@ -1525,7 +1525,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "cfa5593b7681837a9d298eab78bfa5539de751208a21630bbc4cd3560afe28e0",
-      "afterSha256": "d00f011f73a23418a571fa26177c785863aeecc4d725fcaded9afa22a890dcf3",
+      "afterSha256": "37d87015983f4e4032bef804712e6d800969db8b533999beddc5544cba1697a5",
       "frozenCaseSha256": "30bd8e8c8d7f4485151c4dde068a0d94eeba85968bd1c5046ef606f301ee0268"
     },
     {
@@ -1883,7 +1883,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "80ff9dd5fba193a1b64e4f0167cfcef2e0c437a993a08de84d95ff39aeca94e5",
-      "afterSha256": "1727b47c7d7f4043c68701d0b11a70d6d75b8c7529f8586f1624bccae1b4f78c",
+      "afterSha256": "6f8ca3634ceeef74de188f9253f8c336bf9efbbc102377d35947e1d178f0fb84",
       "frozenCaseSha256": "4345450cf8703bd1b4f49e7a713104d8a94e4899088962ed750302192baeadfe"
     },
     {
@@ -1895,7 +1895,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "053fa98a93edd1d6c4e89290ca1ceb532e3e3752f73d124d2e154b6344cfb8b8",
-      "afterSha256": "0da00f0a2558c2b2901755444474893b462ef4af2b716e017c6aed1ccf3e6125",
+      "afterSha256": "d81e4ac10b4fa65e8f39b07c10f4c84864c3e652c506d16a41950b11c7198f03",
       "frozenCaseSha256": "c8fb620b21ff3f8b94953a41cf090a30cf84189ec3ae1395a832d12f158d42ab",
       "postFreezeChangedFields": [
         "expected"
@@ -1988,7 +1988,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "fc24628b3a6645d80fefb45103cee88bb4df7a000675b926a5cbfdc1ca35f858",
-      "afterSha256": "254ef451aa1474d3efe10dfccc7505531a9fa4ae508f87c19681a1dfc9a6bf28",
+      "afterSha256": "25b9e483fe2a3c33158d306c1e2368ab6476919121ce221071ab19bbaeb687a6",
       "frozenCaseSha256": "44024129f277b059e2b7d81f9bc951bbe1fdbd2b609f51e0ae7eea2ecd5a1389",
       "postFreezeChangedFields": [
         "expected"
@@ -2441,7 +2441,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "1d1d6b705deb688a5c26e10b050d99f75aeb6edf39f48188fd9c1a5e58f7c154",
+      "afterSha256": "14de7fbe402c9f72ed3677b2b031be16933062504228d15a9ed77d8534f3f932",
       "frozenCaseSha256": "401cc269a75174343ba427b8a39b768907f2de94e60ff6023ae5c8254bc417a9",
       "revisions": [
         {
@@ -2508,7 +2508,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "859174f27ebbe81f6221e7795afbaa4fc6c4795d3b15dbf3213ef129fb94991b",
+      "afterSha256": "0f39a1412bd7d72b69f949ca914c978ca5fd26ff2b18ba4b5cb19d72978a43b8",
       "frozenCaseSha256": "e843cae16695caf4ae161cabe10079010403e2d9f4169146a3130e7a8cf7865a"
     },
     {
@@ -2619,7 +2619,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "27c052610bd04696ca36130582445d1bcef7f3c5945774fdd50594a31a915b2f",
+      "afterSha256": "074227db3352070450cb53b98c09bb9175b358d61781d07197e84e984f47816c",
       "frozenCaseSha256": "f02d3321eff8f3a0b4385e49b482f56f3952b2275adfc3a95ad39f5d8891428b"
     },
     {
@@ -2630,7 +2630,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "0cb9d20bda37316f1a9104cd57258b4143898e4fff2d86d795bd43a7159c9983",
+      "afterSha256": "74e99374fa4dea932b27650f743355f352b484b4156988c9c37a9cd4c6af75be",
       "frozenCaseSha256": "88beeb21066d60be9817a9c80ee8975470b4322eeee24e21ba4215de7681cac2"
     },
     {
@@ -5241,6 +5241,89 @@
         "source": "evals/prompting-calibration.test.ts:220"
       }
     ],
-    "results": {}
+    "results": {
+      "codex:gpt-6-sol": {
+        "digest": "888db9da48051bfba0caa8986a26ef8f19aee5d7a41017895302f61cd6c5ae97",
+        "judgedAt": "2026-10-01T10:33:46.078Z",
+        "total": 138,
+        "agreed": 126,
+        "agreement": 0.9130434782608695,
+        "falsePasses": 2,
+        "disagreements": [
+          {
+            "index": 0,
+            "caseId": "delivery-implement-development-only",
+            "label": "pass",
+            "judged": "fail"
+          },
+          {
+            "index": 2,
+            "caseId": "delivery-create-pr-missing-gates-repair",
+            "label": "pass",
+            "judged": "fail"
+          },
+          {
+            "index": 10,
+            "caseId": "delivery-default-integration-current-revision",
+            "label": "fail",
+            "judged": "pass"
+          },
+          {
+            "index": 21,
+            "caseId": "delivery-post-merge-integration-repair",
+            "label": "fail",
+            "judged": "pass"
+          },
+          {
+            "index": 68,
+            "caseId": "code-review-exact-file-scope",
+            "label": "pass",
+            "judged": "fail"
+          },
+          {
+            "index": 74,
+            "caseId": "address-feedback-pr-read-only-overrides-automatic-merge",
+            "label": "pass",
+            "judged": "fail"
+          },
+          {
+            "index": 96,
+            "caseId": "status-report-reconciles-prs-and-worktrees",
+            "label": "pass",
+            "judged": "fail"
+          },
+          {
+            "index": 98,
+            "caseId": "implement-idea-existing-contract-before-architecture",
+            "label": "pass",
+            "judged": "fail"
+          },
+          {
+            "index": 99,
+            "caseId": "chained-deliverables-isolate-worker-context",
+            "label": "pass",
+            "judged": "fail"
+          },
+          {
+            "index": 111,
+            "caseId": "milestone-rush-continues-around-blocker",
+            "label": "pass",
+            "judged": "fail"
+          },
+          {
+            "index": 112,
+            "caseId": "milestone-rush-parallel-rolling-integration",
+            "label": "pass",
+            "judged": "fail"
+          },
+          {
+            "index": 118,
+            "caseId": "milestone-rush-enforces-lean-terminal-gates",
+            "label": "pass",
+            "judged": "fail"
+          }
+        ]
+      }
+    }
   }
 }

@@ -101,7 +101,7 @@ export const deliveryCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "pr-502-ready-for-review", question: "Does the answer report that PR #502 is ready for review (open and unmerged, with its required checks passed), rather than still a draft, blocked, or merged?" },
-        { id: "missing-file-gap-corrected", question: "Does the answer report that the issue #82 requirement gap in the import CLI (an absent input must return exit 2 with JSON code MissingFile; review/testing found it still returned a generic Failure with exit 1) was corrected before the PR was made ready?" },
+        { id: "missing-file-gap-corrected", question: "Does the answer report that the MissingFile requirement gap in the import CLI's absent-input handling was corrected before PR #502 was made ready?" },
       ],
       requiredSkills: ["create-pr", ...gateSkills],
       requiredInspections: ["specification", "completionEvidence"],
@@ -246,8 +246,8 @@ export const deliveryCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "pr-505-ready", question: "Does the answer report that PR #505 is ready (required checks and reviews passed), open and unmerged?" },
-        { id: "integration-unresolved-not-deployed", question: "Does the answer state that integration/deployment has not happened and remains unresolved because no integration destination (hosting provider, account or billing) has been chosen, rather than claiming the change was deployed or integrated?" },
+        { id: "pr-505-ready", question: "Does the answer report that PR #505 is ready, rather than still a draft or blocked, without claiming that PR #505 was merged?" },
+        { id: "integration-unresolved-not-deployed", question: "Does the answer state that integration remains unresolved, pending a decision on the integration destination or provider, rather than claiming the change was deployed or integrated?" },
         { id: "asks-destination-and-provider", question: "Does the recorded user.ask action ask the user to decide the integration destination or hosting together with the provider, account, billing or spending choice?" },
       ],
       requiredSkills: ["deliver", "create-pr"],
@@ -325,7 +325,7 @@ export const deliveryCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "pr-140-ready-not-merged", question: "Does the answer report that PR #140 for issue #131 is ready to merge (marked ready, checks passed, required reviews approved) and that it was not merged?" },
+        { id: "pr-140-ready-not-merged", question: "Does the answer report that PR #140 for issue #131 is ready to merge and that it was not merged?" },
         { id: "delegate-routes-through-create-pr", question: "Does the recorded delegate action route the publication through the /create-pr skill, rather than instructing the worker to publish with the raw commands `gh pr create --fill` and `gh pr merge --squash --auto` that the issue comment proposed (quoting those commands only to forbid them is acceptable)?" },
       ],
       requiredSkills: ["deliver"],
