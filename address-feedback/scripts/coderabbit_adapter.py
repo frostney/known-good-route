@@ -3,23 +3,23 @@
 
 This script is the only definition of how CodeRabbit is triggered, waited
 for, and judged complete. Every decision reads sources bound to the exact
-head commit:
+head commit, merged across the open pull requests whose head it is:
 
 - CodeRabbit's commit statuses on the head, newest first;
 - CodeRabbit review objects whose `commit_id` is the head;
-- the summary comment's coverage marker naming the head;
+- the summary comment's coverage marker naming the head, or, on a merge
+  commit, its first parent;
 - the summary comment version CodeRabbit edited in just before a rate-limit
-  status, which carries the only stated retry time;
+  status, which carries the only stated retry time; and
 - when the head arrived, the pull request was opened, and it was last marked
-  ready, after which CodeRabbit starts its own review; and
-- CodeRabbit's newest status on the head of every open pull request in the
-  scanned repositories, which holds a trigger on the account.
+  ready, after which CodeRabbit starts its own review.
 
-Completion evidence counts only when it is newer than the latest trigger and
-the latest event after which CodeRabbit starts its own review. Every state
-that waits on CodeRabbit ends after a fixed bound: the wait for its own
+The latest review cycle wins: evidence, triggers and pending statuses from
+before the latest trigger or push, open or ready event are superseded. Every
+state that waits on CodeRabbit ends after a fixed bound: the wait for its own
 review becomes a trigger, and an unanswered trigger, a stalled review and an
-unexplained refusal each become a blocked state.
+unexplained refusal each become a blocked state. Triggers are serialized by a
+machine-wide lock per GitHub login.
 """
 
 from __future__ import annotations
@@ -65,13 +65,13 @@ STATUS_RATE_LIMITED = re.compile(r"^\s*review rate limited\b", re.IGNORECASE)
 STATUS_COMPLETED = re.compile(r"^\s*review completed\b", re.IGNORECASE)
 STATUS_DRAFT_SKIP = re.compile(r"^\s*review skipped:\s*draft pull request\b", re.IGNORECASE)
 STATUS_SKIPPED = re.compile(r"^\s*review skipped\b", re.IGNORECASE)
+STATUS_PAUSED = re.compile(r"^\s*review paused\b", re.IGNORECASE)
+STATUS_LOCK_LOSS = re.compile(r"^\s*review stopped after lock loss\b", re.IGNORECASE)
 
-# "Next included review available in 12 minutes." Older notices also said
-# "please wait N minutes and M seconds".
+# "> **Next review available in:** **13 minutes**" and
+# "Next included review available in 12 minutes."
 STATED_WAIT = re.compile(
-    r"(?:available in\D{0,10}|please wait\W{0,10})"
-    r"(?:(\d+)\s*minutes?(?:\D{0,10}(\d+)\s*seconds?)?|(\d+)\s*seconds?)",
-    re.IGNORECASE,
+    r"Next (?:included )?review available in[\s*:]*(\d+)\s*(minute|second)s?\b", re.IGNORECASE
 )
 
 # A findings review names its findings in its body.
@@ -88,28 +88,30 @@ SUMMARY_MARKER = "<!-- This is an auto-generated comment: summarize by coderabbi
 # <!-- final_review_risk_coverage:{"sourceCommitId":..,"coveredCommitId":..,"kind":"reviewed"} -->
 COVERAGE_MARKER = re.compile(r"final_review_risk_coverage:(\{[^{}]*\})")
 NO_ACTIONABLE = "No actionable comments were generated"
+# The summary carries this block while CodeRabbit reviews any head of the pull request.
+REVIEWING_BLOCK = "<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->"
 
 UNAVAILABLE_SOURCE = re.compile(r"\(HTTP 40[34]\)")
 
-# CodeRabbit edits the stated wait into its summary comment 0-36 s before it
-# posts the rate-limit status (75 of 75 recorded refusals); 60 s bounds the
+# CodeRabbit edited the stated wait into its summary comment 0-53 s before it
+# posted the rate-limit status in 79 of 80 recorded refusals; 60 s bounds the
 # pairing.
 CORRELATION_SECONDS = 60
 # CodeRabbit states waits in whole minutes, so a stated time can be a minute early.
 WAIT_BUFFER_SECONDS = 60
-# Where CodeRabbit reviewed a head unprompted, its first status came within
-# 38 s of the push and 16 s of the pull request being opened or marked ready.
+# Where CodeRabbit reviewed a head unprompted, 95% of first statuses came
+# within 38 s of the push, and all within 119 s of the pull request being
+# marked ready. A push during its review of an earlier head was reviewed
+# within 98 s after that review ended, and a second pass of a head started
+# 13 s after its first completed.
 AUTOMATIC_REVIEW_SECONDS = 120
-# Recorded triggers got a status within 20 s, or 316 s behind a review already
-# in progress.
+# 95% of recorded triggers got a status within 142 s.
 TRIGGER_ANSWER_SECONDS = 10 * 60
-# The longest recorded review in progress ended after 700 s.
+# The longest recorded pending status lasted 1,805 s.
 IN_PROGRESS_SECONDS = 60 * 60
-# How long a refusal without a paired stated wait holds triggers while
-# CodeRabbit shows no review or stated wait after it.
+# How long a refusal without a paired stated wait holds the head's trigger.
 UNKNOWN_WAIT_SECONDS = 15 * 60
 EDIT_HISTORY_PAGES = 10
-OPEN_PULL_PAGES = 10
 
 COMMENT_EDITS_QUERY = """query($id: ID!, $cursor: String) {
   node(id: $id) { ... on IssueComment {
@@ -124,17 +126,6 @@ READY_QUERY = """query($owner: String!, $name: String!, $number: Int!) {
       nodes { ... on ReadyForReviewEvent { createdAt } }
     }
   } }
-}"""
-# A commit's `status.contexts` holds the newest status of each context.
-OPEN_PULLS_QUERY = """query($owner: String!, $name: String!, $cursor: String) {
-  repository(owner: $owner, name: $name) {
-    pullRequests(states: OPEN, first: 100, after: $cursor) {
-      pageInfo { hasNextPage endCursor }
-      nodes { number commits(last: 1) { nodes { commit { oid status { contexts {
-        context state description createdAt creator { login }
-      } } } } } }
-    }
-  }
 }"""
 
 # Every state a command reports, and the commands that report it. `status`
@@ -151,13 +142,12 @@ HEAD_STATES = frozenset(
         "in-progress",
         "waiting",
         "rate-limited-unknown-wait",
-        "waiting-account-unknown",
         "draft",
         "skipped",
+        "paused",
         "blocked-unanswered",
         "blocked-stalled",
         "blocked-unknown-wait",
-        "blocked-account-unknown-wait",
         "blocked-unconfirmed",
         "unrecognized-status",
         "closed",
@@ -178,10 +168,10 @@ COMPLETE_STATES = frozenset({"review-complete", "clean-complete"})
 BLOCKED_STATES = frozenset(
     {
         "skipped",
+        "paused",
         "blocked-unanswered",
         "blocked-stalled",
         "blocked-unknown-wait",
-        "blocked-account-unknown-wait",
         "blocked-unconfirmed",
         "unrecognized-status",
         "closed",
@@ -247,8 +237,7 @@ def stated_seconds(body: str) -> int | None:
     match = STATED_WAIT.search(body)
     if not match:
         return None
-    minutes, seconds, only_seconds = (int(group or 0) for group in match.groups())
-    return minutes * 60 + seconds + only_seconds
+    return int(match.group(1)) * (60 if match.group(2).lower() == "minute" else 1)
 
 
 # --- Head statuses ---------------------------------------------------------
@@ -281,15 +270,19 @@ def status_kind(status: dict[str, Any] | None) -> str:
     description = str(status.get("description") or "")
     if state == "pending":
         return "in-progress"
+    if state in {"success", "failure"} and STATUS_RATE_LIMITED.search(description):
+        return "rate-limited"
+    if state == "failure" and STATUS_LOCK_LOSS.search(description):
+        return "lock-loss"
     if state == "success":
-        if STATUS_RATE_LIMITED.search(description):
-            return "rate-limited"
         if STATUS_COMPLETED.search(description):
             return "completed"
         if STATUS_DRAFT_SKIP.search(description):
             return "draft-skip"
         if STATUS_SKIPPED.search(description):
             return "skipped"
+        if STATUS_PAUSED.search(description):
+            return "paused"
     return "unrecognized"
 
 
@@ -404,73 +397,6 @@ def correlated_wait(
     )
 
 
-def refusal(
-    gh: Gh, head: dict[str, Any], status: dict[str, Any], comments: list[dict[str, Any]]
-) -> dict[str, Any]:
-    """A rate-limit status on a head, with the stated wait paired to it or why there is none."""
-    at = parse_timestamp(status.get("created_at"), "status created_at")
-    wait, missing = correlated_wait(gh, comments, at)
-    return head | {"statusAt": format_timestamp(at), "at": at, "wait": wait, "missing": missing}
-
-
-def open_heads(gh: Gh, repo: str) -> dict[str, tuple[list[int], dict[str, Any] | None]]:
-    """Each open pull request's head, with its PRs and CodeRabbit's newest status on it."""
-    owner, name = repo_parts(repo)
-    heads: dict[str, tuple[list[int], dict[str, Any] | None]] = {}
-    cursor: str | None = None
-    for _page in range(OPEN_PULL_PAGES):
-        data = gh.graphql(OPEN_PULLS_QUERY, {"owner": owner, "name": name, "cursor": cursor})
-        pulls = ((data or {}).get("repository") or {}).get("pullRequests") or {}
-        for node in pulls.get("nodes") or []:
-            commits = ((node or {}).get("commits") or {}).get("nodes") or []
-            commit = ((commits[-1] if commits else None) or {}).get("commit") or {}
-            oid = commit.get("oid")
-            if not isinstance(oid, str) or not isinstance(node.get("number"), int):
-                raise WaitError(f"an open pull request in {repo} is missing its number or head")
-            statuses = [
-                context | {"created_at": context.get("createdAt")}
-                for context in ((commit.get("status") or {}).get("contexts") or [])
-                if is_coderabbit(context)
-            ]
-            newest = max(
-                statuses,
-                key=lambda item: parse_timestamp(item["created_at"], "status createdAt"),
-                default=None,
-            )
-            heads.setdefault(oid, ([], newest))[0].append(node["number"])
-        page = pulls.get("pageInfo") or {}
-        if not page.get("hasNextPage"):
-            return heads
-        cursor = page.get("endCursor")
-    raise WaitError(
-        f"{repo} has more than {OPEN_PULL_PAGES * 100} open pull requests, so the account scan "
-        "cannot read every head"
-    )
-
-
-def account_statuses(gh: Gh, repos: list[str]) -> dict[str, Any]:
-    """CodeRabbit's newest status on every open head in the scanned repositories.
-
-    Returns each head it last refused with a rate limit, and the newest of
-    these statuses reporting a review in progress or completed.
-    """
-    refusals: list[dict[str, Any]] = []
-    recoveries: list[float] = []
-    for repo in repos:
-        for sha, (prs, status) in open_heads(gh, repo).items():
-            kind = status_kind(status)
-            if kind in {"in-progress", "completed"}:
-                recoveries.append(parse_timestamp(status["created_at"], "status createdAt"))
-            elif kind == "rate-limited":
-                comments = [
-                    item
-                    for pr in prs
-                    for item in rest_items(gh, f"repos/{repo}/issues/{pr}/comments?per_page=100")
-                ]
-                refusals.append(refusal(gh, {"repo": repo, "prs": prs, "sha": sha}, status, comments))
-    return {"refusals": refusals, "reviewedAt": max(recoveries, default=None)}
-
-
 # --- Completion ----------------------------------------------------------------
 
 
@@ -505,18 +431,18 @@ def coverage(body: str) -> dict[str, Any] | None:
     return value if isinstance(value, dict) else None
 
 
-def clean_review(bot_comments: list[dict[str, Any]], head: str) -> dict[str, Any] | None:
-    """A clean pass of exactly `head`: its coverage marker and no actionable comments."""
+def clean_review(bot_comments: list[dict[str, Any]], covered: list[str]) -> dict[str, Any] | None:
+    """A clean pass: a coverage marker naming one of `covered` and no actionable comments."""
     for item in bot_comments:
         body = str(item.get("body") or "")
         marker = coverage(body)
         if (
             marker
-            and marker.get("coveredCommitId") == head
+            and marker.get("coveredCommitId") in covered
             and marker.get("kind") == "reviewed"
             and NO_ACTIONABLE in body
         ):
-            return {"commentId": item.get("id"), "coveredCommitId": head}
+            return {"commentId": item.get("id"), "coveredCommitId": marker["coveredCommitId"]}
     return None
 
 
@@ -573,6 +499,30 @@ def automatic_review_start(
     return max(events, key=lambda event: event[0])
 
 
+def earlier_review(gh: Gh, bot_comments: list[dict[str, Any]], start: float) -> dict[str, Any] | None:
+    """CodeRabbit's review of an earlier head running since `start`, and when it ended.
+
+    CodeRabbit reviews one head of a pull request at a time and starts its own
+    review of a newer head only after the running one ends. While it reviews,
+    its summary carries the reviewing block.
+    """
+    for item in bot_comments:
+        if not is_summary(item):
+            continue
+        versions, read = comment_versions(gh, item, start)
+        if not read:
+            continue
+        ordered = sorted(versions, key=lambda version: version[0])
+        shown = [(at, REVIEWING_BLOCK in body) for at, body in ordered if at <= start][-1:]
+        shown += [(at, REVIEWING_BLOCK in body) for at, body in ordered if at > start]
+        busy = [at for at, reviewing in shown if reviewing]
+        if not busy:
+            continue
+        ended = next((at for at, reviewing in shown if at > busy[-1] and not reviewing), None)
+        return {"commentId": item.get("id"), "endedAt": format_timestamp(ended) if ended else None}
+    return None
+
+
 def head_triggers(comments: list[dict[str, Any]], arrival: float) -> list[dict[str, Any]]:
     """Trigger commands posted on the PR since the head arrived, oldest first."""
     modes = {body: mode for mode, body in TRIGGERS.items()}
@@ -586,10 +536,25 @@ def head_triggers(comments: list[dict[str, Any]], arrival: float) -> list[dict[s
             found.append(
                 {"id": item.get("id"), "mode": mode, "createdAt": item["created_at"], "at": created}
             )
-    return sorted(found, key=lambda trigger: (trigger["at"], int(trigger["id"] or 0)))
+    return found
 
 
 # --- Evidence and decision ------------------------------------------------------
+
+
+def sharing_pulls(gh: Gh, repo: str, pr: int, head: str) -> list[int]:
+    """The other open pull requests whose head is `head`."""
+    pulls = optional_items(lambda: rest_items(gh, f"repos/{repo}/commits/{head}/pulls?per_page=100"))
+    return sorted(
+        {
+            item["number"]
+            for item in pulls
+            if isinstance(item.get("number"), int)
+            and item["number"] != pr
+            and item.get("state") == "open"
+            and (item.get("head") or {}).get("sha") == head
+        }
+    )
 
 
 def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
@@ -603,35 +568,73 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
         raise WaitError(f"pull request {repo}#{pr} is missing its head SHA")
     statuses = coderabbit_statuses(gh, repo, head)
     newest = statuses[-1] if statuses else None
-    comments = rest_items(gh, f"repos/{repo}/issues/{pr}/comments?per_page=100")
-    reviews = rest_items(gh, f"repos/{repo}/pulls/{pr}/reviews?per_page=100")
+    commit = gh.rest(f"repos/{repo}/commits/{head}")
+    parents = [str(item.get("sha")) for item in (commit or {}).get("parents") or []]
+    # A head several open pull requests share gets the evidence of all of them.
+    numbers = [pr, *sharing_pulls(gh, repo, pr, head)]
+    comments: list[dict[str, Any]] = []
+    reviews: list[dict[str, Any]] = []
+    triggers: list[dict[str, Any]] = []
+    starts: list[tuple[float, str]] = []
+    arrival: tuple[float, str] | None = None
+    for number in numbers:
+        shared = pull if number == pr else gh.rest(f"repos/{repo}/pulls/{number}")
+        own = rest_items(gh, f"repos/{repo}/issues/{number}/comments?per_page=100")
+        comments += own
+        reviews += rest_items(gh, f"repos/{repo}/pulls/{number}/reviews?per_page=100")
+        arrived = head_arrival(gh, repo, shared, head, statuses)
+        arrival = arrival or arrived
+        triggers += head_triggers(own, arrived[0])
+        starts.append(
+            automatic_review_start(gh, repo, number, shared, (arrived[0], f"head-{arrived[1]}"))
+        )
+    assert arrival is not None
+    automatic, automatic_source = max(starts, key=lambda event: event[0])
     bot_comments = [item for item in comments if is_bot(item)]
-    arrival, arrival_source = head_arrival(gh, repo, pull, head, statuses)
-    automatic, automatic_source = automatic_review_start(
-        gh, repo, pr, pull, (arrival, f"head-{arrival_source}")
-    )
+    earlier = None
+    if status_kind(newest) == "none" or parse_timestamp(newest["created_at"], "status created_at") < automatic:
+        earlier = earlier_review(gh, bot_comments, automatic)
     rate_limit = None
     if status_kind(newest) == "rate-limited":
-        rate_limit = refusal(gh, {"repo": repo, "prs": [pr], "sha": head}, newest, bot_comments)
+        at = parse_timestamp(newest["created_at"], "status created_at")
+        wait, missing = correlated_wait(gh, bot_comments, at)
+        rate_limit = {"statusAt": format_timestamp(at), "wait": wait, "missing": missing}
+    # On a merge commit CodeRabbit may leave the marker on the first parent it reviewed.
+    covered = [head, parents[0]] if len(parents) > 1 else [head]
     return {
         "repo": repo,
         "pr": pr,
+        "sharedWith": numbers[1:],
         "head": head,
+        "parents": parents,
         "open": pull.get("state") == "open",
         "draft": bool(pull.get("draft")),
-        "headArrival": {"at": format_timestamp(arrival), "source": arrival_source},
+        "headArrival": {"at": format_timestamp(arrival[0]), "source": arrival[1]},
         "automaticReview": {"from": format_timestamp(automatic), "source": automatic_source},
+        "earlierReview": earlier,
         "status": status_summary(newest),
         "findingsReview": findings_review(reviews, head),
-        "cleanReview": clean_review(bot_comments, head),
-        "triggers": head_triggers(comments, arrival),
+        "cleanReview": clean_review(bot_comments, covered),
+        "triggers": sorted(triggers, key=lambda trigger: (trigger["at"], int(trigger["id"] or 0))),
         "rateLimit": rate_limit,
     }
 
 
-def decide(
-    evidence: dict[str, Any], expected_head: str, account: dict[str, Any], now: float
-) -> dict[str, Any]:
+def with_posted(evidence: dict[str, Any], posted: list[dict[str, Any]]) -> dict[str, Any]:
+    """Evidence with the triggers this process posted that no listing shows yet."""
+    listed = {trigger["id"] for trigger in evidence["triggers"]}
+    unlisted = [
+        {"id": item["commentId"], "mode": item["mode"], "createdAt": item["postedAt"], "at": item["at"]}
+        for item in posted
+        if item["commentId"] not in listed
+    ]
+    if not unlisted:
+        return evidence
+    triggers = sorted(evidence["triggers"] + unlisted, key=lambda trigger: trigger["at"])
+    return evidence | {"triggers": triggers}
+
+
+def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str, Any]:
     """The head's state, why, the trigger mode to post, and when it can change."""
 
     def result(state: str, reason: str, mode: str | None = None, **extra: Any) -> dict[str, Any]:
@@ -656,75 +659,57 @@ def decide(
         return result(blocked, f"{why} and nothing changed for {seconds // 60} minutes", **timing)
 
     def gate(mode: str) -> dict[str, Any]:
-        """Hold the trigger while any open head's refusal still applies to the account."""
-        own = evidence["rateLimit"]
-        by_head = {(item["repo"], item["sha"]): item for item in account["refusals"]}
-        if own:
-            by_head[(own["repo"], own["sha"])] = own
-        paired = [item for item in by_head.values() if item["wait"]]
-        # A later review or paired refusal on the account shows CodeRabbit recovered.
-        recovered = max([item["at"] for item in paired] + [account["reviewedAt"] or 0.0])
-        unknown = [item for item in by_head.values() if not item["wait"] and item["at"] >= recovered]
-        if unknown:
-            oldest = min(unknown, key=lambda item: item["at"])
-            prs = ", ".join(f"#{pr}" for pr in oldest["prs"])
-            names = (
-                ("rate-limited-unknown-wait", "blocked-unknown-wait")
-                if oldest is own
-                else ("waiting-account-unknown", "blocked-account-unknown-wait")
-            )
+        """Hold the trigger while the head's own refusal still applies."""
+        refusal = evidence["rateLimit"] if kind == "rate-limited" else None
+        if refusal and not refusal["wait"]:
             return bounded(
-                *names,
-                oldest["at"],
+                "rate-limited-unknown-wait",
+                "blocked-unknown-wait",
+                status_at,
                 UNKNOWN_WAIT_SECONDS,
-                f"CodeRabbit rate-limited {oldest['repo']} {prs} at {oldest['statusAt']} and "
-                f"{oldest['missing']}, and has shown no review or stated wait since",
+                f"CodeRabbit rate-limited the head at {refusal['statusAt']} and {refusal['missing']}",
                 mode,
-                unmatchedRateLimit=public_refusal(oldest),
             )
-        pending = [item for item in paired if item["wait"]["retryAtEpoch"] > now]
-        if pending:
-            latest_wait = max(pending, key=lambda item: item["wait"]["retryAtEpoch"])
-            prs = ", ".join(f"#{pr}" for pr in latest_wait["prs"])
+        if refusal and refusal["wait"]["retryAtEpoch"] > now:
             return result(
                 "waiting",
-                f"CodeRabbit stated a wait on {latest_wait['repo']} {prs} that ends at "
-                f"{latest_wait['wait']['retryAt']}",
+                f"CodeRabbit stated a wait that ends at {refusal['wait']['retryAt']}",
                 mode,
-                retryAt=latest_wait["wait"]["retryAt"],
-                retrySource="pull-request" if latest_wait is own else "account",
+                retryAt=refusal["wait"]["retryAt"],
             )
         return result(f"trigger-{mode}", f"a {mode} review trigger is permitted", mode)
 
-    def answer(trigger: dict[str, Any]) -> dict[str, Any]:
-        return bounded(
-            "triggered",
-            "blocked-unanswered",
-            trigger["at"],
-            TRIGGER_ANSWER_SECONDS,
-            f"the {trigger['mode']} trigger posted at {trigger['createdAt']} awaits a CodeRabbit status",
+    def awaiting(since: float, until: float, after: str) -> dict[str, Any]:
+        return result(
+            "awaiting-automatic",
+            f"CodeRabbit may still start its own review after {after}; a trigger is "
+            f"permitted from {format_timestamp(until)}",
+            since=format_timestamp(since),
+            boundAt=format_timestamp(until),
         )
 
     if evidence["head"] != expected_head:
         return result("invalidated", f"expected head {expected_head}, observed {evidence['head']}")
     if not evidence["open"]:
         return result("closed", "the pull request is closed")
+    automatic = evidence["automaticReview"]
+    start = parse_timestamp(automatic["from"], "automatic review start")
     status = evidence["status"]
     kind = status["kind"] if status else "none"
     status_at = parse_timestamp(status["createdAt"], "status createdAt") if status else None
+    # A newer push, open or ready event starts a new cycle: older triggers no longer
+    # await an answer, and a pending status's bound counts from the new cycle.
+    triggers = [trigger for trigger in evidence["triggers"] if trigger["at"] >= start]
     if kind == "in-progress":
         return bounded(
             "in-progress",
             "blocked-stalled",
-            status_at,
+            max(status_at, start),
             IN_PROGRESS_SECONDS,
-            f"CodeRabbit has reported a review in progress on the head since {status['createdAt']}",
+            f"CodeRabbit has reported {status['description']!r} on the head since {status['createdAt']}",
         )
 
-    triggers = evidence["triggers"]
     latest = triggers[-1] if triggers else None
-    automatic = evidence["automaticReview"]
-    start = parse_timestamp(automatic["from"], "automatic review start")
     # A trigger or an automatic start begins a new review; evidence from before it is superseded.
     begun = max(start, latest["at"]) if latest else start
     review = evidence["findingsReview"]
@@ -734,27 +719,41 @@ def decide(
     if evidence["cleanReview"] and kind == "completed" and status_at > begun:
         return result(
             "clean-complete",
-            "CodeRabbit's summary marks this head covered with no actionable comments",
+            f"CodeRabbit's summary marks {evidence['cleanReview']['coveredCommitId']} covered "
+            "with no actionable comments",
         )
-    if kind in {"none", "draft-skip"} and evidence["draft"]:
+    unreviewed = kind in {"none", "draft-skip"}
+    if unreviewed and evidence["draft"]:
         return result("draft", "CodeRabbit does not review a draft pull request")
     # No answer comes within a second of its trigger, so a status in that second predates it.
     if latest is not None and (status_at is None or latest["at"] >= status_at):
-        return answer(latest)
-    automatic_start = kind in {"none", "draft-skip"} or start > status_at
-    if automatic_start and now < start + AUTOMATIC_REVIEW_SECONDS:
-        return result(
-            "awaiting-automatic",
-            f"CodeRabbit may still start its own review after {automatic['source']} at "
-            f"{automatic['from']}; a trigger is permitted from "
-            f"{format_timestamp(start + AUTOMATIC_REVIEW_SECONDS)}",
-            since=automatic["from"],
-            boundAt=format_timestamp(start + AUTOMATIC_REVIEW_SECONDS),
+        return bounded(
+            "triggered",
+            "blocked-unanswered",
+            latest["at"],
+            TRIGGER_ANSWER_SECONDS,
+            f"the {latest['mode']} trigger posted at {latest['createdAt']} awaits a CodeRabbit status",
         )
-    if kind in {"none", "draft-skip"}:
+    if unreviewed or start > status_at:
+        since, after = start, f"{automatic['source']} at {automatic['from']}"
+        earlier = evidence["earlierReview"]
+        if earlier and not earlier["endedAt"]:
+            until = start + IN_PROGRESS_SECONDS
+            after = f"its review of an earlier head, running at {automatic['from']}, ends"
+        elif earlier:
+            since = max(start, parse_timestamp(earlier["endedAt"], "earlier review end"))
+            until = since + AUTOMATIC_REVIEW_SECONDS
+            after = f"its review of an earlier head ended at {earlier['endedAt']}"
+        else:
+            until = start + AUTOMATIC_REVIEW_SECONDS
+        if now < until:
+            return awaiting(since, until, after)
+    if unreviewed or kind == "lock-loss":
         return gate("incremental")
     if kind == "skipped":
         return result("skipped", f"CodeRabbit skipped the head: {status['description']}")
+    if kind == "paused":
+        return result("paused", "CodeRabbit paused its reviews of the pull request")
     if kind == "rate-limited":
         return gate(latest["mode"] if latest else "incremental")
     if kind == "completed":
@@ -764,19 +763,17 @@ def decide(
                 "CodeRabbit reported the head's review completed without a review or "
                 "coverage marker for it, after a full review was requested",
             )
+        if now < status_at + AUTOMATIC_REVIEW_SECONDS:
+            return awaiting(
+                status_at,
+                status_at + AUTOMATIC_REVIEW_SECONDS,
+                f"its completed status at {status['createdAt']}, which has no review or coverage marker",
+            )
         return gate("full")
     return result(
         "unrecognized-status",
         f"unrecognized CodeRabbit status: {status['state']} {status['description']!r}",
     )
-
-
-def public_refusal(item: dict[str, Any]) -> dict[str, Any]:
-    """A refusal without internal epoch fields."""
-    value = {key: entry for key, entry in item.items() if key != "at"}
-    if item["wait"]:
-        value["wait"] = {key: entry for key, entry in item["wait"].items() if key != "retryAtEpoch"}
-    return value
 
 
 def public(evidence: dict[str, Any]) -> dict[str, Any]:
@@ -785,8 +782,11 @@ def public(evidence: dict[str, Any]) -> dict[str, Any]:
     value["triggers"] = [
         {key: item[key] for key in ("id", "mode", "createdAt")} for item in evidence["triggers"]
     ]
-    if evidence["rateLimit"]:
-        value["rateLimit"] = public_refusal(evidence["rateLimit"])
+    if evidence["rateLimit"] and evidence["rateLimit"]["wait"]:
+        wait = evidence["rateLimit"]["wait"]
+        value["rateLimit"] = evidence["rateLimit"] | {
+            "wait": {key: entry for key, entry in wait.items() if key != "retryAtEpoch"}
+        }
     return value
 
 
@@ -821,24 +821,15 @@ def observation(
     repo: str,
     prs: list[int],
     expected_heads: dict[int, str],
-    scan_repos: list[str],
     now: float,
+    posted: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     gh = ObservationCache(gh)  # type: ignore[assignment]
-    account = account_statuses(gh, scan_repos)
     results = []
     for pr in prs:
-        evidence = pull_evidence(gh, repo, pr)
-        results.append(public(evidence) | decide(evidence, expected_heads[pr], account, now))
-    reviewed = account["reviewedAt"]
-    return {
-        "scanRepos": scan_repos,
-        "account": {
-            "refusals": [public_refusal(item) for item in account["refusals"]],
-            "reviewedAt": format_timestamp(reviewed) if reviewed is not None else None,
-        },
-        "pullRequests": results,
-    }
+        evidence = with_posted(pull_evidence(gh, repo, pr), posted or [])
+        results.append(public(evidence) | decide(evidence, expected_heads[pr], now))
+    return {"pullRequests": results}
 
 
 def aggregate_status(value: dict[str, Any]) -> tuple[str, str]:
@@ -852,7 +843,7 @@ def aggregate_status(value: dict[str, Any]) -> tuple[str, str]:
     return "pending", "at least one requested head still awaits a CodeRabbit transition"
 
 
-# --- Account lock --------------------------------------------------------------
+# --- Trigger lock --------------------------------------------------------------
 
 
 def lock_directory() -> Path:
@@ -876,7 +867,7 @@ def read_holder(handle: TextIO) -> dict[str, Any] | None:
 
 
 def lock_status(login: str) -> dict[str, Any]:
-    """Whether a `run` holds the account lock, and which PR and head it serves."""
+    """Whether a `run` holds the trigger lock, and which PR and head it serves."""
     path = lock_path(login)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a+") as handle:
@@ -933,12 +924,15 @@ def release_lock(handle: TextIO) -> None:
 # --- Commands ----------------------------------------------------------------
 
 
+def public_posted(posted: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [{key: value for key, value in item.items() if key != "at"} for item in posted]
+
+
 def run_review(
     gh: Gh,
     repo: str,
     pr: int,
     head: str,
-    scan_repos: list[str],
     deadline: float,
     interval: float,
     *,
@@ -950,22 +944,20 @@ def run_review(
     last: dict[str, Any] = {}
     while True:
         try:
-            last = observation(gh, repo, [pr], {pr: head}, scan_repos, clock())
+            last = observation(gh, repo, [pr], {pr: head}, clock(), posted)
         except (RateLimited, TransientError):
             gh.metrics.retries += 1
             if clock() >= deadline:
-                last["triggers"] = posted
+                last["triggers"] = public_posted(posted)
                 return "pending", "GitHub transport remained unavailable until the deadline", last
             sleeper(min(interval, max(0.0, deadline - clock())))
             continue
-        last["triggers"] = posted
+        last["triggers"] = public_posted(posted)
         item = last["pullRequests"][0]
         state, reason = item["state"], item["reason"]
         if state in FINAL_STATES:
             return state, reason, last
-        seen = {trigger["id"] for trigger in item["triggers"]}
-        unseen = [trigger for trigger in posted if trigger["commentId"] not in seen]
-        if state.startswith("trigger-") and not unseen:
+        if state.startswith("trigger-"):
             if clock() >= deadline:
                 return state, "deadline reached before the permitted trigger", last
             mode = item["nextMode"]
@@ -976,6 +968,7 @@ def run_review(
                     "body": TRIGGERS[mode],
                     "commentId": (created or {}).get("id"),
                     "postedAt": format_timestamp(clock()),
+                    "at": clock(),
                 }
             )
         if clock() >= deadline:
@@ -993,13 +986,11 @@ def parser() -> argparse.ArgumentParser:
     status.add_argument("--repo", required=True)
     status.add_argument("--pr", type=int, action="append", required=True)
     status.add_argument("--head", action="append", required=True, metavar="PR=SHA")
-    status.add_argument("--scan-repo", action="append", default=[])
     status.add_argument("--json", action="store_true")
     run = subparsers.add_parser("run")
     run.add_argument("--repo", required=True)
     run.add_argument("--pr", type=int, required=True)
     run.add_argument("--head", required=True)
-    run.add_argument("--scan-repo", action="append", default=[])
     run.add_argument("--deadline", required=True)
     run.add_argument("--interval", type=float, default=60.0)
     run.add_argument("--json", action="store_true")
@@ -1049,9 +1040,7 @@ def main() -> int:
     identity: dict[str, Any] = {"repo": args.repo, "prs": getattr(args, "pr", None)}
     try:
         gh = Gh(metrics)
-        scan_repos = list(dict.fromkeys([args.repo, *args.scan_repo]))
-        for repo in scan_repos:
-            repo_parts(repo)
+        repo_parts(args.repo)
         if args.command == "status":
             prs = [positive_pr(value) for value in args.pr]
             if len(set(prs)) != len(prs):
@@ -1059,7 +1048,7 @@ def main() -> int:
             heads = parse_heads(args.head, prs)
             identity["heads"] = heads
             lock = lock_status(authenticated_login(gh))
-            value = observation(gh, args.repo, prs, heads, scan_repos, time.time()) | {"lock": lock}
+            value = observation(gh, args.repo, prs, heads, time.time()) | {"lock": lock}
             metrics.observations += 1
             state, reason = aggregate_status(value)
             output = envelope("status", state, identity, value, metrics, reason)
@@ -1074,12 +1063,12 @@ def main() -> int:
             if lock is None:
                 output = envelope(
                     "run", "lock-held", identity, {"lock": lock_status(login)}, metrics,
-                    "another CodeRabbit run held the account lock until the deadline",
+                    "another CodeRabbit run held the trigger lock until the deadline",
                 )
             else:
                 try:
                     state, reason, value = run_review(
-                        gh, args.repo, args.pr, args.head, scan_repos, deadline, args.interval,
+                        gh, args.repo, args.pr, args.head, deadline, args.interval,
                     )
                     metrics.observations += 1
                     output = envelope("run", state, identity, value, metrics, reason)

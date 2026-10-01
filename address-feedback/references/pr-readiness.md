@@ -119,17 +119,14 @@ retry times come only from its adapter; see [CodeRabbit](#coderabbit).
 waited for, refused, or complete; its code and tests define how. Never post a
 CodeRabbit command or work out a CodeRabbit wait yourself.
 
-- `status --repo <owner/repo> --pr <n> --head <n>=<sha> [--scan-repo
-  <owner/repo>]... --json` reads each head's state without posting, and names
-  the run that holds the account lock. Repeat `--pr` and `--head` for several
-  pull requests.
+- `status --repo <owner/repo> --pr <n> --head <n>=<sha> --json` reads each
+  head's state without posting, and names the run that holds the trigger
+  lock. Repeat `--pr` and `--head` for several pull requests.
 - `run --repo <owner/repo> --pr <n> --head <sha> --deadline <RFC 3339>
-  [--scan-repo <owner/repo>]... [--interval <seconds>] --json` takes the
-  account lock, posts any trigger the head needs, and waits until the head
-  reaches a final state or the deadline.
+  [--interval <seconds>] --json` takes the trigger lock, posts any trigger
+  the head needs, and waits until the head reaches a final state or the
+  deadline.
 
-Pass each other repository CodeRabbit reviews on the same account as a
-`--scan-repo`.
 `status` reports one state for the whole set and one for each head; `run`
 reports its head's state. A pending head state from `run` means its deadline
 came first.
@@ -141,16 +138,16 @@ came first.
 | `satisfied` | `status` | Every head is complete. |
 | `trigger-incremental`, `trigger-full` | `run`, `status` | Pending: `run`, which posts it. |
 | `awaiting-automatic`, `triggered`, `in-progress`, `waiting` | `run`, `status` | Pending: `run` waits; after its deadline, `run` again. |
-| `rate-limited-unknown-wait`, `waiting-account-unknown` | `run`, `status` | Pending: `run` again later; never trigger by hand. |
+| `rate-limited-unknown-wait` | `run`, `status` | Pending: `run` again later; never trigger by hand. |
 | `pending` | `run`, `status` | A head is pending, or GitHub was unreachable until the deadline: `run` again. |
-| `lock-held` | `run` | Pending: another `run` holds the account lock; `run` again later. |
+| `lock-held` | `run` | Pending: another `run` holds the trigger lock; `run` again later. |
 | `draft` | `run`, `status` | Mark the PR ready when the workflow permits, then `run`. |
 | `blocked` | `status` | Act on each blocked head's state. |
 | `skipped` | `run`, `status` | Blocked: report the reason; a person must act. |
+| `paused` | `run`, `status` | Blocked: CodeRabbit paused its reviews of the PR. A person resumes them or triggers a review. |
 | `blocked-unanswered` | `run`, `status` | Blocked: CodeRabbit did not answer the trigger. A person checks CodeRabbit on the PR, then triggers again or pushes. |
 | `blocked-stalled` | `run`, `status` | Blocked: CodeRabbit's review never finished. A person checks CodeRabbit on the PR, then triggers again or pushes. |
 | `blocked-unknown-wait` | `run`, `status` | Blocked: CodeRabbit refused the head without a stated wait. A person reads its notice on the PR and triggers when it allows. |
-| `blocked-account-unknown-wait` | `run`, `status` | Blocked: CodeRabbit refused the named PR without a stated wait. A person reads that notice and triggers when it allows. |
 | `blocked-unconfirmed`, `unrecognized-status` | `run`, `status` | Blocked: escalate to a person. |
 | `closed` | `run`, `status` | Stop. |
 | `invalidated` | `run`, `status` | The head changed: restart on the new head. |
