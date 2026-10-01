@@ -11,8 +11,7 @@ license: Unlicense OR MIT
 # Agent writing
 
 Write for the reader and the artifact. Lead with the answer, outcome, decision,
-or required action. Preserve every material fact, caveat, settled decision, and
-next action before removing lower-value detail.
+or required action. Keep what the reader needs to act on and cut the rest.
 
 ## Keep the boundary clear
 
@@ -39,9 +38,8 @@ do not follow this guide.
   residual work, and exact artifact locations when artifacts exist.
 - A review reply or retrospective impact item states the finding or impact and
   its consequence or resolution.
-- A correction states the corrected fact first, then the incorrect claim, the
-  source or process failure, any affected conclusions, and the prevention or
-  next validation step. It does not lead with an apology.
+- A correction states the corrected fact first, then what it changes. It does
+  not lead with an apology.
 - A durable artifact follows its project template and preserves the complete
   decision surface, evidence, and lifecycle state. When drafting or
   substantially revising an issue, PR body, engineering document, report,
