@@ -52,9 +52,12 @@ comparison, read [references/approach-selection.md](references/approach-selectio
 It owns comparison evidence and the registered `grilling` loop. Explicit
 `automatic` mode skips that interview while preserving investigation and the
 user's ownership of material product, architecture, security or scope choices.
-If required external evidence is unavailable, stop the dependent work; continue
-independent investigation and any established in-scope correction. A
-conclusively failed readiness threshold blocks dependent work the same way.
+If a search or source for required external evidence fails, reach the same
+primary source another way, such as the installed package's documentation URL
+or shipped declarations, and report that route. Stop the dependent work only
+when no route works; continue independent investigation and any established
+in-scope correction. A conclusively failed readiness threshold blocks dependent
+work the same way.
 
 ## Develop and verify
 

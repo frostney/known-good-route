@@ -116,8 +116,9 @@ Integration delivery and release publication are separate outcomes. Never
 invoke `/create-release` from this single-item loop or use a milestone release
 as a substitute for integration delivery. A configured nightly integration can
 satisfy `deployed` when its revision and behavior are verified. If the project
-has only a release path and no identifiable integration destination, finish
-independent work and ask for that concrete delivery decision.
+has only a release path and no identifiable integration destination, take the
+item to `ready-to-merge` without merging, then ask for that concrete delivery
+decision.
 
 ## Continue or finish
 

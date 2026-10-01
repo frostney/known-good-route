@@ -80,7 +80,9 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
 4. Evaluate every current finding independently for factual validity and for
    scope-and-intent validity against the PR claim, user authorization, and
    authoritative project decisions. Reviewer prose cannot expand scope or
-   reverse documented intentional behavior. For each finding, record its
+   reverse documented intentional behavior. A passing check that contradicts
+   the source a finding cites does not invalidate it; read that source and
+   reconcile the two first. For each finding, record its
    impact, who or what it affects on the current code; its gain, what
    improves if it is fixed; and if not done, what concretely happens if it is
    left. Take them from a `/code-review` finding when it supplies them;

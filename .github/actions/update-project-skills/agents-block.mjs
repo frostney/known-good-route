@@ -122,7 +122,7 @@ function deliveryLine(settings) {
   const endpoint = `the \`${settings.endpoint}\` endpoint`;
   return settings["entry-points"] === "stop"
     ? `Delivery (${source}): entry points stop after their own step, and \`/deliver\` stops at ${endpoint}.`
-    : `Delivery (${source}): entry points continue through \`/deliver\` to ${endpoint}.`;
+    : `Delivery (${source}): entry points that change, review or test code continue through \`/deliver\` to ${endpoint}.`;
 }
 
 export function renderRegion(declarations, settings) {

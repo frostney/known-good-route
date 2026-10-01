@@ -17,9 +17,9 @@ Establish whether the delivered behavior matches the explicit specification.
 Report by default. With the exact `fix` qualifier, fix observed in-scope gaps
 and retest them. Started directly, continue under the
 [delivery settings](../deliver/SKILL.md#delivery-settings). This skill does not
-replace source review or the repository's full project gate; the caller owns
-that aggregate gate, and source review and unit-test success alone are not
-behavior evidence.
+replace or run source review or the repository's full project gate; the caller
+owns those, and source review and unit-test success alone are not behavior
+evidence.
 
 Reuse recorded real-interface evidence when the implementation, requirement,
 environment, and inputs match, except that fix mode reproduces each failure

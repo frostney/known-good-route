@@ -63,7 +63,7 @@ const fixtureRegion = [
   "",
   "Generated from the `metadata.agents-role` and `metadata.agents-text` of the skills installed in `.agents/skills`. Edit outside the `known-good-route:agents` markers only.",
   "",
-  "Delivery (defaults, no `ORCHESTRATION.md`): entry points continue through `/deliver` to the `ready-to-merge` endpoint.",
+  "Delivery (defaults, no `ORCHESTRATION.md`): entry points that change, review or test code continue through `/deliver` to the `ready-to-merge` endpoint.",
   "",
   "- Always apply `tidy-notes`: Keep every note short and sourced.",
   "- Start with `/brew-tea`: Brew the team's pot.",
@@ -182,11 +182,11 @@ describe("AGENTS.md block", () => {
   test("states the delivery settings from ORCHESTRATION.md and goes stale when they change", async () => {
     const root = await makeProject();
     await installFixturePack(root);
-    const defaultLine = "Delivery (defaults, no `ORCHESTRATION.md`): entry points continue through `/deliver` to the `ready-to-merge` endpoint.";
+    const defaultLine = "Delivery (defaults, no `ORCHESTRATION.md`): entry points that change, review or test code continue through `/deliver` to the `ready-to-merge` endpoint.";
     await writeFile(join(root, "ORCHESTRATION.md"), "---\nendpoint: deployed\n---\n\n# Policy\n");
     await writeAgentsBlock(root);
     const configured = await readFile(agentsFile(root), "utf8");
-    expect(configured).toContain("Delivery (`ORCHESTRATION.md`): entry points continue through `/deliver` to the `deployed` endpoint.");
+    expect(configured).toContain("Delivery (`ORCHESTRATION.md`): entry points that change, review or test code continue through `/deliver` to the `deployed` endpoint.");
     expect(configured.replace(/\nDelivery \(.*\n/, `\n${defaultLine}\n`)).toBe(`# Agent Instructions\n\n${fixtureRegion}\n`);
 
     await writeFile(join(root, "ORCHESTRATION.md"), "---\nendpoint: merged\nentry-points: stop\n---\n");
