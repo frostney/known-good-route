@@ -69,8 +69,9 @@ Put status notes in the same message as the next action.
 ### Blockers and decisions
 
 Before stopping at a blocker, search the repository's docs and scripts for how
-to clear it, and try that route. Retry a failed API call or lookup twice before
-reporting it. Stop only for a secret, a paid action, an account action, or a
+to clear it, and try that route. A missing fact that an available action or
+lookup can establish is not a blocker. Retry a failed API call or lookup twice
+before reporting it. Stop only for a secret, a paid action, an account action, or a
 decision that belongs to the person.
 
 A decision belongs to the person, and is what other skills call material, only
