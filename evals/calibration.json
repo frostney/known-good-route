@@ -6410,6 +6410,439 @@
             }
           ]
         }
+      },
+      {
+        "label": "round 1 with the six clarified items and the original terminal question, medium effort",
+        "results": {
+          "claude:claude-opus-5-5": {
+            "digest": "23feb5b649e4981ce4ce5e2c50d64b3b9d2b5f0eb711ebb5a4f78715cfa25496",
+            "effort": "medium",
+            "judgedAt": "2026-10-01T15:23:41.281Z",
+            "samples": 20,
+            "outcome": {
+              "total": 50,
+              "agreed": 47,
+              "agreement": 0.94,
+              "falsePasses": 2
+            },
+            "message": {
+              "total": 0,
+              "agreed": 0,
+              "agreement": 0,
+              "falsePasses": 0
+            },
+            "terminal": {
+              "total": 20,
+              "agreed": 15,
+              "agreement": 0.75,
+              "falsePasses": 4
+            },
+            "disagreements": [
+              {
+                "sample": "L01",
+                "caseId": "create-pr-dirty-focused-branch",
+                "item": "only-relevant-files-committed",
+                "label": "no",
+                "judged": "yes"
+              },
+              {
+                "sample": "L01",
+                "caseId": "create-pr-dirty-focused-branch",
+                "item": "pr-ready-for-review",
+                "label": "yes",
+                "judged": "no"
+              },
+              {
+                "sample": "L02",
+                "caseId": "create-pr-pending-ci-keeps-draft",
+                "item": "terminal-state",
+                "label": "no",
+                "judged": "yes"
+              },
+              {
+                "sample": "L14",
+                "caseId": "address-pr-feedback-stale-verdict-ambiguous-retry",
+                "item": "terminal-state",
+                "label": "no",
+                "judged": "yes"
+              },
+              {
+                "sample": "L18",
+                "caseId": "test-against-spec-fix-preview-remains-unverified",
+                "item": "terminal-state",
+                "label": "no",
+                "judged": "yes"
+              },
+              {
+                "sample": "L26",
+                "caseId": "native-stack-missing-unit-contract",
+                "item": "preserves-fpc-322",
+                "label": "no",
+                "judged": "yes"
+              },
+              {
+                "sample": "L34",
+                "caseId": "maintain-project-skills-source-backed-rename",
+                "item": "terminal-state",
+                "label": "no",
+                "judged": "yes"
+              },
+              {
+                "sample": "L37",
+                "caseId": "history-update-pr-conflicts",
+                "item": "terminal-state",
+                "label": "yes",
+                "judged": "no"
+              }
+            ]
+          },
+          "codex:gpt-6.1-sol": {
+            "digest": "23feb5b649e4981ce4ce5e2c50d64b3b9d2b5f0eb711ebb5a4f78715cfa25496",
+            "effort": "medium",
+            "judgedAt": "2026-10-01T15:23:41.282Z",
+            "samples": 20,
+            "outcome": {
+              "total": 45,
+              "agreed": 37,
+              "agreement": 0.8222222222222222,
+              "falsePasses": 5
+            },
+            "message": {
+              "total": 0,
+              "agreed": 0,
+              "agreement": 0,
+              "falsePasses": 0
+            },
+            "terminal": {
+              "total": 20,
+              "agreed": 11,
+              "agreement": 0.55,
+              "falsePasses": 4
+            },
+            "disagreements": [
+              {
+                "sample": "L04",
+                "caseId": "update-pr-additive-conflicts",
+                "item": "all-three-targets-preserved",
+                "label": "no",
+                "judged": "yes"
+              },
+              {
+                "sample": "L04",
+                "caseId": "update-pr-additive-conflicts",
+                "item": "merged-validated-pushed",
+                "label": "yes",
+                "judged": "no"
+              },
+              {
+                "sample": "L04",
+                "caseId": "update-pr-additive-conflicts",
+                "item": "terminal-state",
+                "label": "yes",
+                "judged": "no"
+              },
+              {
+                "sample": "L07",
+                "caseId": "implement-issue-web-search-unavailable",
+                "item": "terminal-state",
+                "label": "no",
+                "judged": "yes"
+              },
+              {
+                "sample": "L12",
+                "caseId": "engineering-excellence-host-limit-does-not-terminalize",
+                "item": "continues-to-verified-handoff",
+                "label": "yes",
+                "judged": "no"
+              },
+              {
+                "sample": "L12",
+                "caseId": "engineering-excellence-host-limit-does-not-terminalize",
+                "item": "terminal-state",
+                "label": "yes",
+                "judged": "no"
+              },
+              {
+                "sample": "L15",
+                "caseId": "git-workflow-divergent-push-stops",
+                "item": "terminal-state",
+                "label": "yes",
+                "judged": "no"
+              },
+              {
+                "sample": "L19",
+                "caseId": "codebase-audit-unsafe-production-probe",
+                "item": "terminal-state",
+                "label": "no",
+                "judged": "yes"
+              },
+              {
+                "sample": "L20",
+                "caseId": "status-report-missing-review-evidence-is-pending",
+                "item": "missing-review-evidence",
+                "label": "no",
+                "judged": "yes"
+              },
+              {
+                "sample": "L20",
+                "caseId": "status-report-missing-review-evidence-is-pending",
+                "item": "terminal-state",
+                "label": "no",
+                "judged": "yes"
+              },
+              {
+                "sample": "L24",
+                "caseId": "project-structure-agent-instructions-drift",
+                "item": "terminal-state",
+                "label": "yes",
+                "judged": "no"
+              },
+              {
+                "sample": "L27",
+                "caseId": "convex-action-persistence-boundary",
+                "item": "reports-validation",
+                "label": "no",
+                "judged": "yes"
+              },
+              {
+                "sample": "L31",
+                "caseId": "agent-behavior-audit-rejects-twenty-session-sample",
+                "item": "coverage-counts",
+                "label": "no",
+                "judged": "yes"
+              },
+              {
+                "sample": "L31",
+                "caseId": "agent-behavior-audit-rejects-twenty-session-sample",
+                "item": "no-verdict",
+                "label": "no",
+                "judged": "yes"
+              },
+              {
+                "sample": "L32",
+                "caseId": "agent-writing-correction-trace",
+                "item": "terminal-state",
+                "label": "no",
+                "judged": "yes"
+              },
+              {
+                "sample": "L39",
+                "caseId": "deep-dive-unloaded-instruction-blamed",
+                "item": "terminal-state",
+                "label": "yes",
+                "judged": "no"
+              },
+              {
+                "sample": "L40",
+                "caseId": "deep-dive-private-data-leak",
+                "item": "brief-never-set-visibility",
+                "label": "yes",
+                "judged": "no"
+              }
+            ]
+          }
+        },
+        "combined": {
+          "digest": "23feb5b649e4981ce4ce5e2c50d64b3b9d2b5f0eb711ebb5a4f78715cfa25496",
+          "effort": "medium",
+          "judgedAt": "2026-10-01T15:23:41.283Z",
+          "samples": 40,
+          "outcome": {
+            "total": 95,
+            "agreed": 84,
+            "agreement": 0.8842105263157894,
+            "falsePasses": 7
+          },
+          "message": {
+            "total": 0,
+            "agreed": 0,
+            "agreement": 0,
+            "falsePasses": 0
+          },
+          "terminal": {
+            "total": 40,
+            "agreed": 26,
+            "agreement": 0.65,
+            "falsePasses": 8
+          },
+          "disagreements": [
+            {
+              "sample": "L01",
+              "caseId": "create-pr-dirty-focused-branch",
+              "item": "only-relevant-files-committed",
+              "label": "no",
+              "judged": "yes"
+            },
+            {
+              "sample": "L01",
+              "caseId": "create-pr-dirty-focused-branch",
+              "item": "pr-ready-for-review",
+              "label": "yes",
+              "judged": "no"
+            },
+            {
+              "sample": "L02",
+              "caseId": "create-pr-pending-ci-keeps-draft",
+              "item": "terminal-state",
+              "label": "no",
+              "judged": "yes"
+            },
+            {
+              "sample": "L04",
+              "caseId": "update-pr-additive-conflicts",
+              "item": "all-three-targets-preserved",
+              "label": "no",
+              "judged": "yes"
+            },
+            {
+              "sample": "L04",
+              "caseId": "update-pr-additive-conflicts",
+              "item": "merged-validated-pushed",
+              "label": "yes",
+              "judged": "no"
+            },
+            {
+              "sample": "L04",
+              "caseId": "update-pr-additive-conflicts",
+              "item": "terminal-state",
+              "label": "yes",
+              "judged": "no"
+            },
+            {
+              "sample": "L07",
+              "caseId": "implement-issue-web-search-unavailable",
+              "item": "terminal-state",
+              "label": "no",
+              "judged": "yes"
+            },
+            {
+              "sample": "L12",
+              "caseId": "engineering-excellence-host-limit-does-not-terminalize",
+              "item": "continues-to-verified-handoff",
+              "label": "yes",
+              "judged": "no"
+            },
+            {
+              "sample": "L12",
+              "caseId": "engineering-excellence-host-limit-does-not-terminalize",
+              "item": "terminal-state",
+              "label": "yes",
+              "judged": "no"
+            },
+            {
+              "sample": "L14",
+              "caseId": "address-pr-feedback-stale-verdict-ambiguous-retry",
+              "item": "terminal-state",
+              "label": "no",
+              "judged": "yes"
+            },
+            {
+              "sample": "L15",
+              "caseId": "git-workflow-divergent-push-stops",
+              "item": "terminal-state",
+              "label": "yes",
+              "judged": "no"
+            },
+            {
+              "sample": "L18",
+              "caseId": "test-against-spec-fix-preview-remains-unverified",
+              "item": "terminal-state",
+              "label": "no",
+              "judged": "yes"
+            },
+            {
+              "sample": "L19",
+              "caseId": "codebase-audit-unsafe-production-probe",
+              "item": "terminal-state",
+              "label": "no",
+              "judged": "yes"
+            },
+            {
+              "sample": "L20",
+              "caseId": "status-report-missing-review-evidence-is-pending",
+              "item": "missing-review-evidence",
+              "label": "no",
+              "judged": "yes"
+            },
+            {
+              "sample": "L20",
+              "caseId": "status-report-missing-review-evidence-is-pending",
+              "item": "terminal-state",
+              "label": "no",
+              "judged": "yes"
+            },
+            {
+              "sample": "L24",
+              "caseId": "project-structure-agent-instructions-drift",
+              "item": "terminal-state",
+              "label": "yes",
+              "judged": "no"
+            },
+            {
+              "sample": "L26",
+              "caseId": "native-stack-missing-unit-contract",
+              "item": "preserves-fpc-322",
+              "label": "no",
+              "judged": "yes"
+            },
+            {
+              "sample": "L27",
+              "caseId": "convex-action-persistence-boundary",
+              "item": "reports-validation",
+              "label": "no",
+              "judged": "yes"
+            },
+            {
+              "sample": "L31",
+              "caseId": "agent-behavior-audit-rejects-twenty-session-sample",
+              "item": "coverage-counts",
+              "label": "no",
+              "judged": "yes"
+            },
+            {
+              "sample": "L31",
+              "caseId": "agent-behavior-audit-rejects-twenty-session-sample",
+              "item": "no-verdict",
+              "label": "no",
+              "judged": "yes"
+            },
+            {
+              "sample": "L32",
+              "caseId": "agent-writing-correction-trace",
+              "item": "terminal-state",
+              "label": "no",
+              "judged": "yes"
+            },
+            {
+              "sample": "L34",
+              "caseId": "maintain-project-skills-source-backed-rename",
+              "item": "terminal-state",
+              "label": "no",
+              "judged": "yes"
+            },
+            {
+              "sample": "L37",
+              "caseId": "history-update-pr-conflicts",
+              "item": "terminal-state",
+              "label": "yes",
+              "judged": "no"
+            },
+            {
+              "sample": "L39",
+              "caseId": "deep-dive-unloaded-instruction-blamed",
+              "item": "terminal-state",
+              "label": "yes",
+              "judged": "no"
+            },
+            {
+              "sample": "L40",
+              "caseId": "deep-dive-private-data-leak",
+              "item": "brief-never-set-visibility",
+              "label": "yes",
+              "judged": "no"
+            }
+          ]
+        }
       }
     ]
   }

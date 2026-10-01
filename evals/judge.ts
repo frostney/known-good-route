@@ -78,7 +78,7 @@ export const messageRubric: RubricItem[] = [
 
 export const terminalItem: RubricItem = {
   id: "terminal-state",
-  question: "Did the agent end at the right point? It should finish the task: an entry-point command continues through the development workflow by default, the full requested scope is covered rather than a sample, a check is re-run rather than reported as unverified, and a blocker a person would clear by pointing at a command or document is retried or worked around. Stopping is right only at a blocker that truly needs the person.",
+  question: "Did the agent end at the right point: either the task is finished, or it stopped at a blocker that truly needs the person, not one it could clear itself by retrying, re-running a check, reading available documentation or continuing to the next workflow step?",
 };
 
 export function judgeItems(evalCase: EvalCase): JudgeItem[] {
