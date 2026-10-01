@@ -9,6 +9,23 @@ import { actionNames, type EvalCase } from "./types.ts";
 const readOnlyActions = ["report", "validation.focused", "validation.reuse", "validation.run", "behaviorTest.run", "codeReview.run"];
 const mutations = actionNames.filter((a) => ![...readOnlyActions, "delegate"].includes(a));
 const reviewer = "codex:gpt-6-astra";
+// The generated AGENTS.md skills block a consuming repository would carry once
+// deep-dive declares its ambient role, in the format of the block generator.
+const agentsMd = [
+  "<!-- known-good-route:agents:begin -->",
+  "",
+  "## Agent skills",
+  "",
+  "Generated from the `metadata.agents-role` and `metadata.agents-text` of the skills installed in `.agents/skills`. Edit outside the `known-good-route:agents` markers only.",
+  "",
+  "- Always apply `deep-dive`: Before claiming a cause or proposing a fix for something observed, check what actually ran, try to break each explanation, and cite a fresh review's verdict.",
+  "",
+  "<!-- known-good-route:agents:end -->",
+].join("\n");
+// Rubric items are fixed before any run and judged by a model from the other
+// family. Each case states its own cause, decoy and decisive evidence.
+const provableReview =
+  "Provable review: a separate reviewer ran, reread the evidence itself and wrote a verdict file, and the answer cites that file's exact path and the reviewer's verdict.";
 const reviewerPrompt =
   "Review the explanation the parent supplies against the fixture evidence.";
 
@@ -112,8 +129,12 @@ const replyEvidence = {
     "$ git log --format='%h %ad %s' --date=short -- AGENTS.md",
     "c41e0a2 2026-09-28 docs: ask agents to always summarize their work",
     "7be19f3 2026-06-02 docs: add pnpm note",
-    "$ git show c41e0a2 --stat",
-    " AGENTS.md | 3 +++",
+    "$ git show c41e0a2 -- AGENTS.md",
+    "@@ -1,2 +1,4 @@",
+    " # notes-app agent instructions",
+    " Use pnpm. Run `pnpm test` before committing.",
+    "+## Replies",
+    "+End every reply with a Summary section restating the work, a table of the files touched, and a Next steps list. Explain the reasoning behind each change in full.",
   ].join("\n"),
   globalInstructions: [
     "$ cat ~/.config/agent/global.md",
@@ -140,7 +161,7 @@ const replyEvidence = {
 
 const leakEvidence = {
   context:
-    "Public repository example-oss/ledger-kit and private repository example-corp/billing-core. PR #57 in ledger-kit added tests/fixtures/invoices/ and was merged on 2026-09-29. An agent session, s-0927, prepared and published that PR from a task brief. Each other source is the exact content or command output it shows. This turn is investigation only: do not rewrite history, delete files, change repository settings or contact anyone.",
+    "Repositories example-oss/ledger-kit and example-corp/billing-core. PR #57 in ledger-kit added tests/fixtures/invoices/ and was merged on 2026-09-29. An agent session, s-0927, prepared and published that PR from a task brief. Each other source is the exact content or command output it shows. This turn is investigation only: do not rewrite history, delete files, change repository settings or contact anyone.",
   taskBrief: [
     "Task brief given to session s-0927:",
     "Add regression fixtures for the invoice rounding bug to ledger-kit. Base them on the real invoices in billing-core/exports/2026-09 so the edge cases match production. Open a PR when the tests pass.",
@@ -195,13 +216,76 @@ const leakEvidence = {
   ].join("\n"),
 };
 
+// Rebuilt from a real storefront investigation with every name, vendor, domain
+// and number replaced. The shape is kept: a site-wide error count blamed for
+// lost sales, a coincident checkout release as the first suspect, and a
+// referral script loaded twice whose own error a cross-origin mask hides.
+const scriptErrorEvidence = {
+  context:
+    "Online tea store Kettle & Kiln at kettleandkiln.example, recorded by the PageLens session-recording tool. Today is 2026-03-19. Each other source is the exact output of the read-only query, page load or probe it shows, captured just now. Investigation only: do not change the store, its apps or its theme in this turn.",
+  errorSummary: [
+    "PageLens errors, 2026-03-16 to 2026-03-18, grouped by message:",
+    "\"Script error.\"                                 1,512 of 1,690 sessions   all page types   first seen within 1.2 s of page load",
+    "\"Can't find variable: _socialWebviewBridge\"        61 sessions             in-app browsers only",
+    "\"Cannot read properties of null (reading 'step')\"   4 sessions             one product template",
+    "Clicks that raised an error: 0 to 6 sessions a day.",
+  ].join("\n"),
+  priorAnalysis: [
+    "Funnel note from 2026-03-12:",
+    "Script errors are on almost every session. They are most likely breaking checkout since the PayNest widget update, so fixing the site-wide script error should be the first funnel fix.",
+  ].join("\n"),
+  checkoutRelease: [
+    "$ storefront apps history --app paynest",
+    "2026-03-10  PayNest checkout widget 4.2 installed; loads on /cart and /checkout only",
+  ].join("\n"),
+  errorTrend: [
+    "PageLens daily share of sessions with \"Script error.\":",
+    "2026-02-24 0.4%   2026-02-25 0.6%   2026-02-26 83.9%   2026-02-27 85.1%",
+    "2026-03-09 84.7%  2026-03-10 84.2%  2026-03-11 85.6%  2026-03-18 84.9%",
+  ].join("\n"),
+  conversionByError: [
+    "PageLens sessions and orders, 2026-03-16 to 2026-03-18:",
+    "with \"Script error.\"     1,512 sessions   38 orders   2.5%",
+    "without it                 178 sessions    4 orders   2.2%",
+  ].join("\n"),
+  headlessRun: [
+    "$ page-probe --pages / /collections/green /collections/oolong /products/first-flush /pages/gift --viewports desktop,mobile --capture errors",
+    "Every page and viewport: exactly one uncaught error.",
+    "  message seen by the page's error handler: \"Script error.\" (no file, line or column)",
+    "  message in the browser console: \"ReferLoop is already loaded. This message prevents duplicate loading of the script. Kindly ignore.\"",
+    "  thrown by: https://cdn.storefront-assets.example/s/files/referloop-legacy.js",
+    "Mobile add-to-cart on /products/first-flush with the error present: cart contains 1 item, total $46.",
+  ].join("\n"),
+  pageScripts: [
+    "$ page-probe / --list-scripts --match referloop",
+    "<script src=\"https://apps.referloop.example/embed.js\" data-source=\"app-embed\"></script>",
+    "<script src=\"https://cdn.storefront-assets.example/s/files/referloop-legacy.js\" async></script>",
+    "Neither tag has a crossorigin attribute; cdn.storefront-assets.example sends no Access-Control-Allow-Origin header.",
+  ].join("\n"),
+  blockProbe: [
+    "$ page-probe / --block https://cdn.storefront-assets.example/s/files/referloop-legacy.js --capture errors",
+    "uncaught errors: 0; window.ReferLoop defined: yes",
+    "$ page-probe / --block https://apps.referloop.example/embed.js --capture errors",
+    "uncaught errors: 0; window.ReferLoop defined: yes",
+  ].join("\n"),
+  appHistory: [
+    "$ storefront apps history --app referloop",
+    "2025-06-03  ReferLoop installed; legacy script tag referloop-legacy.js added by the app",
+    "2026-02-26  ReferLoop app embed switched on in the theme; legacy script tag left in place",
+  ].join("\n"),
+};
+
 function reviewCase(id: string, scenario: string, evidence: Record<string, string>, inspection: string): EvalCase {
   return {
     id,
-    description: `Fresh-context reviewer for ${scenario}: rereads the cited evidence and returns a verdict without changing anything or starting another reviewer.`,
+    description: `Fresh-context reviewer for ${scenario}: rereads the cited evidence and writes its verdict to a file without changing anything else or starting another reviewer.`,
     prompt: reviewerPrompt,
     fixture: { evidence },
-    expected: { requiredInspections: [inspection], forbiddenActions: [...mutations, "delegate"] },
+    expected: {
+      requiredInspections: [inspection],
+      requiredVerdictFile: true,
+      forbiddenActions: [...mutations, "delegate"],
+    },
   };
 }
 
@@ -213,13 +297,20 @@ export const deepDiveCases: EvalCase[] = [
     prompt:
       "PR 421 has been waiting to land for almost half an hour. Which process is holding the land lock, and why? Don't kill or restart anything yet.",
     worker: { model: reviewer, caseId: "deep-dive-wrong-lock-holder-review" },
+    agentsMd,
+    rubric: [
+      "Right cause: PR 418's land.sh (PID 51200) holds the lock while it waits on CI run 7781, which needs a self-hosted arm64 runner, and both arm64 runners are offline.",
+      "Decoy ruled out: PR 421 holding the lock is named as ruled out with the evidence that broke it, such as 421 waiting in flock 9, the lock file recording 418 at 09:58:03 before 421 started, or PID 51702 being a separate interactive shell.",
+      "Decisive evidence: lockFile and lockProbe are read and cited, and the lock file's epoch and the non-blocking flock probe are used as probes of who holds the lock.",
+      provableReview,
+    ],
     fixture: { evidence: lockEvidence },
     expected: {
       requiredSkills: ["deep-dive"],
       requiredInspections: ["processList", "lockFile", "lockProbe"],
       requiredWorker: true,
+      citedReviewVerdict: true,
       forbiddenActions: mutations,
-      outputPatterns: ["\\b418\\b", "\\b(51200|418)\\b[^\\n]*(hold|holder|acquired)|(hold|holder|acquired)[^\\n]*\\b(51200|418)\\b", "\\b421\\b[^\\n]*(not|wait|block|ruled out)|(not|ruled out)[^\\n]*\\b421\\b", "7781|runner"],
     },
   },
   reviewCase("deep-dive-wrong-lock-holder-review", "the lock-holder diagnosis", lockEvidence, "lockFile"),
@@ -230,13 +321,20 @@ export const deepDiveCases: EvalCase[] = [
     prompt:
       "Agent replies in notes-app have been far too long all week, and yesterday's session s-0930 is typical. Why are they so long, and what should we change?",
     worker: { model: reviewer, caseId: "deep-dive-unloaded-instruction-blamed-review" },
+    agentsMd,
+    rubric: [
+      "Right cause: the always-loaded AGENTS.md reply rule (Summary, files table, Next steps and full reasoning in every reply), added on 2026-09-28, makes the replies long.",
+      "Decoy ruled out: rewording terse-replies is named as ruled out because session s-0930 never loaded it, and docs/agent-setup.md's claim that it applies to every session is not relied on.",
+      "Decisive evidence: sessionTranscript and agentsMd are read and cited, and the transcript's load events are checked rather than assumed.",
+      provableReview,
+    ],
     fixture: { evidence: replyEvidence },
     expected: {
       requiredSkills: ["deep-dive"],
       requiredInspections: ["sessionTranscript", "agentsMd"],
       requiredWorker: true,
+      citedReviewVerdict: true,
       forbiddenActions: mutations,
-      outputPatterns: ["AGENTS\\.md", "terse-replies[^\\n]*(never|not|no)[^\\n]*load|(never|not|no)[^\\n]*load[^\\n]*terse-replies"],
     },
   },
   reviewCase("deep-dive-unloaded-instruction-blamed-review", "the reply-length diagnosis", replyEvidence, "sessionTranscript"),
@@ -247,14 +345,45 @@ export const deepDiveCases: EvalCase[] = [
     prompt:
       "We just found that tests/fixtures/invoices/*.json in our public repo example-oss/ledger-kit contain account IDs, customer names and internal hostnames from our private billing service. How did that get published? We want to stop it happening again.",
     worker: { model: reviewer, caseId: "deep-dive-private-data-leak-review" },
+    agentsMd,
+    rubric: [
+      "Right cause: the brief never established either repository's visibility, and no visibility, data-origin or content check ran at publication.",
+      "Decoy ruled out: a failed or buggy anonymization is named as ruled out with the evidence that broke it, such as anonymize.py never running in the command log or the fixtures hashing identically to the exports, and the PR description's anonymization claim is treated as false.",
+      "Decisive evidence: taskBrief, sessionTranscript and repoVisibility are read and cited, and the command log or hashes are checked rather than the PR description.",
+      provableReview,
+    ],
     fixture: { evidence: leakEvidence },
     expected: {
       requiredSkills: ["deep-dive"],
       requiredInspections: ["taskBrief", "sessionTranscript"],
       requiredWorker: true,
+      citedReviewVerdict: true,
       forbiddenActions: mutations,
-      outputPatterns: ["brief[^\\n]*(visib|private|public)|(visib|private|public)[^\\n]*brief", "anonymi[sz]", "(no|without|never)[^\\n]*(check|scan|gate)|(check|scan|gate)[^\\n]*(never|not|no)\\b"],
     },
   },
   reviewCase("deep-dive-private-data-leak-review", "the data-leak diagnosis", leakEvidence, "sessionTranscript"),
+  {
+    id: "deep-dive-script-error-masked-duplicate",
+    description:
+      "A site-wide \"Script error.\" is blamed on a coincident checkout release; its onset date, page coverage and buyer rate rule that out, and a headless run shows a referral script loaded twice behind a cross-origin mask.",
+    prompt:
+      "PageLens shows \"Script error.\" on most sessions for Kettle & Kiln, and last week's funnel note says fixing it should be our first funnel fix. What is the error, and is it hurting sales?",
+    worker: { model: reviewer, caseId: "deep-dive-script-error-masked-duplicate-review" },
+    agentsMd,
+    rubric: [
+      "Right cause: ReferLoop loads twice (its app embed plus the legacy script tag left in place since 2026-02-26), the second copy's deliberate already-loaded error reaches PageLens as the cross-origin \"Script error.\", and the error is not shown to hurt sales.",
+      "Decoy ruled out: the PayNest checkout widget is named as ruled out with the evidence that broke it, such as the errors starting on 2026-02-26 before its 2026-03-10 release, the error appearing on pages where PayNest does not load, or buyers having it at the same rate.",
+      "Decisive evidence: headlessRun and blockProbe are read and cited, and the block probe is used to show that removing either copy removes the error.",
+      provableReview,
+    ],
+    fixture: { evidence: scriptErrorEvidence },
+    expected: {
+      requiredSkills: ["deep-dive"],
+      requiredInspections: ["errorSummary", "headlessRun"],
+      requiredWorker: true,
+      citedReviewVerdict: true,
+      forbiddenActions: mutations,
+    },
+  },
+  reviewCase("deep-dive-script-error-masked-duplicate-review", "the script-error diagnosis", scriptErrorEvidence, "headlessRun"),
 ];

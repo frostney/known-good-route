@@ -234,6 +234,23 @@ export function gradeRun(
     });
   }
 
+  if (expected.requiredVerdictFile)
+    checks.push({
+      name: "reviewer wrote a verdict file",
+      passed: !!ledger.verdict?.path,
+      detail: ledger.verdict ? `${ledger.verdict.verdict} at ${ledger.verdict.path}` : "no writeVerdict call completed",
+    });
+  if (expected.citedReviewVerdict) {
+    const files = (ledger.workers ?? []).flatMap((worker) => (worker.verdictFile ? [worker.verdictFile] : []));
+    checks.push({
+      name: "review cites its verdict file",
+      passed: files.length === 1 && output.includes(files[0]!),
+      detail: files.length
+        ? `require the final response to cite the reviewer's verdict file ${files[0]}`
+        : "no reviewer run wrote a verdict file; any claimed review is unreviewed",
+    });
+  }
+
   for (const requirement of expected.requiredActionDetails ?? []) {
     const details = ledger.actions
       .filter((a) => a.action === requirement.action)
@@ -541,6 +558,8 @@ export function validateCases(
     ))
       if (Array.isArray(response) && response.length === 0)
         throw new Error(`${evalCase.id}: empty action response sequence`);
+    if (evalCase.expected.citedReviewVerdict && !(evalCase.worker && evalCase.expected.requiredWorker))
+      throw new Error(`${evalCase.id}: a cited review verdict needs a required configured worker`);
     if (evalCase.worker) {
       const child = caseCatalog.find((c) => c.id === evalCase.worker!.caseId);
       if (!child || child.worker)

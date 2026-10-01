@@ -13,14 +13,20 @@ const empty = (): RunLedger => ({
 });
 const parentCase = deepDiveCases.find((c) => c.id === "deep-dive-wrong-lock-holder")!;
 const reviewCase = deepDiveCases.find((c) => c.id === parentCase.worker!.caseId)!;
-const answer =
-  "PR 418 (pid 51200) holds the land lock: the lock file records 418 at its start time and flock -n exits 1. 421 is waiting in flock 9; 51702 is a manual gh pr merge --auto. 418 waits on run 7781, which has no online arm64 runner. Fresh review by a separate Codex worker: agree.";
+const transcript = "/runs/7-deep-dive-wrong-lock-holder.jsonl.worker.jsonl";
+const verdictFile = `${transcript}.verdict.json`;
+const finding = "PR 418 (pid 51200) holds the land lock; 421 waits in flock 9.";
+const answer = `${finding} Fresh review: agree (${verdictFile}).`;
 const parent: RunLedger = {
   ...empty(),
   loadedSkills: ["deep-dive"],
   inspections: ["processList", "lockFile", "lockProbe"],
 };
-const reviewLedger: RunLedger = { ...empty(), inspections: ["lockFile"] };
+const reviewLedger = (written = true): RunLedger => ({
+  ...empty(),
+  inspections: ["lockFile"],
+  ...(written ? { verdict: { path: verdictFile, verdict: "agree" as const, evidence: "lockFile names 418" } } : {}),
+});
 const worker = {
   model: parentCase.worker!.model,
   caseId: reviewCase.id,
@@ -30,31 +36,33 @@ const worker = {
   responseModels: [],
   version: "test",
   context: "Symptom, explanation, evidence with sources, ruled-out candidates.",
-  transcript: "/tmp/test-transcript",
-  ledger: reviewLedger,
-  grade: gradeRun(reviewCase, reviewLedger, "agree"),
-  output: "agree",
+  transcript,
+  verdictFile,
+  ledger: reviewLedger(),
+  grade: gradeRun(reviewCase, reviewLedger(), "Agree."),
+  output: "Agree.",
 };
+const passes = (ledger: RunLedger, output: string) => gradeRun(parentCase, ledger, output).passed;
 
-test("a deep dive passes only with the real cause and a completed fresh reviewer", () => {
-  expect(gradeRun(parentCase, { ...parent, workers: [worker] }, answer).passed).toBeTrue();
-  // A recorded delegation is not a review, and a stop at the visible 421
-  // process misses the holder and what blocks it.
-  expect(
-    gradeRun(parentCase, { ...parent, actions: [{ action: "delegate", details: "review" }] }, answer).passed,
-  ).toBeFalse();
-  expect(
-    gradeRun(parentCase, { ...parent, workers: [worker] }, "PR 421 holds the land lock; gh pr merge 421 is running. Reviewed: agree.").passed,
-  ).toBeFalse();
+test("a deep dive passes only when its answer cites the verdict file of a review that ran", () => {
+  expect(passes({ ...parent, workers: [worker] }, answer)).toBeTrue();
+  // A claimed review without a citable verdict file is unreviewed.
+  expect(passes({ ...parent, workers: [worker] }, `${finding} A fresh review agreed.`)).toBeFalse();
+  expect(passes({ ...parent, workers: [worker] }, `${finding} Review: agree (${transcript}).`)).toBeFalse();
+  expect(passes({ ...parent, actions: [{ action: "delegate", details: "review" }] }, answer)).toBeFalse();
+  const { verdictFile: _unwritten, ...withoutVerdict } = worker;
+  expect(passes({ ...parent, workers: [withoutVerdict] }, answer)).toBeFalse();
+});
+
+test("a reviewer must write its verdict file and must not start a further reviewer", () => {
+  const unwritten = reviewLedger(false);
+  const delegated: RunLedger = { ...reviewLedger(), actions: [{ action: "delegate", details: "another reviewer" }] };
+  for (const ledger of [unwritten, delegated])
+    expect(passes({ ...parent, workers: [{ ...worker, ledger, grade: gradeRun(reviewCase, ledger, "Agree.") }] }, answer)).toBeFalse();
 });
 
 test("a Codex reviewer's identity is configured-only, but a reported identity must match", () => {
-  for (const bad of [
-    { ...worker, responseModels: ["gpt-6-sol"] },
-    { ...worker, grade: gradeRun(reviewCase, { ...reviewLedger, actions: [{ action: "delegate", details: "another reviewer" }] }, "agree") },
-    { ...worker, output: " " },
-  ])
-    expect(gradeRun(parentCase, { ...parent, workers: [bad] }, answer).passed).toBeFalse();
+  expect(passes({ ...parent, workers: [{ ...worker, responseModels: ["gpt-6.1-sol"] }] }, answer)).toBeFalse();
   const claudeCase = { ...parentCase, worker: { ...parentCase.worker!, model: "claude:claude-opus-5-5" } };
   const claudeWorker = { ...worker, model: "claude:claude-opus-5-5" };
   expect(gradeRun(claudeCase, { ...parent, workers: [claudeWorker] }, answer).passed).toBeFalse();

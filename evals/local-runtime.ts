@@ -5,7 +5,7 @@ import type { EvalCase, RunLedger } from "./types.ts";
 
 export const defaultModels = [
   "codex:gpt-6-astra",
-  "codex:gpt-6-sol",
+  "codex:gpt-6.1-sol",
   "claude:claude-fable-5-1",
   "claude:claude-opus-5-5",
 ];
@@ -350,7 +350,10 @@ export async function runLocal(options: {
   const { cli, model } = parseModel(options.target);
   const work = await mkdtemp(join(tmpdir(), "kgr-eval-"));
   const ledgerPath = join(work, "ledger.json");
-  await Bun.write(join(work, "instructions.md"), options.instructions);
+  const instructions = options.evalCase.agentsMd
+    ? `${options.instructions}\n\nThis repository's AGENTS.md, loaded into every session:\n\n${options.evalCase.agentsMd}`
+    : options.instructions;
+  await Bun.write(join(work, "instructions.md"), instructions);
   const serverArgs = options.server
     ? [options.server.path, ...options.server.args, ledgerPath]
     : [
@@ -384,7 +387,7 @@ export async function runLocal(options: {
     options.effort,
     work,
     cli === "codex" ? codexConfig : configPath,
-    options.instructions,
+    instructions,
   );
   if (options.responseSchema) {
     if (cli === "codex") {
