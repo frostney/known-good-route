@@ -11,7 +11,11 @@ import copy
 import importlib.util
 import io
 import json
+import os
+import pwd
 import re
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -154,6 +158,30 @@ def posts(gh: Replay) -> list[tuple[str, str]]:
     return [(fields["body"], iso(when)) for _endpoint, fields, when in gh.posts]
 
 
+def lock_loss(gh: Replay, ref: str) -> Callable[[float], None]:
+    """CodeRabbit starts the triggered review and stops it after lock loss."""
+
+    def answer(posted: float) -> None:
+        gh.add_status(ref, "Review in progress", iso(posted + 5), state="pending")
+        gh.add_status(ref, "Review stopped after lock loss", iso(posted + 10), state="failure")
+
+    return answer
+
+
+def main(gh: Replay, *argv: str) -> tuple[int, dict[str, Any]]:
+    """The adapter's CLI against `gh` as the login `reviewer`, at `gh.now`."""
+    read = gh.rest
+    gh.rest = lambda endpoint, *args: {"login": "reviewer"} if endpoint == "user" else read(endpoint, *args)
+    output: list[str] = []
+    with mock.patch.object(ADAPTER, "Gh", lambda _metrics: gh), mock.patch.object(
+        ADAPTER.time, "time", lambda: gh.now
+    ), mock.patch.object(ADAPTER.sys, "argv", ["coderabbit_adapter.py", *argv]), mock.patch(
+        "builtins.print", output.append
+    ):
+        code = ADAPTER.main()
+    return code, json.loads(output[0])
+
+
 class HeadStatusTest(unittest.TestCase):
     """Each status CodeRabbit posted on a recorded head reaches its state."""
 
@@ -252,6 +280,37 @@ class HeadStatusTest(unittest.TestCase):
             "failure", "Review stopped after lock loss"
         ))
         self.assertEqual((result["state"], result["nextMode"]), ("trigger-incremental", "incremental"))
+
+    def test_a_second_lock_loss_blocks_after_one_retry(self) -> None:
+        # GocciaScript#1113 from 17:43. Synthetic: CodeRabbit stops every triggered review after
+        # lock loss.
+        ref = "GocciaScript#1113"
+        gh = Replay(ref, now="2026-08-09T17:43:00Z")
+        gh.truncate(ref, "2026-08-09T17:43:00Z")
+        answering(gh, ref, *[lock_loss(gh, ref)] * 5)
+        final, _reason, _value = run(gh, ref, "2026-08-09T18:40:00Z")
+        self.assertEqual(posts(gh), [("@coderabbitai review", "2026-08-09T17:43:00Z")])
+        self.assertEqual(final, "blocked-lock-loss")
+        self.assertIn("blocked-lock-loss", ADAPTER.BLOCKED_STATES)
+
+    def test_lock_loss_retries_a_full_review_as_a_full_review(self) -> None:
+        # GocciaScript#1216 at 14:47:03 needs a full review. Synthetic: CodeRabbit stops it after
+        # lock loss, then completes the retry without a review or coverage marker.
+        ref = "GocciaScript#1216"
+        gh = Replay(ref, now="2026-08-26T14:47:03Z")
+        gh.truncate(ref, "2026-08-26T14:47:03Z")
+
+        def completes(posted: float) -> None:
+            gh.add_status(ref, "Review in progress", iso(posted + 5), state="pending")
+            gh.add_status(ref, "Review completed", iso(posted + 60))
+
+        answering(gh, ref, lock_loss(gh, ref), completes)
+        final, _reason, _value = run(gh, ref, "2026-08-26T15:30:00Z")
+        self.assertEqual(posts(gh), [
+            ("@coderabbitai full review", "2026-08-26T14:47:03Z"),
+            ("@coderabbitai full review", "2026-08-26T14:48:03Z"),
+        ])
+        self.assertEqual(final, "blocked-unconfirmed")
 
     def test_a_findings_review_of_the_head_completes_it(self) -> None:
         # duetto#55: CodeRabbit reviewed 4bccca05 with one actionable comment.
@@ -358,6 +417,49 @@ class AutomaticReviewTest(unittest.TestCase):
         self.assertEqual((ended["state"], ended["boundAt"]), ("awaiting-automatic", "2026-09-27T09:27:32Z"))
         self.assertEqual(state("GocciaScript#1265", "2026-09-27T09:26:34Z")["state"], "in-progress")
 
+    def test_an_unreadable_history_never_reads_as_no_earlier_review(self) -> None:
+        # GocciaScript#1265 at 09:24:36: CodeRabbit is still reviewing 6bddc38d. Synthetic: the
+        # summary's edit history cannot be read.
+        gh = Replay("GocciaScript#1265", now="2026-09-27T09:23:00Z")
+        gh.unreadable_histories.add(gh.summary("GocciaScript#1265")["id"])
+        answering(gh, "GocciaScript#1265")
+        with self.assertRaisesRegex(ADAPTER.WaitError, "edit history unavailable"):
+            run(gh, "GocciaScript#1265", "2026-09-27T09:30:00Z", interval=5)
+        self.assertEqual(gh.posts, [])
+
+    def test_a_refused_github_read_is_an_operational_error(self) -> None:
+        # Synthetic: GitHub answers 403 for the head's check suites or associated pull requests.
+        for source in ("check-suites", "pulls"):
+            with self.subTest(source=source):
+                gh = Replay("GocciaScript#1212", now="2026-08-22T23:56:40Z")
+                read = gh.rest_pages
+
+                def refusing(endpoint: str, read: Callable[[str], list[Any]] = read, source: str = source) -> list[Any]:
+                    if f"/{source}?" in endpoint:
+                        raise ADAPTER.WaitError(f"gh: Resource not accessible (HTTP 403) {endpoint}")
+                    return read(endpoint)
+
+                gh.rest_pages = refusing  # type: ignore[method-assign]
+                with self.assertRaisesRegex(ADAPTER.WaitError, "HTTP 403"):
+                    observe(gh, "GocciaScript#1212")
+
+    def test_another_pull_requests_running_review_does_not_hold_this_head(self) -> None:
+        # GocciaScript#1265 at 09:24:36 waits on its review of 6bddc38d. Synthetic: another open
+        # pull request with the same branch and head, whose summary never showed a review running.
+        gh = Replay("GocciaScript#1265", now="2026-09-27T09:24:36Z")
+        twin = copy.deepcopy(gh.case("GocciaScript#1265"))
+        twin["number"] = 99999
+        for item in twin["comments"]:
+            item["id"] += 10**12
+            item["versions"] = [[edited, body.replace(ADAPTER.REVIEWING_BLOCK, "")] for edited, body in item["versions"]]
+        gh.pulls[(twin["repo"], 99999)] = twin
+        gh.timelines[(twin["repo"], 99999)] = REPLAY.head_timeline(twin)
+        gh.refs["twin"] = (twin["repo"], 99999)
+        self.assertEqual(observe(gh, "GocciaScript#1265")["state"], "awaiting-automatic")
+        result = observe(gh, "twin")
+        self.assertEqual((result["sharedWith"], result["earlierReview"]), ([1265], None))
+        self.assertEqual(result["state"], "trigger-incremental")
+
     def test_a_second_pass_after_a_completed_status_is_awaited(self) -> None:
         # GocciaScript#1256: fd3eec03 completed at 11:07:39; CodeRabbit started again at 11:07:52.
         first = state("GocciaScript#1256", "2026-09-26T11:07:39Z")
@@ -396,7 +498,7 @@ class CycleTest(unittest.TestCase):
         gh = Replay("duetto#55", now="2026-09-25T22:34:30Z")
         recorded = next(
             item for item in gh.case("duetto#55")["comments"]
-            if item["versions"][0][1] == "[mentions] @coderabbitai full review"
+            if item["versions"][0][1].startswith("@coderabbitai full review\n")
         )
         gh.remove_comment("duetto#55", recorded["id"])
         self.assertEqual(observe(gh, "duetto#55")["state"], "clean-complete")
@@ -404,6 +506,77 @@ class CycleTest(unittest.TestCase):
         result = observe(gh, "duetto#55", posted=posted)
         self.assertEqual((result["state"], result["since"]), ("triggered", "2026-09-25T22:34:00Z"))
         self.assertEqual(result["triggers"][-1]["mode"], "full")
+
+
+    def test_a_trigger_after_a_pending_status_awaits_its_answer(self) -> None:
+        # GocciaScript#1172: in progress since 13:33:10. Synthetic: a review trigger at 14:33:30.
+        gh = Replay("GocciaScript#1172", now="2026-08-17T14:34:00Z")
+        gh.add_comment("GocciaScript#1172", "@coderabbitai review", "2026-08-17T14:33:30Z")
+        result = observe(gh, "GocciaScript#1172")
+        self.assertEqual((result["state"], result["since"], result["boundAt"]), (
+            "triggered", "2026-08-17T14:33:30Z", "2026-08-17T14:43:30Z"
+        ))
+
+    def test_a_findings_review_after_a_pending_status_completes_the_head(self) -> None:
+        # GocciaScript#1067: in progress since 23:09:39; the findings review of 19371184 came at
+        # 23:13:50, three seconds before CodeRabbit's completed status.
+        result = state("GocciaScript#1067", "2026-08-04T23:13:51Z")
+        self.assertEqual(result["status"]["description"], "Review in progress")
+        self.assertEqual((result["state"], result["findingsReview"]["actionable"]), ("review-complete", 2))
+        self.assertEqual(state("GocciaScript#1067", "2026-08-04T23:13:49Z")["state"], "in-progress")
+
+    def test_a_status_in_the_same_second_as_a_trigger_predates_it(self) -> None:
+        # GocciaScript#1162 was rate limited at 16:49:32. Synthetic: a trigger in that second.
+        gh = Replay("GocciaScript#1162", now="2026-08-15T16:50:00Z")
+        gh.add_comment("GocciaScript#1162", "@coderabbitai review", "2026-08-15T16:49:32Z")
+        result = observe(gh, "GocciaScript#1162")
+        self.assertEqual((result["state"], result["since"]), ("triggered", "2026-08-15T16:49:32Z"))
+
+    def test_a_ready_event_after_a_clean_pass_awaits_the_automatic_review(self) -> None:
+        # duetto#55: clean pass of 1ca17f50 at 19:47:10. Synthetic: marked ready at 19:49:00.
+        gh = Replay("duetto#55", now="2026-09-25T19:50:00Z")
+        self.assertEqual(observe(gh, "duetto#55")["state"], "clean-complete")
+        gh.add_event("duetto#55", "ready", "2026-09-25T19:49:00Z")
+        result = observe(gh, "duetto#55")
+        self.assertEqual((result["state"], result["boundAt"]), ("awaiting-automatic", "2026-09-25T19:51:00Z"))
+
+
+class TriggerCommentTest(unittest.TestCase):
+    """A line that is exactly a review command is a trigger, whatever else the comment says."""
+
+    def test_a_command_line_followed_by_an_explanation_is_a_trigger(self) -> None:
+        # duetto#55: clean pass of 1ca17f50 at 19:47:10; at 22:34:56 a comment requested a full
+        # review on its first line and explained why below. CodeRabbit started at 22:35:09.
+        gh = Replay("duetto#55", now="2026-09-25T22:34:56Z")
+        self.assertEqual(gh.comment("duetto#55", 5840595432)["versions"][0][1], "@coderabbitai full review\n\n[text]")
+        result = observe(gh, "duetto#55")
+        self.assertEqual(result["state"], "triggered")
+        self.assertEqual((result["since"], result["triggers"][-1]["mode"]), ("2026-09-25T22:34:56Z", "full"))
+        self.assertEqual(observed_at(gh, "duetto#55", "2026-09-25T22:35:09Z")["state"], "in-progress")
+        self.assertEqual(observed_at(gh, "duetto#55", "2026-09-25T22:40:53Z")["state"], "clean-complete")
+
+    def test_a_command_quoted_inside_a_sentence_is_not_a_trigger(self) -> None:
+        # duetto#65: a full review was requested at 17:08:58; the comment at 17:10:48 quotes
+        # `@coderabbitai review` inside a sentence.
+        result = state("duetto#65", "2026-09-26T17:10:50Z")
+        self.assertEqual([trigger["createdAt"] for trigger in result["triggers"]], [
+            "2026-09-26T16:38:17Z", "2026-09-26T17:08:58Z"
+        ])
+        self.assertEqual((result["state"], result["since"]), ("triggered", "2026-09-26T17:08:58Z"))
+
+    def test_a_command_line_in_a_coderabbit_comment_is_not_a_trigger(self) -> None:
+        # duetto#55: clean pass of 1ca17f50 at 19:47:10. Synthetic: CodeRabbit quotes a command
+        # on its own line at 19:48.
+        gh = Replay("duetto#55", now="2026-09-25T19:50:00Z")
+        gh.add_comment("duetto#55", "To review again, comment:\n@coderabbitai full review", "2026-09-25T19:48:00Z", login="coderabbitai[bot]")
+        result = observe(gh, "duetto#55")
+        self.assertEqual((result["state"], len(result["triggers"])), ("clean-complete", 1))
+
+    def test_the_mode_is_read_from_the_command_line(self) -> None:
+        self.assertEqual(ADAPTER.trigger_mode("@coderabbitai full review\n\nThe last pass missed a file."), "full")
+        self.assertEqual(ADAPTER.trigger_mode("Please look again.\n  @CodeRabbitAI   review  "), "incremental")
+        self.assertIsNone(ADAPTER.trigger_mode("CodeRabbit ignored `@coderabbitai review` twice."))
+        self.assertIsNone(ADAPTER.trigger_mode("@coderabbitai configuration"))
 
 
 class SharedHeadTest(unittest.TestCase):
@@ -431,10 +604,10 @@ class SharedHeadTest(unittest.TestCase):
         self.assertNotIn(observe(gh, "duetto#58")["state"], ADAPTER.COMPLETE_STATES)
 
     def test_the_latest_retry_among_the_shared_summaries_holds(self) -> None:
-        # Synthetic: a trigger on #34 at 06:14:50 refused at 06:15, with a 30-minute wait stated
+        # Synthetic: a trigger on #58 at 06:14:50 refused at 06:15, with a 30-minute wait stated
         # on #34 and a 5-minute one on #58.
         gh = self.shared()
-        gh.add_comment("duetto#34", "@coderabbitai review", "2026-09-26T06:14:50Z")
+        gh.add_comment("duetto#58", "@coderabbitai review", "2026-09-26T06:14:50Z")
         for ref, minutes in (("duetto#34", 30), ("duetto#58", 5)):
             notice = f"{ADAPTER.SUMMARY_MARKER}\n> **Next review available in:** **{minutes} minutes**"
             gh.add_version(ref, gh.summary(ref)["id"], notice, "2026-09-26T06:14:59Z")
@@ -444,6 +617,27 @@ class SharedHeadTest(unittest.TestCase):
         )
         result = observed_at(gh, "duetto#58", "2026-09-26T06:15:05Z")
         self.assertEqual((result["state"], result["retryAt"]), ("waiting", "2026-09-26T06:45:59Z"))
+
+    def test_another_pull_requests_events_and_triggers_do_not_start_this_heads_cycle(self) -> None:
+        # Synthetic: duetto#58 opened on #34's reviewed head at 06:13:20, with a trigger, and
+        # CodeRabbit skipped it there because its base branch has reviews disabled.
+        gh = Replay("duetto#58", "duetto#34", now="2026-09-26T06:14:00Z")
+        sha = gh.head("duetto#34")
+        commit = copy.deepcopy(gh.case("duetto#34")["heads"][sha])
+        commit["checkSuites"] = [{"created_at": "2026-09-26T06:13:20Z", "head_branch": gh.case("duetto#58")["ref"]}]
+        gh.case("duetto#58")["heads"][sha] = commit
+        gh.case("duetto#58")["createdAt"] = "2026-09-26T06:13:20Z"
+        gh.timelines = {key: REPLAY.head_timeline(pull) for key, pull in gh.pulls.items()}
+        gh.add_comment("duetto#58", "@coderabbitai full review", "2026-09-26T06:13:30Z")
+        gh.add_status("duetto#34", "Review skipped: reviews are disabled for this base branch", "2026-09-26T06:13:40Z")
+        # 06:15:21 is past the 120 s that #58's opening would otherwise have started.
+        for now in ("2026-09-26T06:14:00Z", "2026-09-26T06:15:21Z"):
+            with self.subTest(now=now):
+                result = observed_at(gh, "duetto#34", now)
+                self.assertEqual(result["sharedWith"], [58])
+                self.assertEqual(result["automaticReview"]["from"], "2026-09-26T06:04:27Z")
+                self.assertEqual([trigger["createdAt"] for trigger in result["triggers"]], ["2026-09-26T06:07:32Z"])
+                self.assertEqual((result["state"], result["findingsReview"]["actionable"]), ("review-complete", 2))
 
 
 class BoundTest(unittest.TestCase):
@@ -501,12 +695,24 @@ class StatedWaitTest(unittest.TestCase):
     def test_an_edit_after_the_status_does_not_correlate(self) -> None:
         self.assertEqual(self.moved("2026-08-15T16:49:33Z")["state"], "rate-limited-unknown-wait")
 
-    def test_an_unreadable_edit_history_leaves_the_wait_unknown(self) -> None:
+    def test_an_edit_older_than_sixty_seconds_does_not_correlate_after_a_later_edit(self) -> None:
+        # Synthetic: the notice edited in five minutes before the refusal, and edited away at 16:55.
         gh = Replay(self.REF, now="2026-08-15T17:00:00Z")
-        gh.unreadable_histories.add(gh.summary(self.REF)["id"])
+        summary = gh.summary(self.REF)["id"]
+        gh.move_version(self.REF, summary, self.EDITED, "2026-08-15T16:44:30Z")
+        notice = [body for edited, body in gh.comment(self.REF, summary)["versions"] if edited <= "2026-08-15T16:44:30Z"][-1]
+        gh.add_version(self.REF, summary, ADAPTER.STATED_WAIT.sub("", notice), "2026-08-15T16:55:00Z")
         result = observe(gh, self.REF)
-        self.assertEqual(result["state"], "rate-limited-unknown-wait")
-        self.assertIn("could not be read", result["reason"])
+        self.assertEqual((result["state"], result["rateLimit"]["wait"]), ("rate-limited-unknown-wait", None))
+
+    def test_an_unreadable_edit_history_is_an_operational_error_not_a_refusal(self) -> None:
+        gh = Replay(self.REF, now="2026-08-15T17:05:00Z")
+        gh.unreadable_histories.add(gh.summary(self.REF)["id"])
+        with self.assertRaisesRegex(ADAPTER.WaitError, "edit history unavailable"):
+            observe(gh, self.REF)
+        head = gh.head(self.REF)
+        code, output = main(gh, "status", "--repo", gh.refs[self.REF][0], "--pr", "1162", "--head", f"1162={head}", "--json")
+        self.assertEqual((code, output["state"]), (2, "operational-error"))
 
     def test_a_notice_gone_from_the_current_body_is_read_from_its_history(self) -> None:
         # GocciaScript#1067: the notice for bb43ced6's refusal was edited away by 23:47:23.
@@ -647,6 +853,26 @@ class RunTest(unittest.TestCase):
         self.assertEqual((final, gh.posts), ("blocked-unknown-wait", []))
         self.assertEqual(iso(gh.now), "2026-08-15T17:04:32Z")
 
+    def test_a_trigger_posted_as_the_deadline_passes_is_reported(self) -> None:
+        # GocciaScript#1162 at 17:47:29. Synthetic: the POST takes 2 s, past the deadline.
+        ref = "GocciaScript#1162"
+        gh = Replay(ref, now="2026-08-15T17:47:29Z")
+        gh.truncate(ref, "2026-08-15T17:47:29Z")
+
+        def post(_endpoint: str, fields: dict[str, str]) -> int:
+            identifier = gh.add_comment(ref, fields["body"], iso(gh.now))
+            gh.now += 2
+            return identifier
+
+        gh.now = at("2026-08-15T17:47:30Z")
+        gh.on_post = post
+        final, _reason, value = run(gh, ref, "2026-08-15T17:47:31Z", interval=1)
+        self.assertEqual(final, "triggered")
+        self.assertEqual([item["mode"] for item in value["triggers"]], ["incremental"])
+        self.assertEqual(value["pullRequests"][0]["state"], "triggered")
+        again, _reason, _value = run(gh, ref, "2026-08-15T17:57:31Z")
+        self.assertEqual((again, len(gh.posts)), ("blocked-unanswered", 1))
+
     def test_an_expired_deadline_never_posts(self) -> None:
         gh = Replay("GocciaScript#1162", now="2026-08-15T17:47:30Z")
         final, reason, _value = run(gh, "GocciaScript#1162", "2026-08-15T17:47:30Z")
@@ -661,6 +887,24 @@ class TriggerLockTest(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         self.addCleanup(self.directory.cleanup)
+
+    def test_the_lock_path_is_the_same_whatever_tmpdir_or_home_a_process_has(self) -> None:
+        program = (
+            "import importlib.util, sys; sys.dont_write_bytecode = True; "
+            f"spec = importlib.util.spec_from_file_location('adapter', {str(MODULE_PATH)!r}); "
+            "module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module); "
+            "print(module.lock_path('reviewer'))"
+        )
+        paths = set()
+        for variable in ("TMPDIR", "HOME"):
+            for value in ("/var/empty/one", "/var/empty/two"):
+                environment = dict(os.environ, **{variable: value})
+                completed = subprocess.run(
+                    [sys.executable, "-c", program], env=environment, capture_output=True, text=True, check=True
+                )
+                paths.add(completed.stdout.strip())
+        self.assertEqual(len(paths), 1)
+        self.assertTrue(paths.pop().startswith(pwd.getpwuid(os.getuid()).pw_dir + os.sep))
 
     def test_status_names_the_run_holding_the_lock(self) -> None:
         self.assertEqual(ADAPTER.lock_status("reviewer")["held"], False)
@@ -682,31 +926,18 @@ class TriggerLockTest(unittest.TestCase):
 
     def test_status_command_reports_the_holder_and_run_reports_lock_held(self) -> None:
         gh = Replay("duetto#55", now="2026-09-25T19:50:00Z")
-        read = gh.rest
-        gh.rest = lambda endpoint, *args: {"login": "reviewer"} if endpoint == "user" else read(endpoint, *args)
         head = gh.head("duetto#55")
         handle = ADAPTER.acquire_lock("reviewer", {"repo": "frostney/duetto", "pr": 58, "head": "abc"}, 0, 1)
         self.addCleanup(ADAPTER.release_lock, handle)
-
-        def main(*argv: str) -> dict[str, Any]:
-            output: list[str] = []
-            with mock.patch.object(ADAPTER, "Gh", lambda _metrics: gh), mock.patch.object(
-                ADAPTER.time, "time", lambda: gh.now
-            ), mock.patch.object(ADAPTER.sys, "argv", ["coderabbit_adapter.py", *argv]), mock.patch(
-                "builtins.print", output.append
-            ):
-                self.assertEqual(ADAPTER.main(), 0)
-            return json.loads(output[0])
-
-        status = main("status", "--repo", "frostney/duetto", "--pr", "55", "--head", f"55={head}", "--json")
-        self.assertEqual(status["state"], "satisfied")
+        code, status = main(gh, "status", "--repo", "frostney/duetto", "--pr", "55", "--head", f"55={head}", "--json")
+        self.assertEqual((code, status["state"]), (0, "satisfied"))
         self.assertEqual(status["observation"]["pullRequests"][0]["state"], "clean-complete")
         self.assertEqual(status["observation"]["lock"]["holder"]["pr"], 58)
-        blocked = main(
-            "run", "--repo", "frostney/duetto", "--pr", "55", "--head", head,
+        code, blocked = main(
+            gh, "run", "--repo", "frostney/duetto", "--pr", "55", "--head", head,
             "--deadline", "2000-01-01T00:00:00Z", "--interval", "1", "--json",
         )
-        self.assertEqual(blocked["state"], "lock-held")
+        self.assertEqual((code, blocked["state"]), (0, "lock-held"))
         self.assertEqual(blocked["observation"]["lock"]["holder"]["pr"], 58)
         self.assertEqual(gh.posts, [])
 
@@ -776,7 +1007,8 @@ class RecorderTest(unittest.TestCase):
             for item in pull["comments"]:
                 for _edited, body in item["versions"]:
                     if item["user"]["login"] == "maintainer":
-                        self.assertTrue(body.startswith(("@coderabbitai", "[mentions] @coderabbitai")), body)
+                        self.assertEqual(recorder.reduce_command(body), body)
+                        self.assertTrue(all(line in {"", "[text]"} or "@coderabbitai " in line for line in body.splitlines()), body)
                     else:
                         self.assertEqual(recorder.reduce_body(body), body)
             for review in pull["reviews"]:

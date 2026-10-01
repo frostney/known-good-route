@@ -13,7 +13,10 @@ For each pull request it keeps only what `coderabbit_adapter.py` reads:
 - every version of CodeRabbit's comments from their edit history, each
   reduced to the summary marker, coverage marker, stated-wait sentence and
   HTML block markers, with all other prose dropped;
-- other comments that address CodeRabbit, reduced to the command;
+- other comments that address CodeRabbit, line by line: a line that is only a
+  CodeRabbit command keeps it, a line that mentions one inside other text
+  keeps it between `[text]` placeholders, and every other line becomes
+  `[text]` or stays empty;
 - when the pull request was opened, marked ready or draft, closed, reopened
   and merged, and when each head was pushed (its check suites); and
 - each head's parents.
@@ -156,12 +159,22 @@ def reduce_body(body: str) -> str:
 
 
 def reduce_command(body: str) -> str | None:
-    """A non-CodeRabbit comment kept only as the CodeRabbit command it holds."""
-    text = (body or "").strip()
-    if text.lower() in ADAPTER.TRIGGERS.values():
-        return text
-    match = COMMAND.search(text)
-    return f"[mentions] {match.group(0).strip().lower()}" if match else None
+    """A non-CodeRabbit comment that mentions CodeRabbit, reduced line by line; None if none does."""
+    lines = (body or "").strip().splitlines()
+    if not any(COMMAND.search(line) for line in lines):
+        return None
+    kept = []
+    for line in lines:
+        text = " ".join(line.split())
+        match = COMMAND.search(text)
+        if not match:
+            kept.append("[text]" if text else "")
+            continue
+        command = " ".join(match.group(0).split()).lower()
+        before = "[text] " if text[: match.start()].strip() else ""
+        after = " [text]" if text[match.end():].strip() else ""
+        kept.append(f"{before}{command}{after}")
+    return "\n".join(kept)
 
 
 def is_bot(login: str) -> bool:

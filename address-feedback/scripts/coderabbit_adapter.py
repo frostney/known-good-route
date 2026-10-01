@@ -11,15 +11,19 @@ head commit, merged across the open pull requests whose head it is:
   commit, its first parent;
 - the summary comment version CodeRabbit edited in just before a rate-limit
   status, which carries the only stated retry time; and
-- when the head arrived, the pull request was opened, and it was last marked
-  ready, after which CodeRabbit starts its own review.
+- the requested pull request's trigger commands, and when the head arrived
+  on it, it was opened, and it was last marked ready, after which CodeRabbit
+  starts its own review.
 
 The latest review cycle wins: evidence, triggers and pending statuses from
-before the latest trigger or push, open or ready event are superseded. Every
-state that waits on CodeRabbit ends after a fixed bound: the wait for its own
-review becomes a trigger, and an unanswered trigger, a stalled review and an
-unexplained refusal each become a blocked state. Triggers are serialized by a
-machine-wide lock per GitHub login.
+before the latest trigger or the requested pull request's latest push, open
+or ready event are superseded, and among a pending status, a trigger and a
+findings review the newest decides. Every state that waits on CodeRabbit ends
+after a fixed bound: the wait for its own review becomes a trigger, and an
+unanswered trigger, a stalled review, an unexplained refusal and a second
+lock loss each become a blocked state. A GitHub read that fails is an
+operational error, never missing evidence. Triggers are serialized by a lock
+per user account and GitHub login.
 """
 
 from __future__ import annotations
@@ -28,9 +32,9 @@ import argparse
 import fcntl
 import json
 import os
+import pwd
 import re
 import sys
-import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -91,8 +95,6 @@ NO_ACTIONABLE = "No actionable comments were generated"
 # The summary carries this block while CodeRabbit reviews any head of the pull request.
 REVIEWING_BLOCK = "<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->"
 
-UNAVAILABLE_SOURCE = re.compile(r"\(HTTP 40[34]\)")
-
 # CodeRabbit edited the stated wait into its summary comment 0-53 s before it
 # posted the rate-limit status in 79 of 80 recorded refusals; 60 s bounds the
 # pairing.
@@ -149,6 +151,7 @@ HEAD_STATES = frozenset(
         "blocked-stalled",
         "blocked-unknown-wait",
         "blocked-unconfirmed",
+        "blocked-lock-loss",
         "unrecognized-status",
         "closed",
         "invalidated",
@@ -173,6 +176,7 @@ BLOCKED_STATES = frozenset(
         "blocked-stalled",
         "blocked-unknown-wait",
         "blocked-unconfirmed",
+        "blocked-lock-loss",
         "unrecognized-status",
         "closed",
     }
@@ -219,18 +223,6 @@ def rest_items(gh: Gh, endpoint: str) -> list[dict[str, Any]]:
             raise WaitError(f"paginated GitHub response for {endpoint} is invalid")
         items.extend(page)
     return items
-
-
-def optional_items(fetch: Callable[[], list[Any]]) -> list[Any]:
-    """Items from a source the repository may not expose; 403 and 404 yield none."""
-    try:
-        return fetch()
-    except (RateLimited, TransientError):
-        raise
-    except WaitError as error:
-        if UNAVAILABLE_SOURCE.search(str(error)):
-            return []
-        raise
 
 
 def stated_seconds(body: str) -> int | None:
@@ -301,33 +293,31 @@ def status_summary(status: dict[str, Any] | None) -> dict[str, Any] | None:
 # --- Stated waits ------------------------------------------------------------
 
 
-def comment_versions(
-    gh: Gh, item: dict[str, Any], since: float
-) -> tuple[list[tuple[float, str]], bool]:
+def comment_versions(gh: Gh, item: dict[str, Any], since: float) -> list[tuple[float, str]]:
     """Every body the comment showed from `since` on, each with when it was set.
 
     An unedited comment has one version, its creation. An edited one has its
     edit history, newest first, where each entry is the full body from its
-    `editedAt`. Returns the versions and whether the history was read back to
-    `since`.
+    `editedAt`. A history that cannot be read back to `since` is an
+    operational error: the missing versions may hold a stated wait or the
+    reviewing block.
     """
     body = str(item.get("body") or "")
     created = parse_timestamp(item.get("created_at"), "comment created_at")
     updated = parse_timestamp(item.get("updated_at"), "comment updated_at")
     if updated <= created:
-        return [(created, body)], True
+        return [(created, body)]
     versions: list[tuple[float, str]] = [(updated, body)]
+    unreadable = (
+        f"the edit history of CodeRabbit comment {item.get('id')} could not be read back to "
+        f"{format_timestamp(since)}"
+    )
     node_id = item.get("node_id")
     if not isinstance(node_id, str) or not node_id:
-        return versions, False
+        raise WaitError(f"{unreadable}: it has no node id")
     cursor: str | None = None
     for _page in range(EDIT_HISTORY_PAGES):
-        try:
-            data = gh.graphql(COMMENT_EDITS_QUERY, {"id": node_id, "cursor": cursor})
-        except (RateLimited, TransientError):
-            raise
-        except WaitError:
-            return versions, False
+        data = gh.graphql(COMMENT_EDITS_QUERY, {"id": node_id, "cursor": cursor})
         edits = ((data or {}).get("node") or {}).get("userContentEdits") or {}
         times: list[float] = []
         for node in edits.get("nodes") or []:
@@ -340,9 +330,9 @@ def comment_versions(
         page = edits.get("pageInfo") or {}
         descending = times == sorted(times, reverse=True)
         if not page.get("hasNextPage") or (times and descending and times[-1] < since):
-            return versions, True
+            return versions
         cursor = page.get("endCursor")
-    return versions, False
+    raise WaitError(f"{unreadable} within {EDIT_HISTORY_PAGES} pages")
 
 
 def is_summary(item: dict[str, Any]) -> bool:
@@ -365,13 +355,7 @@ def correlated_wait(
             continue
         if parse_timestamp(item.get("updated_at"), "comment updated_at") < start:
             continue
-        versions, read = comment_versions(gh, item, start)
-        if not read:
-            return None, (
-                f"the edit history of summary comment {item.get('id')} could not be read "
-                f"back to {format_timestamp(start)}"
-            )
-        for at, body in versions:
+        for at, body in comment_versions(gh, item, start):
             seconds = stated_seconds(body)
             if seconds is None or not start <= at <= status_at:
                 continue
@@ -459,9 +443,7 @@ def head_arrival(
     the push; without that, the commit time, which precedes it.
     """
     head_ref = (pull.get("head") or {}).get("ref")
-    pages = optional_items(
-        lambda: gh.rest_pages(f"repos/{repo}/commits/{head}/check-suites?per_page=100")
-    )
+    pages = gh.rest_pages(f"repos/{repo}/commits/{head}/check-suites?per_page=100")
     created = [
         parse_timestamp(suite.get("created_at"), "check suite created_at")
         for page in pages
@@ -504,14 +486,12 @@ def earlier_review(gh: Gh, bot_comments: list[dict[str, Any]], start: float) -> 
 
     CodeRabbit reviews one head of a pull request at a time and starts its own
     review of a newer head only after the running one ends. While it reviews,
-    its summary carries the reviewing block.
+    its summary on that pull request carries the reviewing block.
     """
     for item in bot_comments:
         if not is_summary(item):
             continue
-        versions, read = comment_versions(gh, item, start)
-        if not read:
-            continue
+        versions = comment_versions(gh, item, start)
         ordered = sorted(versions, key=lambda version: version[0])
         shown = [(at, REVIEWING_BLOCK in body) for at, body in ordered if at <= start][-1:]
         shown += [(at, REVIEWING_BLOCK in body) for at, body in ordered if at > start]
@@ -523,12 +503,22 @@ def earlier_review(gh: Gh, bot_comments: list[dict[str, Any]], start: float) -> 
     return None
 
 
+def trigger_mode(body: str) -> str | None:
+    """The review a comment requests: a line that is exactly a trigger command, a full one first.
+
+    The command may come with other lines of explanation; a command quoted
+    inside a sentence requests nothing.
+    """
+    modes = {command: mode for mode, command in TRIGGERS.items()}
+    requested = {modes.get(" ".join(line.split()).lower()) for line in body.splitlines()}
+    return next((mode for mode in ("full", "incremental") if mode in requested), None)
+
+
 def head_triggers(comments: list[dict[str, Any]], arrival: float) -> list[dict[str, Any]]:
     """Trigger commands posted on the PR since the head arrived, oldest first."""
-    modes = {body: mode for mode, body in TRIGGERS.items()}
     found = []
     for item in comments:
-        mode = modes.get(str(item.get("body") or "").strip().lower())
+        mode = trigger_mode(str(item.get("body") or ""))
         if mode is None or is_bot(item):
             continue
         created = parse_timestamp(item.get("created_at"), "trigger created_at")
@@ -544,7 +534,7 @@ def head_triggers(comments: list[dict[str, Any]], arrival: float) -> list[dict[s
 
 def sharing_pulls(gh: Gh, repo: str, pr: int, head: str) -> list[int]:
     """The other open pull requests whose head is `head`."""
-    pulls = optional_items(lambda: rest_items(gh, f"repos/{repo}/commits/{head}/pulls?per_page=100"))
+    pulls = rest_items(gh, f"repos/{repo}/commits/{head}/pulls?per_page=100")
     return sorted(
         {
             item["number"]
@@ -570,30 +560,24 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
     newest = statuses[-1] if statuses else None
     commit = gh.rest(f"repos/{repo}/commits/{head}")
     parents = [str(item.get("sha")) for item in (commit or {}).get("parents") or []]
-    # A head several open pull requests share gets the evidence of all of them.
+    # Open pull requests sharing the head add their reviews, coverage markers and stated
+    # waits. Triggers and the events that start CodeRabbit's own review are the
+    # requested pull request's alone.
     numbers = [pr, *sharing_pulls(gh, repo, pr, head)]
+    own = rest_items(gh, f"repos/{repo}/issues/{pr}/comments?per_page=100")
     comments: list[dict[str, Any]] = []
     reviews: list[dict[str, Any]] = []
-    triggers: list[dict[str, Any]] = []
-    starts: list[tuple[float, str]] = []
-    arrival: tuple[float, str] | None = None
     for number in numbers:
-        shared = pull if number == pr else gh.rest(f"repos/{repo}/pulls/{number}")
-        own = rest_items(gh, f"repos/{repo}/issues/{number}/comments?per_page=100")
-        comments += own
+        comments += own if number == pr else rest_items(gh, f"repos/{repo}/issues/{number}/comments?per_page=100")
         reviews += rest_items(gh, f"repos/{repo}/pulls/{number}/reviews?per_page=100")
-        arrived = head_arrival(gh, repo, shared, head, statuses)
-        arrival = arrival or arrived
-        triggers += head_triggers(own, arrived[0])
-        starts.append(
-            automatic_review_start(gh, repo, number, shared, (arrived[0], f"head-{arrived[1]}"))
-        )
-    assert arrival is not None
-    automatic, automatic_source = max(starts, key=lambda event: event[0])
+    arrival = head_arrival(gh, repo, pull, head, statuses)
+    automatic, automatic_source = automatic_review_start(
+        gh, repo, pr, pull, (arrival[0], f"head-{arrival[1]}")
+    )
     bot_comments = [item for item in comments if is_bot(item)]
     earlier = None
     if status_kind(newest) == "none" or parse_timestamp(newest["created_at"], "status created_at") < automatic:
-        earlier = earlier_review(gh, bot_comments, automatic)
+        earlier = earlier_review(gh, [item for item in own if is_bot(item)], automatic)
     rate_limit = None
     if status_kind(newest) == "rate-limited":
         at = parse_timestamp(newest["created_at"], "status created_at")
@@ -615,7 +599,12 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
         "status": status_summary(newest),
         "findingsReview": findings_review(reviews, head),
         "cleanReview": clean_review(bot_comments, covered),
-        "triggers": sorted(triggers, key=lambda trigger: (trigger["at"], int(trigger["id"] or 0))),
+        "triggers": sorted(
+            head_triggers(own, arrival[0]), key=lambda trigger: (trigger["at"], int(trigger["id"] or 0))
+        ),
+        "statusHistory": [
+            {"createdAt": status["created_at"], "kind": status_kind(status)} for status in statuses
+        ],
         "rateLimit": rate_limit,
     }
 
@@ -700,7 +689,17 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
     # A newer push, open or ready event starts a new cycle: older triggers no longer
     # await an answer, and a pending status's bound counts from the new cycle.
     triggers = [trigger for trigger in evidence["triggers"] if trigger["at"] >= start]
-    if kind == "in-progress":
+    latest = triggers[-1] if triggers else None
+    # A trigger or an automatic start begins a new review; evidence from before it is superseded.
+    begun = max(start, latest["at"]) if latest else start
+    # No answer comes within a second of its trigger, so a status in that second predates it.
+    trigger_newer = latest is not None and (status_at is None or latest["at"] >= status_at)
+    review = evidence["findingsReview"]
+    reviewed_at = parse_timestamp(review["submittedAt"], "review submitted_at") if review else None
+    # Among a pending status, a trigger and a findings review, the newest decides.
+    if reviewed_at is not None and reviewed_at > begun and (kind != "in-progress" or reviewed_at > status_at):
+        return result("review-complete", "a CodeRabbit review of exactly this head states findings")
+    if kind == "in-progress" and not trigger_newer:
         return bounded(
             "in-progress",
             "blocked-stalled",
@@ -708,13 +707,6 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
             IN_PROGRESS_SECONDS,
             f"CodeRabbit has reported {status['description']!r} on the head since {status['createdAt']}",
         )
-
-    latest = triggers[-1] if triggers else None
-    # A trigger or an automatic start begins a new review; evidence from before it is superseded.
-    begun = max(start, latest["at"]) if latest else start
-    review = evidence["findingsReview"]
-    if review and parse_timestamp(review["submittedAt"], "review submitted_at") > begun:
-        return result("review-complete", "a CodeRabbit review of exactly this head states findings")
     # CodeRabbit keeps the marker while it reviews again; the completed status dates the pass.
     if evidence["cleanReview"] and kind == "completed" and status_at > begun:
         return result(
@@ -725,8 +717,7 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
     unreviewed = kind in {"none", "draft-skip"}
     if unreviewed and evidence["draft"]:
         return result("draft", "CodeRabbit does not review a draft pull request")
-    # No answer comes within a second of its trigger, so a status in that second predates it.
-    if latest is not None and (status_at is None or latest["at"] >= status_at):
+    if trigger_newer:
         return bounded(
             "triggered",
             "blocked-unanswered",
@@ -748,8 +739,25 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
             until = start + AUTOMATIC_REVIEW_SECONDS
         if now < until:
             return awaiting(since, until, after)
-    if unreviewed or kind == "lock-loss":
+    if unreviewed:
         return gate("incremental")
+    if kind == "lock-loss":
+        history = [
+            (parse_timestamp(item["createdAt"], "status createdAt"), item["kind"])
+            for item in evidence["statusHistory"]
+        ]
+        losses = [when for when, seen in history if seen == "lock-loss" and when >= start]
+        if len(losses) > 1:
+            return result(
+                "blocked-lock-loss",
+                f"CodeRabbit stopped its review of the head after lock loss {len(losses)} times "
+                f"since {automatic['source']} at {automatic['from']}",
+            )
+        # Retry the interrupted review once: the latest trigger's mode when nothing else answered it.
+        answered = latest is not None and any(
+            latest["at"] < when < status_at and seen != "in-progress" for when, seen in history
+        )
+        return gate(latest["mode"] if latest and not answered else "incremental")
     if kind == "skipped":
         return result("skipped", f"CodeRabbit skipped the head: {status['description']}")
     if kind == "paused":
@@ -847,11 +855,21 @@ def aggregate_status(value: dict[str, Any]) -> tuple[str, str]:
 
 
 def lock_directory() -> Path:
-    return Path(tempfile.gettempdir()) / "known-good-route-coderabbit"
+    """The user account's home directory from the password database, whatever TMPDIR or HOME says."""
+    return Path(pwd.getpwuid(os.getuid()).pw_dir) / ".cache" / "known-good-route" / "coderabbit"
 
 
 def lock_path(login: str) -> Path:
     return lock_directory() / f"account-{stable_digest(login)[:16]}.lock"
+
+
+def open_lock(login: str) -> tuple[Path, TextIO]:
+    path = lock_path(login)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path, path.open("a+")
+    except OSError as error:
+        raise WaitError(f"the trigger lock {path} cannot be opened: {error}") from error
 
 
 def read_holder(handle: TextIO) -> dict[str, Any] | None:
@@ -868,9 +886,8 @@ def read_holder(handle: TextIO) -> dict[str, Any] | None:
 
 def lock_status(login: str) -> dict[str, Any]:
     """Whether a `run` holds the trigger lock, and which PR and head it serves."""
-    path = lock_path(login)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a+") as handle:
+    path, handle = open_lock(login)
+    with handle:
         try:
             fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
@@ -888,9 +905,7 @@ def acquire_lock(
     clock: Callable[[], float] = time.time,
     sleeper: Callable[[float], None] = time.sleep,
 ) -> TextIO | None:
-    path = lock_path(login)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    handle = path.open("a+")
+    _path, handle = open_lock(login)
     while True:
         try:
             fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -944,7 +959,7 @@ def run_review(
     last: dict[str, Any] = {}
     while True:
         try:
-            last = observation(gh, repo, [pr], {pr: head}, clock(), posted)
+            evidence = pull_evidence(ObservationCache(gh), repo, pr)  # type: ignore[arg-type]
         except (RateLimited, TransientError):
             gh.metrics.retries += 1
             if clock() >= deadline:
@@ -952,14 +967,9 @@ def run_review(
                 return "pending", "GitHub transport remained unavailable until the deadline", last
             sleeper(min(interval, max(0.0, deadline - clock())))
             continue
-        last["triggers"] = public_posted(posted)
-        item = last["pullRequests"][0]
-        state, reason = item["state"], item["reason"]
-        if state in FINAL_STATES:
-            return state, reason, last
-        if state.startswith("trigger-"):
-            if clock() >= deadline:
-                return state, "deadline reached before the permitted trigger", last
+        item = decide(with_posted(evidence, posted), head, clock())
+        permitted = item["state"].startswith("trigger-")
+        if permitted and clock() < deadline:
             mode = item["nextMode"]
             created = gh.rest(f"repos/{repo}/issues/{pr}/comments", "POST", {"body": TRIGGERS[mode]})
             posted.append(
@@ -971,6 +981,14 @@ def run_review(
                     "at": clock(),
                 }
             )
+            # The same evidence with the posted trigger, so a run ending here reports it.
+            item, permitted = decide(with_posted(evidence, posted), head, clock()), False
+        last = {"pullRequests": [public(with_posted(evidence, posted)) | item], "triggers": public_posted(posted)}
+        state, reason = item["state"], item["reason"]
+        if state in FINAL_STATES:
+            return state, reason, last
+        if permitted:
+            return state, "deadline reached before the permitted trigger", last
         if clock() >= deadline:
             return state, f"deadline reached; {reason}", last
         # Wake when the state can next change: a stated wait ends or a bound passes.
