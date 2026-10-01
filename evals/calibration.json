@@ -2515,6 +2515,66 @@
       "beforeSha256": null,
       "afterSha256": "60953bbb0fdd8f92940b9e0f5d438eb679a641cf93a78447a37834dfb25fce71",
       "frozenCaseSha256": "60953bbb0fdd8f92940b9e0f5d438eb679a641cf93a78447a37834dfb25fce71"
+    },
+    {
+      "caseId": "deep-dive-wrong-lock-holder",
+      "status": "new",
+      "rationale": [
+        "Reconstructed with invented data: a process for the waiting PR looks like the flock holder; the lock file's epoch and a non-blocking flock probe identify the earlier PR, which waits on a CI job with no online runner. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "a8d0fd5a5cb716bce0dc886d690190ba1e5e1db2199c3ac2b90b7614e55dd5f0",
+      "frozenCaseSha256": "a8d0fd5a5cb716bce0dc886d690190ba1e5e1db2199c3ac2b90b7614e55dd5f0"
+    },
+    {
+      "caseId": "deep-dive-wrong-lock-holder-review",
+      "status": "new",
+      "rationale": [
+        "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, returns a verdict, and neither changes anything nor starts another reviewer."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "960edc05c0b57c65dd77f3a0abfed2856fdc77d3d265ebc2cec027c4a20528d5",
+      "frozenCaseSha256": "960edc05c0b57c65dd77f3a0abfed2856fdc77d3d265ebc2cec027c4a20528d5"
+    },
+    {
+      "caseId": "deep-dive-unloaded-instruction-blamed",
+      "status": "new",
+      "rationale": [
+        "Reconstructed with invented data: a weakly worded reply-length skill looks responsible, but the session record shows it never loaded while always-loaded AGENTS.md demands long replies. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "d2712b7ddb33b035ed17cf28787dd665d8dfa7395642a392ee52b4706789e76d",
+      "frozenCaseSha256": "d2712b7ddb33b035ed17cf28787dd665d8dfa7395642a392ee52b4706789e76d"
+    },
+    {
+      "caseId": "deep-dive-unloaded-instruction-blamed-review",
+      "status": "new",
+      "rationale": [
+        "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, returns a verdict, and neither changes anything nor starts another reviewer."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "ebd70c36182d4543655aec6e5049a4aef32e551e040cf01eeac385aba225c7c7",
+      "frozenCaseSha256": "ebd70c36182d4543655aec6e5049a4aef32e551e040cf01eeac385aba225c7c7"
+    },
+    {
+      "caseId": "deep-dive-private-data-leak",
+      "status": "new",
+      "rationale": [
+        "Reconstructed with invented data: a missed anonymization step looks responsible for private fixtures in a public repository; the session record shows it never ran, the brief never established either repository's visibility, and no check ran at publication. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "d712c24da4c5f2c7a9a032bbbf52160e4557397eb2e583576e1e1fe15dc2d439",
+      "frozenCaseSha256": "d712c24da4c5f2c7a9a032bbbf52160e4557397eb2e583576e1e1fe15dc2d439"
+    },
+    {
+      "caseId": "deep-dive-private-data-leak-review",
+      "status": "new",
+      "rationale": [
+        "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, returns a verdict, and neither changes anything nor starts another reviewer."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "bfb22cbce94f19e0e0a009904e8bbcc17b719d044422dd91cbac5cf682626390",
+      "frozenCaseSha256": "bfb22cbce94f19e0e0a009904e8bbcc17b719d044422dd91cbac5cf682626390"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

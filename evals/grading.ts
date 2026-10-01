@@ -222,12 +222,15 @@ export function gradeRun(
             !worker.ledger.workers?.length &&
             worker.grade.passed &&
             worker.grade.checks.every((check) => check.passed) &&
-            !!worker.responseModels?.length &&
-            worker.responseModels.every(
+            // Codex output carries no response model, so its identity stays
+            // configured-only; any identity it does report must still match.
+            (evalCase.worker.model.startsWith("codex:") ||
+              !!worker.responseModels?.length) &&
+            (worker.responseModels ?? []).every(
               (model) => model === evalCase.worker!.model.split(":")[1],
             ),
         ),
-      detail: `observed workers=${workers.length}; require the configured task/mode, actual response identity, completed output and consistently passing worker checks; transcript binding is verified separately`,
+      detail: `observed workers=${workers.length}; require the configured task/mode, actual response identity (configured-only for a Codex worker), completed output and consistently passing worker checks; transcript binding is verified separately`,
     });
   }
 
