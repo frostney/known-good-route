@@ -105,10 +105,12 @@ interface or artifact for claimed behavior. Qualitative acceptance requires
 judgment against the user's reference or criteria; test counts, performance
 metrics and a worker's success report do not establish the whole outcome.
 
-Use focused checks while editing. The skill that owns a code change finishes it
-only when an independent review of its final diff, such as `/code-review`, and
-the project gate pass on the final content. The caller owns the final
-aggregate gate; subskills contribute applicable evidence without rerunning it.
+Use focused checks while editing. The skill that owns a code change, such as
+`/implement` or a convention skill's repair, finishes it only when an
+independent review of its final diff, such as `/code-review`, and the project
+gate pass on the final content. `/code-review` and `/test-against-spec` leave
+both to their caller. The caller owns the final aggregate gate; subskills
+contribute applicable evidence without rerunning it.
 Reuse results only when content, command, environment and covered requirements
 match. Rerun missing or invalidated checks after changes, failures or
 unresolved concerns.
