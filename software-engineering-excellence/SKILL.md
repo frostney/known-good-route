@@ -91,7 +91,7 @@ a block quote, and explain the missing decision or permission. Risky or
 irreversible actions keep their confirmation gates.
 
 Assessment-only work can finish with findings; it does not authorize remediation.
-Delivery-chain skills continue under
+A change continues under
 [deliver's delivery settings](../deliver/SKILL.md#delivery-settings).
 Stop adding work once the agreed acceptance criteria hold. When work spans
 turns, compaction, external waits or workers, keep the record in

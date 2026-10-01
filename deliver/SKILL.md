@@ -59,11 +59,14 @@ explicit instruction in the request narrows one run, for example to an earlier
 endpoint, read-only or one step; only an explicit request goes past the
 configured endpoint.
 
-With `entry-points: deliver`, `/implement`, `/code-review`, `/test-against-spec`,
-`/create-pr`, `/update-pr` and `/address-feedback` started directly continue
-through `/deliver` from their own stage to the endpoint, instead of stopping
-after their own step. With `stop`, each returns after its own step. A skill that
-`/deliver` or another workflow invoked returns to its caller.
+With `entry-points: deliver`, a skill started directly that develops, reviews,
+tests or publishes a change continues through `/deliver` from its own stage to
+the endpoint, instead of stopping after its own step. These are `/implement`,
+`/code-review`, `/test-against-spec`, `/create-pr`, `/update-pr`,
+`/address-feedback`, and any other skill whose job edits the repository. Other
+entry points, such as an audit or a status report, finish their own job. With
+`stop`, each returns after its own step. A skill that `/deliver` or another
+workflow invoked returns to its caller.
 
 ## Coordinate the existing workflows
 

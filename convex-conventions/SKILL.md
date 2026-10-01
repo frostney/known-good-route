@@ -84,7 +84,9 @@ skill; memory and prior turns do not establish current API behavior.
 
 - Codegen and typecheck pass.
 - Relevant function tests, an independent review of the diff, such as
-  `/code-review`, and the project gate pass on the final content.
+  `/code-review`, and the project gate pass on the final content. Started
+  directly, the change then continues under the
+  [delivery settings](../deliver/SKILL.md#delivery-settings).
 - Any schema migration ran against the development deployment and its result is
   recorded.
 - No public function lacks auth, `args`, or `returns`; no public mutation lacks

@@ -85,9 +85,10 @@ Optional improvements do not expand the task. Current evidence is reused;
 changes invalidate only the checks they affect.
 
 With `entry-points: deliver`, `/implement`, `/code-review`, `/test-against-spec`,
-`/create-pr`, `/update-pr` and `/address-feedback` continue through `/deliver`
-from their own stage to the endpoint; with `stop`, each ends after its own
-step. Other skills, such as `/create-issue`, finish their own job.
+`/create-pr`, `/update-pr`, `/address-feedback` and any other skill whose job
+edits the repository continue through `/deliver` from their own stage to the
+endpoint; with `stop`, each ends after its own step. Other skills, such as
+`/create-issue` or `/codebase-audit`, finish their own job.
 
 `milestone-rush` coordinates multiple `/deliver` work items and triggers
 `create-release` for the milestone. Integration delivery and release are distinct:
