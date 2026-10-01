@@ -57,16 +57,55 @@ new repository or operation needs its own scope.
 - Never amend commits. Add a new commit for every correction.
 - Never force-push. Stop if a plain push is rejected by divergent history.
 - Stage only relevant files and exclude secrets or unrelated local work.
-- Before each commit to a GitHub repository, write the message to a file, run
-  `python3 scripts/publication_guard.py staged --message-file FILE`, commit with
-  `git commit -F FILE`, and report what it rewrote.
-- Before each push, run `python3 scripts/publication_guard.py outgoing --base
-  REMOTE/DEFAULT` and commit anything it stages. If the guard exits 2, fix the
-  error it prints and rerun it before publishing. Report each earlier commit it
-  names: the push publishes those commits as they are.
+- Run the [publication guard](#publication-guard) before each commit, push
+  and pull request write to a GitHub repository.
 - Use concise Conventional Commit subjects in imperative mood. Each commit title
   must state its observable impact, not only the mechanism changed.
 - Let hooks run unless the user explicitly asks otherwise.
+
+## Publication guard
+
+Run [scripts/publication_guard.py](scripts/publication_guard.py) from this
+installed skill with Python 3.11 or newer, using its actual installed path, for
+example `python3 /path/to/git-workflow/scripts/publication_guard.py`. It needs
+`gh` signed in to GitHub. When the repository receiving the content is public,
+it rewrites private GitHub references and local machine paths out of it.
+
+- Before each commit, write the message to a file, run `staged --message-file
+  FILE`, and commit with `git commit -F FILE`.
+- Before each push, including `gh stack push`, `gh stack submit` and
+  `gh stack link`, run `outgoing --base BASE`. BASE is `REMOTE/DEFAULT`, or for
+  a stack layer the branch beneath it. Add `--remote NAME` when the push goes
+  to a remote other than the branch's push remote. Commit what it stages
+  through the commit step above, then push.
+- Before each pull request title or body write, write the title and body to
+  files and run `pr --repo OWNER/REPO --title-file FILE --body-file FILE`, where
+  `OWNER/REPO` is the repository the pull request is opened in. Then create or
+  edit the pull request from those files. This covers `gh pr create`,
+  `gh pr edit`, `gh api .../pulls --input FILE` (build its JSON from the
+  checked files), and the titles and bodies that `gh stack submit` and
+  `gh stack link` create, which you reconcile with `gh pr edit` afterwards.
+
+Act on its result:
+
+- Exit 0 with `is not public; nothing checked` or `nothing to rewrite`:
+  continue.
+- Exit 0 with `rewrote ...` lines: the staged files and the files you passed
+  now hold the rewritten text, and unstaged edits to those files get the same
+  rewrite. Continue, and report each `rewrote` and `placeholder` line.
+- `warning: commit ... pushing publishes that commit unchanged`: history is
+  never rewritten. Report the named commits and files to the user with the
+  push.
+- `warning: PATH was not checked`: the guard could not read that file as text.
+  Check it yourself for private repository names and local paths before
+  publishing, and report it.
+- `warning:` about `.github/publication-guard.json` or a keep pattern: report
+  it; the guard used its default keep list for what it could not read.
+- Exit 2: Git or GitHub could not answer a question the guard depends on, or
+  an argument was wrong, and nothing was changed. Fix the cause the error names
+  and rerun. Never publish without a run that exits 0.
+- Any other exit: the guard failed. Stop, do not publish, and report its
+  output.
 
 ## Merge
 

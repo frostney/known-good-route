@@ -113,9 +113,9 @@ readiness. Recording a walkthrough does not replace behavior testing.
 7. Commit uncommitted relevant work under `git-workflow`: stage only relevant
    files, excluding secrets and unrelated local work, and use a concise
    Conventional Commit subject. Never amend and never skip hooks. Preserve
-   already-published history and add a new commit for any correction. Run
-   `git-workflow`'s `scripts/publication_guard.py staged --message-file FILE`
-   before each commit and commit with `git commit -F FILE`.
+   already-published history and add a new commit for any correction. Run the
+   [publication guard](../git-workflow/SKILL.md#publication-guard) at each
+   commit, push and PR write.
 8. Title each pull request with a Conventional Commit subject covering the whole
    change; `git-workflow`'s squash merge makes that title the base-branch commit
    subject. Follow
@@ -128,10 +128,6 @@ readiness. Recording a walkthrough does not replace behavior testing.
 9. After the publication checks pass, or under the preview-only draft rule
    above, push an ordinary branch normally and set its upstream when needed,
    then open one draft PR against the remote default or the named base.
-   Before pushing, run the guard's `outgoing --base REMOTE/DEFAULT` and commit
-   what it stages; before `gh pr create`, write the title and body to files, run
-   its `pr --title-file FILE --body-file FILE`, and create the PR from those
-   files.
    For a verified native stack, follow the stack reference: a new top layer
    above frozen approved PRs uses protected push, separate PR creation and
    native append; a new stack on a frozen lower PR uses protected
@@ -142,8 +138,7 @@ readiness. Recording a walkthrough does not replace behavior testing.
 10. Run the PR-specific phase. Compare the actual PR diff, body, links, metadata,
     committed tests and documentation, supplied completion evidence, and facts
     that exist only after publication. Correct metadata-only gaps without a
-    commit, running the guard's `pr` operation on the new title and body before
-    each `gh pr edit`.
+    commit.
 11. If the PR-specific phase or CI exposes an in-scope repository, behavior,
     fidelity, test, documentation or compatibility gap, repair it through the
     development loop. Revalidate affected requirements, then use `/update-pr`
