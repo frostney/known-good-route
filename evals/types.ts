@@ -83,6 +83,11 @@ export interface EvalExpectations {
   }>;
 
   requiredWorker?: boolean;
+  // A reviewer must write its verdict through writeVerdict; the parent's final
+  // response must cite that verdict file, so a review claim is bound to a run
+  // that actually happened.
+  requiredVerdictFile?: boolean;
+  citedReviewVerdict?: boolean;
   requiredSkills?: string[];
   requiredAnySkills?: string[];
   forbiddenSkills?: string[];
@@ -113,6 +118,12 @@ export interface EvalExpectations {
 
 export interface EvalCase {
   execution?: "cache-cli" | "authorization-cli";
+  // Project AGENTS.md content loaded into the agent's instructions, as a
+  // consuming repository would load it.
+  agentsMd?: string;
+  // Yes/no criteria fixed before any run, for a judge from the other model
+  // family. The harness does not grade them yet.
+  rubric?: string[];
   models?: string[];
   worker?: { model: string; caseId: string; mode?: "claude-agent" };
   id: string;
@@ -150,12 +161,14 @@ export interface RunLedger {
     version: string;
     context: string;
     transcript: string;
+    verdictFile?: string;
     ledger: RunLedger;
     grade: GradeResult;
     output: string;
     error?: string;
   }>;
 
+  verdict?: { path: string; verdict: "agree" | "disagree"; evidence: string };
   actions: ActionRecord[];
   loadedSkills: string[];
   loadedReferences: string[];
