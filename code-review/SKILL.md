@@ -8,6 +8,9 @@ license: Unlicense OR MIT
 compatibility: >-
   Requires git, the project's declared build and test tools, and network access
   when pull-request context or current third-party documentation is relevant.
+metadata:
+  agents-role: entry-point
+  agents-text: Review a PR, branch, or worktree for evidence-backed findings.
 ---
 
 # Code review

@@ -103,6 +103,7 @@ confirmation of the main operation does not establish its requested side effects
 | [`update-pr`](update-pr/SKILL.md) | Commits relevant changes, merges the remote default when needed, pushes the current pull-request branch, and refreshes stale PR metadata. Use when asked to update or push changes to an existing pull request, or when the user runs /update-pr. |
 | [`address-feedback`](address-feedback/SKILL.md) | Resolves review feedback on one pull request or native GitHub stack. Use when asked to address, fix, or respond to review comments on a PR or stack, or when the user runs /address-feedback. |
 | [`delivery-wait`](delivery-wait/SKILL.md) | Provides deterministic, resumable GitHub transition waits used internally by delivery workflows. Use when another workflow must await CI, merge, tag, or release state without model heartbeats. |
+| [`deep-dive`](deep-dive/SKILL.md) | Establishes the actual cause of something observed from what really ran or loaded, tries to break every candidate explanation, and has the result reviewed in a fresh context before reporting it. Use before claiming a cause or proposing a fix, when asked why something happened, or when the user runs /deep-dive. |
 | [`code-review`](code-review/SKILL.md) | Reviews a PR, branch, or worktree for evidence-backed findings, with scoped revalidation and explicitly requested fixes. Use when asked to review code changes, a diff, a branch, or a PR, or to recheck earlier review findings. |
 | [`test-against-spec`](test-against-spec/SKILL.md) | Tests observable behavior against explicit requirements through the real interface. Use when asked to test or verify that a change meets its specification or acceptance criteria, when the user runs /test-against-spec, or when a delivery workflow needs real-interface acceptance evidence. |
 | [`create-release`](create-release/SKILL.md) | Prepares or publishes a release using the repository's established versioning and publication workflow. Use when asked to cut, prepare, or publish a release, when the user runs /create-release, or when milestone-rush hands off a milestone. |
@@ -228,6 +229,10 @@ and evaluates them on the intended workload.
   `compatibility` only for real environment requirements). Situational detail
   belongs in directly linked, one-level `references/`; the entry skill says
   exactly when to read each file. No `disable-model-invocation`.
+- A skill that should appear in a consuming project's generated `AGENTS.md`
+  skills block declares `metadata.agents-role` (`ambient` or `entry-point`) and
+  a one-line `metadata.agents-text`; see
+  [project skills updates](docs/project-skills-updates.md#agentsmd-skills-block).
 - **Workflow skills** state the outcome, true gates, authorization boundaries,
   and stop rules before exact mechanics. Preserve procedural detail only where
   sequencing is load-bearing.

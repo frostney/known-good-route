@@ -4,3 +4,6 @@ paths:
       # actionlint 1.7.12 predates GitHub's documented $/ self-repository
       # action reference. The workflow contract test keeps this exception exact.
       - 'specifying action "\$/\.github/actions/update-project-skills" in invalid format because ref is missing'
+  .github/workflows/verify-agents-block.yml:
+    ignore:
+      - 'specifying action "\$/\.github/actions/update-project-skills" in invalid format because ref is missing'

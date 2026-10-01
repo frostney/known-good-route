@@ -1,9 +1,9 @@
 name: Update project Agent Skills
-description: Refreshes or publishes one validated project-scoped Agent Skills inventory.
+description: Refreshes or publishes one validated project-scoped Agent Skills inventory, or verifies its AGENTS.md skills block.
 
 inputs:
   mode:
-    description: Run the read-only refresh phase or the separately permissioned publish phase.
+    description: Run the read-only refresh phase, the separately permissioned publish phase, or the read-only verify-agents-block check.
     required: true
   skills-root:
     description: Project root containing .agents/skills and skills-lock.json.
@@ -22,8 +22,8 @@ inputs:
     required: false
     default: "false"
   artifact-directory:
-    description: Runner-temporary directory for the refresh/publish artifact.
-    required: true
+    description: Runner-temporary directory for the refresh/publish artifact; required by refresh and publish.
+    required: false
   pr-branch:
     description: Draft pull-request branch used by publish mode.
     required: false
@@ -55,7 +55,7 @@ runs:
   using: composite
   steps:
     - name: Validate operation mode
-      if: inputs.mode != 'refresh' && inputs.mode != 'publish'
+      if: inputs.mode != 'refresh' && inputs.mode != 'publish' && inputs.mode != 'verify-agents-block'
       shell: bash
       run: |
         printf 'Unsupported project-skills operation: %s\n' "$KGR_MODE" >&2
@@ -97,4 +97,14 @@ runs:
         KGR_PR_BODY: ${{ inputs.pr-body }}
         KGR_PR_BRANCH: ${{ inputs.pr-branch }}
         KGR_PR_TITLE: ${{ inputs.pr-title }}
+        KGR_SKILLS_ROOT: ${{ inputs.skills-root }}
+
+    - name: Verify AGENTS.md skills block
+      if: inputs.mode == 'verify-agents-block'
+      shell: bash
+      run: |
+        node "$GITHUB_ACTION_PATH/update-project-skills.mjs" verify-agents-block \
+          --repository-root "$GITHUB_WORKSPACE" \
+          --skills-root "$KGR_SKILLS_ROOT"
+      env:
         KGR_SKILLS_ROOT: ${{ inputs.skills-root }}

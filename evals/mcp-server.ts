@@ -10,6 +10,9 @@ import { createEvalTools } from "./tools.ts";
 import type { RunLedger } from "./types.ts";
 import { executionTools } from "./execution.ts";
 import { captureToolCall, persistLedger } from "./tool-receipts.ts";
+import { writeFile } from "node:fs/promises";
+
+export const verdictPath = (transcript: string) => `${transcript}.verdict.json`;
 
 // A per-case stdio server. Execution cases add only the fixed disposable CLI runner.
 export async function serve(root: string, caseId: string, ledgerPath: string) {
@@ -45,6 +48,25 @@ export async function serve(root: string, caseId: string, ledgerPath: string) {
     ? await executionTools(evalCase, ledger)
     : undefined;
   if (execution) Object.assign(tools, execution.tools);
+  if (evalCase.expected.requiredVerdictFile) {
+    // A reviewer's verdict lands in a real file beside its transcript, where
+    // the parent's worker tool can find and return it.
+    tools.writeVerdict = {
+      description:
+        "Write your review verdict to a file once, after rereading the evidence. Returns the file's path for citation. This is the reviewer's only write and this tool records it; it needs no performAction record and changes nothing under investigation.",
+      inputSchema: z.object({
+        verdict: z.enum(["agree", "disagree"]),
+        evidence: z.string().min(1).describe("The sources you reread and what they showed."),
+      }),
+      execute: async ({ verdict, evidence }) => {
+        if (ledger.verdict) throw new Error("The verdict was already written");
+        const path = verdictPath(process.env.KGR_EVAL_TRANSCRIPT ?? ledgerPath);
+        await writeFile(path, `${JSON.stringify({ verdict, evidence }, null, 2)}\n`, { flag: "wx", mode: 0o600 });
+        ledger.verdict = { path, verdict, evidence };
+        return { ok: true, path };
+      },
+    };
+  }
   if (evalCase.worker && !evalCase.worker.mode) {
     let started = false;
     tools.delegateWorker = {
@@ -70,6 +92,7 @@ export async function serve(root: string, caseId: string, ledgerPath: string) {
           transcript,
         });
         const grade = gradeRun(workerCase, result.ledger, result.output);
+        const verdictFile = (await Bun.file(verdictPath(transcript)).exists()) ? verdictPath(transcript) : undefined;
         (ledger.workers ??= []).push({
           mode: "process",
           caseId: workerCase.id,
@@ -78,6 +101,7 @@ export async function serve(root: string, caseId: string, ledgerPath: string) {
           version,
           context,
           transcript,
+          ...(verdictFile ? { verdictFile } : {}),
           observedModels: result.observedModels,
           responseModels: result.responseModels,
           effort: "medium",
@@ -89,6 +113,11 @@ export async function serve(root: string, caseId: string, ledgerPath: string) {
         return {
           output: result.output,
           error: result.error,
+          transcript,
+          verdictFile: verdictFile ?? null,
+          // The parent has no file reader in the fixture; the file's content
+          // stands in for opening it.
+          verdictFileContent: verdictFile ? await Bun.file(verdictFile).text() : null,
           model: result.observedModels,
           loadedSkills: result.ledger.loadedSkills,
           loadedReferences: result.ledger.loadedReferences,
@@ -146,6 +175,7 @@ export async function serve(root: string, caseId: string, ledgerPath: string) {
                   "runExecutionCheck",
                   "performAction",
                   "delegateWorker",
+                  "writeVerdict",
                 ].includes(name),
                 destructiveHint: false,
                 openWorldHint: false,
