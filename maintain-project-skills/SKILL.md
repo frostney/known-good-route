@@ -5,9 +5,6 @@ description: >-
   upstream source while preserving local ownership and pins. Use when asked to
   add, refresh, or migrate a project's local skills.
 license: Unlicense OR MIT
-metadata:
-  agents-role: entry-point
-  agents-text: Add, refresh, or migrate a project's installed skills from their upstream source.
 ---
 
 # Maintain project Agent Skills

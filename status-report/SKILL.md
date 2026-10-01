@@ -9,9 +9,6 @@ compatibility: >-
   Requires git plus authenticated read-only access to the Git hosting service;
   GitHub repositories use gh and network access. Rich board rendering is
   optional.
-metadata:
-  agents-role: entry-point
-  agents-text: Build a read-only board of open PRs, CI, reviews, and local work.
 ---
 
 # Status report

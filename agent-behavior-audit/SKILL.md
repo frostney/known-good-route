@@ -8,9 +8,6 @@ license: Unlicense OR MIT
 compatibility: >-
   Requires read access to the in-scope harness histories or exported audit
   bundles, Python 3.11 or newer, and a private output location for evidence.
-metadata:
-  agents-role: entry-point
-  agents-text: Audit past agent sessions for instruction compliance and wasted work.
 ---
 
 # Agent behavior audit
