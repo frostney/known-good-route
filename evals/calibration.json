@@ -4614,6 +4614,7 @@
     "results": {
       "claude:claude-opus-5-5": {
         "digest": "b630c07a128f358e97e5b990dd457df2e34675b3b8c61c6d67eca7bcf7b92f80",
+        "effort": "medium",
         "judgedAt": "2026-10-01T14:38:45.120Z",
         "samples": 20,
         "outcome": {
@@ -4689,6 +4690,7 @@
       },
       "codex:gpt-6.1-sol": {
         "digest": "b630c07a128f358e97e5b990dd457df2e34675b3b8c61c6d67eca7bcf7b92f80",
+        "effort": "medium",
         "judgedAt": "2026-10-01T14:38:45.120Z",
         "samples": 20,
         "outcome": {

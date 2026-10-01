@@ -4,15 +4,18 @@ import {
   calibrationDigest,
   calibrationGate,
   calibrationItems,
+  defaultJudgeEffort,
   defaultJudges,
   judgeAnswer,
   judgesFromFlags,
+  parseJudgeEffort,
   loadJudgeCalibration,
   scoreCalibration,
   selectJudge,
   validateCalibrationSamples,
   type CalibrationResult,
   type CalibrationSample,
+  type JudgeEffort,
   type JudgeRunner,
   type RubricVerdict,
 } from "./judge.ts";
@@ -23,6 +26,7 @@ import { preflight } from "./local-runtime.ts";
 export async function calibrateJudges(options: {
   directory: string;
   judges?: { codex: string; claude: string };
+  effort?: JudgeEffort;
   concurrency?: number;
   runner?: JudgeRunner;
   calibrationPath?: string;
@@ -47,6 +51,7 @@ export async function calibrateJudges(options: {
           output: sample.output,
           actions: sample.actions ?? [],
           transcript: join(options.directory, `${index}-${sample.id}.jsonl`),
+          effort: options.effort ?? defaultJudgeEffort,
           ...(options.runner ? { runner: options.runner } : {}),
         });
         verdicts[index] = judged.status === "error" ? undefined : judged.items;
@@ -61,11 +66,11 @@ export async function calibrateJudges(options: {
   const results: Record<string, CalibrationResult> = {};
   for (const judge of new Set(judgeOf)) {
     const indexes = judgeOf.flatMap((j, i) => (j === judge ? [i] : []));
-    results[judge] = scoreCalibration(indexes.map((i) => calibration.samples[i]!), indexes.map((i) => verdicts[i]), digest);
+    results[judge] = scoreCalibration(indexes.map((i) => calibration.samples[i]!), indexes.map((i) => verdicts[i]), digest, undefined, options.effort ?? defaultJudgeEffort);
   }
-  const combined = scoreCalibration(calibration.samples, verdicts, digest);
+  const combined = scoreCalibration(calibration.samples, verdicts, digest, undefined, options.effort ?? defaultJudgeEffort);
   const gates = Object.fromEntries(
-    Object.keys(results).map((judge) => [judge, calibrationGate(judge, { ...calibration, results }, digest)]),
+    Object.keys(results).map((judge) => [judge, calibrationGate(judge, { ...calibration, results }, digest, options.effort ?? defaultJudgeEffort)]),
   );
   return { results, combined, gates, path };
 }
@@ -144,14 +149,16 @@ if (import.meta.main) {
     await mkdir(directory, { recursive: true });
     const judges = judgesFromFlags(values("--judge"));
     for (const judge of Object.values(judges)) await preflight(judge);
+    const effort = parseJudgeEffort(value("--judge-effort"));
     const { results, combined, gates } = await calibrateJudges({
       directory,
       judges,
+      effort,
       concurrency: Number(value("--concurrency") ?? "1"),
     });
     await Bun.write(join(directory, "result.json"), JSON.stringify({ results, combined, gates }, null, 2) + "\n");
     const line = (name: string, r: CalibrationResult) =>
-      `${name}: items ${r.outcome.agreed}/${r.outcome.total} (false passes ${r.outcome.falsePasses}); terminal ${r.terminal.agreed}/${r.terminal.total} over ${r.samples} answers`;
+      `${name} @ ${r.effort}: items ${r.outcome.agreed}/${r.outcome.total} (false passes ${r.outcome.falsePasses}); terminal ${r.terminal.agreed}/${r.terminal.total} over ${r.samples} answers`;
     for (const [judge, result] of Object.entries(results))
       console.log(`${line(judge, result)}; gate ${gates[judge]!.calibrated ? "open" : "closed"} (${gates[judge]!.reason})`);
     console.log(line("cross-family combined", combined));

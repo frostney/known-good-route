@@ -188,7 +188,11 @@ The judge comes from the other model family: Claude judges Codex runs and Codex
 judges Claude runs. The defaults are `claude:claude-opus-5-5` and
 `codex:gpt-6.1-sol`; `--judge <cli:model>` replaces the judge for that family.
 Judges run through the same native CLIs and saved logins as candidates, with no
-tools, at medium effort. `--same-family-judge` judges each run with its own
+tools, at `--judge-effort` (default `medium`). The default moves only to the
+lowest effort at which both default judges clear the calibration gate; at
+`high` and `xhigh` both still agree on 83/95 rubric items with 8 false passes,
+so it stays `medium`. A calibration result records its effort, and the gate
+opens only for runs at that effort. `--same-family-judge` judges each run with its own
 family's judge, for diagnosis when the other CLI is unavailable. Its verdicts
 are recorded but never trusted.
 

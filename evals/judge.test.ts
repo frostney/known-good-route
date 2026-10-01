@@ -432,3 +432,30 @@ describe("repeat aggregation", () => {
     expect(parseCli(["--repeat", "1"]).repeat).toBe(1);
   });
 });
+
+describe("judge effort", () => {
+  test("the judge effort defaults to medium and a flag selects another", async () => {
+    const { defaultJudgeEffort, parseJudgeEffort } = await import("./judge.ts");
+    expect(defaultJudgeEffort).toBe("medium");
+    expect(parseCli([]).judgeEffort).toBe("medium");
+    expect(parseCli(["--judge-effort", "xhigh"]).judgeEffort).toBe("xhigh");
+    expect(() => parseCli(["--judge-effort", "extreme"])).toThrow("Unsupported judge effort");
+    expect(parseJudgeEffort(undefined)).toBe(defaultJudgeEffort);
+  });
+  test("the selected effort reaches the judge CLI and is recorded with the calibration", async () => {
+    const seen: string[] = [];
+    const runner: JudgeRunner = async ({ effort, input }) => {
+      seen.push(effort);
+      const { items: asked, answer } = JSON.parse(input);
+      return { output: verdicts(asked.map((item: JudgeItem) => ({ id: item.id, verdict: "yes", quote: answer.slice(0, 10) }))), responseModels: ["claude-opus-5-5"] };
+    };
+    await judgeAnswer({ scope: "parent", judge: "claude:claude-opus-5-5", task: "T", items, output: "Done.", actions: [], transcript: "/dev/null", runner, effort: "high" });
+    await judgeAnswer({ scope: "parent", judge: "claude:claude-opus-5-5", task: "T", items, output: "Done.", actions: [], transcript: "/dev/null", runner });
+    expect(seen).toEqual(["high", "medium"]);
+    const result = scoreCalibration([sample({ a: "yes" })], [[verdict("a", true)]], "digest", "2026-10-01T00:00:00Z", "xhigh");
+    expect(result.effort).toBe("xhigh");
+    const recorded: JudgeCalibration = { agreementThreshold: 0.9, minimumSamples: 1, samples: [], results: { "codex:j": result } };
+    expect(calibrationGate("codex:j", recorded, "digest", "xhigh").calibrated).toBeTrue();
+    expect(calibrationGate("codex:j", recorded, "digest", "medium").reason).toContain("calibrated at xhigh effort");
+  });
+});

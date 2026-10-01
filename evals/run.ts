@@ -12,12 +12,14 @@ import {
   judgeAnswer,
   judgeItems,
   judgesFromFlags,
+  parseJudgeEffort,
   loadJudgeCalibration,
   rowOutcome,
   selectJudge,
   validateCalibrationSamples,
   withJudgement,
   type JudgedAnswer,
+  type JudgeEffort,
   type JudgeItem,
   type JudgeRunner,
 } from "./judge.ts";
@@ -48,6 +50,7 @@ export function parseCli(args: string[]) {
     "--concurrency",
     "--output",
     "--judge",
+    "--judge-effort",
   ]);
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
@@ -87,6 +90,7 @@ export function parseCli(args: string[]) {
     repeat: positive("--repeat", "3"),
     judges: judgesFromFlags(values.get("--judge") ?? []),
     sameFamilyJudge: values.has("--same-family-judge"),
+    judgeEffort: parseJudgeEffort(values.get("--judge-effort")?.at(-1)),
     concurrency: positive("--concurrency"),
     output: resolve(
       last(
@@ -130,7 +134,7 @@ export async function run() {
   const judgePlan = Object.fromEntries(
     options.models.map((model) => {
       const selection = selectJudge(model, options.judges, options.sameFamilyJudge);
-      return [model, { ...selection, ...calibrationGate(selection.judge, calibration, digest) }];
+      return [model, { ...selection, effort: options.judgeEffort, ...calibrationGate(selection.judge, calibration, digest, options.judgeEffort) }];
     }),
   );
   const jobs = cases.flatMap((evalCase) =>
@@ -348,7 +352,7 @@ export async function run() {
 export async function judgeRecord(options: {
   record: EvalRunRecord;
   evalCase: EvalCase;
-  plan: { judge: string; crossFamily: boolean; calibrated: boolean; reason: string };
+  plan: { judge: string; crossFamily: boolean; calibrated: boolean; reason: string; effort?: JudgeEffort };
   unavailable?: string | undefined;
   transcript: (scope: string) => string;
   runner?: JudgeRunner;
@@ -380,6 +384,7 @@ export async function judgeRecord(options: {
         output: unit.output,
         actions: unit.ledger.actions,
         transcript: options.transcript(unit.scope),
+        ...(plan.effort ? { effort: plan.effort } : {}),
         ...(options.runner ? { runner: options.runner } : {}),
       }),
     );
