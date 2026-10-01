@@ -17,6 +17,14 @@ import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { spawnSync } from "node:child_process";
 
+import {
+  AGENTS_FILE,
+  collectSkillRoles,
+  spliceRegion,
+  verifyAgentsBlock,
+  writeAgentsBlock,
+} from "./agents-block.mjs";
+
 const LOCK_FILE = "skills-lock.json";
 const SKILLS_DIRECTORY = ".agents/skills";
 const FIND_SKILLS_SOURCE = "vercel-labs/skills";
@@ -418,6 +426,33 @@ function scopedPathsFor(repositoryRoot, skillsRoot) {
   ];
 }
 
+function agentsPathFor(repositoryRoot, skillsRoot) {
+  const prefix = toGitPath(relative(repositoryRoot, skillsRoot));
+  return prefix ? `${prefix}/${AGENTS_FILE}` : AGENTS_FILE;
+}
+
+// The artifact may change AGENTS.md only by regenerating the block from the
+// skills it installs; any other edit fails, including one outside the markers.
+async function requireGeneratedAgentsFile(repositoryRoot, skillsRoot, label) {
+  const agentsPath = agentsPathFor(repositoryRoot, skillsRoot);
+  const base = git(repositoryRoot, ["show", `HEAD:${agentsPath}`], { allowFailure: true });
+  let expected;
+  try {
+    expected = spliceRegion(base.status === 0 ? base.stdout : null, await collectSkillRoles(skillsRoot));
+  } catch (error) {
+    throw new Error(`${label} AGENTS.md block cannot be generated: ${error.message}`);
+  }
+  let actual = null;
+  try {
+    actual = await readFile(join(repositoryRoot, agentsPath), "utf8");
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  if (actual !== expected) {
+    throw new Error(`${label} changed ${agentsPath} beyond the generated skills block`);
+  }
+}
+
 export async function refreshProjectSkills(options, dependencies = {}) {
   const repositoryRoot = resolve(options.repositoryRoot);
   await requireCanonicalDirectory(repositoryRoot, "Repository root");
@@ -533,15 +568,21 @@ export async function refreshProjectSkills(options, dependencies = {}) {
       `Skills refresh changed project-authored skills: ${projectAuthoredChanges.join(", ")}`,
     );
   }
-  const changed = changedPaths.length > 0;
+  await writeAgentsBlock(skillsRoot);
+  const agentsPath = agentsPathFor(repositoryRoot, skillsRoot);
+  const generatedPaths = parseChangedPaths(repositoryRoot);
+  const patchPaths = generatedPaths.includes(agentsPath)
+    ? [...scopedPaths, agentsPath]
+    : scopedPaths;
+  const changed = generatedPaths.length > 0;
   const baseSha = git(repositoryRoot, ["rev-parse", "HEAD"]).stdout.trim();
-  await createPatch(repositoryRoot, scopedPaths, resolve(options.artifactDirectory), {
+  await createPatch(repositoryRoot, patchPaths, resolve(options.artifactDirectory), {
     version: 1,
     baseSha,
     changed,
     skillsRoot: toGitPath(relative(repositoryRoot, skillsRoot)) || ".",
   });
-  return { baseSha, changed, changedPaths, scopedPaths };
+  return { baseSha, changed, changedPaths: generatedPaths, scopedPaths };
 }
 
 function parseJsonOutput(value, label) {
@@ -575,6 +616,8 @@ export async function publishProjectSkills(options) {
   }
   const skillsRoot = resolveSkillsRoot(repositoryRoot, options.skillsRoot ?? ".");
   const scopedPaths = scopedPathsFor(repositoryRoot, skillsRoot);
+  const agentsPath = agentsPathFor(repositoryRoot, skillsRoot);
+  const publishablePaths = [...scopedPaths, agentsPath];
   const currentSha = git(repositoryRoot, ["rev-parse", "HEAD"]).stdout.trim();
   if (currentSha !== metadata.baseSha) {
     throw new Error(
@@ -590,7 +633,7 @@ export async function publishProjectSkills(options) {
   ]);
   const appliedPaths = parseChangedPaths(repositoryRoot);
   const outsideScope = appliedPaths.filter(
-    (path) => !isScopedPath(path, scopedPaths),
+    (path) => !isScopedPath(path, publishablePaths),
   );
   if (outsideScope.length > 0) {
     throw new Error(`Artifact changed files outside its generated scope: ${outsideScope.join(", ")}`);
@@ -608,9 +651,11 @@ export async function publishProjectSkills(options) {
   if (JSON.stringify(published.projectAuthored) !== JSON.stringify(projectAuthored)) {
     throw new Error("Artifact changed the project-authored skill inventory");
   }
+  await requireGeneratedAgentsFile(repositoryRoot, skillsRoot, "Artifact");
   // The verified tree is now a local Git object. Restore the base before switching branches.
   git(repositoryRoot, [
     "restore", "--source=HEAD", "--staged", "--worktree", "--", ...scopedPaths,
+    ...(appliedPaths.includes(agentsPath) ? [agentsPath] : []),
   ]);
   const remoteBranchRef = `refs/remotes/origin/${options.branch}`;
   const branchExists =
@@ -636,7 +681,7 @@ export async function publishProjectSkills(options) {
       .filter(Boolean);
     const foreignPaths = ownedPaths.filter(
       (path) =>
-        !isScopedPath(path, scopedPaths) ||
+        !isScopedPath(path, publishablePaths) ||
         isScopedPath(path, projectAuthoredPaths),
     );
     if (foreignPaths.length > 0) {
@@ -653,6 +698,11 @@ export async function publishProjectSkills(options) {
     "restore", `--source=${metadata.tree}`, "--staged", "--worktree", "--", ...scopedPaths,
     ...projectAuthoredPaths.map((path) => `:(exclude,literal)${path}`),
   ]);
+  // Regenerating on the branch keeps its own text around the block, so main's
+  // hand-written AGENTS.md edits never enter the PR.
+  if ((await writeAgentsBlock(skillsRoot)).changed) {
+    git(repositoryRoot, ["add", "--", agentsPath]);
+  }
 
   const hasCommit =
     git(repositoryRoot, ["diff", "--cached", "--quiet", "--"], {
@@ -791,6 +841,20 @@ export async function main(argv = process.argv.slice(2)) {
     });
     await appendOutput("head_sha", result.headSha);
     await appendOutput("pr_url", result.pullRequestUrl);
+    return;
+  }
+  if (command === "write-agents-block" || command === "verify-agents-block") {
+    const root = resolveSkillsRoot(resolve(repositoryRoot), values["skills-root"] ?? ".");
+    if (command === "write-agents-block") {
+      const { changed, path } = await writeAgentsBlock(root);
+      process.stdout.write(`${path} skills block ${changed ? "written" : "is up to date"}\n`);
+      return;
+    }
+    const { inSync, path } = await verifyAgentsBlock(root);
+    if (!inSync) {
+      throw new Error(`${path} skills block is stale; run update-project-skills.mjs write-agents-block`);
+    }
+    process.stdout.write(`${path} skills block is up to date\n`);
     return;
   }
   if (command === "validate") {

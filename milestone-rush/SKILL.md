@@ -12,6 +12,9 @@ compatibility: >-
   `delivery-wait` skill, and a host that supports subagents and passive
   foreground-process waiting; implementation, review, and validation use the
   project's installed workflow skills and declared gates.
+metadata:
+  agents-role: entry-point
+  agents-text: Complete one confirmed milestone, from its work items to its release.
 ---
 
 # Milestone rush

@@ -65,11 +65,25 @@ only the relevant `with` block:
       pr-title: "chore(paddy): refresh project Agent Skills"
 ```
 
+To fail a consumer's CI when its `AGENTS.md` skills block no longer matches
+the installed skills, add a job that calls the read-only check at the same
+pinned revision:
+
+```yaml
+jobs:
+  agents-block:
+    permissions:
+      contents: read
+    uses: frostney/known-good-route/.github/workflows/verify-agents-block.yml@0123456789abcdef0123456789abcdef01234567
+    with:
+      skills-root: "."
+```
+
 ## Inputs
 
 | Input | Default | Contract |
 | --- | --- | --- |
-| `skills-root` | `.` | Relative project root containing `.agents/skills` and `skills-lock.json`. |
+| `skills-root` | `.` | Relative project root containing `.agents/skills`, `skills-lock.json`, and the `AGENTS.md` that holds the skills block. |
 | `skills-cli-version` | `1.5.23` | Exact CLI version; validate lockfile behavior before upgrading. |
 | `repair-find-skills` | `false` | Full-depth repair only when the sole deletion warning names an existing `find-skills`. |
 | `normalize-lock-hashes` | `false` | Recompute `computedHash` from canonical folders before and after refresh, using the CLI's algorithm. |
@@ -125,6 +139,33 @@ already select it.
   updater.
 - No-change run: confirm the refresh job passed. The absent publish job is the
   expected terminal state.
+- `AGENTS.md` block failure: a corrupt or repeated marker, or an installed
+  skill with an invalid `agents-role` or `agents-text`, stops the run. Fix the
+  marker or the declaration; never hand-edit text between the markers.
+
+## Declare a skill's role in AGENTS.md
+
+Any installed skill, including a project-authored one, joins the generated
+`AGENTS.md` skills block by declaring string entries under its frontmatter
+`metadata`:
+
+```yaml
+metadata:
+  agents-role: ambient
+  agents-text: Keep every note short and sourced.
+```
+
+Use `ambient` for a standard that always applies and `entry-point` for a
+workflow someone starts as `/<name>`. Keep `agents-text` to one short line.
+After changing a declaration, let the next scheduled update PR carry the
+block, or regenerate it from a KGR checkout at the caller's pinned revision:
+
+```sh
+node .github/actions/update-project-skills/update-project-skills.mjs write-agents-block \
+  --repository-root /absolute/path/to/consumer --skills-root .
+```
+
+Edit `AGENTS.md` outside the `known-good-route:agents` markers only.
 
 ## Preserve generated-file ownership
 

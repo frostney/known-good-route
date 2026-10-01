@@ -123,9 +123,24 @@ async function refreshOptions(fixture: Awaited<ReturnType<typeof makeRepository>
   };
 }
 
-async function makePublication(skillsRoot = ".", { projectAuthored = false } = {}) {
+async function declareEntryPoint(fixture: Awaited<ReturnType<typeof makeRepository>>) {
+  await writeFile(
+    join(fixture.skillDirectory, "SKILL.md"),
+    `---\nname: ${fixture.skillName}\ndescription: Test fixture.\nmetadata:\n  agents-role: entry-point\n  agents-text: Run the invented example.\n---\n\n# Fixture\n`,
+  );
+}
+
+async function makePublication(
+  skillsRoot = ".",
+  { projectAuthored = false, declareRole = false, agents = "" } = {},
+) {
   const fixture = await makeRepository(skillsRoot);
   if (projectAuthored) await addProjectAuthoredSkill(fixture);
+  if (agents) {
+    await writeFile(join(fixture.projectRoot, "AGENTS.md"), agents);
+    runGit(fixture.root, ["add", "."]);
+    runGit(fixture.root, ["commit", "--message", "test: add AGENTS.md"]);
+  }
   const bareRemote = await realpath(
     await mkdtemp(join(tmpdir(), "kgr-skills-remote-test-")),
   );
@@ -138,6 +153,7 @@ async function makePublication(skillsRoot = ".", { projectAuthored = false } = {
   await refreshProjectSkills(options, {
     runSkills: async () => {
       await writeFile(join(fixture.skillDirectory, "reference.md"), "published\n");
+      if (declareRole) await declareEntryPoint(fixture);
       await writeInventory(fixture.projectRoot, fixture.skillName);
       return { status: 0, output: "Updated 1 skill" };
     },
@@ -727,6 +743,64 @@ describe("project refresh", () => {
     });
   }, publicationTimeout);
 
+  test("regenerates the AGENTS.md skills block in the refresh and publishes it", async () => {
+    const publication = await makePublication("paddy", { declareRole: true, agents: "# House rules\n" });
+    const { options, bareRemote } = publication;
+    const patch = await readFile(join(options.artifactDirectory, "skills-update.patch"), "utf8");
+    expect(patch).toContain("paddy/AGENTS.md");
+    await withFakeGh(publication, async () => {
+      await publishProjectSkills(options);
+      const published = runGit(bareRemote, ["show", `${options.branch}:paddy/AGENTS.md`]);
+      expect(published.startsWith("# House rules\n\n<!-- known-good-route:agents:begin -->")).toBe(true);
+      expect(published).toContain("- Start with `/example-skill`: Run the invented example.");
+    });
+  }, publicationTimeout);
+
+  test("rejects an artifact that edits AGENTS.md outside the generated block", async () => {
+    const publication = await makePublication(".", { declareRole: true, agents: "# House rules\n" });
+    const { options, fixture, bareRemote } = publication;
+    const agentsPath = join(fixture.projectRoot, "AGENTS.md");
+    await writeFile(agentsPath, (await readFile(agentsPath, "utf8")).replace("# House rules", "# Rewritten rules"));
+    await writeTamperedArtifact(fixture, options.artifactDirectory);
+    await withFakeGh(publication, async () => {
+      await expect(publishProjectSkills(options)).rejects.toThrow("changed AGENTS.md beyond the generated skills block");
+      expect(runGit(bareRemote, ["branch", "--list", options.branch])).toBe("");
+    });
+  }, publicationTimeout);
+
+  test("keeps main's hand-written AGENTS.md edits off an existing branch", async () => {
+    const publication = await makePublication(".", { declareRole: true, agents: "# House rules\n" });
+    const { options, fixture, bareRemote } = publication;
+    await withFakeGh(publication, async () => {
+      await publishProjectSkills(options);
+      runGit(options.repositoryRoot, ["switch", "--detach", "main"]);
+      await writeFile(join(options.repositoryRoot, "AGENTS.md"), "# House rules\n\nEdited on main.\n");
+      runGit(options.repositoryRoot, ["commit", "-am", "test: edit AGENTS.md on main"]);
+      runGit(options.repositoryRoot, ["push", "origin", "HEAD:main"]);
+
+      runGit(fixture.root, ["restore", "."]);
+      runGit(fixture.root, ["clean", "-fd"]);
+      runGit(fixture.root, ["pull", "--ff-only", "origin", "main"]);
+      await refreshProjectSkills({ ...(await refreshOptions(fixture)), artifactDirectory: options.artifactDirectory }, {
+        runSkills: async () => {
+          await writeFile(join(fixture.skillDirectory, "reference.md"), "second\n");
+          await declareEntryPoint(fixture);
+          await writeInventory(fixture.projectRoot, fixture.skillName);
+          return { status: 0, output: "Updated 1 skill" };
+        },
+      });
+      runGit(options.repositoryRoot, ["branch", "-D", options.branch]);
+      runGit(options.repositoryRoot, ["fetch", "origin", "main"]);
+      runGit(options.repositoryRoot, ["switch", "--detach", "origin/main"]);
+      await publishProjectSkills(options);
+
+      const branchAgents = runGit(bareRemote, ["show", `${options.branch}:AGENTS.md`]);
+      expect(branchAgents).not.toContain("Edited on main.");
+      expect(branchAgents).toContain("- Start with `/example-skill`: Run the invented example.");
+      expect(runGit(bareRemote, ["show", `${options.branch}:.agents/skills/example-skill/reference.md`])).toBe("second");
+    });
+  }, publicationTimeout);
+
   test("rejects a patch with unrelated files before publishing", async () => {
     const publication = await makePublication();
     const { options, fixture, bareRemote } = publication;
@@ -815,19 +889,34 @@ describe("workflow contracts", () => {
 
   });
 
-  test("keeps every third-party workflow action pinned to a full SHA", async () => {
-    const raw = await readFile(
-      join(repositoryRoot, ".github/workflows/update-project-skills.yml"),
-      "utf8",
+  test("exposes a read-only AGENTS.md skills block check through the same helper", async () => {
+    const raw = await readFile(join(repositoryRoot, ".github/workflows/verify-agents-block.yml"), "utf8");
+    const workflow = parse(raw);
+    expect(workflow.on.workflow_call.inputs["skills-root"].default).toBe(".");
+    expect(workflow.permissions).toEqual({ contents: "read" });
+    expect(workflow.jobs.verify.permissions).toEqual({ contents: "read" });
+    const helper = workflow.jobs.verify.steps.find(
+      (step: { uses?: string }) => step.uses === "$/.github/actions/update-project-skills",
     );
-    const externalUses = [
-      ...raw.matchAll(
-        /^\s*uses:\s+([A-Za-z0-9_-]+\/[A-Za-z0-9_.-]+@[a-f0-9]+)\s*(?:#.*)?$/gm,
-      ),
-    ].map((match) => match[1]);
-    expect(externalUses.length).toBeGreaterThan(0);
-    for (const reference of externalUses) {
-      expect(reference).toMatch(/@[a-f0-9]{40}$/);
+    expect(helper.with.mode).toBe("verify-agents-block");
+    const actionlintConfig = parse(await readFile(join(repositoryRoot, ".github/actionlint.yaml"), "utf8"));
+    expect(actionlintConfig.paths[".github/workflows/verify-agents-block.yml"].ignore).toEqual([
+      'specifying action "\\$/\\.github/actions/update-project-skills" in invalid format because ref is missing',
+    ]);
+  });
+
+  test("keeps every third-party workflow action pinned to a full SHA", async () => {
+    for (const file of ["update-project-skills.yml", "verify-agents-block.yml"]) {
+      const raw = await readFile(join(repositoryRoot, ".github/workflows", file), "utf8");
+      const externalUses = [
+        ...raw.matchAll(
+          /^\s*uses:\s+([A-Za-z0-9_-]+\/[A-Za-z0-9_.-]+@[a-f0-9]+)\s*(?:#.*)?$/gm,
+        ),
+      ].map((match) => match[1]);
+      expect(externalUses.length).toBeGreaterThan(0);
+      for (const reference of externalUses) {
+        expect(reference).toMatch(/@[a-f0-9]{40}$/);
+      }
     }
   });
 });
