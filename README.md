@@ -228,6 +228,10 @@ and evaluates them on the intended workload.
   `compatibility` only for real environment requirements). Situational detail
   belongs in directly linked, one-level `references/`; the entry skill says
   exactly when to read each file. No `disable-model-invocation`.
+- A skill that should appear in a consuming project's generated `AGENTS.md`
+  skills block declares `metadata.agents-role` (`ambient` or `entry-point`) and
+  a one-line `metadata.agents-text`; see
+  [project skills updates](docs/project-skills-updates.md#agentsmd-skills-block).
 - **Workflow skills** state the outcome, true gates, authorization boundaries,
   and stop rules before exact mechanics. Preserve procedural detail only where
   sequencing is load-bearing.

@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       skills-root:
-        description: Project root containing .agents/skills and skills-lock.json.
+        description: Project root containing .agents/skills, skills-lock.json, and AGENTS.md.
         required: false
         type: string
         default: "."
@@ -39,7 +39,8 @@ on:
         type: string
         default: >-
           Updates the project-owned Agent Skills inventory from its recorded
-          upstream sources. The generated files remain owned by the skills CLI.
+          upstream sources and regenerates the AGENTS.md skills block from the
+          installed skills. The generated files remain owned by the skills CLI.
 
 permissions:
   contents: read

@@ -9,6 +9,9 @@ license: Unlicense OR MIT
 compatibility: >-
   Requires git and the GitHub CLI (gh) authenticated to the target repository,
   plus network access.
+metadata:
+  agents-role: entry-point
+  agents-text: Push new changes to an existing pull request and refresh its metadata.
 ---
 
 # Update PR

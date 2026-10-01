@@ -10,6 +10,9 @@ compatibility: >-
   Requires git, Python 3.11 or newer, the GitHub CLI (gh) 2.99 or newer
   authenticated to the target repository with push access, the internal
   `delivery-wait` skill, and network access.
+metadata:
+  agents-role: entry-point
+  agents-text: Publish the current change as a pull request and bring it to ready for review.
 ---
 
 # Create PR
