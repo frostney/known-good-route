@@ -2688,8 +2688,96 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "6ac8205fa2b46263c332b529f9d412edcc98d3893186047aaa89c8587e31f295",
+      "afterSha256": "0a166e97be16c654e49f651812716d9e181a346a0fce713982d3807ddd7c2a6f",
       "frozenCaseSha256": "60953bbb0fdd8f92940b9e0f5d438eb679a641cf93a78447a37834dfb25fce71"
+    },
+    {
+      "caseId": "deep-dive-wrong-lock-holder",
+      "status": "new",
+      "rationale": [
+        "Reconstructed with invented data: a process for the waiting PR looks like the flock holder; the lock file's epoch and a non-blocking flock probe identify the earlier PR, which waits on a CI job with no online runner. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer whose verdict file the result cites. Fresh native run required.",
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "84201b84c1f89da8695bee5982935c774af56d959c8c21d47d108153859a3215",
+      "frozenCaseSha256": "328f4268f2d2c145e5cce9a3c7b949b2c514b4499522c0981e1f10501ec41f39"
+    },
+    {
+      "caseId": "deep-dive-wrong-lock-holder-review",
+      "status": "new",
+      "rationale": [
+        "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer.",
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "59a8f304b28f5519f27b5699e11770cbb588f8254a07cff72bb42bc4a758b25a",
+      "frozenCaseSha256": "49d1c10d5474f580d7a49b198fbdad9d9db2d8e0b94aaa74c252018060d23a96"
+    },
+    {
+      "caseId": "deep-dive-unloaded-instruction-blamed",
+      "status": "new",
+      "rationale": [
+        "Reconstructed with invented data: a weakly worded reply-length skill looks responsible, but the session record shows it never loaded while always-loaded AGENTS.md demands long replies. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer whose verdict file the result cites. Fresh native run required.",
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "8d96b413c45d36653fee53e4d78fd5581f838c88889dfae2224185a1c59651a2",
+      "frozenCaseSha256": "71648b210e5264c120e6616c2043842b5cdcadd81002ce4415c5e0eadfb67968"
+    },
+    {
+      "caseId": "deep-dive-unloaded-instruction-blamed-review",
+      "status": "new",
+      "rationale": [
+        "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer.",
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "0a3fda0acc780339b937e2dba7b33754004bc4ee8d22e0630bde03f0cf47a625",
+      "frozenCaseSha256": "edea9fde8ae3e6613dd69a9f52776e4ff195484a1aec2bf0086b614117b86235"
+    },
+    {
+      "caseId": "deep-dive-private-data-leak",
+      "status": "new",
+      "rationale": [
+        "Reconstructed with invented data: a missed anonymization step looks responsible for private fixtures in a public repository; the session record shows it never ran, the brief never established either repository's visibility, and no check ran at publication. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer whose verdict file the result cites. Fresh native run required.",
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "43837bd6da2ca3a2da9acb7f11f98aa3d6eef7b85f0df3dd32b39c7245a5090b",
+      "frozenCaseSha256": "28be22afb337053e291e987008a22cb2dbea9159e0a2dc3b19e5940ec72154df"
+    },
+    {
+      "caseId": "deep-dive-private-data-leak-review",
+      "status": "new",
+      "rationale": [
+        "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer.",
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "54eca59e435ad1cd96a111b8d4c5579863e9919d4678df8b9a33cb1c52c61a31",
+      "frozenCaseSha256": "b4c75ee28bbe8eb9787ba8e987c45392ee8d34044aa3ff0d0e842e1b0cd03d7c"
+    },
+    {
+      "caseId": "deep-dive-script-error-masked-duplicate",
+      "status": "new",
+      "rationale": [
+        "Rebuilt from a real storefront investigation with every name, vendor, domain and number replaced: a site-wide \"Script error.\" blamed on a coincident checkout release is ruled out by its onset, page coverage and buyer rate, and traced to a referral script loaded twice behind a cross-origin mask. Requires the real cause without prompting, the ruled-out first explanation and a fresh review whose verdict file the result cites. Fresh native run required.",
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "26b29846d2c310c51aff60c23179e3f44d88b0ec60a4b9ea10877a136f955598",
+      "frozenCaseSha256": "58b294f42269c483c7858cd16a98f050f249e750847cb464a8cb60e00271dc98"
+    },
+    {
+      "caseId": "deep-dive-script-error-masked-duplicate-review",
+      "status": "new",
+      "rationale": [
+        "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer.",
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "5a351d958e4b5d95baf5e9303adc2542d9a280bb8378800fe3e42737bcf9b58c",
+      "frozenCaseSha256": "2a36b105550cd75961c0e265f47490eac89493b632b5da1324f67927b8a0d259"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",
@@ -2881,7 +2969,7 @@
         "caseId": "create-pr-dependency-on-fork-pr-stops",
         "model": "claude:claude-fable-5-1",
         "prompt": "/create-pr for issue #121.",
-        "output": "I did not open a PR for issue #121: the branch builds on open PR #130, which comes from a fork, and the workflow stops there. Nothing was pushed, and no draft PR exists.\n\n## What blocks publication\n\n- `feat/budget-report` is at `2222222`, two commits ahead of `origin/main`: `1111111 feat(budget): add allowance budget` and `2222222 feat(report): show remaining allowance`.\n- Open PR #130 (base `main`) has head `1111111`, the first of those two commits, and is marked `isCrossRepository: true`.\n- No native stack exists locally or on GitHub, and no PR exists yet for `feat/budget-report`.\n\nThe rule, from [create-pr/SKILL.md](/private/tmp/claude-501/-Users-jstein-Documents-Projects-commercial-son-app--claude-worktrees-good-day-optics-analytics-18476b/b56db429-b4d4-49f4-8cde-dbbe72e0630a/scratchpad/labelling-runs/run-2.json.transcripts/snapshot/create-pr/SKILL.md):\n\n> Stop and report a match from a fork (`isCrossRepository`), which cannot be a base here.\n\nA PR against `main` now would also carry #130's unmerged commit, and stacking on a fork head is not possible. Choosing between those outcomes is your call.\n\n## What is already in place\n\nThe fixture records these as passed on the exact head `2222222`; I did not rerun them:\n\n- independent code review and real-interface behavior testing for issue #121's claim\n- the declared project gate\n\nThey can be reused only if the head is unchanged when publication resumes.\n\n## Decision needed\n\nI recorded this question for you; the fixture acknowledged it but does not confirm delivery:\n\n1. **Wait for #130 to merge**, then publish #121 against `main` with only the report commit.\n2. **Publish one PR against `main` with both commits**, duplicating #130's commit.\n3. **Something else**, such as pushing #130's head to a branch in `example/project` so it can serve as a native stack base.",
+        "output": "I did not open a PR for issue #121: the branch builds on open PR #130, which comes from a fork, and the workflow stops there. Nothing was pushed, and no draft PR exists.\n\n## What blocks publication\n\n- `feat/budget-report` is at `2222222`, two commits ahead of `origin/main`: `1111111 feat(budget): add allowance budget` and `2222222 feat(report): show remaining allowance`.\n- Open PR #130 (base `main`) has head `1111111`, the first of those two commits, and is marked `isCrossRepository: true`.\n- No native stack exists locally or on GitHub, and no PR exists yet for `feat/budget-report`.\n\nThe rule, from [create-pr/SKILL.md](/fixture/create-pr/SKILL.md):\n\n> Stop and report a match from a fork (`isCrossRepository`), which cannot be a base here.\n\nA PR against `main` now would also carry #130's unmerged commit, and stacking on a fork head is not possible. Choosing between those outcomes is your call.\n\n## What is already in place\n\nThe fixture records these as passed on the exact head `2222222`; I did not rerun them:\n\n- independent code review and real-interface behavior testing for issue #121's claim\n- the declared project gate\n\nThey can be reused only if the head is unchanged when publication resumes.\n\n## Decision needed\n\nI recorded this question for you; the fixture acknowledged it but does not confirm delivery:\n\n1. **Wait for #130 to merge**, then publish #121 against `main` with only the report commit.\n2. **Publish one PR against `main` with both commits**, duplicating #130's commit.\n3. **Something else**, such as pushing #130's head to a branch in `example/project` so it can serve as a native stack base.",
         "actions": [
           {
             "action": "user.ask",
@@ -3071,7 +3159,7 @@
         "caseId": "implement-issue-web-search-unavailable",
         "model": "claude:claude-fable-5-1",
         "prompt": "/implement 84",
-        "output": "Issue #84 is not implemented: I stopped before editing because the external documentation the design depends on could not be verified. No code, branch or forge state was changed.\n\n**What I found**\n- Issue #84 is open and asks for resumable uploads through the existing storage adapter.\n- The adapter has one upload path with focused tests and no resumable path, so this is new behavior, not an already-fixed issue.\n- The repository pins its storage SDK and has Definitions of Ready and Done.\n- Web search failed because the search service is unavailable. No current official SDK or protocol documentation could be checked.\n\n**Why this blocks the work**\n\nHow resumable uploads should work (session start, chunk and offset handling, resume after interruption, what the pinned SDK version supports) depends on those external facts. Guessing would risk building against an API the pinned SDK does not have.\n\nThe rule I am following is in [implement/SKILL.md](/private/tmp/claude-501/-Users-jstein-Documents-Projects-commercial-son-app--claude-worktrees-good-day-optics-analytics-18476b/b56db429-b4d4-49f4-8cde-dbbe72e0630a/scratchpad/labelling-runs/run-2.json.transcripts/snapshot/implement/SKILL.md):\n\n> If required external evidence is unavailable, stop the dependent work; continue independent investigation and any established in-scope correction.\n\nThe fixture exposed no further independent work: the remaining steps (branch, implementation, review, spec testing) all depend on the chosen mechanism.\n\n**What I need from you**\n\nI recorded this question; the fixture acknowledged recording it, not delivery. Any one of these unblocks the work:\n1. The official SDK or protocol documentation (link or excerpt) for the pinned version.\n2. The resumable mechanism you have already settled on, which I will check against the installed SDK.\n3. Your go-ahead to retry once the search service is back.",
+        "output": "Issue #84 is not implemented: I stopped before editing because the external documentation the design depends on could not be verified. No code, branch or forge state was changed.\n\n**What I found**\n- Issue #84 is open and asks for resumable uploads through the existing storage adapter.\n- The adapter has one upload path with focused tests and no resumable path, so this is new behavior, not an already-fixed issue.\n- The repository pins its storage SDK and has Definitions of Ready and Done.\n- Web search failed because the search service is unavailable. No current official SDK or protocol documentation could be checked.\n\n**Why this blocks the work**\n\nHow resumable uploads should work (session start, chunk and offset handling, resume after interruption, what the pinned SDK version supports) depends on those external facts. Guessing would risk building against an API the pinned SDK does not have.\n\nThe rule I am following is in [implement/SKILL.md](/fixture/implement/SKILL.md):\n\n> If required external evidence is unavailable, stop the dependent work; continue independent investigation and any established in-scope correction.\n\nThe fixture exposed no further independent work: the remaining steps (branch, implementation, review, spec testing) all depend on the chosen mechanism.\n\n**What I need from you**\n\nI recorded this question; the fixture acknowledged recording it, not delivery. Any one of these unblocks the work:\n1. The official SDK or protocol documentation (link or excerpt) for the pinned version.\n2. The resumable mechanism you have already settled on, which I will check against the installed SDK.\n3. Your go-ahead to retry once the search service is back.",
         "actions": [
           {
             "action": "user.ask",
@@ -3238,7 +3326,7 @@
         "caseId": "delivery-missing-integration-decision",
         "model": "codex:gpt-6-astra",
         "prompt": "/deliver the completed import-error correction",
-        "output": "[PR #505](https://github.com/example/palette/pull/505) is ready at `2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b`. Independent review, built-CLI acceptance, `pnpm check`, and required checks/reviews passed.\n\nDeployment remains blocked: no integration destination or credentials are configured.\n\nThe [deliver skill](/private/tmp/claude-501/-Users-jstein-Documents-Projects-commercial-son-app--claude-worktrees-good-day-optics-analytics-18476b/b56db429-b4d4-49f4-8cde-dbbe72e0630a/scratchpad/labelling-runs/run-0.json.transcripts/snapshot/deliver/SKILL.md) requires:\n\n> do not assume production or choose among ambiguous destinations.\n\nI've queued the decision: which provider, destination, account and spending authorization should apply, or should delivery stop at `ready-to-merge` or `merged`? No deployment or release occurred.",
+        "output": "[PR #505](https://github.com/example/palette/pull/505) is ready at `2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b`. Independent review, built-CLI acceptance, `pnpm check`, and required checks/reviews passed.\n\nDeployment remains blocked: no integration destination or credentials are configured.\n\nThe [deliver skill](/fixture/deliver/SKILL.md) requires:\n\n> do not assume production or choose among ambiguous destinations.\n\nI've queued the decision: which provider, destination, account and spending authorization should apply, or should delivery stop at `ready-to-merge` or `merged`? No deployment or release occurred.",
         "actions": [
           {
             "action": "validation.reuse",
@@ -3319,7 +3407,7 @@
         "caseId": "milestone-rush-invalid-orchestration-policy",
         "model": "codex:gpt-6.1-sol",
         "prompt": "/milestone-rush 4.0.0.",
-        "output": "**Milestone 4.0.0 is blocked before execution.** `ORCHESTRATION.md` has contradictory routes for the same task class and requires an unsupported watcher capability.\n\nThe loaded [orchestration policy reference](/private/tmp/claude-501/-Users-jstein-Documents-Projects-commercial-son-app--claude-worktrees-good-day-optics-analytics-18476b/b56db429-b4d4-49f4-8cde-dbbe72e0630a/scratchpad/labelling-runs/run-1.json.transcripts/snapshot/milestone-rush/references/orchestration.md) requires:\n\n> If malformed, contradictory, incompatible with higher-authority instructions, or dependent on unsupported host capabilities, stop before spawning and request resolution. Do not silently weaken it.\n\n- **Initial and final scope:** Three independent ready issues; no observed scope drift.\n- **Issue, worker/worktree, PR, and squash-merge mapping:** No workers spawned or delivery actions taken; item identities unavailable.\n- **Review-axis-to-lane map:** No review lanes started or single-agent fallback used.\n- **Reused local or PR state:** None adopted.\n- **Orchestration policy:** Invalid. Decision `D-ORCH-001` awaits resolution; no monitoring fallback substituted.\n- **CI integration recommendation:** Deferred until policy resolution and delivery-surface inspection; prerequisite tracking remains unconfirmed.\n- **Event ledger:** Initial ingestion at `.agent/milestone-rush-events.jsonl` and checkpoint at `.agent/HANDOFF.md` were requested, but only acknowledged. Persistence, completeness, and telemetry remain unconfirmed.\n- **Validation and reviewer evidence:** Policy inspected; no source gates or reviews run.\n- **Remaining work, integration, release, cleanup, and milestone closure:** All pending; milestone remains open.\n\nA resolution question was recorded, but queue delivery is unconfirmed: **Which route is authoritative, and should the watcher requirement be revised or execution moved to a compliant host?** Resolve that policy, then revalidate, reconcile scope, deliver the issues, verify the release, and close the milestone.",
+        "output": "**Milestone 4.0.0 is blocked before execution.** `ORCHESTRATION.md` has contradictory routes for the same task class and requires an unsupported watcher capability.\n\nThe loaded [orchestration policy reference](/fixture/milestone-rush/references/orchestration.md) requires:\n\n> If malformed, contradictory, incompatible with higher-authority instructions, or dependent on unsupported host capabilities, stop before spawning and request resolution. Do not silently weaken it.\n\n- **Initial and final scope:** Three independent ready issues; no observed scope drift.\n- **Issue, worker/worktree, PR, and squash-merge mapping:** No workers spawned or delivery actions taken; item identities unavailable.\n- **Review-axis-to-lane map:** No review lanes started or single-agent fallback used.\n- **Reused local or PR state:** None adopted.\n- **Orchestration policy:** Invalid. Decision `D-ORCH-001` awaits resolution; no monitoring fallback substituted.\n- **CI integration recommendation:** Deferred until policy resolution and delivery-surface inspection; prerequisite tracking remains unconfirmed.\n- **Event ledger:** Initial ingestion at `.agent/milestone-rush-events.jsonl` and checkpoint at `.agent/HANDOFF.md` were requested, but only acknowledged. Persistence, completeness, and telemetry remain unconfirmed.\n- **Validation and reviewer evidence:** Policy inspected; no source gates or reviews run.\n- **Remaining work, integration, release, cleanup, and milestone closure:** All pending; milestone remains open.\n\nA resolution question was recorded, but queue delivery is unconfirmed: **Which route is authoritative, and should the watcher requirement be revised or execution moved to a compliant host?** Resolve that policy, then revalidate, reconcile scope, deliver the issues, verify the release, and close the milestone.",
         "actions": [
           {
             "action": "telemetry.append",
@@ -3844,7 +3932,7 @@
         "caseId": "release-ownership-ambiguous",
         "model": "codex:gpt-6-astra",
         "prompt": "Publish version 2.0.0 now.",
-        "output": "2.0.0 is not published. The release PR is merged and `main` is clean, but publisher ownership is unresolved: `release.yml` appears to create releases, documentation specifies manual creation, and tag ownership is undocumented.\n\nThe [create-release skill](/private/tmp/claude-501/-Users-jstein-Documents-Projects-commercial-son-app--claude-worktrees-good-day-optics-analytics-18476b/b56db429-b4d4-49f4-8cde-dbbe72e0630a/scratchpad/labelling-runs/run-0.json.transcripts/snapshot/create-release/SKILL.md) requires:\n\n> Stop when ownership is ambiguous or documentation and workflow disagree.\n\nWhich route is authoritative, and who creates the tag and GitHub release?",
+        "output": "2.0.0 is not published. The release PR is merged and `main` is clean, but publisher ownership is unresolved: `release.yml` appears to create releases, documentation specifies manual creation, and tag ownership is undocumented.\n\nThe [create-release skill](/fixture/create-release/SKILL.md) requires:\n\n> Stop when ownership is ambiguous or documentation and workflow disagree.\n\nWhich route is authoritative, and who creates the tag and GitHub release?",
         "actions": [
           {
             "action": "user.ask",

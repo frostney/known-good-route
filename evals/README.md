@@ -34,12 +34,13 @@ bun run eval -- --model codex:gpt-6-astra --case create-pr-already-committed
 bun run eval -- --model claude:claude-fable-5-1 --case history-update-pr-conflicts
 ```
 
-The default matrix is `codex:gpt-6-astra`, `codex:gpt-6-sol`,
+The default matrix is `codex:gpt-6-astra`, `codex:gpt-6.1-sol`,
 `claude:claude-fable-5-1`, and `claude:claude-opus-5-5`. Select exact models
 with repeated `--model` flags.
 Use `KGR_CODEX_BIN` or `KGR_CLAUDE_BIN` to select an explicit local CLI
 executable, for example a newer version in a temporary cache. Existing global
-installations and login files are not modified.
+installations and login files are not modified. `codex:gpt-6.1-sol` needs Codex
+CLI 0.159.3 or later; 0.157.1 rejects it for a ChatGPT login.
 
 For PR description and walkthrough decisions, run the four focused cases:
 
@@ -263,7 +264,9 @@ it. `orchestration` gives the `ORCHESTRATION.md` frontmatter: `endpoint`
 continue an entry-point command through the development workflow to that
 endpoint, or `stop` to end after the command itself), plus an optional body.
 It is `null` when the repository has no `ORCHESTRATION.md`. `files` adds other
-configuration that changes the outcome, such as the integration destination.
+configuration that changes the outcome, such as the integration destination,
+or the project's own `AGENTS.md` text, which the generator keeps outside its
+skills block.
 `validateCases` rejects a case without a valid environment.
 
 Before each run the runner writes the case's `ORCHESTRATION.md` and declared
@@ -277,6 +280,16 @@ candidate and worker run. The snapshot keeps the generator with the harness.
 Each run record exposes `environment`: the files written, the AGENTS.md block
 injected, and the case's repository evidence. `eval:dry` counts the cases per
 environment.
+
+Cases with `citedReviewVerdict` need a real worker started through
+`delegateWorker`. Its reviewer case sets `requiredVerdictFile`: the reviewer
+writes its verdict through `writeVerdict`, which creates a file beside the
+reviewer's transcript, and `delegateWorker` returns that path only when the
+file exists. The parent's final response must cite the exact path. A claimed
+review without that file fails. A Codex worker's model identity stays
+configured-only because Codex output carries no response model; the worker
+record, its own ledger and the verdict file still have to come from a run that
+happened.
 
 ## Independent semantic review
 

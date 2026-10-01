@@ -106,7 +106,9 @@ export function portableAgentInstructions(
   agentsFile = "",
   files: Record<string, string> = {},
 ) {
+  // The project's AGENTS.md text reaches the agent inside the generated block.
   const configuration = Object.entries(files)
+    .filter(([path]) => path !== "AGENTS.md")
     .map(([path, content]) => `<file path="${path}">\n${content.trim()}\n</file>`)
     .join("\n");
   const project =

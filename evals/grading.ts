@@ -260,12 +260,32 @@ export function gradeRun(
             !worker.ledger.workers?.length &&
             worker.grade.passed &&
             worker.grade.checks.every((check) => check.passed) &&
-            !!worker.responseModels?.length &&
-            worker.responseModels.every(
+            // Codex output carries no response model, so its identity stays
+            // configured-only; any identity it does report must still match.
+            (evalCase.worker.model.startsWith("codex:") ||
+              !!worker.responseModels?.length) &&
+            (worker.responseModels ?? []).every(
               (model) => model === evalCase.worker!.model.split(":")[1],
             ),
         ),
-      detail: `observed workers=${workers.length}; require the configured task/mode, actual response identity, completed output and consistently passing worker checks; transcript binding is verified separately`,
+      detail: `observed workers=${workers.length}; require the configured task/mode, actual response identity (configured-only for a Codex worker), completed output and consistently passing worker checks; transcript binding is verified separately`,
+    });
+  }
+
+  if (expected.requiredVerdictFile)
+    checks.push({
+      name: "reviewer wrote a verdict file",
+      passed: !!ledger.verdict?.path,
+      detail: ledger.verdict ? `${ledger.verdict.verdict} at ${ledger.verdict.path}` : "no writeVerdict call completed",
+    });
+  if (expected.citedReviewVerdict) {
+    const files = (ledger.workers ?? []).flatMap((worker) => (worker.verdictFile ? [worker.verdictFile] : []));
+    checks.push({
+      name: "review cites its verdict file",
+      passed: files.length === 1 && output.includes(files[0]!),
+      detail: files.length
+        ? `require the final response to cite the reviewer's verdict file ${files[0]}`
+        : "no reviewer run wrote a verdict file; any claimed review is unreviewed",
     });
   }
 
@@ -605,6 +625,8 @@ export function validateCases(
     ))
       if (Array.isArray(response) && response.length === 0)
         throw new Error(`${evalCase.id}: empty action response sequence`);
+    if (evalCase.expected.citedReviewVerdict && !(evalCase.worker && evalCase.expected.requiredWorker))
+      throw new Error(`${evalCase.id}: a cited review verdict needs a required configured worker`);
     if (evalCase.worker) {
       const child = caseCatalog.find((c) => c.id === evalCase.worker!.caseId);
       if (!child || child.worker)

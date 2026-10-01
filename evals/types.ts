@@ -113,6 +113,11 @@ export interface EvalExpectations {
   }>;
 
   requiredWorker?: boolean;
+  // A reviewer must write its verdict through writeVerdict; the parent's final
+  // response must cite that verdict file, so a review claim is bound to a run
+  // that actually happened.
+  requiredVerdictFile?: boolean;
+  citedReviewVerdict?: boolean;
   requiredSkills?: string[];
   requiredAnySkills?: string[];
   forbiddenSkills?: string[];
@@ -186,12 +191,14 @@ export interface RunLedger {
     version: string;
     context: string;
     transcript: string;
+    verdictFile?: string;
     ledger: RunLedger;
     grade: GradeResult;
     output: string;
     error?: string;
   }>;
 
+  verdict?: { path: string; verdict: "agree" | "disagree"; evidence: string };
   actions: ActionRecord[];
   loadedSkills: string[];
   loadedReferences: string[];

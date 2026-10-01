@@ -27,7 +27,7 @@ export const repairReviewSchema = {
   } } }, required: ["verdict", "findings"],
 };
 export const repairModels: Record<string, string> = {
-  "codex:gpt-6-astra": "GPT-6 Astra", "codex:gpt-6-sol": "GPT-6 Sol", "claude:claude-fable-5-1": "Fable 5.1", "claude:claude-opus-5-5": "Opus 5.5",
+  "codex:gpt-6-astra": "GPT-6 Astra", "codex:gpt-6.1-sol": "GPT-6.1 Sol", "claude:claude-fable-5-1": "Fable 5.1", "claude:claude-opus-5-5": "Opus 5.5",
 };
 export function requireRepairReviewSkills(loadedSkills: string[]) {
   const missing = ["code-review", "test-against-spec"].filter(skill => !loadedSkills.includes(skill));
