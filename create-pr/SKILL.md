@@ -167,4 +167,5 @@ readiness. Recording a walkthrough does not replace behavior testing.
     and observed readiness and CI evidence. Include incomplete walkthrough
     requirements and actionable remedies, even when the PR is ready. Started
     directly, continue under the
-    [delivery settings](../deliver/SKILL.md#delivery-settings).
+    [delivery settings](../deliver/SKILL.md#delivery-settings); with
+    `entry-points: deliver`, the ready PR goes on to `/address-feedback`.

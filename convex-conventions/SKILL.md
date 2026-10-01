@@ -83,7 +83,8 @@ skill; memory and prior turns do not establish current API behavior.
 ## Completion
 
 - Codegen and typecheck pass.
-- Relevant function tests and the project gate pass.
+- Relevant function tests, an independent review of the diff, such as
+  `/code-review`, and the project gate pass on the final content.
 - Any schema migration ran against the development deployment and its result is
   recorded.
 - No public function lacks auth, `args`, or `returns`; no public mutation lacks
