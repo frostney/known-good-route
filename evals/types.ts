@@ -76,6 +76,8 @@ export interface EvalExpectations {
   // Answer correctness, judged by a model of the other family (judge.ts).
   // Exact values never go in the rubric; they are the code checks below.
   rubric?: RubricItem[];
+  // Message items this case adds to the shared set in judge.ts.
+  messageRubric?: RubricItem[];
   // Each value must appear as a whole token in the answer's communication: the
   // final response, report and question actions, and posted replies and
   // comments. An inner array lists accepted spellings of one value.
@@ -189,7 +191,7 @@ export interface GradeCheck {
   name: string;
   passed: boolean;
   detail: string;
-  category?: "discovery" | "rubric";
+  category?: "discovery" | "rubric" | "message";
 }
 
 export interface GradeResult {

@@ -68,7 +68,7 @@ export async function replay(
   ).evalCases as EvalCase[];
   const records: EvalRunRecord[] = [];
   const calibration = await loadJudgeCalibration();
-  const digest = calibrationDigest(calibration.samples, evalCases);
+  const digest = calibrationDigest(calibration.samples);
   const sameRubric = (a: EvalCase | undefined, b: EvalCase | undefined) =>
     JSON.stringify(a?.expected.rubric) === JSON.stringify(b?.expected.rubric);
   for (const id of caseIds) {

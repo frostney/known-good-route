@@ -53,7 +53,7 @@ export function renderSummary(records: EvalRunRecord[], repeat = 1): string {
     for (const record of rows) {
       const failed = record.grade.checks
         .filter((check) => !check.passed && check.category !== "discovery")
-        .map((check) => (check.category === "rubric" ? `${check.name} (${check.detail})` : check.name))
+        .map((check) => (check.category === "rubric" || check.category === "message" ? `${check.name} (${check.detail})` : check.name))
         .join(", ");
       lines.push(
         `- \`${record.model}\` / \`${record.caseId}\` #${record.repetition}: ${tableCell(failed || record.error || "run failed")}`,

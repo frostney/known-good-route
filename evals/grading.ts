@@ -1,3 +1,4 @@
+import { messageRubric } from "./judge.ts";
 import { hasSkillCitation } from "./skill-citation.ts";
 import { toolReceiptSchema } from "./tool-receipts.ts";
 import type {
@@ -527,8 +528,8 @@ export function validateRubric(evalCase: EvalCase): void {
   const rubric = evalCase.expected.rubric;
   if (!Array.isArray(rubric) || rubric.length === 0)
     throw new Error(`${evalCase.id}: needs at least one rubric item`);
-  const ids = new Set<string>();
-  for (const item of rubric) {
+  const ids = new Set<string>(messageRubric.map((item) => item.id));
+  for (const item of [...rubric, ...(evalCase.expected.messageRubric ?? [])]) {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(item.id) || ids.has(item.id))
       throw new Error(`${evalCase.id}: invalid or duplicate rubric id ${item.id}`);
     ids.add(item.id);
