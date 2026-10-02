@@ -6,8 +6,13 @@ description: >-
   result reviewed in a fresh context before reporting it. Use before claiming a
   cause or proposing a fix for an observed failure, hang, leak, or unexpected
   agent behavior, when asked why something happened or what is causing it, or
-  when the user runs /deep-dive.
+  when the user runs /deep-dive. Inside an authorized development, delivery or
+  fix loop, a failing check whose own output or trace already shows an uncontested
+  in-scope cause is fixed in that loop instead, unless the user ran /deep-dive.
 license: Unlicense OR MIT
+metadata:
+  agents-role: ambient
+  agents-text: Before claiming the cause of something observed, check what actually ran, try to break each explanation, and cite a fresh review's verdict; skip that only when the failing output or trace already shows the mechanism, or the observation is itself the defect, such as a required control a view never renders, and treat a symptom whose cause sits in another step or file as a cause to establish.
 ---
 
 # Deep dive
@@ -16,6 +21,22 @@ The person should not have to ask you to check what actually happened. Before
 you name a cause or propose a fix for something observed, establish the cause
 from the record of what ran, try to break it, and have it reviewed in a fresh
 context.
+
+An explicit `/deep-dive` always runs the full procedure below. Otherwise, a
+check that fails inside an authorized development, delivery or fix loop needs no
+deep dive only when the failing run's own output or trace already shows the
+in-scope mechanism that produced the failure, not only the failed assertion or
+the defect it names, and nothing contradicts it. State that cause and its
+evidence, fix it in the loop, and rerun; the rerun confirms the fix, not the
+cause. If you had to read source, files or history beyond the failing output
+to find the cause, or set aside a conflicting claim, such as a note blaming
+another component, you did a deep dive: get its fresh review before the fix.
+When the observation is itself the defect, such as a required control a view
+never renders, there is no cause to claim: fix it and verify it against the
+requirement. A symptom whose cause sits in another step or file, such as a
+total that is wrong because an earlier step rounded it, is a cause to
+establish. A failure the evidence does not explain, or a fix the rerun does not
+confirm, also returns to this procedure.
 
 ## Look at what actually ran
 
@@ -100,7 +121,9 @@ Stop only when one of these holds:
 
 ## Report
 
-Keep it short:
+Keep it short. When the deep dive ran inside a larger task, such as a delivery,
+its report still goes in the final message, including the verdict file's exact
+path:
 
 - the surviving explanation as a cause, back to its earliest supported link,
   or the gap;

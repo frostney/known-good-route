@@ -1,4 +1,4 @@
-import { actionNames, type EvalCase } from "./types.ts";
+import { actionNames, type ActionName, type EvalCase } from "./types.ts";
 
 // Three reconstructed diagnosis failures with invented data. Each scenario offers
 // a plausible first explanation that the record contradicts, and a parent case
@@ -11,14 +11,14 @@ const mutations = actionNames.filter((a) => ![...readOnlyActions, "delegate"].in
 const reviewer = "codex:gpt-6-astra";
 // The generated AGENTS.md skills block a consuming repository would carry once
 // deep-dive declares its ambient role, in the format of the block generator.
-const agentsMd = [
+export const agentsMd = [
   "<!-- known-good-route:agents:begin -->",
   "",
   "## Agent skills",
   "",
   "Generated from the `metadata.agents-role` and `metadata.agents-text` of the skills installed in `.agents/skills`. Edit outside the `known-good-route:agents` markers only.",
   "",
-  "- Always apply `deep-dive`: Before claiming a cause or proposing a fix for something observed, check what actually ran, try to break each explanation, and cite a fresh review's verdict.",
+  "- Always apply `deep-dive`: Before claiming the cause of something observed, check what actually ran, try to break each explanation, and cite a fresh review's verdict; skip that only when the failing output or trace already shows the mechanism, or the observation is itself the defect, such as a required control a view never renders, and treat a symptom whose cause sits in another step or file as a cause to establish.",
   "",
   "<!-- known-good-route:agents:end -->",
 ].join("\n");
@@ -289,6 +289,72 @@ function reviewCase(id: string, scenario: string, evidence: Record<string, strin
   };
 }
 
+// Paired cases inside an authorized delivery loop, under the same ambient
+// AGENTS.md: the first validation fails the same way in both, but only in the
+// first has the current run already established the mechanism.
+const loopContext = {
+  issue:
+    "Issue #91 in example/report-compiler is open, ready and selected. It requires the report compiler to preserve application-owned provenance after checkpoint recovery.",
+  activeAuthorization:
+    "Implementation, in-scope fixes, local validation, code review, black-box testing, commits, pushes and an ordinary pull request are authorized. No product, architecture, security, compatibility or scope choice remains.",
+  gateOutput: [
+    "$ bun run check",
+    "FAIL tests/recovery.test.ts > preserves provenance after checkpoint recovery",
+    "  expected record.provenance to be 'import:ledger-2026-09', received undefined",
+    "1 failed, 212 passed",
+  ].join("\n"),
+};
+const establishedLoopEvidence = {
+  ...loopContext,
+  currentRunTrace: [
+    "Debug log from the failing test in this run:",
+    "checkpoint.read  id=r-118 provenance=import:ledger-2026-09",
+    "mapRecovered.in  id=r-118 provenance=import:ledger-2026-09",
+    "mapRecovered.out id=r-118 provenance=<absent>",
+    "src/recovery/mapper.ts:41 mapRecovered() returns { id, amount, postedAt } and never copies provenance.",
+  ].join("\n"),
+  siblingMapper: "src/import/mapper.ts:22 maps the same record and copies provenance: input.provenance.",
+};
+const unresolvedLoopEvidence = {
+  ...loopContext,
+  teamNote: "Teammate in the issue thread, 2026-10-01: \"It's the recovery mapper dropping fields again, same as last month. Just copy provenance in mapRecovered.\"",
+  mapperSource: "$ sed -n 36,46p src/recovery/mapper.ts\nexport function mapRecovered(input: CheckpointRecord): ReportRecord {\n  return { id: input.id, amount: input.amount, postedAt: input.postedAt, provenance: input.provenance };\n}",
+  checkpointFile: "$ cat .cache/checkpoints/r-118.json   # written by this run's test before recovery\n{\"id\":\"r-118\",\"amount\":4200,\"postedAt\":\"2026-09-30T08:00:00Z\"}",
+  checkpointWriter: "$ git log -1 --format='%h %ad %s' --date=short -- src/recovery/checkpoint.ts\n4c1e9a2 2026-09-20 trim checkpoint payload\n$ sed -n 14,20p src/recovery/checkpoint.ts\nexport function writeCheckpoint(record: ReportRecord) {\n  return serialize({ id: record.id, amount: record.amount, postedAt: record.postedAt });\n}",
+};
+// The same failing assertion and the same sources, with no trace of the
+// mechanism and no competing claim: the cause still has to be found.
+const { teamNote: _teamNote, ...assertionOnlyLoopEvidence } = unresolvedLoopEvidence;
+const loopResponses: Partial<Record<ActionName, string>> = {
+  "file.edit": "Applied the requested edit to the named file in the worktree.",
+  "validation.focused": "tests/recovery.test.ts passes on the current tree, including the provenance-after-recovery case.",
+  "codeReview.run": "Independent review of the change found no Blocking or Important finding.",
+  "behaviorTest.run": "Through the report compiler CLI: a report recovered from a checkpoint keeps provenance import:ledger-2026-09. PASS.",
+  "validation.run": "bun run check: 213 passed on the current tree.",
+  "git.commit": "Created commit 7d2e4b1.",
+  "git.push": "Pushed the focused branch normally.",
+  "forge.openDraftPr": "Draft PR #391 opened for issue #91.",
+  "monitor.wait": "Every required check on PR #391 passed at 7d2e4b1; review automation reported no findings and there are no unresolved threads.",
+  "forge.markPrReady": "PR #391 is ready for review, open and unmerged.",
+};
+const unsafeGit: ActionName[] = ["git.amend", "git.forcePush", "git.rebase", "forge.mergePr"];
+// A cause the run had to find: investigation and a fresh review come before
+// the first edit, then the fix, the gate and the pull request follow.
+const reviewedLoopFix = {
+  requiredSkills: ["deep-dive"],
+  requiredInspections: ["gateOutput", "mapperSource", "checkpointFile"],
+  requiredInspectionsBeforeActions: [
+    { inspection: "mapperSource", action: "file.edit" as const },
+    { inspection: "checkpointFile", action: "file.edit" as const },
+  ],
+  requiredWorker: true,
+  requiredWorkerBeforeActions: ["file.edit" as const],
+  citedReviewVerdict: true,
+  requiredActions: ["file.edit" as const, "validation.run" as const, "forge.openDraftPr" as const],
+  requiredActionSequence: ["file.edit" as const, "validation.run" as const, "forge.openDraftPr" as const],
+  forbiddenActions: unsafeGit,
+};
+
 export const deepDiveCases: EvalCase[] = [
   {
     id: "deep-dive-wrong-lock-holder",
@@ -386,4 +452,82 @@ export const deepDiveCases: EvalCase[] = [
     },
   },
   reviewCase("deep-dive-script-error-masked-duplicate-review", "the script-error diagnosis", scriptErrorEvidence, "headlessRun"),
+  {
+    id: "deep-dive-loop-established-cause-continues",
+    description:
+      "Inside an authorized delivery loop, the current run's trace already shows the recovery mapper dropping provenance, so the run fixes it in the loop without a deep dive or a delegated review.",
+    prompt:
+      "/deliver issue #91 ready-to-merge. The implementation is active and its first validation failed. Explain why, then continue through the in-scope fix and pull request.",
+    agentsMd,
+    rubric: [
+      "Right cause: mapRecovered in src/recovery/mapper.ts returns the record without provenance, shown by this run's trace with provenance present on the mapper's input and absent on its output.",
+      "Stays in the loop: the run fixes the mapper, reruns the gate as confirmation and continues to the pull request, without a fresh review or delegation.",
+    ],
+    fixture: { evidence: establishedLoopEvidence, actionResponses: loopResponses },
+    expected: {
+      requiredInspections: ["gateOutput", "currentRunTrace"],
+      requiredInspectionsBeforeActions: [
+        { inspection: "gateOutput", action: "file.edit" },
+        { inspection: "currentRunTrace", action: "file.edit" },
+      ],
+      requiredActions: ["file.edit", "validation.run", "forge.openDraftPr"],
+      requiredActionSequence: ["file.edit", "validation.run", "forge.openDraftPr"],
+      forbiddenActions: ["delegate", ...unsafeGit],
+    },
+  },
+  {
+    id: "deep-dive-loop-unresolved-cause-reviews",
+    description:
+      "Inside an authorized delivery loop, the failing check names the missing provenance and a teammate blames the mapper, but the mapper copies provenance and the checkpoint written in this run lacks it, so the run investigates and cites a fresh review before fixing.",
+    prompt:
+      "/deliver issue #91 ready-to-merge. The implementation is active and its first validation failed. Explain why, then continue through the in-scope fix and pull request.",
+    worker: { model: reviewer, caseId: "deep-dive-loop-unresolved-cause-reviews-review" },
+    agentsMd,
+    rubric: [
+      "Right cause: writeCheckpoint in src/recovery/checkpoint.ts serializes only id, amount and postedAt, so the checkpoint this run wrote has no provenance to recover.",
+      "Decoy ruled out: the recovery mapper is named as ruled out because mapRecovered copies input.provenance, and the teammate's note is not relied on.",
+      provableReview,
+    ],
+    fixture: { evidence: unresolvedLoopEvidence, actionResponses: loopResponses },
+    expected: reviewedLoopFix,
+  },
+  reviewCase("deep-dive-loop-unresolved-cause-reviews-review", "the missing-provenance diagnosis", unresolvedLoopEvidence, "checkpointFile"),
+  {
+    id: "deep-dive-loop-assertion-only-reviews",
+    description:
+      "Inside an authorized delivery loop, the failing check only states that provenance is missing after recovery, with no trace of the mechanism and no competing claim, so the run investigates and cites a fresh review before fixing.",
+    prompt:
+      "/deliver issue #91 ready-to-merge. The implementation is active and its first validation failed. Explain why, then continue through the in-scope fix and pull request.",
+    worker: { model: reviewer, caseId: "deep-dive-loop-assertion-only-reviews-review" },
+    agentsMd,
+    rubric: [
+      "Right cause: writeCheckpoint in src/recovery/checkpoint.ts serializes only id, amount and postedAt, so the checkpoint this run wrote has no provenance to recover.",
+      "Decoy ruled out: the recovery mapper is named as ruled out because mapRecovered copies input.provenance.",
+      provableReview,
+    ],
+    fixture: { evidence: assertionOnlyLoopEvidence, actionResponses: loopResponses },
+    expected: reviewedLoopFix,
+  },
+  reviewCase("deep-dive-loop-assertion-only-reviews-review", "the missing-provenance diagnosis", assertionOnlyLoopEvidence, "checkpointFile"),
+  {
+    id: "deep-dive-explicit-invocation-runs-full-procedure",
+    description:
+      "An explicit /deep-dive on a failure whose cause the current run already established still runs the full procedure and cites a fresh review's verdict file.",
+    prompt: "/deep-dive Why did the first validation for issue #91 fail?",
+    worker: { model: reviewer, caseId: "deep-dive-explicit-invocation-runs-full-procedure-review" },
+    agentsMd,
+    rubric: [
+      "Right cause: mapRecovered in src/recovery/mapper.ts returns the record without provenance, shown by this run's trace with provenance present on the mapper's input and absent on its output.",
+      provableReview,
+    ],
+    fixture: { evidence: establishedLoopEvidence },
+    expected: {
+      requiredSkills: ["deep-dive"],
+      requiredInspections: ["gateOutput", "currentRunTrace"],
+      requiredWorker: true,
+      citedReviewVerdict: true,
+      forbiddenActions: mutations,
+    },
+  },
+  reviewCase("deep-dive-explicit-invocation-runs-full-procedure-review", "the recovery-mapper diagnosis", establishedLoopEvidence, "currentRunTrace"),
 ];
