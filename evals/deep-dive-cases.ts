@@ -18,7 +18,7 @@ export const agentsMd = [
   "",
   "Generated from the `metadata.agents-role` and `metadata.agents-text` of the skills installed in `.agents/skills`. Edit outside the `known-good-route:agents` markers only.",
   "",
-  "- Always apply `deep-dive`: Before claiming a cause or proposing a fix for something observed, check what actually ran, try to break each explanation, and cite a fresh review's verdict.",
+  "- Always apply `deep-dive`: Before claiming the cause of something observed, check what actually ran, try to break each explanation, and cite a fresh review's verdict; a failing check whose own output already shows an uncontested in-scope cause is fixed in the loop instead.",
   "",
   "<!-- known-good-route:agents:end -->",
 ].join("\n");

@@ -2544,10 +2544,11 @@
       "caseId": "deep-dive-wrong-lock-holder",
       "status": "new",
       "rationale": [
-        "Reconstructed with invented data: a process for the waiting PR looks like the flock holder; the lock file's epoch and a non-blocking flock probe identify the earlier PR, which waits on a CI job with no online runner. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer whose verdict file the result cites. Fresh native run required."
+        "Reconstructed with invented data: a process for the waiting PR looks like the flock holder; the lock file's epoch and a non-blocking flock probe identify the earlier PR, which waits on a CI job with no online runner. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer whose verdict file the result cites. Fresh native run required.",
+        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop."
       ],
       "beforeSha256": null,
-      "afterSha256": "328f4268f2d2c145e5cce9a3c7b949b2c514b4499522c0981e1f10501ec41f39",
+      "afterSha256": "50a5516eb25db18eb515fd0535775264465623ad61aa7f8bcc6172c50369cd34",
       "frozenCaseSha256": "328f4268f2d2c145e5cce9a3c7b949b2c514b4499522c0981e1f10501ec41f39"
     },
     {
@@ -2564,10 +2565,11 @@
       "caseId": "deep-dive-unloaded-instruction-blamed",
       "status": "new",
       "rationale": [
-        "Reconstructed with invented data: a weakly worded reply-length skill looks responsible, but the session record shows it never loaded while always-loaded AGENTS.md demands long replies. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer whose verdict file the result cites. Fresh native run required."
+        "Reconstructed with invented data: a weakly worded reply-length skill looks responsible, but the session record shows it never loaded while always-loaded AGENTS.md demands long replies. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer whose verdict file the result cites. Fresh native run required.",
+        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop."
       ],
       "beforeSha256": null,
-      "afterSha256": "71648b210e5264c120e6616c2043842b5cdcadd81002ce4415c5e0eadfb67968",
+      "afterSha256": "c7c682f8fa07cd051f75226d97762191ef32f76650be3f19c13d1e9d0917d416",
       "frozenCaseSha256": "71648b210e5264c120e6616c2043842b5cdcadd81002ce4415c5e0eadfb67968"
     },
     {
@@ -2584,10 +2586,11 @@
       "caseId": "deep-dive-private-data-leak",
       "status": "new",
       "rationale": [
-        "Reconstructed with invented data: a missed anonymization step looks responsible for private fixtures in a public repository; the session record shows it never ran, the brief never established either repository's visibility, and no check ran at publication. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer whose verdict file the result cites. Fresh native run required."
+        "Reconstructed with invented data: a missed anonymization step looks responsible for private fixtures in a public repository; the session record shows it never ran, the brief never established either repository's visibility, and no check ran at publication. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer whose verdict file the result cites. Fresh native run required.",
+        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop."
       ],
       "beforeSha256": null,
-      "afterSha256": "28be22afb337053e291e987008a22cb2dbea9159e0a2dc3b19e5940ec72154df",
+      "afterSha256": "1e3561aecfcf729c162e1306747b4291e1cba6dbcf944c31b49a0798bd844ecc",
       "frozenCaseSha256": "28be22afb337053e291e987008a22cb2dbea9159e0a2dc3b19e5940ec72154df"
     },
     {
@@ -2604,10 +2607,11 @@
       "caseId": "deep-dive-script-error-masked-duplicate",
       "status": "new",
       "rationale": [
-        "Rebuilt from a real storefront investigation with every name, vendor, domain and number replaced: a site-wide \"Script error.\" blamed on a coincident checkout release is ruled out by its onset, page coverage and buyer rate, and traced to a referral script loaded twice behind a cross-origin mask. Requires the real cause without prompting, the ruled-out first explanation and a fresh review whose verdict file the result cites. Fresh native run required."
+        "Rebuilt from a real storefront investigation with every name, vendor, domain and number replaced: a site-wide \"Script error.\" blamed on a coincident checkout release is ruled out by its onset, page coverage and buyer rate, and traced to a referral script loaded twice behind a cross-origin mask. Requires the real cause without prompting, the ruled-out first explanation and a fresh review whose verdict file the result cites. Fresh native run required.",
+        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop."
       ],
       "beforeSha256": null,
-      "afterSha256": "58b294f42269c483c7858cd16a98f050f249e750847cb464a8cb60e00271dc98",
+      "afterSha256": "dd75fd3f7534cabd3f71c95ca7bf69ce8fc5b24af36b57d1e340abf4d19bcc8a",
       "frozenCaseSha256": "58b294f42269c483c7858cd16a98f050f249e750847cb464a8cb60e00271dc98"
     },
     {
@@ -2624,20 +2628,22 @@
       "caseId": "deep-dive-loop-established-cause-continues",
       "status": "new",
       "rationale": [
-        "Invented paired case inside an authorized delivery loop under the deep-dive AGENTS.md block: this run's trace already shows the recovery mapper dropping provenance, so the run fixes it in the loop without a delegated review. Fresh native run required."
+        "Invented paired case inside an authorized delivery loop under the deep-dive AGENTS.md block: this run's trace already shows the recovery mapper dropping provenance, so the run fixes it in the loop without a delegated review. Fresh native run required.",
+        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop."
       ],
       "beforeSha256": null,
-      "afterSha256": "8fd6c761d8b8d23eb8184a689a0dc630c9de268827eed2577cfac06916b9144b",
+      "afterSha256": "4575468dcbb5f50b9c9d1cc5ba3ac545b17b51b74070cd97a502f67f754c96c2",
       "frozenCaseSha256": "8fd6c761d8b8d23eb8184a689a0dc630c9de268827eed2577cfac06916b9144b"
     },
     {
       "caseId": "deep-dive-loop-unresolved-cause-reviews",
       "status": "new",
       "rationale": [
-        "Invented paired case with the same failing check and AGENTS.md block: the check names the missing provenance and a teammate blames the mapper, but the mapper copies it and this run's checkpoint lacks it, so the run must investigate and cite a fresh review's verdict file. Fresh native run required."
+        "Invented paired case with the same failing check and AGENTS.md block: the check names the missing provenance and a teammate blames the mapper, but the mapper copies it and this run's checkpoint lacks it, so the run must investigate and cite a fresh review's verdict file. Fresh native run required.",
+        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop."
       ],
       "beforeSha256": null,
-      "afterSha256": "3a1da29a679611dfae7a939f8972faed95ce2e255c10393d45e060adfa457054",
+      "afterSha256": "db26807794c4c0745b7ca1bb2133e07e33109349c082361eccd5e995980c4d71",
       "frozenCaseSha256": "3a1da29a679611dfae7a939f8972faed95ce2e255c10393d45e060adfa457054"
     },
     {
@@ -2654,10 +2660,11 @@
       "caseId": "deep-dive-explicit-invocation-runs-full-procedure",
       "status": "new",
       "rationale": [
-        "Invented override case: an explicit /deep-dive on a failure whose cause this run already established still runs the full procedure with a cited fresh review. Fresh native run required."
+        "Invented override case: an explicit /deep-dive on a failure whose cause this run already established still runs the full procedure with a cited fresh review. Fresh native run required.",
+        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop."
       ],
       "beforeSha256": null,
-      "afterSha256": "6c8de269d2fe3ca67c45dfc64e7d8e6a6ee843cf5f7c853e729be92e108a06e0",
+      "afterSha256": "46ab6ddfa1dee93c779e497cc8ed876de90d5eee47a38df64e83c27d10865991",
       "frozenCaseSha256": "6c8de269d2fe3ca67c45dfc64e7d8e6a6ee843cf5f7c853e729be92e108a06e0"
     },
     {

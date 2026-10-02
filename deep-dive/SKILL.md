@@ -6,13 +6,13 @@ description: >-
   result reviewed in a fresh context before reporting it. Use before claiming a
   cause or proposing a fix for an observed failure, hang, leak, or unexpected
   agent behavior, when asked why something happened or what is causing it, or
-  when the user runs /deep-dive. Inside an authorized development or delivery
-  loop, a failing check whose own output or trace already shows an uncontested
+  when the user runs /deep-dive. Inside an authorized development, delivery or
+  fix loop, a failing check whose own output or trace already shows an uncontested
   in-scope cause is fixed in that loop instead, unless the user ran /deep-dive.
 license: Unlicense OR MIT
 metadata:
   agents-role: ambient
-  agents-text: Before claiming a cause or proposing a fix for something observed, check what actually ran, try to break each explanation, and cite a fresh review's verdict.
+  agents-text: Before claiming the cause of something observed, check what actually ran, try to break each explanation, and cite a fresh review's verdict; a failing check whose own output already shows an uncontested in-scope cause is fixed in the loop instead.
 ---
 
 # Deep dive
@@ -23,7 +23,7 @@ from the record of what ran, try to break it, and have it reviewed in a fresh
 context.
 
 An explicit `/deep-dive` always runs the full procedure below. Otherwise, a
-check that fails inside an authorized development or delivery loop needs no
+check that fails inside an authorized development, delivery or fix loop needs no
 deep dive only when the failing run's own output or trace already shows the
 in-scope mechanism that produced the failure, not only the failed assertion or
 the defect it names, and nothing contradicts it. State that cause and its
