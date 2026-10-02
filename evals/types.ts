@@ -106,6 +106,8 @@ export interface EvalExpectations {
     before: ActionName;
     after: ActionName;
   }>;
+  // The native worker must have started before the first of each action.
+  requiredWorkerBeforeActions?: ActionName[];
   requiredActionSequence?: ActionName[];
   requiredActions?: ActionName[];
   requiredAnyActions?: ActionName[];
@@ -162,6 +164,9 @@ export interface RunLedger {
     context: string;
     transcript: string;
     verdictFile?: string;
+    // Parent ledger event count when the worker started, so its order against
+    // the parent's actions can be checked.
+    startedAtEvent?: number;
     ledger: RunLedger;
     grade: GradeResult;
     output: string;

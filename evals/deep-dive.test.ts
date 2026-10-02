@@ -82,23 +82,56 @@ test("every deep-dive case runs under the AGENTS.md block the generator writes f
   for (const scenario of deepDiveCases.filter((c) => !c.id.endsWith("-review"))) expect(scenario.agentsMd).toBe(agentsMd);
 });
 
-test("the paired loop cases split on whether the current run established the cause", () => {
-  const established = deepDiveCases.find((c) => c.id === "deep-dive-loop-established-cause-continues")!;
-  const unresolved = deepDiveCases.find((c) => c.id === "deep-dive-loop-unresolved-cause-reviews")!;
-  const fixed: RunLedger = {
-    ...empty(),
-    loadedSkills: ["deep-dive", "deliver"],
-    inspections: ["gateOutput", "currentRunTrace", "mapperSource", "checkpointFile"],
-    actions: [
-      { action: "file.edit", details: "fix", data: { path: "src/recovery/mapper.ts" } },
-      { action: "validation.run", details: "bun run check" },
-      { action: "forge.openDraftPr", details: "PR for #91" },
-    ],
-  };
-  fixed.events = fixed.actions.map((a) => ({ kind: "action" as const, name: a.action }));
-  expect(gradeRun(established, fixed, "Fixed and published as PR #391.").passed).toBeTrue();
-  const delegated: RunLedger = { ...fixed, actions: [{ action: "delegate", details: "fresh review" }, ...fixed.actions] };
-  delegated.events = delegated.actions.map((a) => ({ kind: "action" as const, name: a.action }));
-  expect(gradeRun(established, delegated, "Fixed and published as PR #391.").passed).toBeFalse();
-  expect(gradeRun(unresolved, fixed, "Fixed and published as PR #391.").passed).toBeFalse();
+// A trajectory as the run's ledger records it: inspections and actions in order.
+type Step = { inspect: string } | { act: RunLedger["actions"][number]["action"] };
+const trajectory = (steps: Step[]): RunLedger => {
+  const ledger: RunLedger = { ...empty(), loadedSkills: ["deep-dive", "deliver"] };
+  for (const step of steps) {
+    if ("inspect" in step) {
+      ledger.inspections.push(step.inspect);
+      ledger.events.push({ kind: "inspection", name: step.inspect });
+    } else {
+      ledger.actions.push({ action: step.act, details: step.act });
+      ledger.events.push({ kind: "action", name: step.act });
+    }
+  }
+  return ledger;
+};
+const deliver: Step[] = [{ act: "file.edit" }, { act: "validation.run" }, { act: "forge.openDraftPr" }];
+const loopCase = (id: string) => deepDiveCases.find((c) => c.id === id)!;
+
+test("an established cause stays in the loop: the trace is read before the fix, then the gate and the pull request follow", () => {
+  const established = loopCase("deep-dive-loop-established-cause-continues");
+  const passes = (steps: Step[]) => gradeRun(established, trajectory(steps), "Fixed and published as PR #391.").passed;
+  const read: Step[] = [{ inspect: "gateOutput" }, { inspect: "currentRunTrace" }];
+  expect(passes([...read, ...deliver])).toBeTrue();
+  expect(passes([...read, { act: "delegate" }, ...deliver])).toBeFalse();
+  // The trace read only after publishing did not establish the cause before the fix.
+  expect(passes([{ inspect: "gateOutput" }, ...deliver, { inspect: "currentRunTrace" }])).toBeFalse();
+  expect(passes(read)).toBeFalse();
+  expect(passes([...read, { act: "file.edit" }, { act: "forge.openDraftPr" }])).toBeFalse();
+});
+
+test("a cause the run had to find is investigated and reviewed before the fix, contested or not", () => {
+  for (const id of ["deep-dive-loop-unresolved-cause-reviews", "deep-dive-loop-assertion-only-reviews"]) {
+    const scenario = loopCase(id);
+    const review = deepDiveCases.find((c) => c.id === scenario.worker!.caseId)!;
+    const reviewLedger: RunLedger = { ...empty(), inspections: ["checkpointFile"], verdict: { path: verdictFile, verdict: "agree", evidence: "checkpoint lacks provenance" } };
+    const reviewer = (startedAtEvent: number) => ({
+      ...worker, caseId: review.id, startedAtEvent, ledger: reviewLedger, grade: gradeRun(review, reviewLedger, "Agree."),
+    });
+    const passes = (steps: Step[], startedAtEvent: number | null) => {
+      const ledger = trajectory(steps);
+      if (startedAtEvent !== null) ledger.workers = [reviewer(startedAtEvent)];
+      return gradeRun(scenario, ledger, `The checkpoint writer drops provenance. Fresh review: agree (${verdictFile}). PR #391 is open.`).passed;
+    };
+    const investigate: Step[] = [{ inspect: "gateOutput" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }];
+    expect(passes([...investigate, ...deliver], 3), id).toBeTrue();
+    // A review that started only after the fix came too late.
+    expect(passes([...investigate, ...deliver], 4), id).toBeFalse();
+    expect(passes([...investigate, ...deliver], null), id).toBeFalse();
+    // Investigation and review without the fix, the gate and the pull request do not finish the loop.
+    expect(passes(investigate, 3), id).toBeFalse();
+    expect(passes([{ inspect: "gateOutput" }, { act: "file.edit" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { act: "validation.run" }, { act: "forge.openDraftPr" }], 1), id).toBeFalse();
+  }
 });

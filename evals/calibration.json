@@ -2629,10 +2629,11 @@
       "status": "new",
       "rationale": [
         "Invented paired case inside an authorized delivery loop under the deep-dive AGENTS.md block: this run's trace already shows the recovery mapper dropping provenance, so the run fixes it in the loop without a delegated review. Fresh native run required.",
-        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop."
+        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop.",
+        "Grader corrected: investigation and, where the cause had to be found, a fresh review now come before the first edit, followed by the fix, the gate and the pull request; the contested case no longer credits an unsupported commit attribution."
       ],
       "beforeSha256": null,
-      "afterSha256": "4575468dcbb5f50b9c9d1cc5ba3ac545b17b51b74070cd97a502f67f754c96c2",
+      "afterSha256": "3d776a6651a0b8cedd5fd9006b12488e9f2cf6c040b3b6432f5e77fd68b32156",
       "frozenCaseSha256": "8fd6c761d8b8d23eb8184a689a0dc630c9de268827eed2577cfac06916b9144b"
     },
     {
@@ -2640,10 +2641,11 @@
       "status": "new",
       "rationale": [
         "Invented paired case with the same failing check and AGENTS.md block: the check names the missing provenance and a teammate blames the mapper, but the mapper copies it and this run's checkpoint lacks it, so the run must investigate and cite a fresh review's verdict file. Fresh native run required.",
-        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop."
+        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop.",
+        "Grader corrected: investigation and, where the cause had to be found, a fresh review now come before the first edit, followed by the fix, the gate and the pull request; the contested case no longer credits an unsupported commit attribution."
       ],
       "beforeSha256": null,
-      "afterSha256": "db26807794c4c0745b7ca1bb2133e07e33109349c082361eccd5e995980c4d71",
+      "afterSha256": "e57d284fdb2df00b63ac33fd6dba30770aa8c4a5773600755fe5537b05be531e",
       "frozenCaseSha256": "3a1da29a679611dfae7a939f8972faed95ce2e255c10393d45e060adfa457054"
     },
     {
@@ -2676,6 +2678,26 @@
       "beforeSha256": null,
       "afterSha256": "0fc3b417e0747e94a0691d7115596c675c02d32181a9e08cb914cbadeac8f335",
       "frozenCaseSha256": "0fc3b417e0747e94a0691d7115596c675c02d32181a9e08cb914cbadeac8f335"
+    },
+    {
+      "caseId": "deep-dive-loop-assertion-only-reviews",
+      "status": "new",
+      "rationale": [
+        "Invented uncontested negative in the same authorized loop under the same AGENTS.md block: the failing check only states that provenance is missing, with no trace and no competing claim, so the run must investigate and cite a fresh review's verdict file before the fix. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "d905a50a32518215f987082b8e459c449310d51c3000d801e6c6f7fcd7863859",
+      "frozenCaseSha256": "d905a50a32518215f987082b8e459c449310d51c3000d801e6c6f7fcd7863859"
+    },
+    {
+      "caseId": "deep-dive-loop-assertion-only-reviews-review",
+      "status": "new",
+      "rationale": [
+        "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "000100643cf4056743cc69276429ec92b4def6b3945e6b3676208156e8cc9681",
+      "frozenCaseSha256": "000100643cf4056743cc69276429ec92b4def6b3945e6b3676208156e8cc9681"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",
