@@ -7,8 +7,8 @@ description: >-
   /update-pr.
 license: Unlicense OR MIT
 compatibility: >-
-  Requires git and the GitHub CLI (gh) authenticated to the target repository,
-  plus network access.
+  Requires git, Python 3.11 or newer, and the GitHub CLI (gh) authenticated to
+  the target repository, plus network access.
 metadata:
   agents-role: entry-point
   agents-text: Push new changes to an existing pull request and refresh its metadata.
@@ -52,7 +52,9 @@ not block the update.
    resume testing on that exact revision before claiming readiness.
 5. When relevant changes exist, commit them under `git-workflow`: stage only
    those files, use a concise Conventional Commit subject, and never amend or
-   skip hooks.
+   skip hooks. Run the
+   [publication guard](../git-workflow/SKILL.md#publication-guard) at each
+   commit, push and PR write.
 6. When the branch has commits its remote lacks, push an ordinary branch
    normally, setting upstream when needed. Push a verified stack only through
    the guarded official stack workflow.
@@ -63,8 +65,9 @@ not block the update.
    [../agent-writing/references/pr-descriptions.md](../agent-writing/references/pr-descriptions.md),
    preserving explicit project-template requirements and replacing obsolete
    summaries or intermediate development history.
-8. Report the updated PR, any new commit, metadata changes and observed
-   validation. Include stack position and rewritten branches when applicable.
+8. Report the updated PR, any new commit, metadata changes, what the
+   publication guard rewrote and observed validation. Include stack position
+   and rewritten branches when applicable.
    Distinguish passed local checks from pending current-head CI. Return the
    exact current head and next transition to the active publication or delivery
    caller; that caller continues through CI and feedback. Report missing
