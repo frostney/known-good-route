@@ -101,10 +101,11 @@
       "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "30e9ca770fae4c64f14f2dbcd468cf44849f74bd9b3f87f8b876c7fc38a46eb7",
-      "afterSha256": "94ac5ab7322cfdd8251fa513b89ec7780fd18d38dd79f35cfeb4e52cf8c66fcc",
+      "afterSha256": "463612650d1fa13b0d6e6ec1e8aa6235b9b4f82fb7553eb12eeba35dab874529",
       "frozenCaseSha256": "4173add14875c06e8a075b4d1e6238e4d18458cc62117816f97f7d1fe46ce333"
     },
     {
@@ -778,10 +779,11 @@
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Supply retry timing, concrete cancellation defect and attribution; make mutation results explicit.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "34b83e0912c8638480a795363891d569271678fef05a001adce7554ed78ce5af",
-      "afterSha256": "ca2714e377438d91972d42b7ab91d07a41ed5f36abd7c8d5dced12c7c98bf739",
+      "afterSha256": "11acc54299e80cacae4d09a270713cb1338dd05f5434cf64082b23b2cf42005f",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1445,10 +1447,11 @@
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
         "September 14 approved release ownership: preserve parallel rolling integration and add an explicit configured milestone release plan, create-release invocation and verified release before closure. No fresh native replay of this legacy case claimed.",
         "September 27 contract change: the delegated review default is /code-review fix-all, whose lanes fan out by default. Fresh native run required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "4a77e31e0e86343d1e4e0f72ba1a2f18f4e13d4645feb94c336ef87f43123791",
-      "afterSha256": "461e8188640fd4c40f177fcbb200b53ce351231a2790292654176a1515456135",
+      "afterSha256": "e5f98a5e0fd921e3bb23770a5e36cce185136824d96f3a299a0dc381104a217b",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1483,10 +1486,11 @@
       "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "05c0e220a1dee74000324faae5e1894e335d6ffb566e0fb474125b88ac671df6",
-      "afterSha256": "8e0a80691826366bcb58c08d26a24c0ab44999a9212626988ac90dc8851ac4db",
+      "afterSha256": "7a6e8872636e339fa52bee0d7f0de01c6478afa9ee41586a8868ffe706548a99",
       "frozenCaseSha256": "8037599737c2cb06a7f453669b71fd12e5f49590c35209b5b235d5800f2fab36"
     },
     {
@@ -1536,10 +1540,11 @@
         "Supply concrete lane identity and separate focused/local/remote validation results.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
         "September 14 approved release ownership: preserve lean validation and telemetry requirements while completing the configured milestone release before closure. No fresh native replay of this legacy case claimed.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "943af6b3de1021d9805c46450689b5242d9da8937edd9833eb9306d54106d718",
-      "afterSha256": "0570be9896bbfc6e60587c00b6f6b2018a71c7850a342a53e7de5e716c6658eb",
+      "afterSha256": "ec00b95f876c8615cf392fdf022e2f107a32b8e0014279becc036e071aecd779",
       "frozenCaseSha256": "e39277968a2796b5b740996fd10c54547b15ad26e16a6ab0767deb57ace61b4d",
       "postFreezeChangedFields": [
         "expected"
@@ -1659,10 +1664,11 @@
       "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "f7f4c49580242958106e7408e5e4c4947d3eec04c52da040e0799f9b2a6871c0",
-      "afterSha256": "935f3fc5d0104bec4d5798f6c1de63216de7a78025f0186e2e1d4eb494e688bf",
+      "afterSha256": "74574bcb360a589dbcead1ab89453c12e9fc94044d48bdc641374793d0528a2a",
       "frozenCaseSha256": "7f0ecd811bd03a42f763b0a5a290770ca6ba4f05654c69ac1f0c1800280c8382"
     },
     {
@@ -2463,10 +2469,11 @@
         "New bounded September 14 synthetic decision fixture, declared before native execution: Delivery resumes an existing draft, repairs an in-scope CI failure and reaches the selected merge-ready endpoint. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md.",
         "Original Astra and Fable inspected current stored evidence and avoided redundant initial gates without requesting validation.reuse. Replace that ceremonial action requirement with completion-evidence inspection before the first wait; preserve failure-repair-publication order and captured renewed gates. Assertion-only reassessment of original outputs is recorded separately from native runs.",
         "Original Astra and Fable inspected current stored evidence and avoided redundant initial gates without requesting validation.reuse. Replace that ceremonial action requirement with completion-evidence inspection before the first wait; preserve failure-repair-publication order and captured renewed gates. Assertion-only reassessment of original outputs is recorded separately from native runs.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": null,
-      "afterSha256": "9a05c4ac20f7307a20e771ae7ca5c31bd6b4ff285dbb992bbafe32d069b5453d",
+      "afterSha256": "61d5a92b4377f5d3b30f8110c28b5667f573f74211d88b3c05fb5d81d6f46716",
       "frozenCaseSha256": "7310a7d77d1db3a54ec1b5bd544c2acf4595438e4203e14590eaf19be1e6455e",
       "revisions": [
         {
@@ -2518,10 +2525,11 @@
         "New bounded September 14 synthetic decision fixture, declared before native execution: Milestone completion invokes the release workflow and the existing single publisher after work-item integration is verified. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md.",
         "Original fixtures wrongly published on a pre-tag wait, omitted required ledger-validation results and forbade ignored checkpoints. Keep releases absent until tag submission changes subsequent monitor responses; supply persisted-and-validated telemetry results, require captured publication/ledger success before closure, allow only the ignored handoff, and accept structured tag/head evidence. Original incomplete/contradictory trajectories are preserved; fresh native replay required.",
         "Original fixtures wrongly published on a pre-tag wait, omitted required ledger-validation results and forbade ignored checkpoints. Keep releases absent until tag submission changes subsequent monitor responses; supply persisted-and-validated telemetry results, require captured publication/ledger success before closure, allow only the ignored handoff, and accept structured tag/head evidence. Original incomplete/contradictory trajectories are preserved; fresh native replay required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": null,
-      "afterSha256": "b6b45994dde5b75e0eae0f3b437cf4bae4f17a9a3c53c479715974dbbe830b60",
+      "afterSha256": "ef4dc33a50c602106acfdd873e9103d64d8147efc87c58d0c281bf2e46ce9812",
       "frozenCaseSha256": "046409fe4ee390ed149924e35c79a2622d0d43f4d0cdde115e0453d9e5743e92",
       "revisions": [
         {
@@ -2542,10 +2550,11 @@
       "rationale": [
         "New bounded September 14 synthetic decision fixture, declared before native execution: A merged work item whose integration reveals a requirement gap completes through a new linked repair PR and verified replacement deployment. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md.",
         "Normalize a malformed 42-character synthetic repair revision to valid 40-character state/responses. Grade explicit integration probe identity through details/structured fields and fresh default-base branch identity, without requiring the incidental word repair or a final SHA spelling length. Original identity evidence is inconclusive because fixture revisions were malformed; fresh native replay required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": null,
-      "afterSha256": "6167edd18cfdd1d56491dd014fdc085b7d4281fb10d20aa8ae86ceb46cebdd92",
+      "afterSha256": "4cba359fe0174b83446c8be088ddfcc84773e541cacc35731c2f1e6f2beea753",
       "frozenCaseSha256": "863f754d2c7473145a9688ce7e01411e98d19f4e0de61dd2568ef68939437e87",
       "revisions": [
         {
