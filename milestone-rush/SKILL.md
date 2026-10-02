@@ -156,7 +156,8 @@ Unsupported passive waiting required by repository policy blocks spawning.
   and verify that every in-scope item is delivered and closed with evidence; no
   milestone PR, required check, review thread, or active review-tool pass
   remains pending; and the synced default branch passes the applicable full
-  project gate. A failure resumes execution.
+  project gate. A watcher or CI result for that exact revision is that
+  evidence; do not run the gate again. A failure resumes execution.
 - Run the event-ledger `validate` and `summarize` commands for the current
   `runId` before closure. Any invalid closure evidence the event-ledger
   reference lists blocks closure until corrected or explicitly marked

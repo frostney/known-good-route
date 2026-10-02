@@ -38,8 +38,9 @@ do not follow this guide.
   or evidence.
 - A progress update starts with a result, blocker, decision, or correction. Add
   the next action only when it helps the reader.
-- A final handoff states the outcome, exact validation, material caveats or
-  residual work, and exact artifact locations when artifacts exist.
+- A final handoff states the outcome, exact validation, including any check
+  that failed before it passed and what fixed it, material caveats or residual
+  work, and exact artifact locations when artifacts exist.
 - A review reply or retrospective impact item states the finding or impact and
   its consequence or resolution.
 - A correction first re-runs the check behind the claim when it can. It states
