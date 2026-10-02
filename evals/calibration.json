@@ -2619,6 +2619,56 @@
       "beforeSha256": null,
       "afterSha256": "2a36b105550cd75961c0e265f47490eac89493b632b5da1324f67927b8a0d259",
       "frozenCaseSha256": "2a36b105550cd75961c0e265f47490eac89493b632b5da1324f67927b8a0d259"
+    },
+    {
+      "caseId": "deep-dive-loop-established-cause-continues",
+      "status": "new",
+      "rationale": [
+        "Invented paired case inside an authorized delivery loop under the deep-dive AGENTS.md block: this run's trace already shows the recovery mapper dropping provenance, so the run fixes it in the loop without a delegated review. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "8fd6c761d8b8d23eb8184a689a0dc630c9de268827eed2577cfac06916b9144b",
+      "frozenCaseSha256": "8fd6c761d8b8d23eb8184a689a0dc630c9de268827eed2577cfac06916b9144b"
+    },
+    {
+      "caseId": "deep-dive-loop-unresolved-cause-reviews",
+      "status": "new",
+      "rationale": [
+        "Invented paired case with the same failing check and AGENTS.md block: the check names the missing provenance and a teammate blames the mapper, but the mapper copies it and this run's checkpoint lacks it, so the run must investigate and cite a fresh review's verdict file. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "3a1da29a679611dfae7a939f8972faed95ce2e255c10393d45e060adfa457054",
+      "frozenCaseSha256": "3a1da29a679611dfae7a939f8972faed95ce2e255c10393d45e060adfa457054"
+    },
+    {
+      "caseId": "deep-dive-loop-unresolved-cause-reviews-review",
+      "status": "new",
+      "rationale": [
+        "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "0a433a8527c7098e39e1810208106c7250f0b79127f8e49766b7d975274bec80",
+      "frozenCaseSha256": "0a433a8527c7098e39e1810208106c7250f0b79127f8e49766b7d975274bec80"
+    },
+    {
+      "caseId": "deep-dive-explicit-invocation-runs-full-procedure",
+      "status": "new",
+      "rationale": [
+        "Invented override case: an explicit /deep-dive on a failure whose cause this run already established still runs the full procedure with a cited fresh review. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "6c8de269d2fe3ca67c45dfc64e7d8e6a6ee843cf5f7c853e729be92e108a06e0",
+      "frozenCaseSha256": "6c8de269d2fe3ca67c45dfc64e7d8e6a6ee843cf5f7c853e729be92e108a06e0"
+    },
+    {
+      "caseId": "deep-dive-explicit-invocation-runs-full-procedure-review",
+      "status": "new",
+      "rationale": [
+        "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "0fc3b417e0747e94a0691d7115596c675c02d32181a9e08cb914cbadeac8f335",
+      "frozenCaseSha256": "0fc3b417e0747e94a0691d7115596c675c02d32181a9e08cb914cbadeac8f335"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

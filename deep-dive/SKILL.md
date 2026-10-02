@@ -5,9 +5,14 @@ description: >-
   ran or loaded, trying to break each candidate explanation, and having the
   result reviewed in a fresh context before reporting it. Use before claiming a
   cause or proposing a fix for an observed failure, hang, leak, or unexpected
-  agent behavior that the record does not already explain, when asked why
-  something happened or what is causing it, or when the user runs /deep-dive.
+  agent behavior, when asked why something happened or what is causing it, or
+  when the user runs /deep-dive. Inside an authorized development or delivery
+  loop, a failing check whose in-scope cause the current run has established is
+  fixed in that loop instead, unless the user ran /deep-dive.
 license: Unlicense OR MIT
+metadata:
+  agents-role: ambient
+  agents-text: Before claiming a cause or proposing a fix for something observed, check what actually ran, try to break each explanation, and cite a fresh review's verdict.
 ---
 
 # Deep dive
@@ -17,9 +22,14 @@ you name a cause or propose a fix for something observed, establish the cause
 from the record of what ran, try to break it, and have it reviewed in a fresh
 context.
 
-A check that fails inside a development or delivery loop, with output that
-names an in-scope defect, needs no deep dive: state that cause, fix it, and let
-the rerun confirm it.
+An explicit `/deep-dive` always runs the full procedure below. Otherwise, a
+check that fails inside an authorized development or delivery loop needs no
+deep dive only when evidence from the current run establishes its in-scope
+cause: the mechanism that produced the failure, not only the failed assertion
+or the defect the output names. State that cause and its evidence, fix it in
+the loop, and rerun; the rerun confirms the fix, not the cause. Contradictory
+evidence, a failure that evidence does not explain, or a fix the rerun does not
+confirm returns to this procedure, including the fresh review.
 
 ## Look at what actually ran
 

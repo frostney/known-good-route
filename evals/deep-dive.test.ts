@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { deepDiveCases } from "./deep-dive-cases.ts";
+import { agentsMd, deepDiveCases } from "./deep-dive-cases.ts";
 import { gradeRun } from "./grading.ts";
 import type { RunLedger } from "./types.ts";
 
@@ -69,4 +69,36 @@ test("a Codex reviewer's identity is configured-only, but a reported identity mu
   expect(
     gradeRun(claudeCase, { ...parent, workers: [{ ...claudeWorker, responseModels: ["claude-opus-5-5"] }] }, answer).passed,
   ).toBeTrue();
+});
+
+test("every deep-dive case runs under the AGENTS.md block the generator writes from deep-dive's own declaration", async () => {
+  const generator: string = "../.github/actions/update-project-skills/agents-block.mjs";
+  const { readRoleDeclaration, renderRegion } = (await import(generator)) as {
+    readRoleDeclaration: (source: string, label: string) => unknown;
+    renderRegion: (declarations: unknown[]) => string;
+  };
+  const source = await Bun.file(new URL("../deep-dive/SKILL.md", import.meta.url)).text();
+  expect(agentsMd).toBe(renderRegion([readRoleDeclaration(source, "deep-dive/SKILL.md")]));
+  for (const scenario of deepDiveCases.filter((c) => !c.id.endsWith("-review"))) expect(scenario.agentsMd).toBe(agentsMd);
+});
+
+test("the paired loop cases split on whether the current run established the cause", () => {
+  const established = deepDiveCases.find((c) => c.id === "deep-dive-loop-established-cause-continues")!;
+  const unresolved = deepDiveCases.find((c) => c.id === "deep-dive-loop-unresolved-cause-reviews")!;
+  const fixed: RunLedger = {
+    ...empty(),
+    loadedSkills: ["deep-dive", "deliver"],
+    inspections: ["gateOutput", "currentRunTrace", "mapperSource", "checkpointFile"],
+    actions: [
+      { action: "file.edit", details: "fix", data: { path: "src/recovery/mapper.ts" } },
+      { action: "validation.run", details: "bun run check" },
+      { action: "forge.openDraftPr", details: "PR for #91" },
+    ],
+  };
+  fixed.events = fixed.actions.map((a) => ({ kind: "action" as const, name: a.action }));
+  expect(gradeRun(established, fixed, "Fixed and published as PR #391.").passed).toBeTrue();
+  const delegated: RunLedger = { ...fixed, actions: [{ action: "delegate", details: "fresh review" }, ...fixed.actions] };
+  delegated.events = delegated.actions.map((a) => ({ kind: "action" as const, name: a.action }));
+  expect(gradeRun(established, delegated, "Fixed and published as PR #391.").passed).toBeFalse();
+  expect(gradeRun(unresolved, fixed, "Fixed and published as PR #391.").passed).toBeFalse();
 });
