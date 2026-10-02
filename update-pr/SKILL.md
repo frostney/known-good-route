@@ -70,7 +70,9 @@ not block the update.
 8. Report the updated PR, any new commit, metadata changes, what the
    publication guard rewrote and observed validation. Include stack position
    and rewritten branches when applicable.
-   Distinguish passed local checks from pending current-head CI. Return the
+   Distinguish passed local checks from pending current-head CI. A draft PR
+   stays draft until `delivery-wait` observes every required check green on the
+   pushed head; only then may it be marked ready for review. Return the
    exact current head and next transition to the active publication or delivery
    caller; that caller continues through CI and feedback. Started directly,
    continue under the [delivery settings](../deliver/SKILL.md#delivery-settings).
