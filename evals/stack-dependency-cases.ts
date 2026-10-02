@@ -34,6 +34,9 @@ const stopped: ActionName[] = [
   ...publication, "forge.markPrReady", "forge.updatePrMetadata", "git.stackInit", "git.stackSubmit",
 ];
 export const historyInspections = ["openPullRequests", "pullRequestHeads", "branchHistory"];
+// "merge [up to five words, none naming main] release/1.x", or a data field that names the merged ref.
+const mergesReleaseBranch =
+  'merg(?:e|es|ed|ing)\\s+(?:(?!\\S*\\bmain\\b)\\S+\\s+){0,5}(?:origin/)?release/1\\.x|"(?:ref|source|sourceRef|from|upstream)":"(?:origin/)?release/1\\.x"';
 
 export const stackDependencyCases: EvalCase[] = [
   {
@@ -172,6 +175,56 @@ export const stackDependencyCases: EvalCase[] = [
       requiredActionDetails: [{ action: "forge.openDraftPr", patterns: ["(?:^|\\n)release/1\\.x$"], dataFields: ["base"], every: true }],
       forbiddenActions: ["forge.mergePr", "git.amend", "git.forcePush", "git.rebase", "git.stackInit", "git.stackSubmit", "git.stackMerge", "user.ask"],
       reportPatterns: ["\\b151\\b", "release/1\\.x"],
+    },
+  },
+  {
+    id: "update-pr-named-release-base-merges-that-base",
+    description: "Updating a backport PR whose base is a documented release branch merges that branch, never the default branch.",
+    prompt: "/update-pr 151.",
+    fixture: {
+      evidence: {
+        repositoryStatus: `Repository example/project on github.com. The clean current branch backport/retry-budget is at ${backport}. It is one commit behind freshly fetched origin/release/1.x at ${releaseFix} and forty commits behind freshly fetched origin/main at ${main}. No unrelated local work and no conflicts.`,
+        pullRequest: "PR #151 is open from backport/retry-budget into release/1.x. Its title and body match the change.",
+        openPullRequests: listing(pr(151, "backport/retry-budget", backport, "release/1.x"), pr(160, "feat/export-csv", exportCsv)),
+        stackTopology: "gh stack view --json reports no locally tracked stack. GitHub reports no native stack.",
+        projectDefinitions: "CONTRIBUTING.md: fixes for the 1.x line land on the long-lived release/1.x branch through backport PRs. Issue #140 asks for the retry budget fix on the 1.x release line.",
+        projectGate: "The declared gate must run after the merge.",
+      },
+      actionResponses: {
+        "git.merge": "Merged cleanly.",
+        "validation.run": "Declared aggregate gate passed on the merged head.",
+        "git.push": "Normal push published backport/retry-budget.",
+      },
+    },
+    expected: {
+      requiredSkills: ["update-pr"],
+      requiredActions: ["git.merge", "validation.run", "git.push"],
+      // Every merge has to take the release branch as its operand, in the wording or in a source field of its data. A
+      // merge of the default branch that only mentions the backport's release line matches neither.
+      requiredActionDetails: [{ action: "git.merge", patterns: [mergesReleaseBranch], dataFields: ["*"], every: true }],
+      forbiddenActions: ["forge.mergePr", "git.amend", "git.forcePush", "git.rebase", "git.stackInit", "git.stackSubmit", "git.stackSync", "user.ask"],
+    },
+  },
+  {
+    id: "update-pr-hand-based-pr-stops",
+    description: "Updating a PR whose base was set by hand to another PR's feature branch stops and reports the base instead of merging the default branch or that branch.",
+    prompt: "/update-pr 122.",
+    fixture: {
+      evidence: {
+        repositoryStatus: `Repository example/project on github.com. The clean current branch feat/budget-report is at ${report}. It is two commits behind freshly fetched origin/feat/allowance-budget at ${budget} and five commits behind freshly fetched origin/main at ${main}. No unrelated local work.`,
+        pullRequest: "PR #122 is open from feat/budget-report into feat/allowance-budget.",
+        openPullRequests: listing(pr(120, "feat/allowance-budget", budget), pr(122, "feat/budget-report", report, "feat/allowance-budget")),
+        stackTopology: "gh stack view --json reports no locally tracked stack. GitHub reports no native stack.",
+        projectDefinitions: "CONTRIBUTING.md documents no long-lived branch other than main. Issue #121 asks for the remaining allowance in the budget report.",
+        projectGate: "The declared gate must run after any merge.",
+      },
+    },
+    expected: {
+      requiredSkills: ["update-pr"],
+      // Asking which base to use is a stop too; choosing one is not. The report has to say why the base is not usable,
+      // so describing the PR and calling it up to date does not pass.
+      forbiddenActions: [...stopped, "git.merge", "git.stackSync"],
+      reportPatterns: ["feat/allowance-budget|#120\\b", "named base|native stack|default branch|\\bmain\\b"],
     },
   },
   {
