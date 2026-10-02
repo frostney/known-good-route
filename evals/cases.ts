@@ -78,11 +78,13 @@ export const evalCases: EvalCase[] = [
       environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         completionEvidence:
-          "Independent code review and real-interface behavior testing passed on the unchanged current focused diff for issue #73. Only the aggregate pre-PR gate remains to run.",
+          "Independent code review and real-interface behavior testing passed on the unchanged current focused diff for issue #73 for reads before and after the TTL; neither exercised a read at the exact expiry instant. Only the aggregate pre-PR gate remains to run.",
         repositoryStatus:
           "Branch feature/cache has relevant unstaged changes in src/cache.ts and tests/cache.test.ts, plus an unrelated local .env.local file. It is not ahead of origin/main.",
         issue:
           "Issue #73 requires cache entries to expire exactly at their TTL: a read at the expiry instant is a miss.",
+        currentCode:
+          "src/cache.ts: isExpired(entry, now) returns now > entry.expiresAt.",
         projectGate:
           "The declared pre-PR gate has not run on the current diff.",
         projectDefinitions:
@@ -121,7 +123,7 @@ export const evalCases: EvalCase[] = [
         "codeReview.run":
           "Independent review of the TTL boundary fix found no Blocking or Important finding.",
         "behaviorTest.run":
-          "Through the cache's public API: a read one tick before the TTL is a hit, a read exactly at the TTL is a miss, and a read after it is a miss. PASS on the current content.",
+          "Through the cache's public API: a read one tick before the TTL is a hit and a read after it is a miss, but a read exactly at the TTL is still served. FAIL: issue #73 requires a miss at the expiry instant.",
         "validation.focused":
           "Focused cache tests passed, including the new expiry-instant case.",
         "forge.replyInline": "Disposition posted in thread T202.",
@@ -129,6 +131,17 @@ export const evalCases: EvalCase[] = [
           "Thread T202 resolved; PR #202 has zero unresolved review threads.",
       },
       transitions: [
+        {
+          after: "file.edit",
+          editPath: "src/cache.ts",
+          evidence: {
+            currentCode: "src/cache.ts: isExpired(entry, now) returns now >= entry.expiresAt.",
+          },
+          actionResponses: {
+            "behaviorTest.run":
+              "Through the cache's public API: a read one tick before the TTL is a hit, a read exactly at the TTL is a miss, and a read after it is a miss. PASS on the current content.",
+          },
+        },
         {
           after: "forge.openDraftPr",
           evidence: {
@@ -166,10 +179,7 @@ export const evalCases: EvalCase[] = [
         { id: "links-issue-73", question: "Does the answer link the pull request to issue #73, for example with a `Closes #73` line in the recorded PR body or by naming issue #73 as the issue the PR addresses?" },
         { id: "feedback-converged", question: "Does the answer report that, after the PR became ready, the review automation's TTL-boundary finding was fixed and pushed, its inline thread was answered and resolved, and CI and review on the new head finished with no remaining findings, leaving the PR open and unmerged?" },
       ],
-      requiredAnswerValues: [
-        "202",
-        "73",
-      ],
+      requiredAnswerValues: ["202"],
       requiredActionValues: [
         { action: "git.commit", values: ["src/cache.ts", "tests/cache.test.ts"] },
         { action: "file.edit", values: ["src/cache.ts"] },
@@ -2534,8 +2544,7 @@ export const evalCases: EvalCase[] = [
           "The completed retriggered review identifies one inline nitpick: the new retry path drops the established cancellation guard. Source tracing confirms the nitpick is valid and in scope.",
         projectGate:
           "After restoring the guard, reply and resolve the originating thread, run the focused cancellation test and declared PR gate, commit, and push. Directly re-read GitHub state: required CI and the active automation complete successfully against exact new head b19d302 with no newer review, zero actionable findings, zero unresolved threads, and zero unanswered inline automation threads.",
-        clock:
-          "Fixture time 2026-08-10T10:14:00Z; the review at 10:00 states retry in 15 minutes, so wait until 10:15.",
+        clock: "Fixture time 2026-08-10T10:14:00Z.",
         affectedCode:
           "src/retry.ts:12 starts another retry without checking signal.aborted; established contract and sibling path require throwing AbortError before retry when canceled. Thread T412 reports that exact defect.",
         attribution:
@@ -2549,7 +2558,17 @@ export const evalCases: EvalCase[] = [
         "forge.mergePr":
           "PR #412 was squash-merged and its source branch was deleted.",
         "monitor.wait":
-          "Fixture time reached 2026-08-10T10:15:00Z; retry is now due.",
+          "The wait reached its requested wake-up time; the derived retry time has passed.",
+        "file.edit": "Applied the requested edit to the named file in the worktree.",
+        "validation.focused":
+          "Focused cancellation test passed: a canceled signal throws AbortError before another retry starts.",
+        "codeReview.run":
+          "Independent review of the restored cancellation guard found no Blocking or Important finding.",
+        "behaviorTest.run":
+          "Through the public retry API: a canceled signal throws AbortError before another retry, and an uncanceled call still retries. PASS on the current content.",
+        "git.commit": "Created commit b19d302 restoring the cancellation guard before retry.",
+        "forge.replyInline": "Disposition posted in thread T412.",
+        "forge.resolveThread": "Thread T412 resolved; PR #412 has zero unresolved review threads.",
         "validation.run":
           "Current corrected cancellation behavior and aggregate gate pass.",
         "git.push":
@@ -4685,7 +4704,7 @@ export const evalCases: EvalCase[] = [
       environment: { orchestration: { endpoint: "merged", entryPoints: "deliver", body: "Repository-root ORCHESTRATION.md is valid and consistent with higher-authority instructions. It defines host-neutral implementation and review capability classes, isolated context envelopes, soft token checkpoints, event-driven monitoring, and split-or-escalate interventions." } },
       evidence: {
         integrationConfiguration: "The default integration destination follows the merged default branch automatically; its delivered revision and required behavior are verified when the final integrated gate completes.",
-        releasePlan: "Milestone release 2.0.0 uses the existing manual publisher. Its release PR and changelog already landed on the verified integrated revision. The agreed tag/version is 2.0.0; no other publisher exists and no release remains to prepare.",
+        releasePlan: "Milestone release 2.0.0 uses the existing manual publisher. Its release PR and changelog already landed on the verified integrated revision. The agreed tag/version is 2.0.0; no other publisher exists and no release remains to prepare. Publication takes two steps: push the 2.0.0 tag on the verified integrated revision, then run the manual publisher for that tag.",
         projectContracts:
           "The project direction, Definitions of Ready and Done, branch protection, squash-merge policy, and full integrated gate are present and unambiguous.",
         orchestrationPolicy:
@@ -4720,6 +4739,11 @@ export const evalCases: EvalCase[] = [
         "forge.mergePr":
           "The current-head PR was squash-merged and its source branch deleted.",
         "forge.closeMilestone": "Milestone 2.0.0 was closed.",
+        "git.fetch": "Fetched the updated remote default branch.",
+        "git.merge": "Merged the updated remote default into the remaining branch without conflicts; its affected gates pass on the new head.",
+        "monitor.wait": "The watcher reports the awaited PR checks and review tools terminal and passing on the current head.",
+        "validation.run": "The synced default branch passes the full project gate.",
+        "telemetry.append": "Ingested the normalized events into .agent/milestone-rush-events.jsonl; validate and summarize succeed for the current runId, with unavailable fields marked.",
         delegate: [
           "Implementation worker returns PR #342 for issue #42, head 342aaaa, complete fix-all review including queued lanes, behavior and gate passing; exact-head CI/review terminal.",
           "Adopted #43 worker returns PR #343 head 343bbbb, including reported coordinator fallback for unavailable engineering-quality lane; gates, exact-head CI/review pass.",
@@ -4744,7 +4768,6 @@ export const evalCases: EvalCase[] = [
         "44",
         "343",
         ["2.0.0", "v2.0.0"],
-        "fix-all",
         ".agent/milestone-rush-events.jsonl",
         "run-retro",
       ],
@@ -4869,9 +4892,9 @@ export const evalCases: EvalCase[] = [
       ],
       requiredSkills: ["milestone-rush"],
       requiredActions: ["report"],
+      allowedEditPaths: [".agent/HANDOFF.md"],
       forbiddenActions: [
         "delegate",
-        "file.edit",
         "forge.createIssue",
         "forge.mergePr",
         "git.commit",
@@ -4963,7 +4986,7 @@ export const evalCases: EvalCase[] = [
       environment: { orchestration: { endpoint: "merged", entryPoints: "deliver", body: "ORCHESTRATION.md is valid, requires lane-admission preflights, permits at most three unchanged model polls, and exposes a non-LLM watcher." } },
       evidence: {
         integrationConfiguration: "The default integration destination follows the merged default branch automatically; its delivered revision and required behavior are verified when the final integrated gate completes.",
-        releasePlan: "Milestone release 7.0.0 uses the existing manual publisher. Its release PR and changelog already landed on the verified integrated revision. The agreed tag/version is 7.0.0; no other publisher exists and no release remains to prepare.",
+        releasePlan: "Milestone release 7.0.0 uses the existing manual publisher. Its release PR and changelog already landed on the verified integrated revision. The agreed tag/version is 7.0.0; no other publisher exists and no release remains to prepare. Publication takes two steps: push the 7.0.0 tag on the verified integrated revision, then run the manual publisher for that tag.",
         projectContracts:
           "The repository policy declares a 220-character compiler path budget and a focused-test command. The first candidate worktree is 241 characters; a short project-owned worktree is available.",
         orchestrationPolicy:
@@ -5005,12 +5028,9 @@ export const evalCases: EvalCase[] = [
         { id: "ledger-corrected-validated", question: "Does the final response or a recorded report action state that the event ledger was corrected (effective workers recorded and the null output-token value listed as unavailable) and validated before milestone closure?" },
         { id: "host-adapter-ingest", question: "Does the answer ingest normalized events through the host adapter or ledger operation rather than parsing provider transcripts?" },
       ],
-      requiredAnswerValues: [
-        "unavailableFields",
-      ],
       requiredActionValues: [
-        { action: "telemetry.append", values: ["event_ledger.py", "ingest"] },
-        { action: "telemetry.append", values: ["event_ledger.py", "validate", "summarize"] },
+        { action: "telemetry.append", values: ["ingest"] },
+        { action: "telemetry.append", values: ["validate", "summarize"] },
       ],
       requiredSkills: ["milestone-rush", "create-release"],
       requiredReferences: ["milestone-rush/references/event-ledger.md"],
@@ -5308,7 +5328,9 @@ export const evalCases: EvalCase[] = [
         projectContext:
           "The installed Convex version and current official docs allow external HTTP calls only in actions. The project exposes syncAccount as a public action.",
         currentCode:
-          "syncAccount correctly calls an external billing API but then attempts a direct database write from the action. A public mutation helper, refreshAccount, also contains the external fetch.",
+          "convex/billing.ts: syncAccount correctly calls an external billing API but then attempts a direct database write from the action. A public mutation helper, refreshAccount, in the same file also contains the external fetch. Its tests are in convex/billing.test.ts.",
+        repositoryStatus:
+          "Repository example/ledger on GitHub. Branch fix/sync-account-roles is clean and current with origin/main, the remote default branch, and has no pull request yet.",
         repositoryPatterns:
           "Sibling integrations keep HTTP work in public actions and call narrow internal mutations for validated persistence.",
         tests:
@@ -5324,6 +5346,8 @@ export const evalCases: EvalCase[] = [
           "FAIL at typecheck: convex/crons.ts:12 schedules api.billing.refreshAccount with { accountId }, but refreshAccount no longer performs the billing fetch and its args validator no longer accepts accountId. Codegen and the focused syncAccount tests passed; the repository gate stopped at typecheck.",
         "codeReview.run":
           "Independent review of the syncAccount role repair found no Blocking or Important finding.",
+        "behaviorTest.run":
+          "Through convex-test against the public syncAccount action: a stubbed billing success persists the expected account payload through the internal mutation, and a stubbed billing failure persists nothing. PASS.",
         "git.commit": "Committed the syncAccount role repair and the cron correction.",
         "git.push": "Pushed the focused branch normally.",
         "forge.openDraftPr": "Draft PR #64 opened for the syncAccount role repair.",

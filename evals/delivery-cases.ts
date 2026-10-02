@@ -134,7 +134,7 @@ export const deliveryCases: EvalCase[] = [
       environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: { ...common,
         workItem: "PR #503 is the established ordinary work item for issue #83 in example/palette, not an issue numbered 503. It fixes loading a theme fixture from paths containing spaces. Scope and the path-decoding approach were already selected.",
-        pullRequest: `Existing draft PR #503 at ${before}. Required project check is pending. Existing external reviews found no unrelated issues; final approval must apply to the repaired head. There are no unresolved inline threads.`,
+        pullRequest: `Existing draft PR #503 at ${before}. Its body lists the changed files and the testing done, so a new commit leaves it stale. Required project check is pending. Existing external reviews found no unrelated issues; final approval must apply to the repaired head. There are no unresolved inline threads.`,
         completionEvidence: `Independent review, behavior testing and local pnpm check passed on ${before} in the developer environment. These results remain valid only for unchanged content, command, environment and coverage.`,
         continuousIntegration: "The foreground wait is available; the currently queued Linux PR check will return its actual result.",
         failureDetails: "No terminal result or failure log is available while the Linux check is pending.",
@@ -172,7 +172,7 @@ export const deliveryCases: EvalCase[] = [
         "503",
       ],
       requiredActionValues: [
-        { action: "forge.markPrReady", values: ["2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b"], fields: ["head", "revision"] },
+        { action: "forge.markPrReady", values: ["2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b"] },
       ],
       requiredSkills: ["deliver", "update-pr", ...gateSkills],
       requiredInspections: ["workItem", "failureDetails", "reviewState", "completionEvidence"],
@@ -311,7 +311,7 @@ export const deliveryCases: EvalCase[] = [
         ["4.2.0", "v4.2.0"],
       ],
       requiredActionValues: [
-        { action: "git.pushTag", values: [["v4.2.0","4.2.0"], "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"], fields: ["tag", "head", "revision"] },
+        { action: "git.pushTag", values: [["v4.2.0","4.2.0"], "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"] },
       ],
       requiredSkills: ["milestone-rush", "create-release"],
       requiredInspections: ["milestone", "integrationEvidence", "releasePlan", "releaseWorkflow"],
@@ -417,7 +417,7 @@ export const deliveryCases: EvalCase[] = [
         "508",
       ],
       requiredActionValues: [
-        { action: "git.createBranch", values: ["3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"], fields: ["base", "baseRef", "startPoint", "revision"] },
+        { action: "git.createBranch", values: [["3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c", "main", "origin/main"]] },
         { action: "forge.openDraftPr", values: ["507", "87"] },
         { action: "forge.mergePr", values: ["508"] },
         { action: "behaviorTest.run", values: ["https://nightly.example.test", "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d"] },
