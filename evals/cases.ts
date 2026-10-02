@@ -5385,7 +5385,7 @@ export const evalCases: EvalCase[] = [
         "codeReview.run":
           "Independent review of the syncAccount role repair found no Blocking or Important finding.",
         "behaviorTest.run":
-          "Through convex-test against the public syncAccount action: a stubbed billing success persists the expected account payload through the internal mutation, and a stubbed billing failure persists nothing. PASS.",
+          "Through convex-test against the public syncAccount action and the scheduled refresh path: a stubbed billing success persists the expected account payload through the internal mutation, a stubbed billing failure persists nothing, and the public refreshAccount mutation makes no external call. PASS.",
         "git.commit": "Committed the syncAccount role repair and the cron correction.",
         "git.push": "Pushed the focused branch normally.",
         "forge.openDraftPr": "Draft PR #64 opened for the syncAccount role repair.",
