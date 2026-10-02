@@ -175,14 +175,26 @@ def lock_loss(gh: Replay, ref: str) -> Callable[[float], None]:
     return answer
 
 
-def main(gh: REPLAY.RecordedGitHub, *argv: str) -> tuple[int, dict[str, Any]]:
-    """The adapter's CLI against `gh` at `gh.now`."""
+def main(gh: REPLAY.RecordedGitHub, *argv: str, host: str | None = None) -> tuple[int, dict[str, Any]]:
+    """The adapter's CLI against `gh` at `gh.now`, with GH_HOST set to `host` and no gh config.
+
+    `gh.hostnames` records the host each `Gh` the CLI made sends its requests to.
+    """
     output: list[str] = []
-    with mock.patch.object(ADAPTER, "Gh", lambda _metrics: gh), mock.patch.object(
+    gh.hostnames = getattr(gh, "hostnames", [])
+
+    def connect(_metrics: Any, hostname: str | None = None) -> REPLAY.RecordedGitHub:
+        gh.hostnames.append(hostname)
+        return gh
+
+    environment = {"GH_CONFIG_DIR": "/var/empty/no-gh-config"} | ({"GH_HOST": host} if host else {})
+    with mock.patch.dict(os.environ, environment), mock.patch.object(ADAPTER, "Gh", connect), mock.patch.object(
         ADAPTER.time, "time", lambda: gh.now
     ), mock.patch.object(ADAPTER.sys, "argv", ["coderabbit_adapter.py", *argv]), mock.patch(
         "builtins.print", output.append
     ):
+        if not host:
+            os.environ.pop("GH_HOST", None)
         code = ADAPTER.main()
     return code, json.loads(output[0])
 
@@ -885,6 +897,9 @@ class RunTest(unittest.TestCase):
         self.assertIn("before the permitted trigger", reason)
 
 
+GITHUB, ENTERPRISE = "github.com", "example.ghe.com"
+
+
 class TriggerLockTest(unittest.TestCase):
     def setUp(self) -> None:
         self.directory = tempfile.TemporaryDirectory()
@@ -898,7 +913,7 @@ class TriggerLockTest(unittest.TestCase):
             "import importlib.util, sys; sys.dont_write_bytecode = True; "
             f"spec = importlib.util.spec_from_file_location('adapter', {str(MODULE_PATH)!r}); "
             "module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module); "
-            "print(module.lock_path('quillworks'))"
+            "print(module.lock_path('github.com', 'quillworks'))"
         )
         paths = set()
         for variable in ("TMPDIR", "HOME"):
@@ -912,37 +927,49 @@ class TriggerLockTest(unittest.TestCase):
         self.assertTrue(paths.pop().startswith(pwd.getpwuid(os.getuid()).pw_dir + os.sep))
 
     def test_status_names_the_run_holding_the_lock(self) -> None:
-        self.assertEqual(ADAPTER.lock_status("quillworks")["held"], False)
+        self.assertEqual(ADAPTER.lock_status(GITHUB, "quillworks")["held"], False)
         holder = {"repo": "quillworks/duetto", "pr": 55, "head": CORPUS["duetto#55"]["head"]}
-        handle = ADAPTER.acquire_lock("quillworks", holder, 0, 1)
+        handle = ADAPTER.acquire_lock(GITHUB, "quillworks", holder, 0, 1)
         self.assertIsNotNone(handle)
         try:
-            status = ADAPTER.lock_status("quillworks")
-            self.assertEqual((status["owner"], status["held"]), ("quillworks", True))
+            status = ADAPTER.lock_status(GITHUB, "quillworks")
+            self.assertEqual((status["host"], status["owner"], status["held"]), (GITHUB, "quillworks", True))
             self.assertEqual(
-                {key: status["holder"][key] for key in ("repo", "pr", "head", "owner")},
-                holder | {"owner": "quillworks"},
+                {key: status["holder"][key] for key in ("repo", "pr", "head", "host", "owner")},
+                holder | {"host": GITHUB, "owner": "quillworks"},
             )
             self.assertIsInstance(status["holder"]["pid"], int)
-            self.assertIsNone(ADAPTER.acquire_lock("quillworks", {"pr": 58}, 0, 1))
+            self.assertIsNone(ADAPTER.acquire_lock(GITHUB, "quillworks", {"pr": 58}, 0, 1))
         finally:
             ADAPTER.release_lock(handle)
         self.assertEqual(
-            ADAPTER.lock_status("quillworks"),
-            {"owner": "quillworks", "path": status["path"], "held": False, "holder": None},
+            ADAPTER.lock_status(GITHUB, "quillworks"),
+            {"host": GITHUB, "owner": "quillworks", "path": status["path"], "held": False, "holder": None},
         )
 
     def test_two_owners_hold_their_locks_at_the_same_time(self) -> None:
-        first = ADAPTER.acquire_lock("quillworks", {"repo": "quillworks/duetto", "pr": 55}, 0, 1)
+        first = ADAPTER.acquire_lock(GITHUB, "quillworks", {"repo": "quillworks/duetto", "pr": 55}, 0, 1)
         self.assertIsNotNone(first)
         self.addCleanup(ADAPTER.release_lock, first)
-        second = ADAPTER.acquire_lock("marlowe-labs", {"repo": "marlowe-labs/duetto", "pr": 7}, 0, 1)
+        second = ADAPTER.acquire_lock(GITHUB, "marlowe-labs", {"repo": "marlowe-labs/duetto", "pr": 7}, 0, 1)
         self.assertIsNotNone(second)
         self.addCleanup(ADAPTER.release_lock, second)
-        quill, marlowe = ADAPTER.lock_status("quillworks"), ADAPTER.lock_status("marlowe-labs")
+        quill, marlowe = ADAPTER.lock_status(GITHUB, "quillworks"), ADAPTER.lock_status(GITHUB, "marlowe-labs")
         self.assertNotEqual(quill["path"], marlowe["path"])
         self.assertEqual((quill["held"], quill["holder"]["repo"]), (True, "quillworks/duetto"))
         self.assertEqual((marlowe["held"], marlowe["holder"]["repo"]), (True, "marlowe-labs/duetto"))
+
+    def test_one_owner_name_on_two_hosts_holds_two_locks(self) -> None:
+        first = ADAPTER.acquire_lock(GITHUB, "quillworks", {"repo": "Quillworks/one", "pr": 1}, 0, 1)
+        self.assertIsNotNone(first)
+        self.addCleanup(ADAPTER.release_lock, first)
+        second = ADAPTER.acquire_lock(ENTERPRISE, "quillworks", {"repo": "quillworks/two", "pr": 2}, 0, 1)
+        self.assertIsNotNone(second)
+        self.addCleanup(ADAPTER.release_lock, second)
+        public, enterprise = ADAPTER.lock_status(GITHUB, "quillworks"), ADAPTER.lock_status(ENTERPRISE, "quillworks")
+        self.assertNotEqual(public["path"], enterprise["path"])
+        self.assertEqual((public["holder"]["host"], public["holder"]["repo"]), (GITHUB, "Quillworks/one"))
+        self.assertEqual((enterprise["holder"]["host"], enterprise["holder"]["repo"]), (ENTERPRISE, "quillworks/two"))
 
     def test_the_owner_is_the_repository_owner_in_lowercase(self) -> None:
         self.assertEqual(ADAPTER.lock_owner("Quillworks/Duetto"), "quillworks")
@@ -950,37 +977,70 @@ class TriggerLockTest(unittest.TestCase):
         with self.assertRaises(ADAPTER.WaitError):
             ADAPTER.lock_owner("quillworks")
 
+    def test_the_host_is_the_one_gh_api_targets_normalized(self) -> None:
+        with tempfile.TemporaryDirectory() as config:
+            hosts = Path(config) / "hosts.yml"
+            with mock.patch.dict(os.environ, {"GH_CONFIG_DIR": config}):
+                os.environ.pop("GH_HOST", None)
+                self.assertEqual(ADAPTER.default_host(), GITHUB)
+                hosts.write_text("Example.GHE.com:\n    user: quill-bot\n    git_protocol: https\n")
+                self.assertEqual(ADAPTER.default_host(), ENTERPRISE)
+                hosts.write_text("github.com:\n    user: quill-bot\nexample.ghe.com:\n    user: quill-bot\n")
+                self.assertEqual(ADAPTER.default_host(), GITHUB)
+                for value, expected in (
+                    ("GitHub.com", GITHUB),
+                    ("api.github.com", GITHUB),
+                    ("api.example.ghe.com", ENTERPRISE),
+                    ("Code.Quillworks.Example", "code.quillworks.example"),
+                ):
+                    with self.subTest(GH_HOST=value), mock.patch.dict(os.environ, {"GH_HOST": value}):
+                        self.assertEqual(ADAPTER.default_host(), expected)
+
+    def test_every_request_names_the_host(self) -> None:
+        completed = subprocess.CompletedProcess([], 0, stdout="{}", stderr="")
+        with mock.patch.object(subprocess, "run", return_value=completed) as call:
+            ADAPTER.Gh(ADAPTER.Metrics(0.0), hostname=ENTERPRISE).rest("repos/quillworks/two")
+        self.assertEqual(call.call_args.args[0][:4], ["gh", "api", "--hostname", ENTERPRISE])
+
     def test_status_command_reports_the_holder_and_run_reports_lock_held(self) -> None:
         gh = owned("duetto#55", "quillworks", now="2026-09-25T19:50:00Z")
         head = gh.head_at("quillworks/duetto", 55)
-        handle = ADAPTER.acquire_lock("quillworks", {"repo": "quillworks/ledger", "pr": 58, "head": "abc"}, 0, 1)
+        holder = {"repo": "quillworks/ledger", "pr": 58, "head": "abc"}
+        handle = ADAPTER.acquire_lock(GITHUB, "quillworks", holder, 0, 1)
         self.addCleanup(ADAPTER.release_lock, handle)
         code, status = main(gh, "status", "--repo", "quillworks/duetto", "--pr", "55", "--head", f"55={head}", "--json")
         self.assertEqual((code, status["state"]), (0, "satisfied"))
         self.assertEqual(status["observation"]["pullRequests"][0]["state"], "clean-complete")
         lock = status["observation"]["lock"]
-        self.assertEqual((lock["owner"], lock["path"]), ("quillworks", str(ADAPTER.lock_path("quillworks"))))
+        self.assertEqual(
+            (lock["host"], lock["owner"], lock["path"]),
+            (GITHUB, "quillworks", str(ADAPTER.lock_path(GITHUB, "quillworks"))),
+        )
         self.assertEqual((lock["holder"]["repo"], lock["holder"]["pr"]), ("quillworks/ledger", 58))
+        self.assertEqual(gh.hostnames, [GITHUB])
         # The same owner in another repository and another case still waits for the lock.
         code, blocked = main(
             gh, "run", "--repo", "Quillworks/duetto", "--pr", "55", "--head", head,
-            "--deadline", "2000-01-01T00:00:00Z", "--interval", "1", "--json",
+            "--deadline", "2000-01-01T00:00:00Z", "--interval", "1", "--json", host="GitHub.com",
         )
         self.assertEqual((code, blocked["state"]), (0, "lock-held"))
-        self.assertEqual(blocked["observation"]["lock"]["owner"], "quillworks")
+        self.assertEqual((blocked["observation"]["lock"]["host"], blocked["observation"]["lock"]["owner"]), (GITHUB, "quillworks"))
         self.assertEqual(blocked["observation"]["lock"]["holder"]["pr"], 58)
         self.assertEqual(gh.posts, [])
 
     def test_a_run_for_another_owner_does_not_wait_for_the_held_lock(self) -> None:
         gh = owned("duetto#55", "marlowe-labs", now="2026-09-25T19:50:00Z")
         head = gh.head_at("marlowe-labs/duetto", 55)
-        handle = ADAPTER.acquire_lock("quillworks", {"repo": "quillworks/duetto", "pr": 55, "head": "abc"}, 0, 1)
+        handle = ADAPTER.acquire_lock(GITHUB, "quillworks", {"repo": "quillworks/duetto", "pr": 55, "head": "abc"}, 0, 1)
         self.addCleanup(ADAPTER.release_lock, handle)
         code, status = main(gh, "status", "--repo", "marlowe-labs/duetto", "--pr", "55", "--head", f"55={head}", "--json")
         self.assertEqual((code, status["state"]), (0, "satisfied"))
         self.assertEqual(
             status["observation"]["lock"],
-            {"owner": "marlowe-labs", "path": str(ADAPTER.lock_path("marlowe-labs")), "held": False, "holder": None},
+            {
+                "host": GITHUB, "owner": "marlowe-labs", "path": str(ADAPTER.lock_path(GITHUB, "marlowe-labs")),
+                "held": False, "holder": None,
+            },
         )
         code, finished = main(
             gh, "run", "--repo", "marlowe-labs/duetto", "--pr", "55", "--head", head,
@@ -988,8 +1048,58 @@ class TriggerLockTest(unittest.TestCase):
         )
         self.assertEqual((code, finished["state"]), (0, "clean-complete"))
         self.assertEqual(gh.posts, [])
-        self.assertTrue(ADAPTER.lock_status("quillworks")["held"])
-        self.assertFalse(ADAPTER.lock_status("marlowe-labs")["held"])
+        self.assertTrue(ADAPTER.lock_status(GITHUB, "quillworks")["held"])
+        self.assertFalse(ADAPTER.lock_status(GITHUB, "marlowe-labs")["held"])
+
+    def test_the_same_owner_name_on_another_host_does_not_wait_for_the_held_lock(self) -> None:
+        gh = owned("duetto#55", "quillworks", now="2026-09-25T19:50:00Z")
+        head = gh.head_at("quillworks/duetto", 55)
+        handle = ADAPTER.acquire_lock(GITHUB, "quillworks", {"repo": "Quillworks/one", "pr": 1, "head": "abc"}, 0, 1)
+        self.addCleanup(ADAPTER.release_lock, handle)
+        code, status = main(
+            gh, "status", "--repo", "quillworks/duetto", "--pr", "55", "--head", f"55={head}", "--json", host=ENTERPRISE,
+        )
+        self.assertEqual((code, status["observation"]["lock"]["host"], status["observation"]["lock"]["held"]), (0, ENTERPRISE, False))
+        code, finished = main(
+            gh, "run", "--repo", "quillworks/duetto", "--pr", "55", "--head", head,
+            "--deadline", "2026-09-25T20:50:00Z", "--interval", "1", "--json", host=ENTERPRISE,
+        )
+        self.assertEqual((code, finished["state"]), (0, "clean-complete"))
+        self.assertEqual(gh.hostnames, [ENTERPRISE, ENTERPRISE])
+        self.assertTrue(ADAPTER.lock_status(GITHUB, "quillworks")["held"])
+
+    def test_a_running_review_holds_its_owner_lock_until_it_ends(self) -> None:
+        gh = owned("duetto#55", "quillworks", now="2026-09-25T19:50:00Z")
+        head = gh.head_at("quillworks/duetto", 55)
+        read, seen = gh.rest, {}
+
+        def rest(endpoint: str, *args: Any) -> Any:
+            if not seen:
+                same = ADAPTER.acquire_lock(GITHUB, "quillworks", {"repo": "quillworks/ledger", "pr": 9}, 0, 1)
+                seen["same owner"] = same is not None
+                for name, host, owner in (("other owner", GITHUB, "marlowe-labs"), ("other host", ENTERPRISE, "quillworks")):
+                    handle = ADAPTER.acquire_lock(host, owner, {"repo": f"{owner}/ledger", "pr": 9}, 0, 1)
+                    seen[name] = handle is not None
+                    if handle:
+                        ADAPTER.release_lock(handle)
+                seen["holder"] = ADAPTER.lock_status(GITHUB, "quillworks")["holder"]
+            return read(endpoint, *args)
+
+        gh.rest = rest
+        code, finished = main(
+            gh, "run", "--repo", "quillworks/duetto", "--pr", "55", "--head", head,
+            "--deadline", "2026-09-25T20:50:00Z", "--interval", "1", "--json",
+        )
+        self.assertEqual((code, finished["state"]), (0, "clean-complete"))
+        self.assertEqual(
+            {key: seen[key] for key in ("same owner", "other owner", "other host")},
+            {"same owner": False, "other owner": True, "other host": True},
+        )
+        self.assertEqual((seen["holder"]["repo"], seen["holder"]["pr"]), ("quillworks/duetto", 55))
+        self.assertFalse(ADAPTER.lock_status(GITHUB, "quillworks")["held"])
+        released = ADAPTER.acquire_lock(GITHUB, "quillworks", {"pr": 9}, 0, 1)
+        self.assertIsNotNone(released)
+        ADAPTER.release_lock(released)
 
 
 class ContractTest(unittest.TestCase):

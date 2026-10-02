@@ -23,9 +23,10 @@ after a fixed bound: the wait for its own review becomes a trigger, and an
 unanswered trigger, a stalled review, an unexplained refusal and a second
 lock loss each become a blocked state. A GitHub read that fails is an
 operational error, never missing evidence. Triggers are serialized by a lock
-per user account and repository owner: CodeRabbit's review allowance belongs
-to the organization or account that owns the repository, so runs for
-different owners never wait on each other.
+per user account, GitHub host and repository owner: CodeRabbit's review
+allowance belongs to the organization or account that owns the repository,
+so runs for different owners never wait on each other. Every GitHub request
+goes to the host the lock names.
 """
 
 from __future__ import annotations
@@ -52,6 +53,7 @@ from kgr_github import (  # noqa: E402
     RateLimited,
     TransientError,
     WaitError,
+    default_host,
     emit,
     parse_time,
     positive_interval,
@@ -866,12 +868,12 @@ def lock_owner(repo: str) -> str:
     return repo_parts(repo)[0].lower()
 
 
-def lock_path(owner: str) -> Path:
-    return lock_directory() / f"owner-{stable_digest(owner)[:16]}.lock"
+def lock_path(host: str, owner: str) -> Path:
+    return lock_directory() / f"owner-{stable_digest([host, owner])[:16]}.lock"
 
 
-def open_lock(owner: str) -> tuple[Path, TextIO]:
-    path = lock_path(owner)
+def open_lock(host: str, owner: str) -> tuple[Path, TextIO]:
+    path = lock_path(host, owner)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         return path, path.open("a+")
@@ -891,19 +893,21 @@ def read_holder(handle: TextIO) -> dict[str, Any] | None:
     return value if isinstance(value, dict) else {"unreadable": raw}
 
 
-def lock_status(owner: str) -> dict[str, Any]:
+def lock_status(host: str, owner: str) -> dict[str, Any]:
     """Whether a `run` holds the owner's trigger lock, and which PR and head it serves."""
-    path, handle = open_lock(owner)
+    path, handle = open_lock(host, owner)
+    lock = {"host": host, "owner": owner, "path": str(path)}
     with handle:
         try:
             fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            return {"owner": owner, "path": str(path), "held": True, "holder": read_holder(handle)}
+            return lock | {"held": True, "holder": read_holder(handle)}
         fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
-    return {"owner": owner, "path": str(path), "held": False, "holder": None}
+    return lock | {"held": False, "holder": None}
 
 
 def acquire_lock(
+    host: str,
     owner: str,
     holder: dict[str, Any],
     deadline: float,
@@ -912,7 +916,7 @@ def acquire_lock(
     clock: Callable[[], float] = time.time,
     sleeper: Callable[[float], None] = time.sleep,
 ) -> TextIO | None:
-    _path, handle = open_lock(owner)
+    _path, handle = open_lock(host, owner)
     while True:
         try:
             fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -926,7 +930,7 @@ def acquire_lock(
         handle.truncate()
         handle.write(
             json.dumps(
-                holder | {"owner": owner, "pid": os.getpid(), "acquiredAt": format_timestamp(clock())},
+                holder | {"host": host, "owner": owner, "pid": os.getpid(), "acquiredAt": format_timestamp(clock())},
                 sort_keys=True,
             )
             + "\n"
@@ -1057,15 +1061,16 @@ def main() -> int:
     metrics = Metrics(time.monotonic())
     identity: dict[str, Any] = {"repo": args.repo, "prs": getattr(args, "pr", None)}
     try:
-        gh = Gh(metrics)
         repo_parts(args.repo)
+        host, owner = default_host(), lock_owner(args.repo)
+        gh = Gh(metrics, hostname=host)
         if args.command == "status":
             prs = [positive_pr(value) for value in args.pr]
             if len(set(prs)) != len(prs):
                 raise WaitError("--pr values must be unique")
             heads = parse_heads(args.head, prs)
             identity["heads"] = heads
-            lock = lock_status(lock_owner(args.repo))
+            lock = lock_status(host, owner)
             value = observation(gh, args.repo, prs, heads, time.time()) | {"lock": lock}
             metrics.observations += 1
             state, reason = aggregate_status(value)
@@ -1075,13 +1080,12 @@ def main() -> int:
             args.interval = positive_interval(args.interval)
             deadline = parse_time(args.deadline)
             identity = {"repo": args.repo, "prs": [args.pr], "heads": {args.pr: args.head}}
-            owner = lock_owner(args.repo)
             holder = {"repo": args.repo, "pr": args.pr, "head": args.head}
-            lock = acquire_lock(owner, holder, deadline, args.interval)
+            lock = acquire_lock(host, owner, holder, deadline, args.interval)
             if lock is None:
                 output = envelope(
-                    "run", "lock-held", identity, {"lock": lock_status(owner)}, metrics,
-                    f"another CodeRabbit run for {owner} held the trigger lock until the deadline",
+                    "run", "lock-held", identity, {"lock": lock_status(host, owner)}, metrics,
+                    f"another CodeRabbit run for {owner} on {host} held the trigger lock until the deadline",
                 )
             else:
                 try:

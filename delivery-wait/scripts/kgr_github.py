@@ -67,13 +67,58 @@ class Metrics:
         }
 
 
+GITHUB_HOST = "github.com"
+
+
+def normalize_host(host: str) -> str:
+    """`host` as gh compares hosts: lowercase, with subdomains of github.com,
+    github.localhost and a ghe.com tenancy folded into their base host."""
+    host = host.strip().lower()
+    for base in (GITHUB_HOST, "github.localhost"):
+        if host.endswith(f".{base}"):
+            return base
+    if host.endswith(".ghe.com"):
+        return f"{host.removesuffix('.ghe.com').rsplit('.', 1)[-1]}.ghe.com"
+    return host
+
+
+def gh_config_directory() -> Path:
+    if os.environ.get("GH_CONFIG_DIR"):
+        return Path(os.environ["GH_CONFIG_DIR"])
+    if os.environ.get("XDG_CONFIG_HOME"):
+        return Path(os.environ["XDG_CONFIG_HOME"]) / "gh"
+    return Path.home() / ".config" / "gh"
+
+
+def default_host() -> str:
+    """The host `gh api` targets without --hostname, normalized: GH_HOST, else
+    the only host in gh's hosts.yml, else github.com."""
+    if os.environ.get("GH_HOST"):
+        return normalize_host(os.environ["GH_HOST"])
+    try:
+        lines = (gh_config_directory() / "hosts.yml").read_text().splitlines()
+    except (OSError, UnicodeDecodeError):
+        lines = []
+    hosts = [
+        line.split(":", 1)[0].strip().strip("'\"")
+        for line in lines
+        if line[:1] not in {"", " ", "\t", "#", "-"} and ":" in line
+    ]
+    return normalize_host(hosts[0]) if len(hosts) == 1 else GITHUB_HOST
+
+
 class Gh:
-    def __init__(self, metrics: Metrics, timeout: int = 30) -> None:
+    """`gh api` requests, all to `hostname` when one is given."""
+
+    def __init__(self, metrics: Metrics, timeout: int = 30, hostname: str | None = None) -> None:
         self.metrics = metrics
         self.timeout = timeout
+        self.hostname = hostname
 
     def run(self, args: list[str], stdin: str | None = None) -> Any:
         self.metrics.api_requests += 1
+        if self.hostname and args[:1] == ["api"]:
+            args = ["api", "--hostname", self.hostname, *args[1:]]
         try:
             completed = subprocess.run(
                 ["gh", *args],
