@@ -586,6 +586,12 @@ class CycleTest(unittest.TestCase):
         gh.add_status("duetto#55", "Review in progress", "2026-09-25T19:49:30Z", state="pending")
         self.assertEqual(observed_at(gh, "duetto#55", "2026-09-25T19:50:00Z")["state"], "in-progress")
 
+    def test_a_status_in_the_same_second_as_a_pending_one_can_end_it(self) -> None:
+        # lwpt#141: the findings review of 90d02cb8 came at 00:52:54, and CodeRabbit posted a
+        # pending and a completed status at 00:52:59, then completed again at 00:53:47.
+        result = state("lwpt#141", "2026-08-03T00:53:06Z")
+        self.assertEqual((result["state"], result["findingsReview"]["actionable"]), ("review-complete", 6))
+
     def test_a_ready_event_after_a_findings_review_leaves_it_complete(self) -> None:
         # GocciaScript#1200: a triggered review of the draft's head 052f1b8a stated three findings
         # at 23:16:14; the pull request was marked ready on 2026-08-24 at 06:44:16.
@@ -866,6 +872,72 @@ class CommitEvidenceTest(unittest.TestCase):
         gh.add_status("D", "Review in progress", offset(665), state="pending")
         self.assertEqual(observe(gh, "D")["state"], "in-progress")
 
+    def test_a_newer_review_of_the_head_is_never_completed_by_the_older_one(self) -> None:
+        # Synthetic: after D's clean pass at +610 and E's skip at +654, CodeRabbit reviews the
+        # commit again from +665 while D's summary shows it reviewing and keeps the old marker,
+        # and then posts a skip, a lock loss or a rate limit at +680.
+        answers = {
+            "skip": ((SKIPPED_BASE, "success"), "in-progress"),
+            "lock loss": (("Review stopped after lock loss", "failure"), "trigger-incremental"),
+            "rate limit": (("Review rate limited", "success"), "rate-limited-unknown-wait"),
+        }
+        for name, ((description, outcome), expected) in answers.items():
+            with self.subTest(answer=name):
+                pulls = self.skip_clean_skip()
+                gh = Invented(pulls, offset(690))
+                gh.add_status("D", "Review in progress", offset(665), state="pending")
+                reviewing = f"{coverage_summary(self.HEAD, clean=True)}\n{REVIEWING_SUMMARY.split(chr(10), 1)[1]}"
+                gh.add_version("D", 9004, reviewing, offset(670))
+                gh.add_status("D", description, offset(680), state=outcome)
+                result = observe(gh, "D")
+                self.assertEqual(result["cleanReview"]["coveredCommitId"], self.HEAD)
+                self.assertEqual(result["state"], expected)
+                self.assertNotIn(observe(gh, "C")["state"], ADAPTER.COMPLETE_STATES)
+                clean = {"state": "clean-complete"}
+                history = REPLAY.History(list(pulls.values()))
+                self.assertEqual(history.violations(pulls["D"], self.HEAD, PUSHED + 690, clean), ["completion"])
+        # Once CodeRabbit completes the newer review, its marker and status complete the head again.
+        pulls = self.skip_clean_skip()
+        gh = Invented(pulls, offset(760))
+        gh.add_status("D", "Review in progress", offset(665), state="pending")
+        gh.add_version("D", 9004, coverage_summary(self.HEAD, clean=True), offset(745))
+        gh.add_status("D", "Review completed", offset(750))
+        self.assertEqual(observe(gh, "D")["state"], "clean-complete")
+        self.assertEqual(REPLAY.replay(list(pulls.values()))[0], [])
+
+    def test_a_branch_that_returns_to_the_head_starts_a_new_cycle(self) -> None:
+        # Synthetic: D's branch moves to another commit at +630 and is force-pushed back to the
+        # reviewed head at +650; CodeRabbit skips the head at +654.
+        other = "9e8d7c6b" * 5
+        pulls = self.skip_clean_skip()
+        returned = {"D": pulls["D"]}
+        returned["D"]["heads"][other] = {
+            "parents": [self.HEAD], "checkSuites": [{"created_at": offset(630), "head_branch": self.BRANCH}], "statuses": [],
+        }
+        returned["D"]["events"] = [{"type": "force-pushed", "at": offset(650), "head": self.HEAD}]
+        gh = Invented(returned, offset(660))
+        result = observe(gh, "D")
+        self.assertEqual(result["headArrival"], {"at": offset(650), "source": "force-push"})
+        self.assertEqual(result["state"], "skipped")
+        clean = {"state": "clean-complete"}
+        self.assertEqual(REPLAY.History([returned["D"]]).violations(returned["D"], self.HEAD, PUSHED + 660, clean), ["completion"])
+        self.assertEqual(REPLAY.replay([returned["D"]])[0], [])
+        returned["D"]["events"] = []
+        del returned["D"]["heads"][other]
+        self.assertEqual(observe(Invented(returned, offset(660)), "D")["state"], "clean-complete")
+
+    def test_the_recorder_keeps_each_force_push_with_its_head(self) -> None:
+        items = [
+            {"__typename": "ReadyForReviewEvent", "createdAt": offset(20)},
+            {"__typename": "HeadRefForcePushedEvent", "createdAt": offset(650),
+             "beforeCommit": {"oid": "9e8d7c6b" * 5}, "afterCommit": {"oid": self.HEAD}},
+            {"__typename": "PullRequestCommit", "commit": {"oid": self.HEAD}},
+        ]
+        self.assertEqual(recorder_module().pull_events(items), [
+            {"type": "ready", "at": offset(20)},
+            {"type": "force-pushed", "at": offset(650), "head": self.HEAD},
+        ])
+
     def test_the_replay_judges_completion_by_the_commit(self) -> None:
         for scenario in (self.findings_then_skip(), self.skip_clean_skip()):
             pulls = list(scenario.values())
@@ -886,59 +958,112 @@ class CommitEvidenceTest(unittest.TestCase):
         self.assertEqual(REPLAY.History([pulls["B"]]).violations(pulls["B"], self.HEAD, PUSHED + 420, reviewed), ["completion"])
 
 
+def recorder_module() -> Any:
+    spec = importlib.util.spec_from_file_location(
+        "record_coderabbit", Path(__file__).resolve().parent / "record_coderabbit.py"
+    )
+    assert spec and spec.loader
+    recorder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(recorder)
+    return recorder
+
+
+def limit_notice(sentence: str, minutes: int = 58, walkthrough: str = "") -> str:
+    """CodeRabbit's limit notice, quoted, with `sentence` in it and `walkthrough` as a paragraph after it."""
+    quoted = "\n".join(f"> {line}" for line in sentence.split("\n"))
+    return (
+        f"{ADAPTER.SUMMARY_MARKER}\n<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->\n\n"
+        f"> ## Review limit reached\n>\n{quoted}\n>\n> **Next included review available in {minutes} minutes.**\n\n"
+        f"<!-- end of auto-generated comment: rate limited by coderabbit.ai -->\n\n{walkthrough}"
+    )
+
+
+# Accepted wordings of the clause, one with a soft line break, and wordings that must not match.
+ACCEPTED = (
+    "Every seat is assigned. Waiting won't change this — ask an admin to free a seat.",
+    "Every seat is assigned. Waiting won’t change this.",
+    "Every seat is assigned. waiting will not change this, ask an admin.",
+    "Every seat is assigned. Waiting\nwon't change this, ask an admin.",
+)
+REJECTED = (
+    "Waiting won't change this counter.",
+    'The note reads "Waiting won\'t change this."',
+)
+
+
 class NoCapacityTest(unittest.TestCase):
     """A stated wait whose notice says waiting won't change it blocks for a person."""
 
     HEAD = "5f6e7d8c" * 5
     BRANCH = "nightly-export"
 
-    def refused(self, sentence: str) -> Invented:
+    def refused(self, *versions: tuple[int, str]) -> Invented:
         # Mirrors an observed sequence: opened as a draft, marked ready, then refused with a stated
         # wait in the same notice that says waiting won't change it, because every seat is assigned.
         commit = invented_commit(
             (14, "success", "Review skipped: draft pull request"), (51, "success", "Review skipped: draft pull request"),
             (94, "pending", "Review in progress"), (99, "success", "Review rate limited"), branch=self.BRANCH,
         )
-        notice = (
-            f"{ADAPTER.SUMMARY_MARKER}\n<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->\n"
-            f"{sentence}\n**Next included review available in 58 minutes.**\n"
-            "<!-- end of auto-generated comment: rate limited by coderabbit.ai -->"
-        )
         pull = invented_pull(6, 0, self.HEAD, self.BRANCH, commit=commit, draft=True,
                              events=[{"type": "ready", "at": offset(30)}],
-                             comments=[summary_comment(9006, (13, SKIP_SUMMARY), (99, notice))])
+                             comments=[summary_comment(9006, (13, SKIP_SUMMARY), *versions)])
         return Invented({"F": pull}, offset(100))
 
     def test_a_wait_that_waiting_will_not_change_is_blocked(self) -> None:
-        for sentence in ("> Waiting won't change this, ask an admin.", "Waiting won’t change this", "waiting will not change this"):
+        for sentence in ACCEPTED:
             with self.subTest(sentence=sentence):
-                result = observe(self.refused(sentence), "F")
+                result = observe(self.refused((99, limit_notice(sentence))), "F")
                 self.assertEqual(result["rateLimit"]["wait"]["statedSeconds"], 58 * 60)
                 self.assertTrue(result["rateLimit"]["wait"]["noCapacity"])
                 self.assertEqual((result["state"], result["nextMode"], result["retryAt"]), ("blocked-no-capacity", None, None))
         self.assertIn("blocked-no-capacity", ADAPTER.BLOCKED_STATES)
 
-    def test_the_same_wait_without_the_sentence_waits(self) -> None:
-        result = observe(self.refused("> Limit details are below."), "F")
-        self.assertFalse(result["rateLimit"]["wait"]["noCapacity"])
-        self.assertEqual((result["state"], result["retryAt"]), ("waiting", offset(99 + 58 * 60 + 60)))
+    def test_other_text_saying_waiting_will_not_change_something_waits(self) -> None:
+        cases = [limit_notice(sentence) for sentence in REJECTED]
+        # The clause in the summary's walkthrough, outside the notice.
+        cases.append(limit_notice("Limit details are below.", walkthrough="Waiting won't change this — the cache is warm.\n"))
+        cases.append(limit_notice("Limit details are below."))
+        for body in cases:
+            with self.subTest(body=body):
+                result = observe(self.refused((99, body)), "F")
+                self.assertFalse(result["rateLimit"]["wait"]["noCapacity"])
+                self.assertEqual((result["state"], result["retryAt"]), ("waiting", offset(99 + 58 * 60 + 60)))
+
+    def test_the_newest_paired_notice_decides_whatever_retry_time_is_latest(self) -> None:
+        # Synthetic: an ordinary 58-minute notice at +98, then a 57-minute one at +99 that says
+        # waiting won't change it; and the same two notices the other way round.
+        blocked = self.refused((98, limit_notice("Limit details are below.")), (99, limit_notice(ACCEPTED[0], 57)))
+        self.assertEqual(observe(blocked, "F")["state"], "blocked-no-capacity")
+        waiting = self.refused((98, limit_notice(ACCEPTED[0], 58)), (99, limit_notice("Limit details are below.", 57)))
+        self.assertEqual((observe(waiting, "F")["state"], observe(waiting, "F")["retryAt"]), ("waiting", offset(98 + 58 * 60 + 60)))
 
     def test_a_run_stops_without_a_trigger(self) -> None:
-        gh = self.refused("Waiting won't change this")
+        gh = self.refused((98, limit_notice("Limit details are below.")), (99, limit_notice(ACCEPTED[0], 57)))
         answering(gh, "F")
         final, _reason, _value = run(gh, "F", offset(99 + 2 * 3600))
         self.assertEqual((final, gh.posts), ("blocked-no-capacity", []))
 
-    def test_the_recorder_keeps_only_the_sentence(self) -> None:
-        spec = importlib.util.spec_from_file_location(
-            "record_coderabbit", Path(__file__).resolve().parent / "record_coderabbit.py"
-        )
-        assert spec and spec.loader
-        recorder = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(recorder)
-        line = "> Every seat is assigned. Waiting won't change this, ask an admin to [free a seat](https://example.com)."
-        self.assertEqual(recorder.reduce_body(line), "Waiting won't change this")
-        self.assertEqual(recorder.reduce_body(recorder.reduce_body(line)), "Waiting won't change this")
+    def test_the_replay_flags_a_trigger_after_a_refusal_waiting_will_not_change(self) -> None:
+        later, trigger = PUSHED + 99 + 58 * 60 + 120, {"state": "trigger-incremental"}
+        for body, found in ((limit_notice(ACCEPTED[0]), ["no-capacity"]), (limit_notice("Limit details are below."), [])):
+            with self.subTest(found=found):
+                pull = self.refused((99, body)).case("F")
+                self.assertEqual(REPLAY.History([pull]).violations(pull, self.HEAD, later, trigger), found)
+
+    def test_a_recorded_notice_reads_the_same_as_the_live_one(self) -> None:
+        recorder = recorder_module()
+        bodies = [limit_notice(sentence) for sentence in ACCEPTED + REJECTED]
+        bodies.append(limit_notice("Limit details are below.", walkthrough="Waiting won't change this — the cache is warm.\n"))
+        for body in bodies:
+            with self.subTest(body=body):
+                reduced = recorder.reduce_body(body)
+                self.assertEqual(recorder.reduce_body(reduced), reduced)
+                self.assertNotIn("Every seat", reduced)
+                self.assertEqual(ADAPTER.capacity_sentence(reduced) is None, ADAPTER.capacity_sentence(body) is None)
+                self.assertEqual(ADAPTER.stated_seconds(reduced), ADAPTER.stated_seconds(body))
+                live = observe(self.refused((99, body)), "F")
+                recorded = observe(self.refused((99, reduced)), "F")
+                self.assertEqual((recorded["state"], recorded["retryAt"]), (live["state"], live["retryAt"]))
 
 
 class BoundTest(unittest.TestCase):

@@ -12,14 +12,15 @@ For each pull request it keeps only what `coderabbit_adapter.py` reads:
   count findings);
 - every version of CodeRabbit's comments from their edit history, each
   reduced to the summary marker, coverage marker, stated-wait sentence,
-  the words saying waiting won't change it, and HTML block markers, with
-  all other prose dropped;
+  the clause of its notice saying waiting won't change it, and HTML block
+  markers, with all other prose dropped;
 - other comments that address CodeRabbit, line by line: a line that is only a
   CodeRabbit command keeps it, a line that mentions one inside other text
   keeps it between `[text]` placeholders, and every other line becomes
   `[text]` or stays empty;
 - when the pull request was opened, marked ready or draft, closed, reopened
-  and merged, and when each head was pushed (its check suites); and
+  and merged, when each head was pushed (its check suites), and each force
+  push with the head it left; and
 - each head's parents.
 
 It refuses any repository that an anonymous request cannot read as public,
@@ -143,23 +144,37 @@ def require_public(repo: str) -> None:
 
 
 def reduce_body(body: str) -> str:
-    """The lines of a CodeRabbit body the adapter reads; all other prose is dropped."""
+    """The lines of a CodeRabbit body the adapter reads; all other prose is dropped.
+
+    A notice saying waiting won't change it keeps only that clause, on its own
+    line at the start of the notice's block, whatever lines it spanned.
+    """
+    lines = (body or "").splitlines()
+    capacity = ADAPTER.capacity_sentence(body or "")
+    first = None
+    if capacity:
+        block = next(indexes for indexes, _text in ADAPTER.notice_blocks(body) if indexes[0] == capacity[0])
+        first = next((index for index in block if keeps(lines[index])), None)
     kept = []
-    for line in (body or "").splitlines():
-        no_capacity = ADAPTER.NO_CAPACITY.search(line)
-        if no_capacity and not WAIT_SENTENCE.search(line):
-            kept.append(no_capacity.group(0))
-        elif (
-            line.strip() == ADAPTER.SUMMARY_MARKER
-            or BLOCK_MARKER.match(line)
-            or ADAPTER.COVERAGE_MARKER.search(line)
-            or WAIT_SENTENCE.search(line)
-            or ADAPTER.NO_ACTIONABLE in line
-            or ADAPTER.ACTIONABLE.search(line)
-            or ADAPTER.REVIEW_FINDINGS.search(line)
-        ):
+    for index, line in enumerate(lines):
+        if capacity and index == first:
+            quote = "> " if ADAPTER.QUOTED_LINE.match(line) else ""
+            kept.append(f"{quote}{capacity[1]}.")
+        if keeps(line):
             kept.append(line.strip())
     return "\n".join(kept)
+
+
+def keeps(line: str) -> bool:
+    return bool(
+        line.strip() == ADAPTER.SUMMARY_MARKER
+        or BLOCK_MARKER.match(line)
+        or ADAPTER.COVERAGE_MARKER.search(line)
+        or WAIT_SENTENCE.search(line)
+        or ADAPTER.NO_ACTIONABLE in line
+        or ADAPTER.ACTIONABLE.search(line)
+        or ADAPTER.REVIEW_FINDINGS.search(line)
+    )
 
 
 def reduce_command(body: str) -> str | None:
@@ -210,6 +225,26 @@ def comment_versions(item: dict[str, Any], shas: set[str]) -> tuple[list[list[st
     return versions, complete
 
 
+def pull_events(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The pull request's timeline events the adapter reads, oldest first; a force push names the head it left."""
+    kinds = {
+        "ReadyForReviewEvent": "ready",
+        "ConvertToDraftEvent": "draft",
+        "ClosedEvent": "closed",
+        "ReopenedEvent": "reopened",
+        "MergedEvent": "merged",
+    }
+    return sorted(
+        [{"type": kinds[item["__typename"]], "at": item["createdAt"]} for item in items if item["__typename"] in kinds]
+        + [
+            {"type": "force-pushed", "at": item["createdAt"], "head": item["afterCommit"]["oid"]}
+            for item in items
+            if item["__typename"] == "HeadRefForcePushedEvent" and item.get("afterCommit")
+        ],
+        key=lambda event: event["at"],
+    )
+
+
 def record(repo: str, number: int) -> dict[str, Any]:
     owner, name = repo.split("/", 1)
     items: list[dict[str, Any]] = []
@@ -220,17 +255,7 @@ def record(repo: str, number: int) -> dict[str, Any]:
         if not pull["timelineItems"]["pageInfo"]["hasNextPage"]:
             break
         cursor = pull["timelineItems"]["pageInfo"]["endCursor"]
-    kinds = {
-        "ReadyForReviewEvent": "ready",
-        "ConvertToDraftEvent": "draft",
-        "ClosedEvent": "closed",
-        "ReopenedEvent": "reopened",
-        "MergedEvent": "merged",
-    }
-    events = sorted(
-        ({"type": kinds[item["__typename"]], "at": item["createdAt"]} for item in items if item["__typename"] in kinds),
-        key=lambda event: event["at"],
-    )
+    events = pull_events(items)
     shas = {pull["headRefOid"]}
     for item in items:
         if item["__typename"] == "PullRequestCommit":
