@@ -6,6 +6,7 @@
     "check": "bun run typecheck && bun run test && python3 agent-writing/scripts/check_prose.py && python3 -m unittest discover -s agent-writing/tests && python3 -m unittest discover -s address-feedback/tests && python3 -m unittest discover -s agent-behavior-audit/tests && python3 -m unittest discover -s delivery-wait/tests && python3 -m unittest discover -s milestone-rush/tests && python3 -m unittest discover -s git-workflow/tests && python3 -m unittest discover -s tests && bun run eval:dry",
     "eval": "bun run evals/run.ts",
     "eval:dry": "bun run evals/run.ts --dry-run",
+    "eval:calibrate-judge": "bun run evals/judge-calibration.ts",
     "test": "bun test && bun test ./.github/actions/update-project-skills/",
     "typecheck": "tsc --noEmit"
   },

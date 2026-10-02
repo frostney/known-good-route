@@ -1,8 +1,11 @@
+import { messageRubric } from "./judge.ts";
 import { hasSkillCitation } from "./skill-citation.ts";
 import { toolReceiptSchema } from "./tool-receipts.ts";
+import { orchestrationEndpoints, orchestrationEntryPoints } from "./types.ts";
 import type {
   ActionName,
   EvalCase,
+  ExactValue,
   GradeCheck,
   GradeResult,
   RunLedger,
@@ -16,16 +19,54 @@ function actionCount(ledger: RunLedger, action: ActionName): number {
   return ledger.actions.filter((record) => record.action === action).length;
 }
 
-function actionText(record: RunLedger["actions"][number]): string {
-  if (record.action === "report" || record.action === "user.ask")
-    return [
-      record.details,
-      record.data ? JSON.stringify(record.data) : "",
-    ].join("\n");
-  return [
-    record.details,
-    typeof record.data?.body === "string" ? record.data.body : "",
-  ].join("\n");
+const communication = new Set<ActionName>([
+  "report",
+  "user.ask",
+  "forge.replyInline",
+  "forge.commentPr",
+  "forge.commentIssue",
+]);
+
+const isWordCharacter = (c: string | undefined) => !!c && /[A-Za-z0-9_]/.test(c);
+
+// An exact value counts only as a whole token: "503" is not inside "1503" and a
+// 40-character revision is not inside a 42-character one.
+export function containsValue(text: string, value: string): boolean {
+  for (let at = text.indexOf(value); at >= 0; at = text.indexOf(value, at + 1)) {
+    const before = text[at - 1];
+    const after = text[at + value.length];
+    if (
+      (!isWordCharacter(value[0]) || !isWordCharacter(before)) &&
+      (!isWordCharacter(value.at(-1)) || !isWordCharacter(after))
+    )
+      return true;
+  }
+  return false;
+}
+
+const spellings = (value: ExactValue) => (Array.isArray(value) ? value : [value]);
+const describe = (value: ExactValue) => spellings(value).join(" | ");
+const rendered = (value: unknown) =>
+  typeof value === "string" ? value : JSON.stringify(value) ?? "";
+
+function fieldCarries(field: unknown, value: string): boolean {
+  if (Array.isArray(field)) return field.some((item) => rendered(item) === value);
+  return field !== undefined && rendered(field) === value;
+}
+
+function actionCarries(
+  record: RunLedger["actions"][number],
+  value: ExactValue,
+  fields: string[] | undefined,
+): boolean {
+  return spellings(value).some((spelling) =>
+    fields
+      ? fields.some((field) => fieldCarries(record.data?.[field], spelling))
+      : containsValue(
+          [record.details, ...Object.values(record.data ?? {}).map(rendered)].join("\n"),
+          spelling,
+        ),
+  );
 }
 
 export function gradeRun(
@@ -147,7 +188,6 @@ export function gradeRun(
         "Require observed facts attributed to inspected sources, distinct proposed options with benefit/cost/uncertainty, and a recommendation naming an option. Structure and source availability are checked, not semantic truth.",
     });
   }
-  let artifactText = "";
   if (expected.jsonArtifact) {
     const requirement = expected.jsonArtifact;
     const payload = ledger.actions.findLast(
@@ -156,8 +196,6 @@ export function gradeRun(
     let artifact: any;
     try {
       artifact = typeof payload === "string" ? JSON.parse(payload) : payload;
-      if (artifact && typeof artifact === "object")
-        artifactText = JSON.stringify(artifact);
     } catch {
       /* Invalid serialized content must fail, even if prose claims valid JSON. */
     }
@@ -251,55 +289,36 @@ export function gradeRun(
     });
   }
 
-  for (const requirement of expected.requiredActionDetails ?? []) {
-    const details = ledger.actions
-      .filter((a) => a.action === requirement.action)
-      .map((a) =>
-        [
-          actionText(a),
-          ...(requirement.dataFields ?? []).map((field) => {
-            const value = field === "*" ? a.data : a.data?.[field];
-            return value === undefined
-              ? ""
-              : typeof value === "string"
-                ? value
-                : JSON.stringify(value);
-          }),
-        ].join("\n"),
-      );
-    const matches = (text: string) =>
-      requirement.patterns.every((pattern) =>
-        new RegExp(pattern, "i").test(text),
-      );
+  const said = [
+    output,
+    ...ledger.actions
+      .filter((a) => communication.has(a.action) && a.source !== "final-response")
+      .map((a) => [a.details, ...Object.values(a.data ?? {}).map(rendered)].join("\n")),
+  ].join("\n");
+  for (const value of expected.requiredAnswerValues ?? [])
     checks.push({
-      name: `${requirement.action} evidence`,
+      name: `answer states ${describe(value)}`,
+      passed: spellings(value).some((spelling) => containsValue(said, spelling)),
+      detail: "Exact value as a whole token in the final response or communication actions.",
+    });
+  for (const value of expected.forbiddenAnswerValues ?? [])
+    checks.push({
+      name: `answer omits ${value}`,
+      passed: !containsValue(said, value),
+      detail: "Exact value must not appear in the final response or communication actions.",
+    });
+  for (const requirement of expected.requiredActionValues ?? []) {
+    const records = ledger.actions.filter((a) => a.action === requirement.action);
+    const carriesAll = (record: RunLedger["actions"][number]) =>
+      requirement.values.every((value) => actionCarries(record, value, requirement.fields));
+    checks.push({
+      name: `${requirement.action} carries ${requirement.values.map(describe).join(", ")}`,
       passed:
-        details.length > 0 &&
-        (requirement.every ? details.every(matches) : details.some(matches)),
-      detail: `patterns=${requirement.patterns.join(",")}; receipts=${details.length}`,
+        records.length > 0 &&
+        (requirement.every ? records.every(carriesAll) : records.some(carriesAll)),
+      detail: `${requirement.every ? "every" : "one"} of ${records.length} recorded; fields=${requirement.fields?.join(",") ?? "details or any data"}`,
     });
   }
-  const report = [
-    output,
-    artifactText,
-    ...ledger.actions
-      .filter((a) =>
-        [
-          "report",
-          "user.ask",
-          "forge.replyInline",
-          "forge.commentPr",
-          "forge.commentIssue",
-        ].includes(a.action),
-      )
-      .map(actionText),
-  ].join("\n");
-  for (const pattern of expected.reportPatterns ?? [])
-    checks.push({
-      name: `report evidence matches /${pattern}/i`,
-      passed: new RegExp(pattern, "is").test(report),
-      detail: `pattern=${pattern}`,
-    });
 
   if (expected.requiredSkills) {
     checks.push({
@@ -478,28 +497,84 @@ export function gradeRun(
     }
   }
 
-  for (const pattern of expected.outputPatterns ?? []) {
-    checks.push({
-      name: `output matches /${pattern}/i`,
-      passed: new RegExp(pattern, "i").test(output),
-      detail: `pattern=${pattern}`,
-    });
-  }
-
-  for (const pattern of expected.forbiddenOutputPatterns ?? []) {
-    checks.push({
-      name: `output excludes /${pattern}/i`,
-      passed: !new RegExp(pattern, "i").test(output),
-      detail: `pattern=${pattern}`,
-    });
-  }
-
   return {
     passed: checks.every(
       (check) => check.category === "discovery" || check.passed,
     ),
     checks,
   };
+}
+
+// Regex answer grading was replaced by judged rubrics; a stale case must not
+// silently lose its answer check.
+const removedAnswerPatterns = [
+  "outputPatterns",
+  "forbiddenOutputPatterns",
+  "reportPatterns",
+  "requiredActionDetails",
+];
+const listFields = new Set([
+  "requiredSkills",
+  "requiredAnySkills",
+  "forbiddenSkills",
+  "requiredRegisteredSkills",
+  "requiredInspections",
+  "requiredReferences",
+  "requiredActions",
+  "requiredAnyActions",
+  "forbiddenActions",
+  "allowedEditPaths",
+  "discoverySkills",
+  "allowedDelegateWorkflows",
+]);
+
+function validateExactValues(evalCase: EvalCase): void {
+  const valid = (value: ExactValue) =>
+    spellings(value).length > 0 && spellings(value).every((v) => typeof v === "string" && v.trim() === v && v.length > 0);
+  const expected = evalCase.expected;
+  if (
+    !(expected.requiredAnswerValues ?? []).every(valid) ||
+    !(expected.forbiddenAnswerValues ?? []).every(valid) ||
+    !(expected.requiredActionValues ?? []).every(
+      (r) => r.values.length > 0 && r.values.every(valid) && (r.fields ?? ["x"]).length > 0 && (r.fields ?? []).every((f) => f.trim()),
+    )
+  )
+    throw new Error(`${evalCase.id}: invalid exact value check`);
+}
+
+// Every case declares the repository configuration it runs in, because its
+// expected terminal state depends on it.
+export function validateEnvironment(evalCase: EvalCase): void {
+  const environment = evalCase.fixture.environment;
+  if (!environment || !Object.hasOwn(environment, "orchestration"))
+    throw new Error(`${evalCase.id}: declare fixture.environment with orchestration (or null)`);
+  const orchestration = environment.orchestration;
+  if (
+    orchestration !== null &&
+    (!(orchestrationEndpoints as readonly string[]).includes(orchestration.endpoint) ||
+      !(orchestrationEntryPoints as readonly string[]).includes(orchestration.entryPoints))
+  )
+    throw new Error(`${evalCase.id}: invalid orchestration endpoint or entry-points`);
+  for (const path of Object.keys(environment.files ?? {}))
+    if (!path.trim() || path.startsWith("/") || path.split("/").includes("..") || path === "ORCHESTRATION.md")
+      throw new Error(`${evalCase.id}: invalid environment file ${path}`);
+}
+
+export function validateRubric(evalCase: EvalCase): void {
+  for (const field of removedAnswerPatterns)
+    if (Object.hasOwn(evalCase.expected, field))
+      throw new Error(`${evalCase.id}: ${field} was removed; use rubric items`);
+  const rubric = evalCase.expected.rubric;
+  if (!Array.isArray(rubric) || rubric.length === 0)
+    throw new Error(`${evalCase.id}: needs at least one rubric item`);
+  const ids = new Set<string>(messageRubric.map((item) => item.id));
+  for (const item of [...rubric, ...(evalCase.expected.messageRubric ?? [])]) {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(item.id) || ids.has(item.id))
+      throw new Error(`${evalCase.id}: invalid or duplicate rubric id ${item.id}`);
+    ids.add(item.id);
+    if (!item.question.trim().endsWith("?"))
+      throw new Error(`${evalCase.id}: rubric item ${item.id} must be a yes/no question`);
+  }
 }
 
 export function validateCases(
@@ -520,20 +595,12 @@ export function validateCases(
     }
     ids.add(evalCase.id);
 
-    for (const pattern of [
-      ...(evalCase.expected.outputPatterns ?? []),
-      ...(evalCase.expected.reportPatterns ?? []),
-      ...(evalCase.expected.forbiddenOutputPatterns ?? []),
-      ...(evalCase.expected.requiredActionDetails ?? []).flatMap(
-        (r) => r.patterns,
-      ),
-    ]) {
-      try {
-        new RegExp(pattern, "is");
-      } catch {
-        throw new Error(`${evalCase.id}: invalid assertion pattern ${pattern}`);
-      }
-    }
+    validateRubric(evalCase);
+    validateExactValues(evalCase);
+    for (const [field, values] of Object.entries(evalCase.expected))
+      if (listFields.has(field) && Array.isArray(values) &&
+          new Set(values).size !== values.length)
+        throw new Error(`${evalCase.id}: duplicate ${field} entries`);
     for (const citation of evalCase.expected.requiredSkillCitations ?? []) {
       if (!availableSkills.has(citation.skill) || !citation.passage.trim())
         throw new Error(`${evalCase.id}: invalid skill citation requirement`);
@@ -627,5 +694,6 @@ export function validateCases(
         );
       }
     }
+    validateEnvironment(evalCase);
   }
 }

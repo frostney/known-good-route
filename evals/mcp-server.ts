@@ -5,6 +5,7 @@ import { loadSkills } from "./skill-loader.ts";
 import { gradeRun } from "./grading.ts";
 import { cancelLocalRuns, preflight, runLocal } from "./local-runtime.ts";
 import { portableAgentInstructions } from "./run.ts";
+import { agentsFileFor, environmentFiles } from "./agents-context.ts";
 import { formatSkillCatalog } from "./skill-loader.ts";
 import { createEvalTools } from "./tools.ts";
 import type { RunLedger } from "./types.ts";
@@ -82,7 +83,13 @@ export async function serve(root: string, caseId: string, ledgerPath: string) {
           throw new Error("Invalid or recursive worker case");
         const version = await preflight(target.model);
         const transcript = `${process.env.KGR_EVAL_TRANSCRIPT ?? ledgerPath}.worker.jsonl`;
-        const instructions = portableAgentInstructions(formatSkillCatalog(skills));
+        // The worker works in the parent's repository and its configuration.
+        const files = environmentFiles(evalCase.fixture.environment);
+        const instructions = portableAgentInstructions(
+          formatSkillCatalog(skills),
+          await agentsFileFor(skills, files),
+          files,
+        );
         const result = await runLocal({
           target: target.model,
           effort: "medium",

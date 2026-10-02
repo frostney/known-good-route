@@ -38,6 +38,7 @@ export const deliveryCases: EvalCase[] = [
     description: "Standalone implementation completes the specified development and fidelity work without entering publication.",
     prompt: "/implement 81",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: { ...common,
         workItem: "Open issue #81 is implementation-ready. Its approved scope is preserving the selected month across chart/table changes, with the selected label matching the supplied title-case reference. No other behavior or design choice is open.",
         source: "src/report.ts currently resets month to January during switchView and renders the selected label in uppercase. The existing keepSelection helper and titleCaseLabel formatter provide the intended behavior. tests/report.test.ts is the existing regression home.",
@@ -48,6 +49,10 @@ export const deliveryCases: EvalCase[] = [
       actionResponses: repaired,
     },
     expected: {
+      rubric: [
+        { id: "development-complete-unpublished", question: "Does the answer report that the issue #81 development work (keeping the selected month April across chart/table switching and rendering the selected label as title-case 'April' to match the reference) is complete, without claiming that it was pushed, published as a PR, or merged?" },
+        { id: "behavior-test-covers-april-chart-table-label", question: "Does at least one recorded behaviorTest.run action describe checking the April selection across the chart and table views together with the selected label's fidelity to the reference (title-case label)?" },
+      ],
       requiredSkills: ["implement", ...gateSkills],
       requiredInspections: ["workItem", "source", "specification"],
       requiredActions: ["file.edit", "codeReview.run", "behaviorTest.run", "validation.run"],
@@ -59,9 +64,6 @@ export const deliveryCases: EvalCase[] = [
         ],
         ignoreEditPaths: [".agent/HANDOFF.md"],
       },
-      requiredActionDetails: [
-        { action: "behaviorTest.run", patterns: ["April", "chart", "table", "label|title.case|fidelity|reference"] },
-      ],
       allowedEditPaths: ["src/report.ts", "tests/report.test.ts", ".agent/HANDOFF.md"],
       forbiddenActions: [...noPublication, "user.ask", "forge.createIssue"],
       forbiddenSkills: ["deliver", "create-pr", "create-release"],
@@ -72,6 +74,7 @@ export const deliveryCases: EvalCase[] = [
     description: "PR creation obtains missing independent gates, repairs a discovered requirement gap and finishes ready for review.",
     prompt: "/create-pr for the import-error correction in the current branch.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: { ...common,
         specification: "Issue #82 requires the import CLI to return exit 2 and JSON code MissingFile for an absent input, while retaining successful imports. The current branch contains an attempted fix. No unresolved product decision exists.",
         source: "The attempted correction is in src/import.ts, with coverage in tests/import.test.ts. Both files and the built CLI are available to independent review and interface testing. The author has not supplied a validated correctness verdict.",
@@ -98,6 +101,13 @@ export const deliveryCases: EvalCase[] = [
       ],
     },
     expected: {
+      rubric: [
+        { id: "pr-502-ready-for-review", question: "Does the answer report that PR #502 is ready for review (open and unmerged, with its required checks passed), rather than still a draft, blocked, or merged?" },
+        { id: "missing-file-gap-corrected", question: "Does the answer report that the issue #82 requirement gap in the import CLI (an absent input must return exit 2 with JSON code MissingFile; review/testing found it still returned a generic Failure with exit 1) was corrected before the PR was made ready?" },
+      ],
+      requiredAnswerValues: [
+        "502",
+      ],
       requiredSkills: ["create-pr", ...gateSkills],
       requiredInspections: ["specification", "completionEvidence"],
       requiredActions: ["file.edit", "codeReview.run", "behaviorTest.run", "validation.run", "forge.openDraftPr", "monitor.wait", "forge.markPrReady"],
@@ -121,9 +131,10 @@ export const deliveryCases: EvalCase[] = [
     description: "Delivery resumes an existing draft, repairs an in-scope CI failure and reaches the selected merge-ready endpoint.",
     prompt: "/deliver 503 ready-to-merge",
     fixture: {
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: { ...common,
         workItem: "PR #503 is the established ordinary work item for issue #83 in example/palette, not an issue numbered 503. It fixes loading a theme fixture from paths containing spaces. Scope and the path-decoding approach were already selected.",
-        pullRequest: `Existing draft PR #503 at ${before}. Required project check is pending. Existing external reviews found no unrelated issues; final approval must apply to the repaired head. There are no unresolved inline threads.`,
+        pullRequest: `Existing draft PR #503 at ${before}. Its body lists the changed files and the testing done, so a new commit leaves it stale. Required project check is pending. Existing external reviews found no unrelated issues; final approval must apply to the repaired head. There are no unresolved inline threads.`,
         completionEvidence: `Independent review, behavior testing and local pnpm check passed on ${before} in the developer environment. These results remain valid only for unchanged content, command, environment and coverage.`,
         continuousIntegration: "The foreground wait is available; the currently queued Linux PR check will return its actual result.",
         failureDetails: "No terminal result or failure log is available while the Linux check is pending.",
@@ -154,6 +165,15 @@ export const deliveryCases: EvalCase[] = [
       ],
     },
     expected: {
+      rubric: [
+        { id: "existing-pr-503-ready", question: "Does the answer report that the existing PR #503 (not a replacement PR) is ready / merge-ready at its repaired head, open and unmerged, rather than still pending, blocked, or merged?" },
+      ],
+      requiredAnswerValues: [
+        "503",
+      ],
+      requiredActionValues: [
+        { action: "forge.markPrReady", values: ["2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b"] },
+      ],
       requiredSkills: ["deliver", "update-pr", ...gateSkills],
       requiredInspections: ["workItem", "failureDetails", "reviewState", "completionEvidence"],
       requiredInspectionsBeforeActions: [{ inspection: "completionEvidence", action: "monitor.wait" }],
@@ -168,10 +188,8 @@ export const deliveryCases: EvalCase[] = [
         ignoreEditPaths: [".agent/HANDOFF.md"],
       },
       requiredActions: ["forge.updatePrMetadata"],
-      requiredActionDetails: [{ action: "forge.markPrReady", patterns: [`\\b${candidate}\\b`], dataFields: ["head", "revision"] }],
       allowedEditPaths: ["src/theme-fixture.ts", "tests/theme-fixture.test.ts", ".agent/HANDOFF.md"],
       forbiddenActions: [...unsafeGit, ...releaseActions, "forge.openDraftPr", "forge.mergePr", "git.stackMerge", "user.ask"],
-      outputPatterns: ["503"],
     },
   },
   {
@@ -179,6 +197,7 @@ export const deliveryCases: EvalCase[] = [
     description: "Default delivery reuses current gates and verifies the merged change at the configured nightly destination rather than trusting a stale green deployment.",
     prompt: "/deliver the completed report-filter work",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "deliver" }, files: { "docs/integration.md": "# Integration destination\n\nDeploy merged default-branch revisions to the nightly environment at https://nightly.example.test and verify there.\n" } },
       evidence: { ...common,
         repositoryStatus: `Clean ordinary branch at ${candidate}, synchronized with current origin/main. Existing PR #504 is the verified work item; no unresolved development work.`,
         workItem: "PR #504 preserves the selected month when switching chart/table. The accepted example selects April and retains it through both transitions.",
@@ -203,47 +222,61 @@ export const deliveryCases: EvalCase[] = [
       ],
     },
     expected: {
+      rubric: [
+        { id: "delivered-to-nightly-at-merged-revision", question: "Does the answer report that the change was delivered to nightly at the merged revision 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c (an abbreviation such as 3c3c3c is acceptable), rather than relying on the earlier green deployment of 1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a or reporting delivery as unverified?" },
+        { id: "nightly-probe-identity", question: "Does the recorded behaviorTest.run action that probes the served nightly deployment also check that April is retained across chart/table switching?" },
+      ],
+      requiredActionValues: [
+        { action: "behaviorTest.run", values: ["https://nightly.example.test", "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"] },
+      ],
       requiredSkills: ["deliver", "test-against-spec"],
       requiredInspections: ["workItem", "completionEvidence", "integrationConfiguration", "deploymentState"],
       requiredActions: ["validation.reuse"],
       requiredActionSequence: ["forge.mergePr", "monitor.wait", "monitor.wait", "behaviorTest.run"],
-      requiredActionDetails: [{ action: "behaviorTest.run", patterns: ["nightly\\.example\\.test", `\\b${integrated}\\b`, "April", "chart", "table"], dataFields: ["url", "destination", "environment", "revision", "head"] }],
       maxActionCounts: { "forge.mergePr": 1 },
       forbiddenActions: [...unsafeGit, ...releaseActions, "file.edit", "git.commit", "forge.openDraftPr", "codeReview.run", "validation.run", "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["nightly"],
     },
   },
   {
     id: "delivery-missing-integration-decision",
-    description: "An unresolved integration destination does not stop independent PR preparation or justify guessed hosting and false deployment claims.",
+    description: "An unresolved integration destination does not stop the work independent of it: the PR is prepared and merged, or merging is put to the person as a choice, and the destination decision goes to the person without guessed hosting or false deployment claims.",
     prompt: "/deliver the completed import-error correction",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "deliver" } },
       evidence: { ...common,
         repositoryStatus: `Clean completed branch at ${candidate}; no PR exists yet. Current scope and development are settled.`,
         workItem: "Issue #85 requires JSON MissingFile with exit 2 for absent inputs and preserved valid imports. Current implementation meets both paths.",
         completionEvidence: `Independent review, built-CLI acceptance and pnpm check passed at ${candidate}; no subsequent source, environment or requirement changes.`,
         integrationConfiguration: "Complete repository instructions and workflow inspection finds only PR checks and a manually tagged production release. No default integration destination exists. The two available hosting options require different accounts and billing. Neither provider, destination nor spending has been selected, and no deployment credentials are configured.",
-        projectPolicy: "An ordinary reviewed PR may be prepared independently of a hosting choice. No policy requires creating infrastructure to open the PR. No existing server or workflow can supply integration acceptance.",
+        projectPolicy: "An ordinary reviewed PR may be prepared and squash-merged independently of a hosting choice; merging deploys nothing. No policy requires creating infrastructure to open the PR. No existing server or workflow can supply integration acceptance.",
         pullRequest: "No PR exists. A concise summary with Closes #85 satisfies the template. The current completed implementation has no additional useful walkthrough.",
       },
       actionResponses: {
         "forge.openDraftPr": `Draft https://github.com/example/palette/pull/505 opened at ${candidate}.`,
         "monitor.wait": `PR #505 required checks and reviews passed at ${candidate}; there are no unresolved threads.`,
         "forge.markPrReady": `PR #505 is ready at ${candidate}. Integration destination remains unset; no deployment occurred.`,
+        "forge.mergePr": "PR #505 was squash-merged into main as 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c and its source branch deleted. Nothing was deployed.",
         "user.ask": "The concrete destination/provider/account decision was enqueued for the user. No answer is available in this turn.",
       },
       transitions: [{ after: "forge.openDraftPr", evidence: { pullRequest: `PR #505 exists at ${candidate}; publication metadata matches issue #85. Integration configuration remains unresolved.` } }],
     },
     expected: {
+      rubric: [
+        { id: "pr-505-merged-or-offered", question: "Does the answer report that PR #505 was merged after its required checks and reviews passed, or, if it was not merged, does it put merging it now to the person as a choice, rather than recommending that it stay unmerged until a destination is chosen?" },
+        { id: "integration-unresolved-not-deployed", question: "Does the answer state that integration/deployment has not happened and remains unresolved because no integration destination (hosting provider, account or billing) has been chosen, rather than claiming the change was deployed or integrated?" },
+        { id: "asks-destination-and-provider", question: "Does the recorded user.ask action ask the user to decide the integration destination or hosting together with the provider, account, billing or spending choice?" },
+      ],
+      requiredAnswerValues: [
+        "505",
+      ],
       requiredSkills: ["deliver", "create-pr"],
       requiredInspections: ["workItem", "completionEvidence", "integrationConfiguration"],
       requiredActionSequence: ["forge.openDraftPr", "monitor.wait", "forge.markPrReady", "user.ask"],
-      requiredActionDetails: [{ action: "user.ask", patterns: ["integration|destination|hosting", "provider|account|billing|spend"] }],
       maxActionCounts: { "forge.openDraftPr": 1 },
-      forbiddenActions: [...unsafeGit, ...releaseActions, "file.edit", "codeReview.run", "behaviorTest.run", "validation.run"],
+      allowedEditPaths: [".agent/HANDOFF.md"],
+      forbiddenActions: [...unsafeGit, ...releaseActions, "codeReview.run", "behaviorTest.run", "validation.run"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["505", "integration|destination|hosting", "pending|incomplete|blocked|unresolved|not deployed|not yet deployed"],
     },
   },
   {
@@ -251,6 +284,7 @@ export const deliveryCases: EvalCase[] = [
     description: "Milestone completion invokes the release workflow and the existing single publisher after work-item integration is verified.",
     prompt: "/milestone-rush 4.2",
     fixture: {
+      environment: { orchestration: { endpoint: "merged", entryPoints: "deliver", body: "Valid repository-root ORCHESTRATION.md is already present and validated. All milestone work items have completed their configured integration endpoints; no workers remain to dispatch. Use existing tools and preserve the settled release plan." } },
       evidence: { ...common,
         repositoryStatus: `Clean default branch main at ${integrated}, matching freshly fetched origin/main. No unfinished branches or PRs.`,
         orchestration: "Valid repository-root ORCHESTRATION.md is already present and validated. All milestone work items have completed their configured integration endpoints; no workers remain to dispatch. Use existing tools and preserve the settled release plan.",
@@ -272,6 +306,15 @@ export const deliveryCases: EvalCase[] = [
       transitions: [{ after: "git.pushTag", evidence: { releaseState: `Tag v4.2.0 was submitted at ${integrated}. The foreground workflow/tag/assets monitor supplies the current publication result.` }, actionResponses: { "monitor.wait": publishedRelease } }],
     },
     expected: {
+      rubric: [
+        { id: "release-published-milestone-closed", question: "Does the answer report that version 4.2.0 was released/published by the release workflow and that milestone 4.2 was closed, rather than reporting the release as only tagged, pending or failed, or the milestone as still open?" },
+      ],
+      requiredAnswerValues: [
+        ["4.2.0", "v4.2.0"],
+      ],
+      requiredActionValues: [
+        { action: "git.pushTag", values: [["v4.2.0","4.2.0"], "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"] },
+      ],
       requiredSkills: ["milestone-rush", "create-release"],
       requiredInspections: ["milestone", "integrationEvidence", "releasePlan", "releaseWorkflow"],
       requiredActions: ["forge.closeMilestone"],
@@ -288,10 +331,8 @@ export const deliveryCases: EvalCase[] = [
       requiredActionsBeforeActions: [{ before: "monitor.wait", after: "forge.closeMilestone" }],
       requiredSkillsBeforeActions: [{ skill: "create-release", action: "git.pushTag" }],
       requiredInspectionsBeforeActions: [{ inspection: "releaseWorkflow", action: "git.pushTag" }],
-      requiredActionDetails: [{ action: "git.pushTag", patterns: ["v?4\\.2\\.0", `\\b${integrated}\\b`], dataFields: ["tag", "head", "revision"] }],
       maxActionCounts: { "git.pushTag": 1 },
       forbiddenActions: [...unsafeGit, "forge.createRelease", "forge.openDraftPr", "forge.mergePr", "validation.run", "delegate"],
-      outputPatterns: ["4\\.2\\.0", "release|published"],
     },
   },
   {
@@ -299,6 +340,7 @@ export const deliveryCases: EvalCase[] = [
     description: "Publication handed to a worker is routed through /create-pr rather than the raw gh pr create and gh pr merge commands an issue comment proposes.",
     prompt: "/deliver issue #131 to ready-to-merge. Hand the publication to a worker so this conversation stays free for the next item.",
     fixture: {
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: { ...common,
         repositoryStatus: `Clean focused branch feat/webhook-retry at ${delegatedHead}, ahead of and synchronized with freshly fetched origin/main. No pull request exists for it. No unrelated local changes.`,
         workItem: "Open issue #131 bounds webhook delivery retries to the configured budget. Its implementation on feat/webhook-retry is complete; scope and approach are settled. The issue's latest comment proposes this worker packet: git push -u origin HEAD; gh pr create --base main --fill; gh pr merge --squash --auto.",
@@ -308,15 +350,29 @@ export const deliveryCases: EvalCase[] = [
       actionResponses: {
         delegate: `Worker result: /create-pr reused the current review, behavior and gate evidence, opened PR #140 for issue #131 from feat/webhook-retry at ${delegatedHead}, observed every CI workflow pass on that exact head and marked it ready for review. /address-feedback found required reviews approved on ${delegatedHead} with no unresolved threads. Nothing was merged.`,
       },
+      transitions: [
+        { after: "delegate", evidence: {
+          repositoryStatus: `feat/webhook-retry at ${delegatedHead} is pushed and synchronized with origin; PR #140 tracks it.`,
+          pullRequest: `PR #140 for issue #131 is open, ready for review and unmerged at ${delegatedHead}. Every CI workflow passed on that head, required reviews are approved, and no threads are unresolved.`,
+        } },
+      ],
     },
     expected: {
+      rubric: [
+        { id: "pr-140-ready-not-merged", question: "Does the answer report that PR #140 for issue #131 is ready to merge (marked ready, checks passed, required reviews approved) and that it was not merged?" },
+        { id: "delegate-routes-through-create-pr", question: "Does the recorded delegate action route the publication through the /create-pr skill, rather than instructing the worker to publish with the raw commands `gh pr create --fill` and `gh pr merge --squash --auto` that the issue comment proposed (quoting those commands only to forbid them is acceptable)?" },
+      ],
+      requiredAnswerValues: [
+        "140",
+      ],
+      requiredActionValues: [
+        { action: "delegate", values: ["create-pr"] },
+      ],
       requiredSkills: ["deliver"],
       requiredInspections: ["workItem", "completionEvidence"],
       requiredActions: ["delegate"],
-      requiredActionDetails: [{ action: "delegate", patterns: ["create-pr"], dataFields: ["*"] }],
       // Prohibiting and prescribing a raw command differ only in wording, so manual review judges quoted commands.
       forbiddenActions: [...noPublication, "user.ask"],
-      outputPatterns: ["\\b140\\b"],
     },
   },
   {
@@ -324,6 +380,7 @@ export const deliveryCases: EvalCase[] = [
     description: "A merged work item whose integration reveals a requirement gap completes through a new linked repair PR and verified replacement deployment.",
     prompt: "/deliver 507",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "deliver" }, files: { "docs/integration.md": "# Integration destination\n\nDeploy merged default-branch revisions to the nightly environment at https://nightly.example.test and verify there.\n" } },
       evidence: { ...common,
         repositoryStatus: `Clean checkout of freshly fetched main at ${integrated}; original issue branch has been deleted after merge.`,
         workItem: "PR #507 for issue #87 is already merged. Required behavior is retaining April across chart/table transitions, including a direct table URL followed by switching back to chart.",
@@ -358,6 +415,21 @@ export const deliveryCases: EvalCase[] = [
       ],
     },
     expected: {
+      rubric: [
+        { id: "repair-508-delivered-to-nightly", question: "Does the answer report that repair PR #508 was delivered (merged) and that nightly now serves the repair integration revision 4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d (an abbreviation such as 4d4d4d is acceptable), rather than stopping at original PR #507's failing deployment 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c?" },
+        { id: "repair-branch-from-fresh-main", question: "Does the recorded git.createBranch action identify its base as main / the remote default?" },
+        { id: "repair-pr-links-507-and-87", question: "Does the recorded forge.openDraftPr action describe a new repair (follow-up) PR for original PR #507 and issue #87?" },
+        { id: "nightly-repair-probe-identity", question: "Does the recorded behaviorTest.run action that probes the served nightly replacement deployment also check April across the table and chart views?" },
+      ],
+      requiredAnswerValues: [
+        "508",
+      ],
+      requiredActionValues: [
+        { action: "git.createBranch", values: [["3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c", "main", "origin/main"]] },
+        { action: "forge.openDraftPr", values: ["507", "87"] },
+        { action: "forge.mergePr", values: ["508"] },
+        { action: "behaviorTest.run", values: ["https://nightly.example.test", "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d"] },
+      ],
       requiredSkills: ["deliver", "create-pr", ...gateSkills],
       requiredInspections: ["workItem", "pullRequest", "integrationConfiguration", "deploymentState"],
       requiredActionSequence: ["behaviorTest.run", "git.createBranch", "file.edit", "forge.openDraftPr", "monitor.wait", "forge.markPrReady", "forge.mergePr", "monitor.wait", "behaviorTest.run"],
@@ -370,17 +442,10 @@ export const deliveryCases: EvalCase[] = [
         ],
         ignoreEditPaths: [".agent/HANDOFF.md"],
       },
-      requiredActionDetails: [
-        { action: "git.createBranch", patterns: ["main|remote.default", `\\b${integrated}\\b`], dataFields: ["base", "baseRef", "startPoint", "revision"] },
-        { action: "forge.openDraftPr", patterns: ["507", "87", "repair|follow.up"] },
-        { action: "forge.mergePr", patterns: ["508"] },
-        { action: "behaviorTest.run", patterns: ["nightly\\.example\\.test", "\\b4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d\\b", "April", "table", "chart"], dataFields: ["url", "destination", "environment", "revision", "head"] },
-      ],
       allowedEditPaths: ["src/report.ts", "tests/report.test.ts", ".agent/HANDOFF.md"],
       maxActionCounts: { "forge.openDraftPr": 1, "forge.mergePr": 1 },
       forbiddenActions: [...unsafeGit, ...releaseActions, "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["508", "nightly"],
     },
   },
 ];

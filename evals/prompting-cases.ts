@@ -33,12 +33,19 @@ export const promptingCases: EvalCase[] = [
       mode: "claude-agent",
     },
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         context:
           "Only PR #627 at c319e42 is in scope. The worker has a separate connection to current repository evidence. An earlier coordinator note called this ready at old head a218d31; do not treat that note as evidence for the new head.",
       },
     },
     expected: {
+      rubric: [
+        { id: "pr-627-not-ready", question: "Does the answer state that PR #627 is not ready (pending, blocked or unverified) because the required checks for its current head c319e42 are unavailable, rather than declaring it ready on the strength of the earlier passing checks at a218d31?" },
+      ],
+      requiredAnswerValues: [
+        "627",
+      ],
       requiredSkills: ["software-engineering-excellence"],
       requiredWorker: true,
       forbiddenActions: [
@@ -50,10 +57,6 @@ export const promptingCases: EvalCase[] = [
         "forge.mergePr",
         "git.stackMerge",
       ],
-      outputPatterns: [
-        "627",
-        "pending|blocked|unverified|not ready|cannot.*readiness",
-      ],
     },
   },
   {
@@ -63,6 +66,7 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "Inspect PR #627 at c319e42 in example/project using address-feedback, read-only. Read the applicable PR and readiness procedures. No mutations or delegation. Report readiness and the evidence supporting it.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         context:
           "The sole target is ordinary PR #627 at c319e42. This is a read-only inspection.",
@@ -75,6 +79,14 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "pr-627-not-ready", question: "Does the answer state that PR #627 is not ready (pending, blocked or unverified) rather than ready?" },
+        { id: "current-head-checks-unavailable", question: "Does the answer attribute the missing readiness evidence to the unavailable required checks for current head c319e42 (the checks endpoint failed, for example with HTTP 503), rather than treating the earlier passing checks at a218d31 as covering that head?" },
+      ],
+      requiredAnswerValues: [
+        "627",
+        "c319e42",
+      ],
       requiredSkills: ["address-feedback"],
       requiredReferences: [
         "address-feedback/references/pr.md",
@@ -91,11 +103,6 @@ export const promptingCases: EvalCase[] = [
         "forge.mergePr",
         "git.stackMerge",
       ],
-      outputPatterns: [
-        "627",
-        "c319e42",
-        "pending|blocked|unverified|not ready|cannot.*readiness",
-      ],
     },
   },
   {
@@ -104,8 +111,12 @@ export const promptingCases: EvalCase[] = [
       "A confirmed approach proceeds without another comparison or interview and reuses matching gates.",
     prompt:
       "/implement #81. Continue our selected D1 null-guard approach; its scope and publication are already approved. The fixture has the decision history and current evidence.",
-    fixture: { evidence: settledEvidence },
+    fixture: { environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } }, evidence: settledEvidence },
     expected: {
+      rubric: [
+        { id: "implemented-settled-approach", question: "Does the answer report that the settled D1 approach for issue #81 (a null guard using the existing cache helper so empty cache values are preserved) was implemented, rather than presenting new options or asking the user to choose an approach?" },
+        { id: "reports-verified", question: "Does the answer report the implemented fix as validated or verified (for example review, CLI behavior or the bun run check gate passing on the current content), rather than leaving its verification undone?" },
+      ],
       requiredSkills: ["implement"],
       requiredInspections: [
         "context",
@@ -124,6 +135,7 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "Earlier I asked you to draft issue text. Now create that issue automatically with the exact settled scope; my draft-review waiver applies to this issue. Use /create-issue.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         conversation:
           "User authorized creating the issue in the latest turn. The agreed scope and acceptance criteria are complete.",
@@ -144,6 +156,12 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "issue-82-created", question: "Does the answer report that the parser issue (escaped delimiters dropped) was created as issue #82, rather than presenting a draft for review or asking for approval first?" },
+      ],
+      requiredAnswerValues: [
+        "82",
+      ],
       requiredSkills: ["create-issue"],
       requiredActions: ["forge.createIssue"],
       forbiddenActions: ["user.ask"],
@@ -156,6 +174,7 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "Earlier in this workstream I explicitly authorized amending this one unpublished local commit. After my status question, please apply that approved amendment now. Use git-workflow and the current fixture evidence.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         context:
           "User explicitly authorized amending only the unpublished local commit abc123, and has not revoked it.",
@@ -165,6 +184,9 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "amended-abc123", question: "Does the answer report that the approved parser fix was applied by amending the unpublished local commit abc123 under the user's still-active authorization, rather than asking for authorization again or making a new commit instead?" },
+      ],
       requiredSkills: ["git-workflow"],
       requiredActions: ["git.amend"],
       forbiddenActions: ["user.ask", "git.forcePush", "git.push"],
@@ -177,12 +199,16 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "The agreed change is complete and verified. Please give me the final handoff; we have not requested a retrospective.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         completion:
           "The feature is complete. The applicable gate passed on the exact final tree, review is clean, and there are no open requirements.",
       },
     },
     expected: {
+      rubric: [
+        { id: "final-handoff-without-retro", question: "Does the answer give the final handoff reporting the agreed change as complete and verified (gate passed on the final tree, clean review, no open requirements) and end there without starting, offering or asking about a retrospective?" },
+      ],
       forbiddenSkills: ["run-retro"],
       forbiddenActions: [
         "user.ask",
@@ -199,12 +225,17 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "Use software-engineering-excellence to assess whether this completed fix meets our bar. Assessment only: all requested behavior is verified. A nearby unrelated refactor could make a later change easier.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         completion:
           "Requested outcome, scope, regression tests, real-interface behavior, and aggregate gate all passed on the current unchanged tree. Review found no in-scope issue. The adjacent refactor is unrelated to this outcome.",
       },
     },
     expected: {
+      rubric: [
+        { id: "fix-meets-bar", question: "Does the answer conclude that the completed fix meets the engineering bar as it stands (requested outcome, regression tests, real-interface behavior and the aggregate gate all verified on the current tree, no in-scope review issue)?" },
+        { id: "refactor-not-required", question: "Does the answer treat the nearby unrelated refactor as optional or separate future work rather than as required before this fix counts as done?" },
+      ],
       requiredSkills: ["software-engineering-excellence"],
       forbiddenActions: [
         "file.edit",
@@ -225,12 +256,19 @@ export const promptingCases: EvalCase[] = [
       caseId: "prompting-native-worker-pr",
     },
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         context:
           "Parent scope is one PR #622 at head 91ce117 in example/project. Complete PR-readiness inspection only. No mutations or further delegation.",
       },
     },
     expected: {
+      rubric: [
+        { id: "reports-worker-verdict-622-ready", question: "Does the answer report the delegated worker's readiness result that PR #622 is ready (rather than not ready, pending, blocked, or merged)?" },
+      ],
+      requiredAnswerValues: [
+        "622",
+      ],
       requiredSkills: ["software-engineering-excellence"],
       requiredWorker: true,
       forbiddenActions: ["file.edit", "forge.mergePr", "git.stackMerge"],
@@ -249,12 +287,19 @@ export const promptingCases: EvalCase[] = [
       mode: "claude-agent",
     },
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         context:
           "Read-only PR #622 at 91ce117 in example/project. Native fixture-reviewer has a separate MCP connection for worker evidence. Parent must not claim worker completion without an actual Agent result.",
       },
     },
     expected: {
+      rubric: [
+        { id: "reports-worker-verdict-622-ready", question: "Does the answer report, from the native worker's result, that PR #622 is ready, rather than not ready, pending, blocked, or merged, and without extending the verdict to PR #623 or the rest of stack 17?" },
+      ],
+      requiredAnswerValues: [
+        "622",
+      ],
       requiredSkills: ["software-engineering-excellence"],
       requiredWorker: true,
       forbiddenActions: [
@@ -273,6 +318,7 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "Inspect PR #622 at 91ce117 in example/project through address-feedback, read-only. It belongs to stack 17 but the scope is only this PR. No edits, replies, merge, or further delegation. Read the relevant skill and references and report readiness.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         context:
           "PR #622 is the sole target; scope is read-only. Repository example/project. Native stack 17 contains #622 and #623; do not expand to #623.",
@@ -283,6 +329,12 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "pr-622-ready", question: "Does the answer state that PR #622 is ready (rather than not ready, pending, blocked, or merged)?" },
+      ],
+      requiredAnswerValues: [
+        "622",
+      ],
       requiredSkills: ["address-feedback"],
       requiredReferences: [
         "address-feedback/references/pr.md",
@@ -299,7 +351,6 @@ export const promptingCases: EvalCase[] = [
         "forge.mergePr",
         "git.stackMerge",
       ],
-      outputPatterns: ["ready", "622"],
     },
   },
   {
@@ -308,6 +359,7 @@ export const promptingCases: EvalCase[] = [
       "A plain-language request to open a pull request runs create-pr with its gates.",
     prompt: "Can you open a PR for the parser fix on this branch?",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         repositoryStatus:
           "Branch feature/parser is clean, tracks origin/feature/parser, and is one commit ahead of origin/main.",
@@ -324,6 +376,12 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "pr-301-opened", question: "Does the answer report that pull request #301 was opened for the parser fix on branch feature/parser (commit 8ab31d2), without claiming it was merged?" },
+      ],
+      requiredAnswerValues: [
+        "301",
+      ],
       requiredSkills: ["create-pr"],
       requiredSkillsBeforeActions: [
         { skill: "create-pr", action: "forge.openDraftPr" },
@@ -339,6 +397,7 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "File an issue: the CLI crashes when the configuration file is empty.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         projectContext:
           "The project is a command-line configuration linter. VISION.md lists robust handling of malformed input as a goal.",
@@ -356,6 +415,9 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "issue-88-created-or-draft-for-approval", question: "Does the answer either report that the issue about the CLI crashing on an empty (zero-byte) configuration file was created as issue #88, or present that drafted issue and ask the user to approve it before creating it?" },
+      ],
       requiredSkills: ["create-issue"],
       requiredInspections: ["duplicateSearch"],
       requiredAnyActions: ["user.ask", "forge.createIssue"],
@@ -368,6 +430,7 @@ export const promptingCases: EvalCase[] = [
       "A plain-language review request runs code-review and stays read-only.",
     prompt: "Can you review the changes on this branch before I open a PR?",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         repositoryStatus:
           "Branch feature/cache is clean and two commits ahead of origin/main.",
@@ -377,6 +440,9 @@ export const promptingCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "review-verdict-on-cache-ttl", question: "Does the answer deliver a review of the feature/cache branch's changes (the time-to-live expiry check in src/cache.ts comparing Date.now() with the stored expiry, and the expiry test in tests/cache.test.ts) with a verdict or findings, rather than declining to review or reporting that it edited, committed, pushed or opened a PR?" },
+      ],
       requiredSkills: ["code-review"],
       requiredInspections: ["diff"],
       forbiddenActions: [
