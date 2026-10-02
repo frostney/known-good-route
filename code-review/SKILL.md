@@ -18,7 +18,8 @@ metadata:
 Establish whether the requested review scope is correct, necessary, clear, and
 ready for its claimed use. Without an explicit file or prior-findings input,
 review the complete change. Review first; remediate only in an authorized fix
-mode.
+mode. Started directly, hand the findings on under the
+[delivery settings](../deliver/SKILL.md#delivery-settings).
 
 ## Operations, remediation, and boundaries
 
@@ -42,8 +43,9 @@ Remediation is independent of the operation:
   findings.
 - Fix modes authorize local edits and validation, not commits, pushes, PR
   comments, review-thread changes, deployments, publication, or shared-state
-  mutation. Stop remediation for a material product, architecture, security,
-  compatibility, or scope decision.
+  mutation. Stop remediation for a
+  [material](../software-engineering-excellence/SKILL.md#blockers-and-decisions)
+  product, architecture, security, compatibility, or scope decision.
 - A request to save JSON authorizes only the named findings artifact; it does
   not authorize remediation.
 - Exact file lists and prior-findings JSON are additive inputs. They do not
@@ -156,8 +158,9 @@ Apply these requirements across the mapped finding scope.
   migration, packaging, or deployment path.
 - Record setup, action or command, input, expected result, and observed result.
   Credit returned results or matching stored evidence; a request, acknowledgment,
-  or expected outcome is not an observed result. Mark missing results
-  `unverified` and source-only conclusions `static only`.
+  or expected outcome is not an observed result. Re-run a check that returned
+  no result; mark a result that cannot be obtained `unverified` and source-only
+  conclusions `static only`.
 - Verify that changed tests fail for the relevant wrong behavior and assert
   outcomes rather than implementation details. Do not credit brittle,
   over-mocked, incidental, or snapshot-heavy coverage.

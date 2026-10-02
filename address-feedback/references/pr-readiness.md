@@ -109,9 +109,10 @@ For an incomplete or rate-limited automation response:
 
 If no exact absolute time or duration exists, set no `retry_at` and remain
 `pending`. Do the same when timing statements conflict, cannot be parsed
-unambiguously, or do not clearly describe availability. Never infer a provider,
-account quota, hourly window, blind delay, or retry count. CodeRabbit's
-retry times come only from its adapter; see [CodeRabbit](#coderabbit).
+unambiguously, or do not clearly describe availability. A missing `retry_at`
+rules out a timed retrigger, not the helper's `wait` for the verdict. Never
+infer a provider, account quota, hourly window, blind delay, or retry count.
+CodeRabbit's retry times come only from its adapter; see [CodeRabbit](#coderabbit).
 
 ## CodeRabbit
 
