@@ -53,11 +53,11 @@ this skill directory. It reads the frontmatter of `ORCHESTRATION.md` beside
 - `endpoint`: `ready-to-merge`, `merged` or `deployed`, default `ready-to-merge`;
 - `entry-points`: `deliver` or `stop`, default `deliver`.
 
-A missing file or key takes its default, so nothing is merged unless the project
-sets `merged` or `deployed`. A failed read is a blocker: report its error. An
-explicit instruction in the request narrows one run, for example to an earlier
-endpoint, read-only or one step; only an explicit request goes past the
-configured endpoint.
+`ORCHESTRATION.md` only sets the default. A request in the prompt decides that
+one run in either direction, for example a later or earlier endpoint, read-only
+or one step. A missing file or key takes its default, so without such a request
+nothing is merged unless the project sets `merged` or `deployed`. A failed read
+is a blocker: report its error.
 
 With `entry-points: deliver`, a skill started directly that develops, reviews,
 tests or publishes a change continues through `/deliver` from its own stage to
