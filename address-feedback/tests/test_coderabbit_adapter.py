@@ -107,6 +107,13 @@ class Replay(REPLAY.RecordedGitHub):
         self.case(ref)["comments"].remove(self.comment(ref, identifier))
 
 
+def owned(ref: str, owner: str, now: str) -> REPLAY.RecordedGitHub:
+    """The recorded pull request under an invented owner."""
+    case = copy.deepcopy(CORPUS[ref])
+    case["repo"] = f"{owner}/{case['repo'].split('/', 1)[1]}"
+    return REPLAY.RecordedGitHub([case], now)
+
+
 def observe(gh: Replay, ref: str, head: str | None = None, **options: Any) -> dict[str, Any]:
     repo, number = gh.refs[ref]
     expected = head or gh.head(ref)
@@ -168,10 +175,8 @@ def lock_loss(gh: Replay, ref: str) -> Callable[[float], None]:
     return answer
 
 
-def main(gh: Replay, *argv: str) -> tuple[int, dict[str, Any]]:
-    """The adapter's CLI against `gh` as the login `reviewer`, at `gh.now`."""
-    read = gh.rest
-    gh.rest = lambda endpoint, *args: {"login": "reviewer"} if endpoint == "user" else read(endpoint, *args)
+def main(gh: REPLAY.RecordedGitHub, *argv: str) -> tuple[int, dict[str, Any]]:
+    """The adapter's CLI against `gh` at `gh.now`."""
     output: list[str] = []
     with mock.patch.object(ADAPTER, "Gh", lambda _metrics: gh), mock.patch.object(
         ADAPTER.time, "time", lambda: gh.now
@@ -893,7 +898,7 @@ class TriggerLockTest(unittest.TestCase):
             "import importlib.util, sys; sys.dont_write_bytecode = True; "
             f"spec = importlib.util.spec_from_file_location('adapter', {str(MODULE_PATH)!r}); "
             "module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module); "
-            "print(module.lock_path('reviewer'))"
+            "print(module.lock_path('quillworks'))"
         )
         paths = set()
         for variable in ("TMPDIR", "HOME"):
@@ -907,39 +912,84 @@ class TriggerLockTest(unittest.TestCase):
         self.assertTrue(paths.pop().startswith(pwd.getpwuid(os.getuid()).pw_dir + os.sep))
 
     def test_status_names_the_run_holding_the_lock(self) -> None:
-        self.assertEqual(ADAPTER.lock_status("reviewer")["held"], False)
-        holder = {"repo": "frostney/duetto", "pr": 55, "head": CORPUS["duetto#55"]["head"]}
-        handle = ADAPTER.acquire_lock("reviewer", holder, 0, 1)
+        self.assertEqual(ADAPTER.lock_status("quillworks")["held"], False)
+        holder = {"repo": "quillworks/duetto", "pr": 55, "head": CORPUS["duetto#55"]["head"]}
+        handle = ADAPTER.acquire_lock("quillworks", holder, 0, 1)
         self.assertIsNotNone(handle)
         try:
-            status = ADAPTER.lock_status("reviewer")
-            self.assertTrue(status["held"])
+            status = ADAPTER.lock_status("quillworks")
+            self.assertEqual((status["owner"], status["held"]), ("quillworks", True))
             self.assertEqual(
-                {key: status["holder"][key] for key in ("repo", "pr", "head", "login")},
-                holder | {"login": "reviewer"},
+                {key: status["holder"][key] for key in ("repo", "pr", "head", "owner")},
+                holder | {"owner": "quillworks"},
             )
             self.assertIsInstance(status["holder"]["pid"], int)
-            self.assertIsNone(ADAPTER.acquire_lock("reviewer", {"pr": 58}, 0, 1))
+            self.assertIsNone(ADAPTER.acquire_lock("quillworks", {"pr": 58}, 0, 1))
         finally:
             ADAPTER.release_lock(handle)
-        self.assertEqual(ADAPTER.lock_status("reviewer"), {"path": status["path"], "held": False, "holder": None})
+        self.assertEqual(
+            ADAPTER.lock_status("quillworks"),
+            {"owner": "quillworks", "path": status["path"], "held": False, "holder": None},
+        )
+
+    def test_two_owners_hold_their_locks_at_the_same_time(self) -> None:
+        first = ADAPTER.acquire_lock("quillworks", {"repo": "quillworks/duetto", "pr": 55}, 0, 1)
+        self.assertIsNotNone(first)
+        self.addCleanup(ADAPTER.release_lock, first)
+        second = ADAPTER.acquire_lock("marlowe-labs", {"repo": "marlowe-labs/duetto", "pr": 7}, 0, 1)
+        self.assertIsNotNone(second)
+        self.addCleanup(ADAPTER.release_lock, second)
+        quill, marlowe = ADAPTER.lock_status("quillworks"), ADAPTER.lock_status("marlowe-labs")
+        self.assertNotEqual(quill["path"], marlowe["path"])
+        self.assertEqual((quill["held"], quill["holder"]["repo"]), (True, "quillworks/duetto"))
+        self.assertEqual((marlowe["held"], marlowe["holder"]["repo"]), (True, "marlowe-labs/duetto"))
+
+    def test_the_owner_is_the_repository_owner_in_lowercase(self) -> None:
+        self.assertEqual(ADAPTER.lock_owner("Quillworks/Duetto"), "quillworks")
+        self.assertEqual(ADAPTER.lock_owner("quillworks/ledger"), "quillworks")
+        with self.assertRaises(ADAPTER.WaitError):
+            ADAPTER.lock_owner("quillworks")
 
     def test_status_command_reports_the_holder_and_run_reports_lock_held(self) -> None:
-        gh = Replay("duetto#55", now="2026-09-25T19:50:00Z")
-        head = gh.head("duetto#55")
-        handle = ADAPTER.acquire_lock("reviewer", {"repo": "frostney/duetto", "pr": 58, "head": "abc"}, 0, 1)
+        gh = owned("duetto#55", "quillworks", now="2026-09-25T19:50:00Z")
+        head = gh.head_at("quillworks/duetto", 55)
+        handle = ADAPTER.acquire_lock("quillworks", {"repo": "quillworks/ledger", "pr": 58, "head": "abc"}, 0, 1)
         self.addCleanup(ADAPTER.release_lock, handle)
-        code, status = main(gh, "status", "--repo", "frostney/duetto", "--pr", "55", "--head", f"55={head}", "--json")
+        code, status = main(gh, "status", "--repo", "quillworks/duetto", "--pr", "55", "--head", f"55={head}", "--json")
         self.assertEqual((code, status["state"]), (0, "satisfied"))
         self.assertEqual(status["observation"]["pullRequests"][0]["state"], "clean-complete")
-        self.assertEqual(status["observation"]["lock"]["holder"]["pr"], 58)
+        lock = status["observation"]["lock"]
+        self.assertEqual((lock["owner"], lock["path"]), ("quillworks", str(ADAPTER.lock_path("quillworks"))))
+        self.assertEqual((lock["holder"]["repo"], lock["holder"]["pr"]), ("quillworks/ledger", 58))
+        # The same owner in another repository and another case still waits for the lock.
         code, blocked = main(
-            gh, "run", "--repo", "frostney/duetto", "--pr", "55", "--head", head,
+            gh, "run", "--repo", "Quillworks/duetto", "--pr", "55", "--head", head,
             "--deadline", "2000-01-01T00:00:00Z", "--interval", "1", "--json",
         )
         self.assertEqual((code, blocked["state"]), (0, "lock-held"))
+        self.assertEqual(blocked["observation"]["lock"]["owner"], "quillworks")
         self.assertEqual(blocked["observation"]["lock"]["holder"]["pr"], 58)
         self.assertEqual(gh.posts, [])
+
+    def test_a_run_for_another_owner_does_not_wait_for_the_held_lock(self) -> None:
+        gh = owned("duetto#55", "marlowe-labs", now="2026-09-25T19:50:00Z")
+        head = gh.head_at("marlowe-labs/duetto", 55)
+        handle = ADAPTER.acquire_lock("quillworks", {"repo": "quillworks/duetto", "pr": 55, "head": "abc"}, 0, 1)
+        self.addCleanup(ADAPTER.release_lock, handle)
+        code, status = main(gh, "status", "--repo", "marlowe-labs/duetto", "--pr", "55", "--head", f"55={head}", "--json")
+        self.assertEqual((code, status["state"]), (0, "satisfied"))
+        self.assertEqual(
+            status["observation"]["lock"],
+            {"owner": "marlowe-labs", "path": str(ADAPTER.lock_path("marlowe-labs")), "held": False, "holder": None},
+        )
+        code, finished = main(
+            gh, "run", "--repo", "marlowe-labs/duetto", "--pr", "55", "--head", head,
+            "--deadline", "2026-09-25T20:50:00Z", "--interval", "1", "--json",
+        )
+        self.assertEqual((code, finished["state"]), (0, "clean-complete"))
+        self.assertEqual(gh.posts, [])
+        self.assertTrue(ADAPTER.lock_status("quillworks")["held"])
+        self.assertFalse(ADAPTER.lock_status("marlowe-labs")["held"])
 
 
 class ContractTest(unittest.TestCase):
