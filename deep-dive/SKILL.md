@@ -116,7 +116,9 @@ Stop only when one of these holds:
 
 ## Report
 
-Keep it short:
+Keep it short. When the deep dive ran inside a larger task, such as a delivery,
+its report still goes in the final message, including the verdict file's exact
+path:
 
 - the surviving explanation as a cause, back to its earliest supported link,
   or the gap;
