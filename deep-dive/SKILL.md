@@ -5,8 +5,8 @@ description: >-
   ran or loaded, trying to break each candidate explanation, and having the
   result reviewed in a fresh context before reporting it. Use before claiming a
   cause or proposing a fix for an observed failure, hang, leak, or unexpected
-  agent behavior, when asked why something happened or what is causing it, or
-  when the user runs /deep-dive.
+  agent behavior that the record does not already explain, when asked why
+  something happened or what is causing it, or when the user runs /deep-dive.
 license: Unlicense OR MIT
 ---
 
@@ -16,6 +16,10 @@ The person should not have to ask you to check what actually happened. Before
 you name a cause or propose a fix for something observed, establish the cause
 from the record of what ran, try to break it, and have it reviewed in a fresh
 context.
+
+A check that fails inside a development or delivery loop, with output that
+names an in-scope defect, needs no deep dive: state that cause, fix it, and let
+the rerun confirm it.
 
 ## Look at what actually ran
 
