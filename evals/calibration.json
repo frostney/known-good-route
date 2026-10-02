@@ -784,7 +784,7 @@
         "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "34b83e0912c8638480a795363891d569271678fef05a001adce7554ed78ce5af",
-      "afterSha256": "6f00418c88399e233927ae47aa420d95ce046390d3863262f23eac18b9d59df2",
+      "afterSha256": "3fda1a01b14c572f6d6ed84750fabfc3400444e0ce9c2decef56ce58555334cd",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1670,7 +1670,7 @@
         "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "f7f4c49580242958106e7408e5e4c4947d3eec04c52da040e0799f9b2a6871c0",
-      "afterSha256": "74574bcb360a589dbcead1ab89453c12e9fc94044d48bdc641374793d0528a2a",
+      "afterSha256": "bd951f8b174825c3a78faf2bbb954bfdc31d79ea8880078b2043cb28c090a7c3",
       "frozenCaseSha256": "7f0ecd811bd03a42f763b0a5a290770ca6ba4f05654c69ac1f0c1800280c8382"
     },
     {
