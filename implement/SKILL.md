@@ -91,7 +91,8 @@ owns that operation and resumes testing afterward.
 
 Finish when every verified requirement gap is resolved and applicable gates
 pass; unrelated improvements do not extend the task. Return the implemented
-result and observed requirement evidence to the caller, or continue under the
+result, observed requirement evidence and any route that replaced a failed
+source to the caller, or continue under the
 [delivery settings](../deliver/SKILL.md#delivery-settings) when started
 directly. Report unresolved required behavior as incomplete; never waive it because its finding is low
 severity.
