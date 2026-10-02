@@ -107,6 +107,13 @@ class Replay(REPLAY.RecordedGitHub):
         self.case(ref)["comments"].remove(self.comment(ref, identifier))
 
 
+def owned(ref: str, owner: str, now: str) -> REPLAY.RecordedGitHub:
+    """The recorded pull request under an invented owner."""
+    case = copy.deepcopy(CORPUS[ref])
+    case["repo"] = f"{owner}/{case['repo'].split('/', 1)[1]}"
+    return REPLAY.RecordedGitHub([case], now)
+
+
 def observe(gh: Replay, ref: str, head: str | None = None, **options: Any) -> dict[str, Any]:
     repo, number = gh.refs[ref]
     expected = head or gh.head(ref)
@@ -168,17 +175,48 @@ def lock_loss(gh: Replay, ref: str) -> Callable[[float], None]:
     return answer
 
 
-def main(gh: Replay, *argv: str) -> tuple[int, dict[str, Any]]:
-    """The adapter's CLI against `gh` as the login `reviewer`, at `gh.now`."""
-    read = gh.rest
-    gh.rest = lambda endpoint, *args: {"login": "reviewer"} if endpoint == "user" else read(endpoint, *args)
+GITHUB_API, ENTERPRISE_API = "https://api.github.com", "https://ghe.example.com/api/v3"
+
+
+def main(
+    gh: REPLAY.RecordedGitHub,
+    *argv: str,
+    root: str | None = GITHUB_API,
+    while_waiting: Callable[[], None] | None = None,
+) -> tuple[int, dict[str, Any]]:
+    """The adapter's CLI against `gh` from `gh.now`, with gh's API root at `root`.
+
+    `gh api /` fails when `root` is None; `gh.root_reads` counts its calls. A
+    `run` polls on `gh`'s clock and calls `while_waiting` at each wait.
+    """
     output: list[str] = []
+    read, review = gh.rest, ADAPTER.run_review
+    gh.root_reads = 0
+
+    def rest(endpoint: str, *args: Any) -> Any:
+        if endpoint != "/":
+            return read(endpoint, *args)
+        gh.root_reads += 1
+        if root is None:
+            raise ADAPTER.WaitError("gh: Bad Gateway (HTTP 502)")
+        return {"current_user_url": f"{root}/user", "repository_url": f"{root}/repos/{{owner}}/{{repo}}"}
+
+    def wait(seconds: float) -> None:
+        if while_waiting:
+            while_waiting()
+        gh.now += seconds
+
+    def run_review(*args: Any) -> Any:
+        return review(*args, clock=lambda: gh.now, sleeper=wait)
+
+    gh.rest = rest
     with mock.patch.object(ADAPTER, "Gh", lambda _metrics: gh), mock.patch.object(
-        ADAPTER.time, "time", lambda: gh.now
-    ), mock.patch.object(ADAPTER.sys, "argv", ["coderabbit_adapter.py", *argv]), mock.patch(
-        "builtins.print", output.append
-    ):
+        ADAPTER, "run_review", run_review
+    ), mock.patch.object(ADAPTER.time, "time", lambda: gh.now), mock.patch.object(
+        ADAPTER.sys, "argv", ["coderabbit_adapter.py", *argv]
+    ), mock.patch("builtins.print", output.append):
         code = ADAPTER.main()
+    gh.rest = read
     return code, json.loads(output[0])
 
 
@@ -893,7 +931,7 @@ class TriggerLockTest(unittest.TestCase):
             "import importlib.util, sys; sys.dont_write_bytecode = True; "
             f"spec = importlib.util.spec_from_file_location('adapter', {str(MODULE_PATH)!r}); "
             "module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module); "
-            "print(module.lock_path('reviewer'))"
+            "print(module.lock_path('https://api.github.com', 'quillworks'))"
         )
         paths = set()
         for variable in ("TMPDIR", "HOME"):
@@ -907,39 +945,180 @@ class TriggerLockTest(unittest.TestCase):
         self.assertTrue(paths.pop().startswith(pwd.getpwuid(os.getuid()).pw_dir + os.sep))
 
     def test_status_names_the_run_holding_the_lock(self) -> None:
-        self.assertEqual(ADAPTER.lock_status("reviewer")["held"], False)
-        holder = {"repo": "frostney/duetto", "pr": 55, "head": CORPUS["duetto#55"]["head"]}
-        handle = ADAPTER.acquire_lock("reviewer", holder, 0, 1)
+        self.assertEqual(ADAPTER.lock_status(GITHUB_API, "quillworks")["held"], False)
+        holder = {"repo": "quillworks/duetto", "pr": 55, "head": CORPUS["duetto#55"]["head"]}
+        handle = ADAPTER.acquire_lock(GITHUB_API, "quillworks", holder, 0, 1)
         self.assertIsNotNone(handle)
         try:
-            status = ADAPTER.lock_status("reviewer")
-            self.assertTrue(status["held"])
+            status = ADAPTER.lock_status(GITHUB_API, "quillworks")
+            self.assertEqual((status["apiRoot"], status["owner"], status["held"]), (GITHUB_API, "quillworks", True))
             self.assertEqual(
-                {key: status["holder"][key] for key in ("repo", "pr", "head", "login")},
-                holder | {"login": "reviewer"},
+                {key: status["holder"][key] for key in ("repo", "pr", "head", "apiRoot", "owner")},
+                holder | {"apiRoot": GITHUB_API, "owner": "quillworks"},
             )
             self.assertIsInstance(status["holder"]["pid"], int)
-            self.assertIsNone(ADAPTER.acquire_lock("reviewer", {"pr": 58}, 0, 1))
+            self.assertIsNone(ADAPTER.acquire_lock(GITHUB_API, "quillworks", {"pr": 58}, 0, 1))
         finally:
             ADAPTER.release_lock(handle)
-        self.assertEqual(ADAPTER.lock_status("reviewer"), {"path": status["path"], "held": False, "holder": None})
+        self.assertEqual(
+            ADAPTER.lock_status(GITHUB_API, "quillworks"),
+            {"apiRoot": GITHUB_API, "owner": "quillworks", "path": status["path"], "held": False, "holder": None},
+        )
 
-    def test_status_command_reports_the_holder_and_run_reports_lock_held(self) -> None:
-        gh = Replay("duetto#55", now="2026-09-25T19:50:00Z")
-        head = gh.head("duetto#55")
-        handle = ADAPTER.acquire_lock("reviewer", {"repo": "frostney/duetto", "pr": 58, "head": "abc"}, 0, 1)
+    def test_two_owners_hold_their_locks_at_the_same_time(self) -> None:
+        first = ADAPTER.acquire_lock(GITHUB_API, "quillworks", {"repo": "quillworks/duetto", "pr": 55}, 0, 1)
+        self.assertIsNotNone(first)
+        self.addCleanup(ADAPTER.release_lock, first)
+        second = ADAPTER.acquire_lock(GITHUB_API, "marlowe-labs", {"repo": "marlowe-labs/duetto", "pr": 7}, 0, 1)
+        self.assertIsNotNone(second)
+        self.addCleanup(ADAPTER.release_lock, second)
+        quill, marlowe = ADAPTER.lock_status(GITHUB_API, "quillworks"), ADAPTER.lock_status(GITHUB_API, "marlowe-labs")
+        self.assertNotEqual(quill["path"], marlowe["path"])
+        self.assertEqual((quill["held"], quill["holder"]["repo"]), (True, "quillworks/duetto"))
+        self.assertEqual((marlowe["held"], marlowe["holder"]["repo"]), (True, "marlowe-labs/duetto"))
+
+    def test_the_owner_is_the_repository_owner_in_lowercase(self) -> None:
+        self.assertEqual(ADAPTER.lock_owner("Quillworks/Duetto"), "quillworks")
+        self.assertEqual(ADAPTER.lock_owner("quillworks/ledger"), "quillworks")
+        with self.assertRaises(ADAPTER.WaitError):
+            ADAPTER.lock_owner("quillworks")
+
+    def test_the_api_root_is_gh_current_user_url_without_user(self) -> None:
+        for url, expected in (
+            ("https://api.github.com/user", GITHUB_API),
+            ("https://ghe.example.com/api/v3/user", ENTERPRISE_API),
+        ):
+            with self.subTest(url=url):
+                gh = mock.Mock()
+                gh.rest.return_value = {"current_user_url": url}
+                self.assertEqual(ADAPTER.api_root(gh), expected)
+                gh.rest.assert_called_once_with("/")
+        for value in ({}, {"current_user_url": None}, {"current_user_url": "https://api.github.com/users"}):
+            with self.subTest(response=value), self.assertRaises(ADAPTER.WaitError):
+                gh = mock.Mock()
+                gh.rest.return_value = value
+                ADAPTER.api_root(gh)
+
+    def test_github_and_an_enterprise_root_hold_separate_locks_for_one_owner_name(self) -> None:
+        public = ADAPTER.acquire_lock(GITHUB_API, "quillworks", {"repo": "Quillworks/one", "pr": 1}, 0, 1)
+        self.assertIsNotNone(public)
+        self.addCleanup(ADAPTER.release_lock, public)
+        gh = owned("duetto#55", "quillworks", now="2026-09-25T19:50:00Z")
+        head = gh.head_at("quillworks/duetto", 55)
+        code, status = main(
+            gh, "status", "--repo", "quillworks/duetto", "--pr", "55", "--head", f"55={head}", "--json", root=ENTERPRISE_API,
+        )
+        lock = status["observation"]["lock"]
+        self.assertEqual((code, lock["apiRoot"], lock["held"]), (0, ENTERPRISE_API, False))
+        self.assertNotEqual(lock["path"], str(ADAPTER.lock_path(GITHUB_API, "quillworks")))
+        code, finished = main(
+            gh, "run", "--repo", "quillworks/duetto", "--pr", "55", "--head", head,
+            "--deadline", "2026-09-25T20:50:00Z", "--interval", "1", "--json", root=ENTERPRISE_API,
+        )
+        self.assertEqual((code, finished["state"]), (0, "clean-complete"))
+        self.assertTrue(ADAPTER.lock_status(GITHUB_API, "quillworks")["held"])
+
+    def test_one_root_and_differently_cased_owners_share_a_lock(self) -> None:
+        gh = owned("duetto#55", "quillworks", now="2026-09-25T19:50:00Z")
+        head = gh.head_at("quillworks/duetto", 55)
+        holder = {"repo": "quillworks/ledger", "pr": 58, "head": "abc"}
+        handle = ADAPTER.acquire_lock(GITHUB_API, "quillworks", holder, 0, 1)
         self.addCleanup(ADAPTER.release_lock, handle)
-        code, status = main(gh, "status", "--repo", "frostney/duetto", "--pr", "55", "--head", f"55={head}", "--json")
+        code, status = main(gh, "status", "--repo", "quillworks/duetto", "--pr", "55", "--head", f"55={head}", "--json")
         self.assertEqual((code, status["state"]), (0, "satisfied"))
-        self.assertEqual(status["observation"]["pullRequests"][0]["state"], "clean-complete")
-        self.assertEqual(status["observation"]["lock"]["holder"]["pr"], 58)
+        lock = status["observation"]["lock"]
+        self.assertEqual(
+            (lock["apiRoot"], lock["owner"], lock["path"]),
+            (GITHUB_API, "quillworks", str(ADAPTER.lock_path(GITHUB_API, "quillworks"))),
+        )
+        self.assertEqual((lock["holder"]["repo"], lock["holder"]["pr"]), ("quillworks/ledger", 58))
         code, blocked = main(
-            gh, "run", "--repo", "frostney/duetto", "--pr", "55", "--head", head,
+            gh, "run", "--repo", "QuillWorks/duetto", "--pr", "55", "--head", head,
             "--deadline", "2000-01-01T00:00:00Z", "--interval", "1", "--json",
         )
         self.assertEqual((code, blocked["state"]), (0, "lock-held"))
-        self.assertEqual(blocked["observation"]["lock"]["holder"]["pr"], 58)
+        lock = blocked["observation"]["lock"]
+        self.assertEqual((lock["apiRoot"], lock["owner"], lock["holder"]["pr"]), (GITHUB_API, "quillworks", 58))
+        self.assertEqual((gh.root_reads, gh.posts), (1, []))
+
+    def test_a_run_for_another_owner_does_not_wait_for_the_held_lock(self) -> None:
+        gh = owned("duetto#55", "marlowe-labs", now="2026-09-25T19:50:00Z")
+        head = gh.head_at("marlowe-labs/duetto", 55)
+        handle = ADAPTER.acquire_lock(GITHUB_API, "quillworks", {"repo": "quillworks/duetto", "pr": 55}, 0, 1)
+        self.addCleanup(ADAPTER.release_lock, handle)
+        code, status = main(gh, "status", "--repo", "marlowe-labs/duetto", "--pr", "55", "--head", f"55={head}", "--json")
+        self.assertEqual((code, status["state"]), (0, "satisfied"))
+        self.assertEqual(
+            status["observation"]["lock"],
+            {
+                "apiRoot": GITHUB_API, "owner": "marlowe-labs", "path": str(ADAPTER.lock_path(GITHUB_API, "marlowe-labs")),
+                "held": False, "holder": None,
+            },
+        )
+        code, finished = main(
+            gh, "run", "--repo", "marlowe-labs/duetto", "--pr", "55", "--head", head,
+            "--deadline", "2026-09-25T20:50:00Z", "--interval", "1", "--json",
+        )
+        self.assertEqual((code, finished["state"]), (0, "clean-complete"))
+        self.assertEqual((gh.root_reads, gh.posts), (1, []))
+        self.assertTrue(ADAPTER.lock_status(GITHUB_API, "quillworks")["held"])
+        self.assertFalse(ADAPTER.lock_status(GITHUB_API, "marlowe-labs")["held"])
+
+    def test_a_failing_api_root_read_is_an_operational_error_without_lock_or_trigger(self) -> None:
+        # Synthetic: GitHub fails `gh api /` while CodeRabbit has not yet reviewed the head.
+        gh = owned("duetto#55", "quillworks", now="2026-09-25T19:43:00Z")
+        head = gh.head_at("quillworks/duetto", 55)
+        locked: list[Any] = []
+        acquire = ADAPTER.acquire_lock
+        with mock.patch.object(ADAPTER, "acquire_lock", lambda *args, **kw: locked.append(args) or acquire(*args, **kw)):
+            for command in (
+                ["status", "--repo", "quillworks/duetto", "--pr", "55", "--head", f"55={head}", "--json"],
+                ["run", "--repo", "quillworks/duetto", "--pr", "55", "--head", head,
+                 "--deadline", "2026-09-25T20:50:00Z", "--interval", "60", "--json"],
+            ):
+                with self.subTest(command=command[0]):
+                    code, failed = main(gh, *command, root=None)
+                    self.assertEqual((code, failed["state"]), (2, "operational-error"))
+                    self.assertIn("HTTP 502", failed["reason"])
+                    self.assertNotIn("lock", failed["observation"])
+        self.assertEqual((locked, gh.posts), ([], []))
+        self.assertEqual(list(Path(self.directory.name).iterdir()), [])
+
+    def test_a_running_review_holds_its_owner_lock_until_it_ends(self) -> None:
+        # duetto#55 at 19:43:00: CodeRabbit completes the head at 19:47:10, so `run` polls until then.
+        gh = owned("duetto#55", "quillworks", now="2026-09-25T19:43:00Z")
+        head = gh.head_at("quillworks/duetto", 55)
+        waits: list[dict[str, Any]] = []
+
+        def contend() -> None:
+            seen = {}
+            for name, root, owner in (
+                ("same owner", GITHUB_API, "quillworks"),
+                ("other owner", GITHUB_API, "marlowe-labs"),
+                ("other root", ENTERPRISE_API, "quillworks"),
+            ):
+                handle = ADAPTER.acquire_lock(root, owner, {"repo": f"{owner}/ledger", "pr": 9}, 0, 1)
+                seen[name] = handle is not None
+                if handle:
+                    ADAPTER.release_lock(handle)
+            waits.append(seen | {"holder": ADAPTER.lock_status(GITHUB_API, "quillworks")["holder"]})
+
+        code, finished = main(
+            gh, "run", "--repo", "quillworks/duetto", "--pr", "55", "--head", head,
+            "--deadline", "2026-09-25T20:50:00Z", "--interval", "60", "--json", while_waiting=contend,
+        )
+        self.assertEqual((code, finished["state"]), (0, "clean-complete"))
         self.assertEqual(gh.posts, [])
+        self.assertGreaterEqual(len(waits), 2)
+        for seen in waits:
+            self.assertEqual(
+                {key: seen[key] for key in ("same owner", "other owner", "other root")},
+                {"same owner": False, "other owner": True, "other root": True},
+            )
+            self.assertEqual((seen["holder"]["repo"], seen["holder"]["pr"]), ("quillworks/duetto", 55))
+        released = ADAPTER.acquire_lock(GITHUB_API, "quillworks", {"pr": 9}, 0, 1)
+        self.assertIsNotNone(released)
+        ADAPTER.release_lock(released)
 
 
 class ContractTest(unittest.TestCase):
