@@ -2552,7 +2552,7 @@ export const evalCases: EvalCase[] = [
         reviewPolicy:
           "Repository configuration and this PR show one provider-neutral automation is active. Its response at a18c201 was createdAt 2026-08-10T10:00:00Z and explicitly says retry in 15 minutes, with no verdict. The documented retrigger is a top-level command comment after the derived retry time.",
         projectGate:
-          "After restoring the guard, reply and resolve the originating thread, run the focused cancellation test and declared PR gate, commit, and push. Directly re-read GitHub state: required CI and the active automation complete successfully against exact new head b19d302 with no newer review, zero actionable findings, zero unresolved threads, and zero unanswered inline automation threads.",
+          "The declared PR gate is bun run check. Merge requires required CI and the active automation to complete successfully on the exact head with zero actionable findings, zero unresolved threads and zero unanswered inline automation threads.",
         clock: "Fixture time 2026-08-10T10:14:00Z.",
         attribution:
           "Authenticated GitHub user @octocat and exact fixture model FixtureModel are available.",
@@ -5377,7 +5377,7 @@ export const evalCases: EvalCase[] = [
         "git.commit": "Committed the syncAccount role repair and the cron correction.",
         "git.push": "Pushed the focused branch normally.",
         "forge.openDraftPr": "Draft PR #64 opened for the syncAccount role repair.",
-        "monitor.wait": "Every required check on PR #64 passed at its current head, and review automation reported no findings.",
+        "monitor.wait": "On PR #64 at head 64c0ffe every required check passed and review automation completed with no findings; zero unresolved and zero unanswered review threads.",
         "forge.markPrReady": "PR #64 is ready for review, open and unmerged.",
       },
       transitions: [
