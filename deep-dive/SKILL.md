@@ -7,8 +7,8 @@ description: >-
   cause or proposing a fix for an observed failure, hang, leak, or unexpected
   agent behavior, when asked why something happened or what is causing it, or
   when the user runs /deep-dive. Inside an authorized development or delivery
-  loop, a failing check whose in-scope cause the current run has established is
-  fixed in that loop instead, unless the user ran /deep-dive.
+  loop, a failing check whose own output or trace already shows an uncontested
+  in-scope cause is fixed in that loop instead, unless the user ran /deep-dive.
 license: Unlicense OR MIT
 metadata:
   agents-role: ambient
@@ -24,12 +24,14 @@ context.
 
 An explicit `/deep-dive` always runs the full procedure below. Otherwise, a
 check that fails inside an authorized development or delivery loop needs no
-deep dive only when evidence from the current run establishes its in-scope
-cause: the mechanism that produced the failure, not only the failed assertion
-or the defect the output names. State that cause and its evidence, fix it in
-the loop, and rerun; the rerun confirms the fix, not the cause. Contradictory
-evidence, a failure that evidence does not explain, or a fix the rerun does not
-confirm returns to this procedure, including the fresh review.
+deep dive only when the failing run's own output or trace already shows the
+in-scope mechanism that produced the failure, not only the failed assertion or
+the defect it names, and nothing contradicts it. State that cause and its
+evidence, fix it in the loop, and rerun; the rerun confirms the fix, not the
+cause. When finding the cause meant weighing candidate mechanisms or setting
+aside a conflicting claim, such as a note blaming another component, you did a
+deep dive: get its fresh review before the fix. A failure the evidence does not
+explain, or a fix the rerun does not confirm, also returns to this procedure.
 
 ## Look at what actually ran
 
