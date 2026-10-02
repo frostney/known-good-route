@@ -219,13 +219,20 @@ class RecordedGitHub:
             pull = self.pull(f"{variables['owner']}/{variables['name']}", int(variables["number"]))
             ready = [event["at"] for event in pull["events"] if event["type"] == "ready" and at(event["at"]) <= self.now]
             nodes = [{"createdAt": ready[-1]}] if ready else []
-            limit = int(re.search(r"forcePushes: timelineItems\(last: (\d+)", query).group(1))
+            return {"repository": {"pullRequest": {"timelineItems": {"nodes": nodes}}}}
+        if "HEAD_REF_FORCE_PUSHED_EVENT" in query:
+            # Pages of `last: N` force pushes, newest page first; a cursor is the index a page starts at.
+            pull = self.pull(f"{variables['owner']}/{variables['name']}", int(variables["number"]))
+            limit = int(re.search(r"timelineItems\(last: (\d+)", query).group(1))
             pushes = [
                 {"createdAt": event["at"], "beforeCommit": {"oid": event["from"]}, "afterCommit": {"oid": event["head"]}}
                 for event in pull["events"]
                 if event["type"] == "force-pushed" and at(event["at"]) <= self.now
-            ][-limit:]
-            return {"repository": {"pullRequest": {"timelineItems": {"nodes": nodes}, "forcePushes": {"nodes": pushes}}}}
+            ]
+            end = int(variables["cursor"]) if variables.get("cursor") else len(pushes)
+            begin = max(0, end - limit)
+            info = {"hasPreviousPage": begin > 0, "startCursor": str(begin)}
+            return {"repository": {"pullRequest": {"timelineItems": {"pageInfo": info, "nodes": pushes[begin:end]}}}}
         if "userContentEdits" in query:
             identifier = int(variables["id"].removeprefix("IC_"))
             if identifier in self.unreadable_histories:
@@ -288,33 +295,47 @@ def head_timeline(pull: dict[str, Any]) -> list[tuple[float, str]]:
 # --- Ground truth ------------------------------------------------------------------
 
 
-def refused_for_capacity(pulls: list[dict[str, Any]], status: dict[str, Any]) -> bool:
-    """Whether the newest CodeRabbit notice stating a wait before the refusal says waiting won't change it."""
-    status_at = at(status["created_at"])
-    # A comment's current body, its last version, wins over another version of the same second.
-    paired = [
-        (at(edited), index == len(item["versions"]) - 1, ADAPTER.no_capacity(body))
-        for pull in pulls
-        for item in pull["comments"]
-        if item["user"]["login"].lower() in ADAPTER.BOT_LOGINS
-        for index, (edited, body) in enumerate(item["versions"])
-        if ADAPTER.stated_seconds(body) is not None and status_at - ADAPTER.CORRELATION_SECONDS <= at(edited) <= status_at
-    ]
-    return bool(paired) and max(paired, key=lambda entry: entry[:2])[2]
+def shown_versions(pulls: list[dict[str, Any]], now: float) -> list[tuple[float, str]]:
+    """What each CodeRabbit comment showed at each second by `now`, comment by comment.
 
-
-def stated_wait(pulls: list[dict[str, Any]], status: dict[str, Any]) -> tuple[float, float] | None:
-    """The recorded refusal's stated wait, as (status time, available time)."""
-    status_at = at(status["created_at"])
-    best = None
+    Within one comment a later version in its recorded order wins a second it
+    shares with an earlier one, whether or not either states a wait.
+    """
+    shown = []
     for pull in pulls:
         for item in pull["comments"]:
             if item["user"]["login"].lower() not in ADAPTER.BOT_LOGINS:
                 continue
+            versions: dict[float, str] = {}
             for edited, body in item["versions"]:
-                seconds = ADAPTER.stated_seconds(body)
-                if seconds is not None and status_at - ADAPTER.CORRELATION_SECONDS <= at(edited) <= status_at:
-                    best = max(best or 0.0, at(edited) + seconds)
+                if at(edited) <= now:
+                    versions[at(edited)] = body
+            shown += sorted(versions.items())
+    return shown
+
+
+def refused_for_capacity(pulls: list[dict[str, Any]], status: dict[str, Any], now: float) -> bool:
+    """Whether the newest CodeRabbit notice stating a wait before the refusal says waiting won't change it.
+
+    Between comments, the first listed wins a tie.
+    """
+    status_at = at(status["created_at"])
+    paired = [
+        (edited, ADAPTER.no_capacity(body))
+        for edited, body in shown_versions(pulls, now)
+        if ADAPTER.stated_seconds(body) is not None and status_at - ADAPTER.CORRELATION_SECONDS <= edited <= status_at
+    ]
+    return bool(paired) and max(paired, key=lambda entry: entry[0])[1]
+
+
+def stated_wait(pulls: list[dict[str, Any]], status: dict[str, Any], now: float) -> tuple[float, float] | None:
+    """The recorded refusal's stated wait, as (status time, available time)."""
+    status_at = at(status["created_at"])
+    best = None
+    for edited, body in shown_versions(pulls, now):
+        seconds = ADAPTER.stated_seconds(body)
+        if seconds is not None and status_at - ADAPTER.CORRELATION_SECONDS <= edited <= status_at:
+            best = max(best or 0.0, edited + seconds)
     return (status_at, best) if best else None
 
 
@@ -428,10 +449,10 @@ class History:
         )
         refusals = [status for status in before if ADAPTER.status_kind(status) == "rate-limited"]
         sharing = [other for other in self.by_repo[pull["repo"]] if sha in other["heads"]]
-        own = stated_wait(sharing, refusals[-1]) if refusals else None
+        own = stated_wait(sharing, refusals[-1], now) if refusals else None
         if own and now < own[1] and not accepted:
             found.append("refused-trigger")
-        if refusals and refused_for_capacity(sharing, refusals[-1]):
+        if refusals and refused_for_capacity(sharing, refusals[-1], now):
             found.append("no-capacity")
         for status in after:
             started = at(status["created_at"])

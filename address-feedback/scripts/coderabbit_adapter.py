@@ -150,11 +150,18 @@ READY_QUERY = """query($owner: String!, $name: String!, $number: Int!) {
     timelineItems(last: 1, itemTypes: [READY_FOR_REVIEW_EVENT]) {
       nodes { ... on ReadyForReviewEvent { createdAt } }
     }
-    forcePushes: timelineItems(last: 100, itemTypes: [HEAD_REF_FORCE_PUSHED_EVENT]) {
+  } }
+}"""
+# Read backwards, newest page first, until a force push touching the head or the first one.
+FORCE_PUSH_QUERY = """query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
+  repository(owner: $owner, name: $name) { pullRequest(number: $number) {
+    timelineItems(last: 100, before: $cursor, itemTypes: [HEAD_REF_FORCE_PUSHED_EVENT]) {
+      pageInfo { hasPreviousPage startCursor }
       nodes { ... on HeadRefForcePushedEvent { createdAt beforeCommit { oid } afterCommit { oid } } }
     }
   } }
 }"""
+FORCE_PUSH_PAGES = 20
 
 # Every state a command reports, and the commands that report it. `status`
 # reports one state per head and one for the whole set; `run` reports its
@@ -383,16 +390,21 @@ def correlated_wait(
     """
     start = status_at - CORRELATION_SECONDS
     best: tuple[float, float, int, dict[str, Any]] | None = None
-    # The newest paired version alone says whether waiting can help, whatever retry time is latest.
-    # A comment's current body comes first and wins over a history version of the same second;
-    # between comments, the first listed wins.
+    # The newest paired version alone says whether waiting can help, whatever retry time is latest;
+    # between comments, the first listed wins a tie.
     newest: tuple[float, bool] | None = None
     for item in comments:
         if not is_summary(item):
             continue
         if parse_timestamp(item.get("updated_at"), "comment updated_at") < start:
             continue
+        # Within one comment the current body, then GitHub's newest-first edit history, decides
+        # what the comment showed at a second, whether or not that version states a wait.
+        shown: set[float] = set()
         for at, body in comment_versions(gh, item, start):
+            if at in shown:
+                continue
+            shown.add(at)
             seconds = stated_seconds(body)
             if seconds is None or not start <= at <= status_at:
                 continue
@@ -486,7 +498,7 @@ def head_arrival(
     pull: dict[str, Any],
     head: str,
     statuses: list[dict[str, Any]],
-    timeline: dict[str, Any],
+    pr: int,
 ) -> tuple[float, str]:
     """When the head last reached the PR branch, and the evidence for it.
 
@@ -500,17 +512,41 @@ def head_arrival(
     bounds its arrival.
     """
     first = first_arrival(gh, repo, pull, head, statuses)
-    moves = []
-    for node in ((timeline.get("forcePushes") or {}).get("nodes")) or []:
-        commits = [((node or {}).get(key) or {}).get("oid") for key in ("beforeCommit", "afterCommit")]
-        if not all(isinstance(oid, str) and oid for oid in commits):
-            raise WaitError("a force push on the pull request's timeline is missing its commits")
-        if head in commits:
-            moves.append((parse_timestamp(node.get("createdAt"), "force push createdAt"), commits[1] == head))
-    if not moves or max(moves)[0] <= first[0]:
+    move = latest_force_push(gh, repo, pr, head)
+    if move is None or move[0] <= first[0]:
         return first
-    at, reached = max(moves)
-    return at, "force-push" if reached else "force-push-away"
+    return move[0], "force-push" if move[1] else "force-push-away"
+
+
+def latest_force_push(gh: Gh, repo: str, pr: int, head: str) -> tuple[float, bool] | None:
+    """The latest force push that left or reached `head`, and whether it reached it.
+
+    A history that cannot be read back to such a force push or to its start is
+    an operational error: an unread force push may have left the head.
+    """
+    owner, name = repo_parts(repo)
+    cursor: str | None = None
+    for _page in range(FORCE_PUSH_PAGES):
+        data = gh.graphql(FORCE_PUSH_QUERY, {"owner": owner, "name": name, "number": pr, "cursor": cursor})
+        items = (((data or {}).get("repository") or {}).get("pullRequest") or {}).get("timelineItems")
+        page = (items or {}).get("pageInfo")
+        if not isinstance(page, dict) or not isinstance(page.get("hasPreviousPage"), bool):
+            raise WaitError("the pull request's force-push history has no page information")
+        moves = []
+        for node in items.get("nodes") or []:
+            commits = [((node or {}).get(key) or {}).get("oid") for key in ("beforeCommit", "afterCommit")]
+            if not all(isinstance(oid, str) and oid for oid in commits):
+                raise WaitError("a force push on the pull request's timeline is missing its commits")
+            if head in commits:
+                moves.append((parse_timestamp(node.get("createdAt"), "force push createdAt"), commits[1] == head))
+        if moves:
+            return max(moves)
+        if not page["hasPreviousPage"]:
+            return None
+        cursor = page.get("startCursor")
+        if not isinstance(cursor, str) or not cursor:
+            raise WaitError("the pull request's force-push history has no cursor for its earlier page")
+    raise WaitError(f"the pull request's force-push history was not read to its start within {FORCE_PUSH_PAGES} pages")
 
 
 def first_arrival(
@@ -642,7 +678,7 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
         comments += own if number == pr else rest_items(gh, f"repos/{repo}/issues/{number}/comments?per_page=100")
         reviews += rest_items(gh, f"repos/{repo}/pulls/{number}/reviews?per_page=100")
     timeline = pull_timeline(gh, repo, pr)
-    arrival = head_arrival(gh, repo, pull, head, statuses, timeline)
+    arrival = head_arrival(gh, repo, pull, head, statuses, pr)
     automatic, automatic_source = automatic_review_start(
         pull, timeline, (arrival[0], f"head-{arrival[1]}")
     )

@@ -147,7 +147,8 @@ def require_public(repo: str) -> None:
 def reduce_body(body: str) -> str:
     """The lines of a CodeRabbit body the adapter reads; all other prose is dropped.
 
-    Kept lines that a blank line separated stay separated by one.
+    Kept lines stay exactly as they are, and kept lines that a blank line
+    separated stay separated by one.
     """
     kept: list[str] = []
     gap = False
@@ -158,7 +159,7 @@ def reduce_body(body: str) -> str:
         if keeps(line):
             if gap:
                 kept.append("")
-            kept.append(line.strip())
+            kept.append(line)
             gap = False
     return "\n".join(kept)
 
@@ -169,7 +170,7 @@ def keeps(line: str) -> bool:
         or BLOCK_MARKER.match(line)
         or ADAPTER.COVERAGE_MARKER.search(line)
         or WAIT_SENTENCE.search(line)
-        or ADAPTER.NO_CAPACITY.search(line.strip())
+        or ADAPTER.NO_CAPACITY.search(line)
         or ADAPTER.NO_ACTIONABLE in line
         or ADAPTER.ACTIONABLE.search(line)
         or ADAPTER.REVIEW_FINDINGS.search(line)
@@ -215,12 +216,12 @@ def comment_versions(item: dict[str, Any], shas: set[str]) -> tuple[list[list[st
         if not (edits.get("pageInfo") or {}).get("hasNextPage"):
             break
         cursor = edits["pageInfo"]["endCursor"]
-    versions = sorted(
-        [[node["editedAt"], reduce_body(node.get("diff") or "")] for node in nodes if node.get("diff") is not None]
-    )
-    complete = bool(versions) and len(versions) == len(nodes)
-    if not versions or versions[-1][0] < updated:
-        versions.append([updated, reduce_body(item["body"])])
+    # Oldest first in GitHub's own order, which is newest first; a stable sort by time keeps that
+    # order within a second. The REST body is the comment's current version at its updated_at.
+    history = [[node["editedAt"], reduce_body(node["diff"])] for node in reversed(nodes) if node.get("diff") is not None]
+    complete = bool(history) and len(history) == len(nodes)
+    versions = sorted((version for version in history if version[0] < updated), key=lambda version: version[0])
+    versions.append([updated, reduce_body(item["body"])])
     return versions, complete
 
 

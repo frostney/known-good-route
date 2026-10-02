@@ -974,27 +974,67 @@ class CommitEvidenceTest(unittest.TestCase):
                 self.assertEqual(REPLAY.replay(list(pulls.values()))[0], [])
         self.assertEqual(observe(Invented(self.returned([]), offset(660)), "D")["state"], "clean-complete")
 
-    def test_a_force_push_without_its_commits_is_an_operational_error(self) -> None:
+    def corrupted(self, change: Callable[[dict[str, Any]], None]) -> Invented:
+        """D after a force push back at +650, with each force-push page changed by `change`."""
         pulls = self.returned([{"type": "force-pushed", "at": offset(650), "from": "9e8d7c6b" * 5, "head": self.HEAD}])
         gh = Invented(pulls, offset(660))
         read = gh.graphql
 
-        def without_commits(query: str, variables: dict[str, Any]) -> dict[str, Any]:
+        def changed(query: str, variables: dict[str, Any]) -> dict[str, Any]:
             data = read(query, variables)
-            for node in data["repository"]["pullRequest"].get("forcePushes", {}).get("nodes", []):
-                node["beforeCommit"] = None
+            if "HEAD_REF_FORCE_PUSHED_EVENT" in query:
+                change(data["repository"]["pullRequest"]["timelineItems"])
             return data
 
-        gh.graphql = without_commits  # type: ignore[method-assign]
-        with self.assertRaisesRegex(ADAPTER.WaitError, "missing its commits"):
-            observe(gh, "D")
+        gh.graphql = changed  # type: ignore[method-assign]
+        return gh
 
-    def test_the_replay_lists_only_as_many_force_pushes_as_the_query_asks(self) -> None:
+    def test_an_incomplete_force_push_history_is_an_operational_error(self) -> None:
+        def without_commits(items: dict[str, Any]) -> None:
+            for node in items["nodes"]:
+                node["beforeCommit"] = None
+
+        def without_cursor(items: dict[str, Any]) -> None:
+            items["nodes"] = []
+            items["pageInfo"] = {"hasPreviousPage": True, "startCursor": None}
+
+        cases = {
+            "missing its commits": without_commits,
+            "no page information": lambda items: items.pop("pageInfo"),
+            "no cursor": without_cursor,
+        }
+        for message, change in cases.items():
+            with self.subTest(message=message):
+                with self.assertRaisesRegex(ADAPTER.WaitError, message):
+                    observe(self.corrupted(change), "D")
+
+    def test_a_force_push_leaving_the_head_is_found_past_the_latest_page(self) -> None:
+        # Synthetic: the branch leaves the head for its parent at +620, is force-pushed between two
+        # other commits 150 times, and comes back to the head by a plain push; CodeRabbit skips at +654.
+        parent, other = "4d3c2b1a" * 5, "9e8d7c6b" * 5
+        events = [{"type": "force-pushed", "at": offset(620), "from": self.HEAD, "head": parent}]
+        events += [
+            {"type": "force-pushed", "at": iso(PUSHED + 621 + index * 0.1), "from": (parent, other)[index % 2], "head": (other, parent)[index % 2]}
+            for index in range(150)
+        ]
+        pulls = self.returned(events, (parent, -60), (other, 600))
+        gh = Invented(pulls, offset(660))
+        result = observe(gh, "D")
+        self.assertEqual((result["headArrival"], result["state"]), ({"at": offset(620), "source": "force-push-away"}, "skipped"))
+        with mock.patch.object(ADAPTER, "FORCE_PUSH_PAGES", 1):
+            with self.assertRaisesRegex(ADAPTER.WaitError, "not read to its start within 1 pages"):
+                observe(Invented(pulls, offset(660)), "D")
+
+    def test_the_replay_lists_force_pushes_a_page_at_a_time(self) -> None:
         events = [{"type": "force-pushed", "at": offset(600 + index), "from": "9e8d7c6b" * 5, "head": self.HEAD} for index in range(3)]
         gh = Invented(self.returned(events), offset(660))
-        query = ADAPTER.READY_QUERY.replace("forcePushes: timelineItems(last: 100", "forcePushes: timelineItems(last: 2")
-        nodes = gh.graphql(query, {"owner": "tallyworks", "name": "ledger-kit", "number": 4})["repository"]["pullRequest"]["forcePushes"]["nodes"]
-        self.assertEqual([node["createdAt"] for node in nodes], [offset(601), offset(602)])
+        query = ADAPTER.FORCE_PUSH_QUERY.replace("timelineItems(last: 100", "timelineItems(last: 2")
+        variables = {"owner": "tallyworks", "name": "ledger-kit", "number": 4, "cursor": None}
+        newest = gh.graphql(query, variables)["repository"]["pullRequest"]["timelineItems"]
+        self.assertEqual([node["createdAt"] for node in newest["nodes"]], [offset(601), offset(602)])
+        self.assertEqual(newest["pageInfo"]["hasPreviousPage"], True)
+        oldest = gh.graphql(query, variables | {"cursor": newest["pageInfo"]["startCursor"]})["repository"]["pullRequest"]["timelineItems"]
+        self.assertEqual(([node["createdAt"] for node in oldest["nodes"]], oldest["pageInfo"]["hasPreviousPage"]), ([offset(600)], False))
 
     def test_the_recorder_keeps_each_force_push_with_its_heads(self) -> None:
         items = [
@@ -1059,12 +1099,13 @@ def limit_notice(line: str = CAPACITY_LINE, wait: str = "**Next included review 
 # The line as observed, with a straight or a curly apostrophe.
 ACCEPTED = (limit_notice(), limit_notice(CAPACITY_LINE.replace("won't", "won’t")))
 # Ordinary waits: quoted and conditional wording, the words in another paragraph, the line
-# unquoted, and the line beside a wait in another wording.
+# unquoted or indented, and the line beside a wait in another wording.
 REJECTED = (
     limit_notice('> The documentation says "In this case, waiting won\'t change this."'),
     limit_notice("> If waiting won't change this, consider tuning the cache."),
     limit_notice(ORDINARY_LINE, extra="No actionable comments were generated. Waiting won't change this — the cache is warm.\n"),
     limit_notice(CAPACITY_LINE.removeprefix("> ")),
+    limit_notice("    " + CAPACITY_LINE),
     limit_notice(wait="**Next review available in:** **58 minutes**"),
 )
 
@@ -1126,6 +1167,68 @@ class NoCapacityTest(unittest.TestCase):
                 self.assertEqual(observe(gh, "F")["state"], state)
                 pull = gh.case("F")
                 self.assertEqual(REPLAY.History([pull]).violations(pull, self.HEAD, later, {"state": "trigger-incremental"}), found)
+
+    def test_between_comments_the_first_listed_wins_a_tie(self) -> None:
+        # Synthetic: a second summary comment edited in the same second as the first.
+        later = PUSHED + 99 + 58 * 60 + 120
+        for first, second, state in ((limit_notice(), limit_notice(ORDINARY_LINE), "blocked-no-capacity"),
+                                     (limit_notice(ORDINARY_LINE), limit_notice(), "waiting")):
+            with self.subTest(state=state):
+                gh = self.refused((99, first))
+                gh.case("F")["comments"].append(summary_comment(9007, (99, second)))
+                self.assertEqual(observe(gh, "F")["state"], state)
+                pull = gh.case("F")
+                found = ["no-capacity"] if state == "blocked-no-capacity" else []
+                self.assertEqual(REPLAY.History([pull]).violations(pull, self.HEAD, later, {"state": "trigger-incremental"}), found)
+
+    def test_a_current_body_without_a_wait_wins_its_second(self) -> None:
+        # Synthetic: in the second of the refusal the summary showed the notice and then, as its
+        # current body, no wait at all.
+        plain = f"{ADAPTER.SUMMARY_MARKER}\n<!-- walkthrough_start -->"
+        gh = self.refused((99, limit_notice()), (99, plain))
+        result = observe(gh, "F")
+        self.assertEqual((result["state"], result["rateLimit"]["wait"]), ("rate-limited-unknown-wait", None))
+        pull = gh.case("F")
+        later = PUSHED + 99 + 58 * 60 + 120
+        self.assertEqual(REPLAY.History([pull]).violations(pull, self.HEAD, later, {"state": "trigger-incremental"}), [])
+
+    def test_a_later_edit_leaves_an_earlier_tie_as_the_comment_showed_it(self) -> None:
+        # Synthetic: the notice and then an ordinary wait in the second of the refusal, and an
+        # unrelated summary at +101.
+        later = 99 + 58 * 60 + 120
+        gh = self.refused((99, limit_notice()), (99, limit_notice(ORDINARY_LINE)), (101, f"{ADAPTER.SUMMARY_MARKER}\n<!-- walkthrough_start -->"))
+        self.assertEqual(observed_at(gh, "F", offset(later))["state"], "trigger-incremental")
+        pull = gh.case("F")
+        self.assertEqual(REPLAY.History([pull]).violations(pull, self.HEAD, PUSHED + later, {"state": "trigger-incremental"}), [])
+
+    def test_the_recorder_keeps_the_rest_body_as_the_current_version(self) -> None:
+        # Synthetic: GitHub's edit history, newest first, holds two versions of the same second;
+        # the REST body is the newer one.
+        recorder = recorder_module()
+        tied = offset(99)
+        for current, older in ((limit_notice(ORDINARY_LINE), limit_notice()), (limit_notice(), limit_notice(ORDINARY_LINE))):
+            with self.subTest(current_blocks=ADAPTER.no_capacity(current)):
+                item = {"id": 1, "node_id": "IC_1", "body": current, "created_at": offset(13), "updated_at": tied}
+                edits = {"node": {"userContentEdits": {"pageInfo": {"hasNextPage": False}, "nodes": [
+                    {"editedAt": tied, "diff": current}, {"editedAt": tied, "diff": older}, {"editedAt": offset(13), "diff": SKIP_SUMMARY},
+                ]}}}
+                with mock.patch.object(recorder, "graphql", return_value=edits):
+                    versions, complete = recorder.comment_versions(item, set())
+                self.assertTrue(complete)
+                self.assertEqual(versions[-1], [tied, recorder.reduce_body(current)])
+                recorded = observe(self.refused(*((at(edited) - PUSHED, body) for edited, body in versions)), "F")
+                live = observe(self.refused((99, older), (99, current)), "F")
+                self.assertEqual(recorded["state"], live["state"])
+
+    def test_the_recorder_keeps_lines_exactly_as_they_are(self) -> None:
+        recorder = recorder_module()
+        body = limit_notice("    " + CAPACITY_LINE, wait="**Next included review available in 58 minutes.**")
+        indented = "    > **Next included review available in 58 minutes.**"
+        reduced = recorder.reduce_body(body.replace("> **Next included", "    > **Next included"))
+        self.assertIn(indented, reduced.splitlines())
+        # The adapter does not read the indented notice line, so the recorder drops it.
+        self.assertNotIn("    " + CAPACITY_LINE, reduced.splitlines())
+        self.assertFalse(ADAPTER.no_capacity(reduced))
 
     def test_a_run_stops_without_a_trigger(self) -> None:
         gh = self.refused((98, limit_notice(ORDINARY_LINE)), (99, limit_notice()))
