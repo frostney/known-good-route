@@ -119,8 +119,8 @@ work-item deliveries and the release at the verified milestone boundary.
    otherwise unavoidable waste. A later head, base, topology, or review change
    invalidates the proof.
 7. Integrate continuously rather than waiting for a batch. After every squash
-   merge, re-pull milestone scope and default-branch state; merge the updated
-   remote default into every affected remaining branch and rerun its applicable
+   merge, re-pull milestone scope and default-branch state; merge its updated
+   remote base into every affected remaining branch and rerun its applicable
    gates. Review and CI evidence is valid only for the current PR head.
 8. Read [references/scope-changes.md](references/scope-changes.md) when
    execution discovers new work, issues are added to the milestone externally,
