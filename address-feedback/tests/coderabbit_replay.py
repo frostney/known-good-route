@@ -12,8 +12,8 @@ the recorded history:
 - `completion`: a head is complete only when CodeRabbit posted a findings
   review of that exact head, or a matching coverage marker followed by a
   `Review completed` status on it, on any recorded pull request of that
-  commit, after the head's latest push, open or ready event and the latest
-  trigger on the pull request;
+  commit, after the head reached the pull request's branch and after the
+  latest trigger on the pull request;
 - `refused-trigger`: no trigger while the head's latest refusal states a wait
   that is still running, unless a recorded trigger at that point was
   accepted;
@@ -308,17 +308,19 @@ class History:
             if item["user"]["login"] == "maintainer" and asks(item["versions"][0][1])
         ]
 
-    def cycle_start(self, pull: dict[str, Any], sha: str, now: float) -> float:
-        """The head's latest push, open or ready event or trigger on the pull request by `now`."""
-        arrival = next(time for time, head in head_timeline(pull) if head == sha)
-        moments = [arrival, at(pull["createdAt"])]
-        moments += [at(event["at"]) for event in pull["events"] if event["type"] == "ready"]
-        moments += [time for time in self.triggers(pull, whole_line=True) if time >= arrival]
+    def review_cutoff(self, pull: dict[str, Any], sha: str, now: float) -> float:
+        """When the head was pushed to the pull request's branch, or its latest trigger by `now`.
+
+        Opening the pull request or marking it ready leaves an existing review of the commit standing.
+        """
+        suites = [at(suite["created_at"]) for suite in pull["heads"][sha]["checkSuites"] if suite["head_branch"] == pull["ref"]]
+        pushed = min(suites) if suites else next(time for time, head in head_timeline(pull) if head == sha)
+        moments = [pushed] + [time for time in self.triggers(pull, whole_line=True) if time >= pushed]
         return max(moment for moment in moments if moment <= now)
 
     def completed_with_evidence(self, pull: dict[str, Any], sha: str, now: float) -> bool:
-        """Whether the commit was reviewed since this pull request's cycle start, on any pull request."""
-        cutoff = self.cycle_start(pull, sha, now)
+        """Whether the commit was reviewed since its push to this pull request's branch, on any pull request."""
+        cutoff = self.review_cutoff(pull, sha, now)
         sharing = [other for other in self.by_repo[pull["repo"]] if sha in other["heads"]]
         for review in (review for other in sharing for review in other["reviews"]):
             submitted = at(review["submitted_at"])

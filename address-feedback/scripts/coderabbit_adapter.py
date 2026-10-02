@@ -19,9 +19,10 @@ The latest review cycle wins: evidence, triggers and pending statuses from
 before the latest trigger or the requested pull request's latest push, open
 or ready event are superseded, and among a pending status, a trigger and a
 findings review the newest decides. A review that completed the commit
-after the cycle's start keeps it complete for every pull request on it,
-whatever status CodeRabbit posts on the commit later, unless that status is
-pending. Every state that waits on CodeRabbit ends after a fixed bound: the
+after the head reached the requested pull request's branch and after its
+latest trigger keeps it complete for every pull request on it, whatever
+pull request was opened or marked ready since and whatever status
+CodeRabbit posts on the commit later, unless that status is pending. Every state that waits on CodeRabbit ends after a fixed bound: the
 wait for its own review becomes a trigger, and an unanswered trigger, a
 stalled review, an unexplained refusal and a second lock loss each become a
 blocked state. A refusal whose notice says waiting won't change it is
@@ -715,6 +716,11 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
     begun = max(start, latest["at"]) if latest else start
     # No answer comes within a second of its trigger, so a status in that second predates it.
     trigger_newer = latest is not None and (status_at is None or latest["at"] >= status_at)
+    # Completion belongs to the commit: the pull request's own open or ready event leaves a
+    # review of the head standing, while its triggers and the head's push still supersede it.
+    arrived = parse_timestamp(evidence["headArrival"]["at"], "head arrival")
+    asked = [trigger["at"] for trigger in evidence["triggers"]]
+    reviewed_since = max([arrived, *asked])
     review = evidence["findingsReview"]
     reviewed_at = parse_timestamp(review["submittedAt"], "review submitted_at") if review else None
     history = [
@@ -723,7 +729,7 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
     ]
     completed_at = max((when for when, seen in history if seen == "completed"), default=None)
     # Among a pending status, a trigger and a findings review, the newest decides.
-    if reviewed_at is not None and reviewed_at > begun and (kind != "in-progress" or reviewed_at > status_at):
+    if reviewed_at is not None and reviewed_at > reviewed_since and (kind != "in-progress" or reviewed_at > status_at):
         return result("review-complete", "a CodeRabbit review of exactly this head states findings")
     if kind == "in-progress" and not trigger_newer:
         return bounded(
@@ -736,7 +742,7 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
     # CodeRabbit keeps the marker while it reviews again; the completed status dates the pass.
     # A later status that is not pending, such as a skip for another pull request on the
     # commit, leaves the commit reviewed.
-    if evidence["cleanReview"] and completed_at is not None and completed_at > begun:
+    if evidence["cleanReview"] and completed_at is not None and completed_at > reviewed_since:
         return result(
             "clean-complete",
             f"CodeRabbit's summary marks {evidence['cleanReview']['coveredCommitId']} covered "

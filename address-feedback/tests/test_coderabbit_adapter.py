@@ -512,7 +512,8 @@ class AutomaticReviewTest(unittest.TestCase):
 
 
 class CycleTest(unittest.TestCase):
-    """The latest trigger or push, open or ready event starts the cycle every decision reads."""
+    """The latest trigger or push, open or ready event starts the cycle; an open or ready event
+    leaves an existing review of the head standing."""
 
     def test_a_newer_ready_event_ends_an_unanswered_trigger(self) -> None:
         # duetto#65: the trigger at 16:38:17 got no answer. Synthetic: marked ready again at 16:40.
@@ -576,13 +577,23 @@ class CycleTest(unittest.TestCase):
         result = observe(gh, "GocciaScript#1162")
         self.assertEqual((result["state"], result["since"]), ("triggered", "2026-08-15T16:49:32Z"))
 
-    def test_a_ready_event_after_a_clean_pass_awaits_the_automatic_review(self) -> None:
-        # duetto#55: clean pass of 1ca17f50 at 19:47:10. Synthetic: marked ready at 19:49:00.
-        gh = Replay("duetto#55", now="2026-09-25T19:50:00Z")
-        self.assertEqual(observe(gh, "duetto#55")["state"], "clean-complete")
+    def test_a_ready_event_after_a_clean_pass_leaves_it_complete(self) -> None:
+        # duetto#55: clean pass of 1ca17f50 at 19:47:10. Synthetic: marked ready at 19:49:00, and
+        # CodeRabbit starts another pass at 19:49:30.
+        gh = Replay("duetto#55", now="2026-09-25T19:49:20Z")
         gh.add_event("duetto#55", "ready", "2026-09-25T19:49:00Z")
-        result = observe(gh, "duetto#55")
-        self.assertEqual((result["state"], result["boundAt"]), ("awaiting-automatic", "2026-09-25T19:51:00Z"))
+        self.assertEqual(observe(gh, "duetto#55")["state"], "clean-complete")
+        gh.add_status("duetto#55", "Review in progress", "2026-09-25T19:49:30Z", state="pending")
+        self.assertEqual(observed_at(gh, "duetto#55", "2026-09-25T19:50:00Z")["state"], "in-progress")
+
+    def test_a_ready_event_after_a_findings_review_leaves_it_complete(self) -> None:
+        # GocciaScript#1200: a triggered review of the draft's head 052f1b8a stated three findings
+        # at 23:16:14; the pull request was marked ready on 2026-08-24 at 06:44:16.
+        for now in ("2026-08-24T06:44:16Z", "2026-08-24T06:46:16Z"):
+            with self.subTest(now=now):
+                result = state("GocciaScript#1200", now)
+                self.assertEqual(result["automaticReview"]["source"], "ready-for-review")
+                self.assertEqual((result["state"], result["findingsReview"]["actionable"]), ("review-complete", 3))
 
 
 class TriggerCommentTest(unittest.TestCase):
@@ -807,12 +818,31 @@ class CommitEvidenceTest(unittest.TestCase):
         self.assertEqual((result["sharedWith"], result["status"]["description"]), ([2], SKIPPED_BASE))
         self.assertEqual((result["state"], result["findingsReview"]["actionable"]), ("review-complete", 1))
 
-    def test_a_pull_request_opened_after_the_review_reads_its_own_skip(self) -> None:
-        # B's opening starts its cycle after A's review, so the review does not complete B.
+    def test_a_pull_request_opened_after_the_review_is_complete(self) -> None:
         gh = Invented(self.findings_then_skip(), offset(420))
-        self.assertEqual(observe(gh, "B")["state"], "skipped")
+        result = observe(gh, "B")
+        self.assertEqual(result["status"]["description"], SKIPPED_BASE)
+        self.assertEqual((result["state"], result["findingsReview"]["actionable"]), ("review-complete", 1))
         gh = Invented(self.skip_clean_skip(), offset(660))
-        self.assertEqual(observe(gh, "E")["state"], "skipped")
+        self.assertEqual(observe(gh, "E")["state"], "clean-complete")
+
+    def test_a_trigger_on_the_later_pull_request_starts_a_new_cycle(self) -> None:
+        # Synthetic: a review trigger on B after A's review.
+        gh = Invented(self.findings_then_skip(), offset(420))
+        gh.add_comment("B", "@coderabbitai review", offset(415))
+        self.assertEqual((observe(gh, "B")["state"], observe(gh, "A")["state"]), ("triggered", "review-complete"))
+
+    def test_a_push_of_the_reviewed_commit_starts_a_new_cycle(self) -> None:
+        # Synthetic: the reviewed commit pushed to B's own branch after A's review.
+        pulls = self.findings_then_skip()
+        pulls["B"]["ref"] = "totals-copy"
+        pulls["B"]["heads"] = {self.HEAD: copy.deepcopy(pulls["B"]["heads"][self.HEAD])}
+        pulls["B"]["heads"][self.HEAD]["checkSuites"] = [{"created_at": offset(400), "head_branch": "totals-copy"}]
+        gh = Invented(pulls, offset(420))
+        result = observe(gh, "B")
+        self.assertEqual((result["headArrival"]["at"], result["state"]), (offset(400), "skipped"))
+        reviewed = {"state": "review-complete"}
+        self.assertEqual(REPLAY.History(list(pulls.values())).violations(pulls["B"], self.HEAD, PUSHED + 420, reviewed), ["completion"])
 
     def test_a_clean_pass_completes_the_pull_request_skipped_before_it(self) -> None:
         gh = Invented(self.skip_clean_skip(), offset(610))
@@ -841,17 +871,16 @@ class CommitEvidenceTest(unittest.TestCase):
             pulls = list(scenario.values())
             violations, checked = REPLAY.replay(pulls)
             self.assertEqual(violations, [])
-            self.assertGreater(checked["skipped"], 0)
+            self.assertGreater(checked["review-complete"] + checked["clean-complete"], 0)
         pulls = self.skip_clean_skip()
         history = REPLAY.History(list(pulls.values()))
         clean = {"state": "clean-complete"}
-        self.assertEqual(history.violations(pulls["C"], self.HEAD, PUSHED + 610, clean), [])
-        alone = REPLAY.History([pulls["C"]])
-        self.assertEqual(alone.violations(pulls["C"], self.HEAD, PUSHED + 610, clean), ["completion"])
-        # Synthetic: B opened before A's findings review.
+        for ref, now in (("C", 610), ("E", 660)):
+            with self.subTest(ref=ref):
+                self.assertEqual(history.violations(pulls[ref], self.HEAD, PUSHED + now, clean), [])
+                alone = REPLAY.History([pulls[ref]])
+                self.assertEqual(alone.violations(pulls[ref], self.HEAD, PUSHED + now, clean), ["completion"])
         pulls = self.findings_then_skip()
-        pulls["B"]["createdAt"] = offset(60)
-        self.assertEqual(observe(Invented(pulls, offset(420)), "B")["state"], "review-complete")
         reviewed = {"state": "review-complete"}
         self.assertEqual(REPLAY.History(list(pulls.values())).violations(pulls["B"], self.HEAD, PUSHED + 420, reviewed), [])
         self.assertEqual(REPLAY.History([pulls["B"]]).violations(pulls["B"], self.HEAD, PUSHED + 420, reviewed), ["completion"])
