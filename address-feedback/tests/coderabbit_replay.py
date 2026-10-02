@@ -14,7 +14,9 @@ the recorded history:
   `Review completed` status on it, on any recorded pull request of that
   commit, after the head last reached the pull request's branch, after the
   latest trigger on the pull request, and after a newer pending status on
-  the head that CodeRabbit has not completed, paused or skipped;
+  the head that CodeRabbit has not completed, paused or skipped since, in
+  the order of time and status id; a force push leaving or reaching the head
+  counts as its push;
 - `refused-trigger`: no trigger while the head's latest refusal states a wait
   that is still running, unless a recorded trigger at that point was
   accepted;
@@ -217,7 +219,12 @@ class RecordedGitHub:
             pull = self.pull(f"{variables['owner']}/{variables['name']}", int(variables["number"]))
             ready = [event["at"] for event in pull["events"] if event["type"] == "ready" and at(event["at"]) <= self.now]
             nodes = [{"createdAt": ready[-1]}] if ready else []
-            pushes = [{"createdAt": iso(time), "afterCommit": {"oid": head}} for time, head in force_pushes(pull) if time <= self.now]
+            limit = int(re.search(r"forcePushes: timelineItems\(last: (\d+)", query).group(1))
+            pushes = [
+                {"createdAt": event["at"], "beforeCommit": {"oid": event["from"]}, "afterCommit": {"oid": event["head"]}}
+                for event in pull["events"]
+                if event["type"] == "force-pushed" and at(event["at"]) <= self.now
+            ][-limit:]
             return {"repository": {"pullRequest": {"timelineItems": {"nodes": nodes}, "forcePushes": {"nodes": pushes}}}}
         if "userContentEdits" in query:
             identifier = int(variables["id"].removeprefix("IC_"))
@@ -243,7 +250,7 @@ class RecordedGitHub:
 
 
 def force_pushes(pull: dict[str, Any]) -> list[tuple[float, str]]:
-    """Each recorded force push of the branch, with the head it left, oldest first."""
+    """Each recorded force push of the branch, with the head it brought, oldest first."""
     return sorted((at(event["at"]), event["head"]) for event in pull["events"] if event["type"] == "force-pushed")
 
 
@@ -284,15 +291,16 @@ def head_timeline(pull: dict[str, Any]) -> list[tuple[float, str]]:
 def refused_for_capacity(pulls: list[dict[str, Any]], status: dict[str, Any]) -> bool:
     """Whether the newest CodeRabbit notice stating a wait before the refusal says waiting won't change it."""
     status_at = at(status["created_at"])
+    # A comment's current body, its last version, wins over another version of the same second.
     paired = [
-        (at(edited), ADAPTER.capacity_sentence(body) is not None)
+        (at(edited), index == len(item["versions"]) - 1, ADAPTER.no_capacity(body))
         for pull in pulls
         for item in pull["comments"]
         if item["user"]["login"].lower() in ADAPTER.BOT_LOGINS
-        for edited, body in item["versions"]
+        for index, (edited, body) in enumerate(item["versions"])
         if ADAPTER.stated_seconds(body) is not None and status_at - ADAPTER.CORRELATION_SECONDS <= at(edited) <= status_at
     ]
-    return bool(paired) and max(paired)[1]
+    return bool(paired) and max(paired, key=lambda entry: entry[:2])[2]
 
 
 def stated_wait(pulls: list[dict[str, Any]], status: dict[str, Any]) -> tuple[float, float] | None:
@@ -352,8 +360,12 @@ class History:
         """
         suites = [at(suite["created_at"]) for suite in pull["heads"][sha]["checkSuites"] if suite["head_branch"] == pull["ref"]]
         pushed = min(suites) if suites else next(time for time, head in head_timeline(pull) if head == sha)
-        pushed = max([pushed] + [time for time, head in force_pushes(pull) if head == sha and time <= now])
+        pushed = max([pushed] + [
+            at(event["at"]) for event in pull["events"]
+            if event["type"] == "force-pushed" and sha in (event["from"], event["head"]) and at(event["at"]) <= now
+        ])
         moments = [pushed] + [time for time in self.triggers(pull, whole_line=True) if time >= pushed]
+        # In CodeRabbit's order, by time and then status id.
         statuses = [(at(status["created_at"]), ADAPTER.status_kind(status)) for status in self.statuses(pull["repo"], sha)]
         statuses = [(when, kind) for when, kind in statuses if when <= now]
         shared = any(
@@ -361,8 +373,8 @@ class History:
             for other in self.by_repo[pull["repo"]]
         )
         ending = {"completed", "paused", "draft-skip"} | (set() if shared else {"skipped"})
-        pending = [when for when, kind in statuses if kind == "in-progress"][-1:]
-        moments += [when for when in pending if not any(later >= when and kind in ending for later, kind in statuses)]
+        pending = [index for index, (_when, kind) in enumerate(statuses) if kind == "in-progress"][-1:]
+        moments += [statuses[index][0] for index in pending if not any(kind in ending for _when, kind in statuses[index + 1:])]
         return max(moment for moment in moments if moment <= now)
 
     def completed_with_evidence(self, pull: dict[str, Any], sha: str, now: float) -> bool:

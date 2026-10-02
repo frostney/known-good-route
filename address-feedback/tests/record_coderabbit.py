@@ -12,15 +12,16 @@ For each pull request it keeps only what `coderabbit_adapter.py` reads:
   count findings);
 - every version of CodeRabbit's comments from their edit history, each
   reduced to the summary marker, coverage marker, stated-wait sentence,
-  the clause of its notice saying waiting won't change it, and HTML block
-  markers, with all other prose dropped;
+  CodeRabbit's line saying waiting won't change it, and HTML block markers,
+  with all other prose dropped and a blank line between kept lines a blank
+  line separated;
 - other comments that address CodeRabbit, line by line: a line that is only a
   CodeRabbit command keeps it, a line that mentions one inside other text
   keeps it between `[text]` placeholders, and every other line becomes
   `[text]` or stays empty;
 - when the pull request was opened, marked ready or draft, closed, reopened
   and merged, when each head was pushed (its check suites), and each force
-  push with the head it left; and
+  push with the heads it left and brought; and
 - each head's parents.
 
 It refuses any repository that an anonymous request cannot read as public,
@@ -146,22 +147,19 @@ def require_public(repo: str) -> None:
 def reduce_body(body: str) -> str:
     """The lines of a CodeRabbit body the adapter reads; all other prose is dropped.
 
-    A notice saying waiting won't change it keeps only that clause, on its own
-    line at the start of the notice's block, whatever lines it spanned.
+    Kept lines that a blank line separated stay separated by one.
     """
-    lines = (body or "").splitlines()
-    capacity = ADAPTER.capacity_sentence(body or "")
-    first = None
-    if capacity:
-        block = next(indexes for indexes, _text in ADAPTER.notice_blocks(body) if indexes[0] == capacity[0])
-        first = next((index for index in block if keeps(lines[index])), None)
-    kept = []
-    for index, line in enumerate(lines):
-        if capacity and index == first:
-            quote = "> " if ADAPTER.QUOTED_LINE.match(line) else ""
-            kept.append(f"{quote}{capacity[1]}.")
+    kept: list[str] = []
+    gap = False
+    for line in (body or "").splitlines():
+        if not line.strip():
+            gap = bool(kept)
+            continue
         if keeps(line):
+            if gap:
+                kept.append("")
             kept.append(line.strip())
+            gap = False
     return "\n".join(kept)
 
 
@@ -171,6 +169,7 @@ def keeps(line: str) -> bool:
         or BLOCK_MARKER.match(line)
         or ADAPTER.COVERAGE_MARKER.search(line)
         or WAIT_SENTENCE.search(line)
+        or ADAPTER.NO_CAPACITY.search(line.strip())
         or ADAPTER.NO_ACTIONABLE in line
         or ADAPTER.ACTIONABLE.search(line)
         or ADAPTER.REVIEW_FINDINGS.search(line)
@@ -226,7 +225,7 @@ def comment_versions(item: dict[str, Any], shas: set[str]) -> tuple[list[list[st
 
 
 def pull_events(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """The pull request's timeline events the adapter reads, oldest first; a force push names the head it left."""
+    """The pull request's timeline events the adapter reads, oldest first; a force push names both its heads."""
     kinds = {
         "ReadyForReviewEvent": "ready",
         "ConvertToDraftEvent": "draft",
@@ -237,9 +236,10 @@ def pull_events(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(
         [{"type": kinds[item["__typename"]], "at": item["createdAt"]} for item in items if item["__typename"] in kinds]
         + [
-            {"type": "force-pushed", "at": item["createdAt"], "head": item["afterCommit"]["oid"]}
+            {"type": "force-pushed", "at": item["createdAt"], "from": item["beforeCommit"]["oid"],
+             "head": item["afterCommit"]["oid"]}
             for item in items
-            if item["__typename"] == "HeadRefForcePushedEvent" and item.get("afterCommit")
+            if item["__typename"] == "HeadRefForcePushedEvent"
         ],
         key=lambda event: event["at"],
     )
