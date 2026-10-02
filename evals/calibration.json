@@ -105,7 +105,7 @@
         "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "30e9ca770fae4c64f14f2dbcd468cf44849f74bd9b3f87f8b876c7fc38a46eb7",
-      "afterSha256": "463612650d1fa13b0d6e6ec1e8aa6235b9b4f82fb7553eb12eeba35dab874529",
+      "afterSha256": "0a036550f8e3fe2ce8c47b6ecfd17b8fa62e85e08ed695cb58ff657f3f6c8c95",
       "frozenCaseSha256": "4173add14875c06e8a075b4d1e6238e4d18458cc62117816f97f7d1fe46ce333"
     },
     {
@@ -203,10 +203,11 @@
       "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "2d025147d9c13d443c71cef1f8d27c83875488dd2e4f4bf8cb477a7f07d7a50b",
-      "afterSha256": "f9643f2ef6f0aac9c1b3eb64904c84c5b538ee162868176db76efd9a564ca63c",
+      "afterSha256": "8562bdd1beafb6e152008fdf61c66e1f93978105a083f412343a24c243d9456d",
       "frozenCaseSha256": "19607c37b1d3187f8568eb140244945b9031f984b97e3cc105dfa56e953dee50"
     },
     {
@@ -1451,7 +1452,7 @@
         "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "4a77e31e0e86343d1e4e0f72ba1a2f18f4e13d4645feb94c336ef87f43123791",
-      "afterSha256": "e5f98a5e0fd921e3bb23770a5e36cce185136824d96f3a299a0dc381104a217b",
+      "afterSha256": "801133f7bd6c5ef6c82f5554c6260269f00b6e6fb8c5c60798e6a128a4389436",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -2512,10 +2513,11 @@
       "status": "new",
       "rationale": [
         "New bounded September 14 synthetic decision fixture, declared before native execution: An unresolved integration destination does not stop independent PR preparation or justify guessed hosting and false deployment claims. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": null,
-      "afterSha256": "5faa88d4d2ffbc5c8279836ede6d290dbd11958ddd66370ee75acbc0aa5b8fdc",
+      "afterSha256": "a10f6b5043972598712b3ddb7fa344dcce7a694c56863ee521ca14cb6fa48fdb",
       "frozenCaseSha256": "e843cae16695caf4ae161cabe10079010403e2d9f4169146a3130e7a8cf7865a"
     },
     {
@@ -2716,10 +2718,11 @@
       "status": "new",
       "rationale": [
         "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer.",
-        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text.",
+        "Fixture repair: the reviewer rubric asked the judge to see rereading that only the deterministic inspection check can observe, so agreeing reviews failed."
       ],
       "beforeSha256": null,
-      "afterSha256": "59a8f304b28f5519f27b5699e11770cbb588f8254a07cff72bb42bc4a758b25a",
+      "afterSha256": "12a7598138c32e7622127515b02941e6a9eb90c14b5d393ab7c2d60a17613c68",
       "frozenCaseSha256": "49d1c10d5474f580d7a49b198fbdad9d9db2d8e0b94aaa74c252018060d23a96"
     },
     {
@@ -2738,10 +2741,11 @@
       "status": "new",
       "rationale": [
         "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer.",
-        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text.",
+        "Fixture repair: the reviewer rubric asked the judge to see rereading that only the deterministic inspection check can observe, so agreeing reviews failed."
       ],
       "beforeSha256": null,
-      "afterSha256": "0a3fda0acc780339b937e2dba7b33754004bc4ee8d22e0630bde03f0cf47a625",
+      "afterSha256": "b7970182bc9bb706b81c5d86639cb3c15ce32ba70a99bc2f6f136fbc6a5a9250",
       "frozenCaseSha256": "edea9fde8ae3e6613dd69a9f52776e4ff195484a1aec2bf0086b614117b86235"
     },
     {
@@ -2760,10 +2764,11 @@
       "status": "new",
       "rationale": [
         "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer.",
-        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text.",
+        "Fixture repair: the reviewer rubric asked the judge to see rereading that only the deterministic inspection check can observe, so agreeing reviews failed."
       ],
       "beforeSha256": null,
-      "afterSha256": "54eca59e435ad1cd96a111b8d4c5579863e9919d4678df8b9a33cb1c52c61a31",
+      "afterSha256": "23686dbc18708174c073fcfede87e311e2eecbb18f248c613a779336117953dd",
       "frozenCaseSha256": "b4c75ee28bbe8eb9787ba8e987c45392ee8d34044aa3ff0d0e842e1b0cd03d7c"
     },
     {
@@ -2782,10 +2787,11 @@
       "status": "new",
       "rationale": [
         "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer.",
-        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text."
+        "Moved onto the judged-rubric format: the rubric statements became yes/no outcome questions with exact values as code checks, the evidence each case relies on became required inspections, and the case declares its environment, with deep-dive applied from the project AGENTS.md text.",
+        "Fixture repair: the reviewer rubric asked the judge to see rereading that only the deterministic inspection check can observe, so agreeing reviews failed."
       ],
       "beforeSha256": null,
-      "afterSha256": "5a351d958e4b5d95baf5e9303adc2542d9a280bb8378800fe3e42737bcf9b58c",
+      "afterSha256": "ff35229b0348e584d66c6d4a635d34e8cf7626659c266079157c0aaa86ebfc03",
       "frozenCaseSha256": "2a36b105550cd75961c0e265f47490eac89493b632b5da1324f67927b8a0d259"
     }
   ],

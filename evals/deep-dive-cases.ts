@@ -284,7 +284,7 @@ function reviewCase(id: string, scenario: string, evidence: Record<string, strin
     fixture: { environment, evidence },
     expected: {
       rubric: [
-        { id: "verdict-on-explanation", question: "Does the reviewer state whether it agrees with the parent's explanation, based on evidence it reread itself?" },
+        { id: "verdict-on-explanation", question: "Does the reviewer state whether it agrees or disagrees with the parent's explanation, and give the evidence its verdict rests on?" },
       ],
       requiredInspections: [inspection],
       requiredVerdictFile: true,
