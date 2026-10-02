@@ -2551,13 +2551,9 @@ export const evalCases: EvalCase[] = [
           "PR #412 is ready for review at head a18c201. The repository requires squash merges and source-branch deletion.",
         reviewPolicy:
           "Repository configuration and this PR show one provider-neutral automation is active. Its response at a18c201 was createdAt 2026-08-10T10:00:00Z and explicitly says retry in 15 minutes, with no verdict. The documented retrigger is a top-level command comment after the derived retry time.",
-        reviewFindings:
-          "The completed retriggered review identifies one inline nitpick: the new retry path drops the established cancellation guard. Source tracing confirms the nitpick is valid and in scope.",
         projectGate:
           "After restoring the guard, reply and resolve the originating thread, run the focused cancellation test and declared PR gate, commit, and push. Directly re-read GitHub state: required CI and the active automation complete successfully against exact new head b19d302 with no newer review, zero actionable findings, zero unresolved threads, and zero unanswered inline automation threads.",
         clock: "Fixture time 2026-08-10T10:14:00Z.",
-        affectedCode:
-          "src/retry.ts:12 starts another retry without checking signal.aborted; established contract and sibling path require throwing AbortError before retry when canceled. Thread T412 reports that exact defect.",
         attribution:
           "Authenticated GitHub user @octocat and exact fixture model FixtureModel are available.",
         projectDefinitions:
@@ -2565,7 +2561,7 @@ export const evalCases: EvalCase[] = [
       },
       actionResponses: {
         "forge.commentPr":
-          "The documented review retrigger command was accepted.",
+          "The documented review retrigger command was accepted. The automation's review of a18c201 completed with one inline nitpick in thread T412.",
         "forge.mergePr":
           "PR #412 was squash-merged and its source branch was deleted.",
         "monitor.wait":
@@ -2585,6 +2581,17 @@ export const evalCases: EvalCase[] = [
         "git.push":
           "New head b19d302 pushed. Required CI and active reviewer terminal passing on b19d302; finding body is empty. Reply and resolve T412 before merge.",
       },
+      transitions: [
+        {
+          after: "forge.commentPr",
+          evidence: {
+            reviewFindings:
+              "The retriggered review of a18c201 completed with one inline nitpick in thread T412: the new retry path drops the established cancellation guard. Source tracing confirms the nitpick is valid and in scope.",
+            affectedCode:
+              "src/retry.ts:12 starts another retry without checking signal.aborted; established contract and sibling path require throwing AbortError before retry when canceled.",
+          },
+        },
+      ],
     },
     expected: {
       rubric: [
@@ -4533,7 +4540,7 @@ export const evalCases: EvalCase[] = [
         sdkPackage:
           "The installed node_modules/@harbor-cloud/storage-sdk/package.json is version 3.4.1 and names its official documentation at https://docs.harbor-cloud.example/storage-sdk/3.4. The package ships CHANGELOG.md and TypeScript declarations.",
         officialDocs:
-          "A direct fetch of https://docs.harbor-cloud.example/storage-sdk/3.4/resumable-uploads (the pinned package's documentation URL) succeeds. The official 3.4 documentation describes createResumableSession(), uploadChunk(sessionId, offset, bytes) with chunks in multiples of 256 KiB, and getCommittedOffset(sessionId) for resuming after an interruption. The installed 3.4.1 declarations export the same three functions.",
+          "Web search could not reach these docs (see webResearch). A direct fetch of https://docs.harbor-cloud.example/storage-sdk/3.4/resumable-uploads (the pinned package's documentation URL) succeeds. The official 3.4 documentation describes createResumableSession(), uploadChunk(sessionId, offset, bytes) with chunks in multiples of 256 KiB, and getCommittedOffset(sessionId) for resuming after an interruption. The installed 3.4.1 declarations export the same three functions.",
         tests:
           "A local storage emulator (`bun run storage:emulator`) supports resumable sessions for integration and behavior tests through the adapter's public upload entry point.",
         repositoryStatus:
@@ -4731,7 +4738,7 @@ export const evalCases: EvalCase[] = [
         executionEvidence:
           "Each implementation has one evidence-backed recommended approach with no material ambiguity. Its required pre-PR pass is /code-review fix-all. Review lanes queue when all platform slots are temporarily occupied, then run as capacity frees. Every resulting PR passes its project gate, required CI, and its configured review tools on the current head.",
         reviewDelegation:
-          "Each PR records its review-axis-to-lane map and completed evidence-only workers. PR #343 cannot obtain one engineering-quality worker after bounded retry, so its implementation worker completes that lane directly and reports the single-agent fallback.",
+          "Each PR records its review-axis-to-lane map and completed evidence-only workers. PR #341 already records its /code-review fix-all review-axis-to-lane map with every lane complete. PR #343 cannot obtain one engineering-quality worker after bounded retry, so its implementation worker completes that lane directly and reports the single-agent fallback.",
         rollingIntegration:
           "None of #341 to #344 is merged yet. After each squash merge, each remaining branch must merge the updated remote default, and its affected gates pass when rerun. The refreshed milestone contains no new out-of-scope work.",
         monitoring:
@@ -4764,9 +4771,9 @@ export const evalCases: EvalCase[] = [
         "validation.run": "The synced default branch passes the full project gate.",
         "telemetry.append": "Ingested the normalized events into .agent/milestone-rush-events.jsonl; validate and summarize succeed for the current runId, with unavailable fields marked.",
         delegate: [
-          "Implementation worker returns PR #342 for issue #42, head 342aaaa, complete fix-all review including queued lanes, behavior and gate passing; exact-head CI/review terminal.",
-          "Adopted #43 worker returns PR #343 head 343bbbb, including reported coordinator fallback for unavailable engineering-quality lane; gates, exact-head CI/review pass.",
-          "After #42/#43 integration, dependent #44 worker returns PR #344 head 344cccc with full current-head review/behavior/gate evidence.",
+          "Implementation worker returns PR #342 for issue #42, head 342aaaa: /code-review fix-all ran with its review-axis-to-lane map recorded in the PR, queued lanes completed, behavior and gate pass; exact-head CI/review terminal.",
+          "Adopted #43 worker returns PR #343 head 343bbbb: /code-review fix-all ran with its review-axis-to-lane map recorded in the PR; the engineering-quality lane was unavailable after bounded retry, so the implementation worker completed it directly as a single-agent fallback; gates, exact-head CI/review pass.",
+          "After #42/#43 integration, dependent #44 worker returns PR #344 head 344cccc: /code-review fix-all ran with its review-axis-to-lane map recorded in the PR, all lanes complete; full current-head behavior/gate evidence.",
         ],
       },
     },

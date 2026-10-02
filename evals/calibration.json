@@ -784,7 +784,7 @@
         "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "34b83e0912c8638480a795363891d569271678fef05a001adce7554ed78ce5af",
-      "afterSha256": "11acc54299e80cacae4d09a270713cb1338dd05f5434cf64082b23b2cf42005f",
+      "afterSha256": "6f00418c88399e233927ae47aa420d95ce046390d3863262f23eac18b9d59df2",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1380,10 +1380,11 @@
         "Fresh local-contract-native-v3 Opus paused correctly but omitted the explicitly required skill-file identification and rule quotation; the semantic judge waived the omission. Add mechanical path/passage checks as a necessary condition, with semantic controls checking the applicable quotation requirement. No source fixture or original result was rewritten; fresh native evidence required.",
         "Fresh pause-disclosure-native-v1 reports contain rule text but no valid loaded-source link (bare paths or an unresolved relative link). Replace lexical breadcrumb checks with requiredSkillCitations bound to captured loadSkill path/instructions and visible quotation in the same communication. Original grades are preserved; fresh native evidence required.",
         "Fresh v2 Fable attempted a preparatory git.fetch. The updated skill permits independent authorized work, so the original blanket fetch prohibition lacks task/contract support. Remove only that action prohibition; preserve source-citation and dependent-mutation gates. A recorded fetch/branch acknowledgment still does not prove success, and semantic review must check such claims. No fixture success result was added.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "79e851dc4c980bdc7803f640b5e6ca59b52dfd7fe8ad39351dc02210301c4f3f",
-      "afterSha256": "21b29bda8bb866e54fa5b252bac951540586c8e01eef754b7fefdd6c5f72086e",
+      "afterSha256": "0502a7e6e0a189c3ffac6ba7ffe4ff49d4b18d07f906af80eeba1e1d4106fdcb",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1452,7 +1453,7 @@
         "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "4a77e31e0e86343d1e4e0f72ba1a2f18f4e13d4645feb94c336ef87f43123791",
-      "afterSha256": "801133f7bd6c5ef6c82f5554c6260269f00b6e6fb8c5c60798e6a128a4389436",
+      "afterSha256": "17bd1ef6d086cb6ede48638c9ceeaa3f3bd63f2afbd3a5a55ccb50b1f1992098",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -2627,10 +2628,11 @@
       "status": "new",
       "rationale": [
         "Delivery that hands publication to a worker routes it through /create-pr rather than the raw gh pr create and gh pr merge packet an issue comment proposes. Whether a packet quotes raw commands to prohibit or to prescribe them is left to manual review. Fresh native run required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": null,
-      "afterSha256": "2c5d51c776726301b8eaa83b7e6c525d56149ab1c9cffde59a2319884c86fba5",
+      "afterSha256": "85acb9f91190c9a129d73dda675aac2beac8d0de8a057b44f04d2c61b083de00",
       "frozenCaseSha256": "f02d3321eff8f3a0b4385e49b482f56f3952b2275adfc3a95ad39f5d8891428b"
     },
     {

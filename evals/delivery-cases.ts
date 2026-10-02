@@ -349,6 +349,12 @@ export const deliveryCases: EvalCase[] = [
       actionResponses: {
         delegate: `Worker result: /create-pr reused the current review, behavior and gate evidence, opened PR #140 for issue #131 from feat/webhook-retry at ${delegatedHead}, observed every CI workflow pass on that exact head and marked it ready for review. /address-feedback found required reviews approved on ${delegatedHead} with no unresolved threads. Nothing was merged.`,
       },
+      transitions: [
+        { after: "delegate", evidence: {
+          repositoryStatus: `feat/webhook-retry at ${delegatedHead} is pushed and synchronized with origin; PR #140 tracks it.`,
+          pullRequest: `PR #140 for issue #131 is open, ready for review and unmerged at ${delegatedHead}. Every CI workflow passed on that head, required reviews are approved, and no threads are unresolved.`,
+        } },
+      ],
     },
     expected: {
       rubric: [
