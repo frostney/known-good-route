@@ -44,8 +44,9 @@ do not follow this guide.
   its consequence or resolution.
 - A correction first re-runs the check behind the claim when it can. It states
   the corrected fact first, then the incorrect claim, the source or process
-  failure, each affected conclusion, such as readiness, and the prevention or
-  next validation step. It does not lead with an apology.
+  failure, each affected conclusion, such as whether the branch is ready, and
+  the prevention or next validation step, such as rerunning the gate after the
+  fix. It does not lead with an apology.
 - A durable artifact follows its project template and preserves the complete
   decision surface, evidence, and lifecycle state. When drafting or
   substantially revising an issue, PR body, engineering document, report,

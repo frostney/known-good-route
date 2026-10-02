@@ -132,8 +132,9 @@ weaken acceptance or expand scope to manufacture progress.
 Finish only when the selected endpoint has observed evidence. An external
 blocker, unresolved material decision or needed authority can leave it
 incomplete; report the exact gap and next transition. Keep resumable state in
-the project's handoff convention. Return the work item, chosen endpoint,
-verified revision and destination when applicable, PR and integration evidence,
+the project's handoff convention. Return the work item, the endpoint reached
+by name, such as ready to merge, rather than only the PR state, the verified
+revision and destination when applicable, PR and integration evidence,
 and any remaining limitation. Match each completion claim to a returned result
 for that specific action and target. A successful merge does not confirm branch
 deletion: a deletion flag is a request, and deletion of an earlier branch says
