@@ -2545,10 +2545,14 @@
       "status": "new",
       "rationale": [
         "Reconstructed with invented data: a process for the waiting PR looks like the flock holder; the lock file's epoch and a non-blocking flock probe identify the earlier PR, which waits on a CI job with no online runner. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer whose verdict file the result cites. Fresh native run required.",
-        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop."
+        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop.",
+        "AGENTS.md block updated: deep-dive's ambient line now limits the in-loop exception to a failing check whose own output or trace shows the mechanism.",
+        "AGENTS.md block updated: deep-dive's ambient line limits the in-loop exception to a failing check whose output, trace or the code it points to shows a single in-scope mechanism.",
+        "AGENTS.md block updated: deep-dive's ambient line keeps the in-loop exception to a failing check whose own output or trace shows the mechanism, and says a behaviour the specification requires but the code lacks is built, not diagnosed.",
+        "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish."
       ],
       "beforeSha256": null,
-      "afterSha256": "50a5516eb25db18eb515fd0535775264465623ad61aa7f8bcc6172c50369cd34",
+      "afterSha256": "5317a6a43a3800bc4ead50988dab1641e5425296f7e6abfd58d8cd4df1a9d5d4",
       "frozenCaseSha256": "328f4268f2d2c145e5cce9a3c7b949b2c514b4499522c0981e1f10501ec41f39"
     },
     {
@@ -2566,10 +2570,14 @@
       "status": "new",
       "rationale": [
         "Reconstructed with invented data: a weakly worded reply-length skill looks responsible, but the session record shows it never loaded while always-loaded AGENTS.md demands long replies. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer whose verdict file the result cites. Fresh native run required.",
-        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop."
+        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop.",
+        "AGENTS.md block updated: deep-dive's ambient line now limits the in-loop exception to a failing check whose own output or trace shows the mechanism.",
+        "AGENTS.md block updated: deep-dive's ambient line limits the in-loop exception to a failing check whose output, trace or the code it points to shows a single in-scope mechanism.",
+        "AGENTS.md block updated: deep-dive's ambient line keeps the in-loop exception to a failing check whose own output or trace shows the mechanism, and says a behaviour the specification requires but the code lacks is built, not diagnosed.",
+        "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish."
       ],
       "beforeSha256": null,
-      "afterSha256": "c7c682f8fa07cd051f75226d97762191ef32f76650be3f19c13d1e9d0917d416",
+      "afterSha256": "82ef34aeeae183b9e17620881f4c535c5cdfc78055b3f4407a07b765fd7ec579",
       "frozenCaseSha256": "71648b210e5264c120e6616c2043842b5cdcadd81002ce4415c5e0eadfb67968"
     },
     {
@@ -2587,10 +2595,14 @@
       "status": "new",
       "rationale": [
         "Reconstructed with invented data: a missed anonymization step looks responsible for private fixtures in a public repository; the session record shows it never ran, the brief never established either repository's visibility, and no check ran at publication. Requires the real cause without prompting, the ruled-out first explanation and a real fresh reviewer whose verdict file the result cites. Fresh native run required.",
-        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop."
+        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop.",
+        "AGENTS.md block updated: deep-dive's ambient line now limits the in-loop exception to a failing check whose own output or trace shows the mechanism.",
+        "AGENTS.md block updated: deep-dive's ambient line limits the in-loop exception to a failing check whose output, trace or the code it points to shows a single in-scope mechanism.",
+        "AGENTS.md block updated: deep-dive's ambient line keeps the in-loop exception to a failing check whose own output or trace shows the mechanism, and says a behaviour the specification requires but the code lacks is built, not diagnosed.",
+        "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish."
       ],
       "beforeSha256": null,
-      "afterSha256": "1e3561aecfcf729c162e1306747b4291e1cba6dbcf944c31b49a0798bd844ecc",
+      "afterSha256": "4d9af14d52121e704071db3e8d5d98162f8032eba0f89691e9ca86dbafbe93b8",
       "frozenCaseSha256": "28be22afb337053e291e987008a22cb2dbea9159e0a2dc3b19e5940ec72154df"
     },
     {
@@ -2608,10 +2620,14 @@
       "status": "new",
       "rationale": [
         "Rebuilt from a real storefront investigation with every name, vendor, domain and number replaced: a site-wide \"Script error.\" blamed on a coincident checkout release is ruled out by its onset, page coverage and buyer rate, and traced to a referral script loaded twice behind a cross-origin mask. Requires the real cause without prompting, the ruled-out first explanation and a fresh review whose verdict file the result cites. Fresh native run required.",
-        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop."
+        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop.",
+        "AGENTS.md block updated: deep-dive's ambient line now limits the in-loop exception to a failing check whose own output or trace shows the mechanism.",
+        "AGENTS.md block updated: deep-dive's ambient line limits the in-loop exception to a failing check whose output, trace or the code it points to shows a single in-scope mechanism.",
+        "AGENTS.md block updated: deep-dive's ambient line keeps the in-loop exception to a failing check whose own output or trace shows the mechanism, and says a behaviour the specification requires but the code lacks is built, not diagnosed.",
+        "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish."
       ],
       "beforeSha256": null,
-      "afterSha256": "dd75fd3f7534cabd3f71c95ca7bf69ce8fc5b24af36b57d1e340abf4d19bcc8a",
+      "afterSha256": "12c8abe6f812125be097a45394c38edc82959241e837e68ec166a66396cd6841",
       "frozenCaseSha256": "58b294f42269c483c7858cd16a98f050f249e750847cb464a8cb60e00271dc98"
     },
     {
@@ -2630,10 +2646,14 @@
       "rationale": [
         "Invented paired case inside an authorized delivery loop under the deep-dive AGENTS.md block: this run's trace already shows the recovery mapper dropping provenance, so the run fixes it in the loop without a delegated review. Fresh native run required.",
         "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop.",
-        "Grader corrected: investigation and, where the cause had to be found, a fresh review now come before the first edit, followed by the fix, the gate and the pull request; the contested case no longer credits an unsupported commit attribution."
+        "Grader corrected: investigation and, where the cause had to be found, a fresh review now come before the first edit, followed by the fix, the gate and the pull request; the contested case no longer credits an unsupported commit attribution.",
+        "AGENTS.md block updated: deep-dive's ambient line now limits the in-loop exception to a failing check whose own output or trace shows the mechanism.",
+        "AGENTS.md block updated: deep-dive's ambient line limits the in-loop exception to a failing check whose output, trace or the code it points to shows a single in-scope mechanism.",
+        "AGENTS.md block updated: deep-dive's ambient line keeps the in-loop exception to a failing check whose own output or trace shows the mechanism, and says a behaviour the specification requires but the code lacks is built, not diagnosed.",
+        "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish."
       ],
       "beforeSha256": null,
-      "afterSha256": "3d776a6651a0b8cedd5fd9006b12488e9f2cf6c040b3b6432f5e77fd68b32156",
+      "afterSha256": "e8c35bbefd6bcf2d65273cdc28aee58cc3a39c8b5a124e52b3df19e05c4b6606",
       "frozenCaseSha256": "8fd6c761d8b8d23eb8184a689a0dc630c9de268827eed2577cfac06916b9144b"
     },
     {
@@ -2642,10 +2662,14 @@
       "rationale": [
         "Invented paired case with the same failing check and AGENTS.md block: the check names the missing provenance and a teammate blames the mapper, but the mapper copies it and this run's checkpoint lacks it, so the run must investigate and cite a fresh review's verdict file. Fresh native run required.",
         "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop.",
-        "Grader corrected: investigation and, where the cause had to be found, a fresh review now come before the first edit, followed by the fix, the gate and the pull request; the contested case no longer credits an unsupported commit attribution."
+        "Grader corrected: investigation and, where the cause had to be found, a fresh review now come before the first edit, followed by the fix, the gate and the pull request; the contested case no longer credits an unsupported commit attribution.",
+        "AGENTS.md block updated: deep-dive's ambient line now limits the in-loop exception to a failing check whose own output or trace shows the mechanism.",
+        "AGENTS.md block updated: deep-dive's ambient line limits the in-loop exception to a failing check whose output, trace or the code it points to shows a single in-scope mechanism.",
+        "AGENTS.md block updated: deep-dive's ambient line keeps the in-loop exception to a failing check whose own output or trace shows the mechanism, and says a behaviour the specification requires but the code lacks is built, not diagnosed.",
+        "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish."
       ],
       "beforeSha256": null,
-      "afterSha256": "e57d284fdb2df00b63ac33fd6dba30770aa8c4a5773600755fe5537b05be531e",
+      "afterSha256": "92e20abc8692dd2551cb9811c6b1630dd3f099f0e1dde9c0968f92b13e143eaf",
       "frozenCaseSha256": "3a1da29a679611dfae7a939f8972faed95ce2e255c10393d45e060adfa457054"
     },
     {
@@ -2663,10 +2687,14 @@
       "status": "new",
       "rationale": [
         "Invented override case: an explicit /deep-dive on a failure whose cause this run already established still runs the full procedure with a cited fresh review. Fresh native run required.",
-        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop."
+        "AGENTS.md block updated: deep-dive's ambient line now states that a failing check whose own output shows an uncontested in-scope cause is fixed in the loop.",
+        "AGENTS.md block updated: deep-dive's ambient line now limits the in-loop exception to a failing check whose own output or trace shows the mechanism.",
+        "AGENTS.md block updated: deep-dive's ambient line limits the in-loop exception to a failing check whose output, trace or the code it points to shows a single in-scope mechanism.",
+        "AGENTS.md block updated: deep-dive's ambient line keeps the in-loop exception to a failing check whose own output or trace shows the mechanism, and says a behaviour the specification requires but the code lacks is built, not diagnosed.",
+        "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish."
       ],
       "beforeSha256": null,
-      "afterSha256": "46ab6ddfa1dee93c779e497cc8ed876de90d5eee47a38df64e83c27d10865991",
+      "afterSha256": "446243931474a83dd67d5e64178703292262c042e0c37bfff0ef4b1df30c5a40",
       "frozenCaseSha256": "6c8de269d2fe3ca67c45dfc64e7d8e6a6ee843cf5f7c853e729be92e108a06e0"
     },
     {
@@ -2683,10 +2711,14 @@
       "caseId": "deep-dive-loop-assertion-only-reviews",
       "status": "new",
       "rationale": [
-        "Invented uncontested negative in the same authorized loop under the same AGENTS.md block: the failing check only states that provenance is missing, with no trace and no competing claim, so the run must investigate and cite a fresh review's verdict file before the fix. Fresh native run required."
+        "Invented uncontested negative in the same authorized loop under the same AGENTS.md block: the failing check only states that provenance is missing, with no trace and no competing claim, so the run must investigate and cite a fresh review's verdict file before the fix. Fresh native run required.",
+        "AGENTS.md block updated: deep-dive's ambient line now limits the in-loop exception to a failing check whose own output or trace shows the mechanism.",
+        "AGENTS.md block updated: deep-dive's ambient line limits the in-loop exception to a failing check whose output, trace or the code it points to shows a single in-scope mechanism.",
+        "AGENTS.md block updated: deep-dive's ambient line keeps the in-loop exception to a failing check whose own output or trace shows the mechanism, and says a behaviour the specification requires but the code lacks is built, not diagnosed.",
+        "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish."
       ],
       "beforeSha256": null,
-      "afterSha256": "d905a50a32518215f987082b8e459c449310d51c3000d801e6c6f7fcd7863859",
+      "afterSha256": "9cff39a3304f06b783bd5c30daf01e445fa9f3abe1126233060abd1379783a04",
       "frozenCaseSha256": "d905a50a32518215f987082b8e459c449310d51c3000d801e6c6f7fcd7863859"
     },
     {

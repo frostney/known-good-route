@@ -12,7 +12,7 @@ description: >-
 license: Unlicense OR MIT
 metadata:
   agents-role: ambient
-  agents-text: Before claiming the cause of something observed, check what actually ran, try to break each explanation, and cite a fresh review's verdict; a failing check whose own output already shows an uncontested in-scope cause is fixed in the loop instead.
+  agents-text: Before claiming the cause of something observed, check what actually ran, try to break each explanation, and cite a fresh review's verdict; skip that only when the failing output or trace already shows the mechanism, or the observation is itself the defect, such as a required control a view never renders, and treat a symptom whose cause sits in another step or file as a cause to establish.
 ---
 
 # Deep dive
@@ -28,10 +28,15 @@ deep dive only when the failing run's own output or trace already shows the
 in-scope mechanism that produced the failure, not only the failed assertion or
 the defect it names, and nothing contradicts it. State that cause and its
 evidence, fix it in the loop, and rerun; the rerun confirms the fix, not the
-cause. When finding the cause meant weighing candidate mechanisms or setting
-aside a conflicting claim, such as a note blaming another component, you did a
-deep dive: get its fresh review before the fix. A failure the evidence does not
-explain, or a fix the rerun does not confirm, also returns to this procedure.
+cause. If you had to read source, files or history beyond the failing output
+to find the cause, or set aside a conflicting claim, such as a note blaming
+another component, you did a deep dive: get its fresh review before the fix.
+When the observation is itself the defect, such as a required control a view
+never renders, there is no cause to claim: fix it and verify it against the
+requirement. A symptom whose cause sits in another step or file, such as a
+total that is wrong because an earlier step rounded it, is a cause to
+establish. A failure the evidence does not explain, or a fix the rerun does not
+confirm, also returns to this procedure.
 
 ## Look at what actually ran
 
