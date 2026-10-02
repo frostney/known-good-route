@@ -401,7 +401,8 @@ export async function judgeRecord(options: {
   for (const worker of record.ledger.workers ?? []) {
     const scenario = (options.cases ?? evalCases).find((c) => c.id === worker.caseId);
     if (scenario)
-      units.push({ scope: scenario.id, items: judgeItems(scenario).filter((item) => item.kind === "outcome"), task: worker.context, output: worker.output, ledger: worker.ledger });
+      // A reviewer's evidence lives in the verdict file it wrote, so the judge reads it with the reply.
+      units.push({ scope: scenario.id, items: judgeItems(scenario).filter((item) => item.kind === "outcome"), task: worker.context, output: worker.ledger.verdict ? `${worker.output}\n\nVerdict file (${worker.ledger.verdict.verdict}):\n${worker.ledger.verdict.evidence}` : worker.output, ledger: worker.ledger });
   }
   const answers: JudgedAnswer[] = [];
   for (const unit of units) {

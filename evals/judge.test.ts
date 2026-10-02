@@ -346,7 +346,7 @@ describe("judging a run through the judge CLI", () => {
       "const text = await new Response(Bun.stdin.stream()).text();",
       "const input = JSON.parse(text.replace(/^Scenario request:\\n\\n/, ''));",
       "const mode = process.env.FAKE_JUDGE_MODE ?? 'yes';",
-      "const items = input.items.map((item, i) => ({ id: item.id, verdict: mode === 'no' && i === 0 ? 'no' : 'yes', quote: mode === 'noquote' ? '' : input.answer.split('\\n')[1].slice(0, 12) }));",
+      "const items = input.items.map((item, i) => ({ id: item.id, verdict: (mode === 'no' && i === 0) || (mode === 'evidence' && !input.answer.includes('Reread the lock file')) ? 'no' : 'yes', quote: mode === 'noquote' ? '' : input.answer.split('\\n')[1].slice(0, 12) }));",
       format === "codex"
         ? "for (const event of [{type:'item.completed',item:{type:'agent_message',text:JSON.stringify({items})}},{type:'turn.completed',usage:{input_tokens:1,output_tokens:1}}]) process.stdout.write(JSON.stringify(event)+'\\n');"
         : "for (const event of [{type:'assistant',message:{model:'claude-opus-5-5',content:[]}},{type:'result',structured_output:{items},modelUsage:{'claude-opus-5-5':{}}}]) process.stdout.write(JSON.stringify(event)+'\\n');",
@@ -390,6 +390,17 @@ describe("judging a run through the judge CLI", () => {
           ["child", ["head"]],
         ]);
         expect(judgement.status, `${model} ${mode}`).toBe(status);
+      }
+      process.env.FAKE_JUDGE_MODE = "evidence";
+      const reviewed = record("codex:gpt-6-astra");
+      for (const verdict of [undefined, { path: "/fixture/verdict.json", verdict: "agree" as const, evidence: "Reread the lock file." }]) {
+        reviewed.ledger.workers![0]!.ledger = { ...emptyLedger(), ...(verdict ? { verdict } : {}) };
+        const judged = await judgeRecord({
+          record: reviewed, evalCase: parent, cases: [parent, worker],
+          plan: { ...selectJudge("codex:gpt-6-astra"), calibrated: true, reason: "ok" },
+          transcript: (scope) => join(work, `evidence-${!!verdict}-${scope}.jsonl`),
+        });
+        expect(judged.answers.find((a) => a.scope === "child")!.status, "a reviewer is judged with its verdict file").toBe(verdict ? "pass" : "fail");
       }
       const unavailable = await judgeRecord({
         record: record("codex:gpt-6-astra"), evalCase: parent, cases: [parent, worker],

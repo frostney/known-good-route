@@ -182,8 +182,8 @@ action, with its details and each data field printed raw. The judge returns
 or a `yes` whose quote is empty or not found in the answer, fails the run.
 Quotes are compared after collapsing whitespace. Missing, repeated, unknown or
 malformed verdicts are judge errors, which are inconclusive rather than passes
-or failures. A worker's answer is judged separately against its own case's
-rubric.
+or failures. A worker's answer, with any verdict file it wrote, is judged
+separately against its own case's rubric.
 
 The judge comes from the other model family: Claude judges Codex runs and Codex
 judges Claude runs. The defaults are `claude:claude-opus-5-5` and
