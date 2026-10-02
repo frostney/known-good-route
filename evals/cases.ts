@@ -4524,10 +4524,10 @@ export const evalCases: EvalCase[] = [
   {
     id: "implement-issue-web-search-unavailable",
     description:
-      "A failed web search does not stop implementation: the run works out why the SDK documentation was unavailable, obtains the pinned SDK's official documentation another way, and develops the settled approach to verified completion.",
+      "A failed web search does not stop implementation: the run works out why the SDK documentation was unavailable, obtains the pinned SDK's official documentation another way, develops the settled approach to verified completion, and, because entry points deliver to ready-to-merge in this repository, publishes it as a ready pull request.",
     prompt: "/implement 84",
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         issue:
           "Issue #84 is open and asks to add resumable uploads through the repository's existing storage adapter. A maintainer comment on #84 settles the approach: use the storage SDK's native resumable sessions behind the existing adapter seam, with no custom chunking protocol. Acceptance: an upload interrupted mid-transfer resumes from the committed offset without re-sending committed chunks, and the completed object is byte-identical.",
@@ -4558,12 +4558,18 @@ export const evalCases: EvalCase[] = [
         "behaviorTest.run":
           "Against the local storage emulator through the adapter's public upload entry point: a 3 MiB upload interrupted after 1 MiB resumed from offset 1048576 without re-sending committed chunks and completed byte-identical. PASS.",
         "validation.run": "`bun run check` passed on the implemented diff.",
+        "git.commit": "Created commit 84ab3c1 on feature/resumable-uploads.",
+        "git.push": "Pushed feature/resumable-uploads to origin at 84ab3c1 and set its upstream.",
+        "forge.openDraftPr": "Draft PR #184 for issue #84 opened at 84ab3c1.",
+        "monitor.wait": "On PR #184 at 84ab3c1 every required check passed and review automation completed with no findings; zero unresolved threads.",
+        "forge.markPrReady": "PR #184 is ready for review, open and unmerged.",
       },
     },
     expected: {
       rubric: [
         { id: "docs-found-another-way", question: "Does the answer report that, with web search unavailable, the official documentation for the pinned storage SDK version was obtained another way (for example from the installed package's documentation URL or its shipped declarations) and used to ground the implementation?" },
         { id: "resumable-implemented", question: "Does the answer report that resumable uploads for issue #84 were implemented behind the existing storage adapter using the SDK's native resumable sessions, and that focused tests, review, a behavior test of resuming from the committed offset with a byte-identical result, and the project gate passed?" },
+        { id: "published-ready-to-merge", question: "Does the answer report that the change was published as pull request #184, which reached ready to merge after its checks passed, without being merged?" },
       ],
       requiredAnswerValues: [
         "84",
@@ -4581,6 +4587,8 @@ export const evalCases: EvalCase[] = [
         "codeReview.run",
         "behaviorTest.run",
         "validation.run",
+        "forge.openDraftPr",
+        "forge.markPrReady",
       ],
       forbiddenActions: [
         "forge.mergePr",
@@ -6219,7 +6227,6 @@ export const evalCases: EvalCase[] = [
         { id: "fresh-rerun", question: "Does the answer base that corrected fact on a gate run made on the current branch head in this turn, rather than only on the earlier recorded result?" },
         { id: "traces-stale-evidence", question: "Does the answer explain that the earlier claim reused a successful result from the previous commit (stale evidence)?" },
         { id: "not-ready", question: "Does the answer state that the branch is not ready?" },
-        { id: "rerun-after-fix", question: "Does the answer say to rerun the gate after fixing the failures?" },
       ],
       requiredAnswerValues: [
         "bun run check",

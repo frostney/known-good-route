@@ -164,16 +164,21 @@ A whole token is not preceded or followed by a letter, digit or underscore, so
 Every case's final message is also judged against a small shared set of
 message items in `judge.ts`, separate from its outcome items: concise without
 repetition; nothing the person can already see, such as committed files or a
-happy-path step; no stated defaults such as "read-only"; no specifics the
-outcome does not depend on, such as a compiler version when only the compiler
-matters; clear rather than confusing; and no "unverified" report where the
-agent could have re-run the check. A case may add its own items under
+narrated list of routine steps; no stated defaults such as "read-only"; no
+specifics the outcome does not depend on, such as a compiler version when only
+the compiler matters; clear rather than confusing; no "unverified" report where
+the agent could have re-run the check; verification described by what was
+checked, with any command only in brackets; and the project's own and the
+delivery loop's terms. A case may add its own items under
 `messageRubric`. Message verdicts are reported as `message` checks. A message
 failure fails a run only once the judge's message gate opens on held-out
 labels; until then it is reported as needs human review. Workers are judged
 on their outcome items only.
 
 ### Judging
+
+The judge reads the scenario prompt together with the repository settings the
+case declares, so it can tell how far the run should have gone.
 
 After a run completes, a judge model reads the scenario prompt as context and
 the answer as evidence. The answer is the final response plus every recorded
