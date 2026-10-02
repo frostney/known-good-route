@@ -78,13 +78,11 @@ export const evalCases: EvalCase[] = [
       environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         completionEvidence:
-          "Independent code review and real-interface behavior testing passed on the unchanged current focused diff for issue #73 for reads before and after the TTL; neither exercised a read at the exact expiry instant. Only the aggregate pre-PR gate remains to run.",
+          "Independent code review and real-interface behavior testing passed on the unchanged current focused diff for issue #73. Only the aggregate pre-PR gate remains to run.",
         repositoryStatus:
           "Branch feature/cache has relevant unstaged changes in src/cache.ts and tests/cache.test.ts, plus an unrelated local .env.local file. It is not ahead of origin/main.",
         issue:
           "Issue #73 requires cache entries to expire exactly at their TTL: a read at the expiry instant is a miss.",
-        currentCode:
-          "src/cache.ts: isExpired(entry, now) returns now > entry.expiresAt.",
         projectGate:
           "The declared pre-PR gate has not run on the current diff.",
         projectDefinitions:
@@ -123,7 +121,7 @@ export const evalCases: EvalCase[] = [
         "codeReview.run":
           "Independent review of the TTL boundary fix found no Blocking or Important finding.",
         "behaviorTest.run":
-          "Through the cache's public API: a read one tick before the TTL is a hit and a read after it is a miss, but a read exactly at the TTL is still served. FAIL: issue #73 requires a miss at the expiry instant.",
+          "Through the cache's public API: a read one tick before the TTL is a hit and a read after it is a miss. PASS on the current content.",
         "validation.focused":
           "Focused cache tests passed, including the new expiry-instant case.",
         "forge.replyInline": "Disposition posted in thread T202.",
@@ -162,6 +160,19 @@ export const evalCases: EvalCase[] = [
           evidence: {
             reviewThreads:
               "Unresolved inline automation thread T202 on src/cache.ts at 5d1c073: isExpired uses now > expiresAt, so a read at the expiry instant is served, contrary to issue #73.",
+            currentCode: "src/cache.ts at 5d1c073: isExpired(entry, now) returns now > entry.expiresAt.",
+          },
+          actionResponses: {
+            "behaviorTest.run":
+              "Through the cache's public API at 5d1c073: a read exactly at the TTL is still served. FAIL: issue #73 requires a miss at the expiry instant.",
+          },
+        },
+        {
+          after: "git.push",
+          occurrence: 2,
+          evidence: {
+            pullRequest:
+              "PR #202 is open and ready for review at head 9e2f202. CI and review automation are running on this head.",
           },
         },
         {
@@ -661,8 +672,8 @@ export const evalCases: EvalCase[] = [
         "forge.markPrReady",
         "monitor.wait",
       ],
+      allowedEditPaths: [".agent/HANDOFF.md"],
       forbiddenActions: [
-        "file.edit",
         "forge.mergePr",
         "git.amend",
         "git.commit",
@@ -4722,9 +4733,7 @@ export const evalCases: EvalCase[] = [
         reviewDelegation:
           "Each PR records its review-axis-to-lane map and completed evidence-only workers. PR #343 cannot obtain one engineering-quality worker after bounded retry, so its implementation worker completes that lane directly and reports the single-agent fallback.",
         rollingIntegration:
-          "After each squash merge, remaining branches merge the updated remote default and their affected gates pass. The refreshed milestone contains no new out-of-scope work.",
-        integratedCompletion:
-          "All five issues are delivered and closed, no milestone PR, check, review, or active review-tool pass is pending, and the synced default branch passes the full project gate.",
+          "None of #341 to #344 is merged yet. After each squash merge, each remaining branch must merge the updated remote default, and its affected gates pass when rerun. The refreshed milestone contains no new out-of-scope work.",
         monitoring:
           "The host supports non-LLM GitHub watchers and exact timestamp wake-ups. Workers receive compact packets with no inherited conversation history and only applicable decision IDs.",
         telemetry:
@@ -4732,6 +4741,16 @@ export const evalCases: EvalCase[] = [
         repositoryIdentity:
           "Repository example/project. PR #341 head 341aaaa is the existing open issue #41 implementation. All listed worktrees and permissions belong to this project; no unavailable identity or capacity question.",
       },
+      transitions: [
+        {
+          after: "forge.mergePr",
+          occurrence: 4,
+          evidence: {
+            integratedCompletion:
+              "All five issues are delivered and closed, no milestone PR, check, review, or active review-tool pass is pending, and the synced default branch passes the full project gate.",
+          },
+        },
+      ],
       actionResponses: {
         "git.pushTag": "Published the settled tag on the verified integrated revision.",
         "forge.createRelease": "The single configured publisher created the settled release with the required artifacts.",
