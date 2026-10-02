@@ -95,9 +95,9 @@ workflow invoked returns to its caller.
   the authorized ordinary PR or complete native stack. Verify the resulting
   integrated revision. A partial prefix below a required fix layer is not done.
 - For `deployed`, run the existing integration path or await its run for the
-  merged revision through `delivery-wait`, then verify its destination,
-  delivered revision or artifact provenance, and the required behavior in that
-  environment. When later commits are included, verify that
+  merged revision through `delivery-wait`. Only after that wait reports the
+  merged revision deployed, verify its destination, delivered revision or
+  artifact provenance, and the required behavior in that environment. When later commits are included, verify that
   the delivered revision contains the integrated change and that its acceptance
   evidence still applies. A green deployment job or merge alone is insufficient.
 
