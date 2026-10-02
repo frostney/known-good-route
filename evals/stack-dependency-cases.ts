@@ -34,9 +34,6 @@ const stopped: ActionName[] = [
   ...publication, "forge.markPrReady", "forge.updatePrMetadata", "git.stackInit", "git.stackSubmit",
 ];
 export const historyInspections = ["openPullRequests", "pullRequestHeads", "branchHistory"];
-// "merge [up to five words, none naming main] release/1.x", or a data field that names the merged ref.
-const mergesReleaseBranch =
-  'merg(?:e|es|ed|ing)\\s+(?:(?!\\S*\\bmain\\b)\\S+\\s+){0,5}(?:origin/)?release/1\\.x|"(?:ref|source|sourceRef|from|upstream)":"(?:origin/)?release/1\\.x"';
 
 export const stackDependencyCases: EvalCase[] = [
   {
@@ -222,6 +219,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "Updating a backport PR whose base is a documented release branch merges that branch, never the default branch.",
     prompt: "/update-pr 151.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         repositoryStatus: `Repository example/project on github.com. The clean current branch backport/retry-budget is at ${backport}. It is one commit behind freshly fetched origin/release/1.x at ${releaseFix} and forty commits behind freshly fetched origin/main at ${main}. No unrelated local work and no conflicts.`,
         pullRequest: "PR #151 is open from backport/retry-budget into release/1.x. Its title and body match the change.",
@@ -237,11 +235,13 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "merges-release-base", question: "Does every recorded git.merge action merge release/1.x (the PR's base) into backport/retry-budget, with no merge of main or origin/main, before the gate and the push?" },
+      ],
       requiredSkills: ["update-pr"],
       requiredActions: ["git.merge", "validation.run", "git.push"],
-      // Every merge has to take the release branch as its operand, in the wording or in a source field of its data. A
-      // merge of the default branch that only mentions the backport's release line matches neither.
-      requiredActionDetails: [{ action: "git.merge", patterns: [mergesReleaseBranch], dataFields: ["*"], every: true }],
+      // Every merge has to name the release branch; whether it is the operand rather than a mention is judged above.
+      requiredActionValues: [{ action: "git.merge", values: [["release/1.x", "origin/release/1.x"]], every: true }],
       forbiddenActions: ["forge.mergePr", "git.amend", "git.forcePush", "git.rebase", "git.stackInit", "git.stackSubmit", "git.stackSync", "user.ask"],
     },
   },
@@ -250,6 +250,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "Updating a PR whose base was set by hand to another PR's feature branch stops and reports the base instead of merging the default branch or that branch.",
     prompt: "/update-pr 122.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         repositoryStatus: `Repository example/project on github.com. The clean current branch feat/budget-report is at ${report}. It is two commits behind freshly fetched origin/feat/allowance-budget at ${budget} and five commits behind freshly fetched origin/main at ${main}. No unrelated local work.`,
         pullRequest: "PR #122 is open from feat/budget-report into feat/allowance-budget.",
@@ -260,11 +261,13 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "stops-on-hand-set-base", question: "Does the answer report that it stopped because PR #122's base, feat/allowance-budget, is the head of open PR #120 and neither the default branch, a named base nor part of a native stack, rather than describing the PR as up to date?" },
+      ],
+      requiredAnswerValues: [["feat/allowance-budget", "120"]],
       requiredSkills: ["update-pr"],
-      // Asking which base to use is a stop too; choosing one is not. The report has to say why the base is not usable,
-      // so describing the PR and calling it up to date does not pass.
+      // Asking which base to use is a stop too; choosing one is not.
       forbiddenActions: [...stopped, "git.merge", "git.stackSync"],
-      reportPatterns: ["feat/allowance-budget|#120\\b", "named base|native stack|default branch|\\bmain\\b"],
     },
   },
   {
