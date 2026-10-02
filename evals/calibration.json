@@ -1674,7 +1674,7 @@
         "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "f7f4c49580242958106e7408e5e4c4947d3eec04c52da040e0799f9b2a6871c0",
-      "afterSha256": "595c0b2382313f2b6c2165b797da6fbc1b9bd4abc264362b7b9d9cec5a241ca1",
+      "afterSha256": "ac3ed94883d25831007736f696c221bfeb7ebc6a723cfc9678698f203f0c4cf5",
       "frozenCaseSha256": "7f0ecd811bd03a42f763b0a5a290770ca6ba4f05654c69ac1f0c1800280c8382"
     },
     {
