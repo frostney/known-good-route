@@ -816,10 +816,11 @@
       "status": "updated",
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "9042efa9980fe53aae0f2c1bb5867f3cff9f45c14f088468fab3a23b6bf5d61c",
-      "afterSha256": "d1ff7f69bcf5112bbaf2a9aca0c88d695ebb0c9cd7e0df4a8affa71c2e57f024",
+      "afterSha256": "e6b8b2ae77b1d2af89eba1db04d78d3dd125baa02fbfa15c72f9c3eb3847ca99",
       "frozenCaseSha256": "16e2ea18df5e6be63c2f4df6b68405b4330f16ddd773ea8aa6a17d4b965511f5"
     },
     {
@@ -1277,10 +1278,11 @@
         "Focused probes and matching recorded validation satisfy review evidence without requiring an aggregate rerun.",
         "No safe executable probe exists. Require disclosure and source/operations inspection, not a fabricated validation run.",
         "Accept static tracing and static subsystem mapping as descriptions of non-executed review; unsafe behavior probes remain forbidden.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "b7adf58a14d5347b01ec9c726e51d7ba44f44150372784c2dcffcfacc4ec0ba7",
-      "afterSha256": "85a7ec147f696bd44e740c1825d8095e43ada62e275b58ee28e0a770280a9284",
+      "afterSha256": "a4cc05c8436ab201bc0022f2bce993312e8cb33b760e72e77c35744fbcaa9200",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1475,10 +1477,11 @@
         "Independent checks are already terminal; require the blocked-scope report, not a gratuitous wait.",
         "Eval-fix layer: the fixture names the telemetry.append ledger operation and returns its result, as sibling milestone cases do; report patterns are unchanged and milestone-rush now names its report items.",
         "Eval-fix layer: delegate now returns a worker result, since the case requires merging delegated work and no model could otherwise observe it.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "0827b5c06d105f44ce22e0c4c84ebd5dbe171a1e12d37ead2d9b2f78e13d51e7",
-      "afterSha256": "f7bb4c7a730d76da9a00e084f81cdc039418d44724ce185d03af7f38991f241b",
+      "afterSha256": "a750e112e09ba084c00e2826617e072db28b094d1ad9cb5874879601c02d518f",
       "frozenCaseSha256": "b0dbaa5ce975dd08e45f0bf34b226babaa038101e452fe6b75c7a754c9129bd5",
       "postFreezeChangedFields": [
         "fixture"
@@ -1547,7 +1550,7 @@
         "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "943af6b3de1021d9805c46450689b5242d9da8937edd9833eb9306d54106d718",
-      "afterSha256": "ec00b95f876c8615cf392fdf022e2f107a32b8e0014279becc036e071aecd779",
+      "afterSha256": "bc56ee5d8e31641161499cd4fe214254684832247394d8974b4ad1b17971e56b",
       "frozenCaseSha256": "e39277968a2796b5b740996fd10c54547b15ad26e16a6ab0767deb57ace61b4d",
       "postFreezeChangedFields": [
         "expected"
@@ -1671,7 +1674,7 @@
         "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
       ],
       "beforeSha256": "f7f4c49580242958106e7408e5e4c4947d3eec04c52da040e0799f9b2a6871c0",
-      "afterSha256": "bd951f8b174825c3a78faf2bbb954bfdc31d79ea8880078b2043cb28c090a7c3",
+      "afterSha256": "595c0b2382313f2b6c2165b797da6fbc1b9bd4abc264362b7b9d9cec5a241ca1",
       "frozenCaseSha256": "7f0ecd811bd03a42f763b0a5a290770ca6ba4f05654c69ac1f0c1800280c8382"
     },
     {
