@@ -11,8 +11,9 @@ For each pull request it keeps only what `coderabbit_adapter.py` reads:
 - CodeRabbit's reviews (`commit_id`, `submitted_at`, and the lines that
   count findings);
 - every version of CodeRabbit's comments from their edit history, each
-  reduced to the summary marker, coverage marker, stated-wait sentence and
-  HTML block markers, with all other prose dropped;
+  reduced to the summary marker, coverage marker, stated-wait sentence,
+  the words saying waiting won't change it, and HTML block markers, with
+  all other prose dropped;
 - other comments that address CodeRabbit, line by line: a line that is only a
   CodeRabbit command keeps it, a line that mentions one inside other text
   keeps it between `[text]` placeholders, and every other line becomes
@@ -145,7 +146,10 @@ def reduce_body(body: str) -> str:
     """The lines of a CodeRabbit body the adapter reads; all other prose is dropped."""
     kept = []
     for line in (body or "").splitlines():
-        if (
+        no_capacity = ADAPTER.NO_CAPACITY.search(line)
+        if no_capacity and not WAIT_SENTENCE.search(line):
+            kept.append(no_capacity.group(0))
+        elif (
             line.strip() == ADAPTER.SUMMARY_MARKER
             or BLOCK_MARKER.match(line)
             or ADAPTER.COVERAGE_MARKER.search(line)

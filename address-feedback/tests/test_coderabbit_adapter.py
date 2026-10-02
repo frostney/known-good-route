@@ -305,11 +305,17 @@ class HeadStatusTest(unittest.TestCase):
         self.assertEqual((result["state"], result["rateLimit"]), ("skipped", None))
 
     def test_a_paused_review_needs_a_person(self) -> None:
-        # duetto#60: CodeRabbit paused reviews of 5e681fec at 06:28:25.
-        result = state("duetto#60", "2026-09-26T06:28:26Z")
+        # duetto#60: CodeRabbit paused reviews of 7828195a at 06:28:42, before it reviewed it.
+        result = state("duetto#60", "2026-09-26T06:28:43Z")
         self.assertEqual(result["status"]["description"], "Review paused")
         self.assertEqual((result["state"], result["nextMode"]), ("paused", None))
         self.assertIn("paused", ADAPTER.BLOCKED_STATES)
+
+    def test_a_pause_after_the_head_was_reviewed_leaves_it_complete(self) -> None:
+        # duetto#60: CodeRabbit completed a clean pass of 5e681fec at 06:24:26 and paused at 06:28:25.
+        result = state("duetto#60", "2026-09-26T06:28:26Z")
+        self.assertEqual(result["status"]["description"], "Review paused")
+        self.assertEqual(result["state"], "clean-complete")
 
     def test_a_review_stopped_after_lock_loss_is_triggered_again(self) -> None:
         # GocciaScript#1113: "Review stopped after lock loss" (failure) at 17:42:57 on ba711c3f.
@@ -676,6 +682,234 @@ class SharedHeadTest(unittest.TestCase):
                 self.assertEqual(result["automaticReview"]["from"], "2026-09-26T06:04:27Z")
                 self.assertEqual([trigger["createdAt"] for trigger in result["triggers"]], ["2026-09-26T06:07:32Z"])
                 self.assertEqual((result["state"], result["findingsReview"]["actionable"]), ("review-complete", 2))
+
+
+# Invented pull requests: an invented owner and repository, invented commits, and only the
+# markers and generic sentences CodeRabbit writes. Times are offsets from an invented push.
+INVENTED_REPO = "tallyworks/ledger-kit"
+PUSHED = at("2026-09-30T08:00:00Z")
+SKIPPED_BASE = "Review skipped: reviews are disabled for this base branch"
+SKIP_SUMMARY = (
+    f"{ADAPTER.SUMMARY_MARKER}\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n"
+    "<!-- end of auto-generated comment: skip review by coderabbit.ai -->"
+)
+REVIEWING_SUMMARY = (
+    f"{ADAPTER.SUMMARY_MARKER}\n{ADAPTER.REVIEWING_BLOCK}\n"
+    "<!-- end of auto-generated comment: review in progress by coderabbit.ai -->"
+)
+
+
+def offset(seconds: int) -> str:
+    return iso(PUSHED + seconds)
+
+
+def coverage_summary(sha: str, clean: bool) -> str:
+    marker = json.dumps({"sourceCommitId": sha, "coveredCommitId": sha, "kind": "reviewed"}, separators=(",", ":"))
+    recent = f"{ADAPTER.NO_ACTIONABLE} in the recent review.\n" if clean else ""
+    return f"{ADAPTER.SUMMARY_MARKER}\n{recent}<!-- final_review_risk_coverage:{marker} -->"
+
+
+def invented_pull(number: int, opened: int, head: str, branch: str, **fields: Any) -> dict[str, Any]:
+    """A recorded pull request on `head`, opened `opened` seconds after the push."""
+    return {
+        "repo": INVENTED_REPO,
+        "number": number,
+        "createdAt": offset(opened),
+        "ref": branch,
+        "base": "main",
+        "head": head,
+        "state": "OPEN",
+        "initialDraft": fields.get("draft", False),
+        "events": fields.get("events", []),
+        "heads": {head: fields["commit"]},
+        "comments": fields.get("comments", []),
+        "reviews": fields.get("reviews", []),
+    }
+
+
+def invented_commit(*statuses: tuple[int, str, str], branch: str) -> dict[str, Any]:
+    """One commit pushed to `branch`, with CodeRabbit's statuses on it as (seconds, state, description)."""
+    return {
+        "parents": ["0a1b2c3d" * 5],
+        "checkSuites": [{"created_at": offset(0), "head_branch": branch}],
+        "statuses": [
+            {"id": 7000 + index, "state": state, "description": description, "context": "CodeRabbit",
+             "created_at": offset(seconds), "creator": {"login": "coderabbitai[bot]"}}
+            for index, (seconds, state, description) in enumerate(statuses)
+        ],
+    }
+
+
+def summary_comment(identifier: int, *versions: tuple[int, str]) -> dict[str, Any]:
+    return {
+        "id": identifier,
+        "user": {"login": "coderabbitai[bot]"},
+        "created_at": offset(versions[0][0]),
+        "versions": [[offset(seconds), body] for seconds, body in versions],
+    }
+
+
+class Invented(Replay):
+    """Invented pull requests, named by the keys of `pulls`, as GitHub showed them at `now`."""
+
+    def __init__(self, pulls: dict[str, dict[str, Any]], now: str) -> None:
+        REPLAY.RecordedGitHub.__init__(self, list(pulls.values()), now)
+        self.refs = {ref: (pull["repo"], pull["number"]) for ref, pull in pulls.items()}
+
+
+class CommitEvidenceTest(unittest.TestCase):
+    """A review completes the commit for every pull request on it; a later skip leaves it complete."""
+
+    HEAD = "1b2c3d4e" * 5
+    BRANCH = "shared-totals"
+
+    def findings_then_skip(self) -> dict[str, dict[str, Any]]:
+        # Mirrors an observed lab sequence: pull request A was reviewed with one finding, then B
+        # opened on the same commit with a base CodeRabbit does not review, and was skipped.
+        commit = invented_commit(
+            (61, "pending", "Review in progress"), (378, "success", "Review completed"),
+            (410, "success", SKIPPED_BASE), branch=self.BRANCH,
+        )
+        review = {"id": 8001, "user": {"login": "coderabbitai[bot]"}, "commit_id": self.HEAD,
+                  "submitted_at": offset(372), "body": "**Actionable comments posted: 1**"}
+        return {
+            "A": invented_pull(1, 53, self.HEAD, self.BRANCH, commit=commit, reviews=[review], comments=[
+                summary_comment(9001, (66, REVIEWING_SUMMARY), (369, coverage_summary(self.HEAD, clean=False))),
+            ]),
+            "B": invented_pull(2, 403, self.HEAD, self.BRANCH, commit=commit, comments=[
+                summary_comment(9002, (409, SKIP_SUMMARY)),
+            ]),
+        }
+
+    def skip_clean_skip(self) -> dict[str, dict[str, Any]]:
+        # Mirrors an observed lab sequence: C opened with a base CodeRabbit does not review and was
+        # skipped, D opened on the same commit and got a clean pass, then E opened like C and was
+        # skipped after the pass.
+        commit = invented_commit(
+            (438, "success", SKIPPED_BASE), (480, "pending", "Review in progress"),
+            (610, "success", "Review completed"), (654, "success", SKIPPED_BASE), branch=self.BRANCH,
+        )
+        return {
+            "C": invented_pull(3, 430, self.HEAD, self.BRANCH, commit=commit, comments=[
+                summary_comment(9003, (437, SKIP_SUMMARY)),
+            ]),
+            "D": invented_pull(4, 474, self.HEAD, self.BRANCH, commit=commit, comments=[
+                summary_comment(9004, (486, REVIEWING_SUMMARY), (607, coverage_summary(self.HEAD, clean=True))),
+            ]),
+            "E": invented_pull(5, 645, self.HEAD, self.BRANCH, commit=commit, comments=[
+                summary_comment(9005, (653, SKIP_SUMMARY)),
+            ]),
+        }
+
+    def test_a_skip_for_another_pull_request_leaves_a_findings_review_complete(self) -> None:
+        gh = Invented(self.findings_then_skip(), offset(420))
+        result = observe(gh, "A")
+        self.assertEqual((result["sharedWith"], result["status"]["description"]), ([2], SKIPPED_BASE))
+        self.assertEqual((result["state"], result["findingsReview"]["actionable"]), ("review-complete", 1))
+
+    def test_a_pull_request_opened_after_the_review_reads_its_own_skip(self) -> None:
+        # B's opening starts its cycle after A's review, so the review does not complete B.
+        gh = Invented(self.findings_then_skip(), offset(420))
+        self.assertEqual(observe(gh, "B")["state"], "skipped")
+        gh = Invented(self.skip_clean_skip(), offset(660))
+        self.assertEqual(observe(gh, "E")["state"], "skipped")
+
+    def test_a_clean_pass_completes_the_pull_request_skipped_before_it(self) -> None:
+        gh = Invented(self.skip_clean_skip(), offset(610))
+        for ref in ("C", "D"):
+            with self.subTest(ref=ref):
+                result = observe(gh, ref)
+                self.assertEqual(result["cleanReview"]["coveredCommitId"], self.HEAD)
+                self.assertEqual(result["state"], "clean-complete")
+
+    def test_a_later_skip_on_the_commit_leaves_a_clean_pass_complete(self) -> None:
+        gh = Invented(self.skip_clean_skip(), offset(660))
+        for ref in ("C", "D"):
+            with self.subTest(ref=ref):
+                result = observe(gh, ref)
+                self.assertEqual(result["status"]["description"], SKIPPED_BASE)
+                self.assertEqual(result["state"], "clean-complete")
+
+    def test_a_later_pending_status_still_decides(self) -> None:
+        # Synthetic: CodeRabbit starts another pass of the commit after the clean one.
+        gh = Invented(self.skip_clean_skip(), offset(670))
+        gh.add_status("D", "Review in progress", offset(665), state="pending")
+        self.assertEqual(observe(gh, "D")["state"], "in-progress")
+
+    def test_the_replay_judges_completion_by_the_commit(self) -> None:
+        for scenario in (self.findings_then_skip(), self.skip_clean_skip()):
+            pulls = list(scenario.values())
+            violations, checked = REPLAY.replay(pulls)
+            self.assertEqual(violations, [])
+            self.assertGreater(checked["skipped"], 0)
+        pulls = self.skip_clean_skip()
+        history = REPLAY.History(list(pulls.values()))
+        clean = {"state": "clean-complete"}
+        self.assertEqual(history.violations(pulls["C"], self.HEAD, PUSHED + 610, clean), [])
+        alone = REPLAY.History([pulls["C"]])
+        self.assertEqual(alone.violations(pulls["C"], self.HEAD, PUSHED + 610, clean), ["completion"])
+        # Synthetic: B opened before A's findings review.
+        pulls = self.findings_then_skip()
+        pulls["B"]["createdAt"] = offset(60)
+        self.assertEqual(observe(Invented(pulls, offset(420)), "B")["state"], "review-complete")
+        reviewed = {"state": "review-complete"}
+        self.assertEqual(REPLAY.History(list(pulls.values())).violations(pulls["B"], self.HEAD, PUSHED + 420, reviewed), [])
+        self.assertEqual(REPLAY.History([pulls["B"]]).violations(pulls["B"], self.HEAD, PUSHED + 420, reviewed), ["completion"])
+
+
+class NoCapacityTest(unittest.TestCase):
+    """A stated wait whose notice says waiting won't change it blocks for a person."""
+
+    HEAD = "5f6e7d8c" * 5
+    BRANCH = "nightly-export"
+
+    def refused(self, sentence: str) -> Invented:
+        # Mirrors an observed sequence: opened as a draft, marked ready, then refused with a stated
+        # wait in the same notice that says waiting won't change it, because every seat is assigned.
+        commit = invented_commit(
+            (14, "success", "Review skipped: draft pull request"), (51, "success", "Review skipped: draft pull request"),
+            (94, "pending", "Review in progress"), (99, "success", "Review rate limited"), branch=self.BRANCH,
+        )
+        notice = (
+            f"{ADAPTER.SUMMARY_MARKER}\n<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->\n"
+            f"{sentence}\n**Next included review available in 58 minutes.**\n"
+            "<!-- end of auto-generated comment: rate limited by coderabbit.ai -->"
+        )
+        pull = invented_pull(6, 0, self.HEAD, self.BRANCH, commit=commit, draft=True,
+                             events=[{"type": "ready", "at": offset(30)}],
+                             comments=[summary_comment(9006, (13, SKIP_SUMMARY), (99, notice))])
+        return Invented({"F": pull}, offset(100))
+
+    def test_a_wait_that_waiting_will_not_change_is_blocked(self) -> None:
+        for sentence in ("> Waiting won't change this, ask an admin.", "Waiting won’t change this", "waiting will not change this"):
+            with self.subTest(sentence=sentence):
+                result = observe(self.refused(sentence), "F")
+                self.assertEqual(result["rateLimit"]["wait"]["statedSeconds"], 58 * 60)
+                self.assertTrue(result["rateLimit"]["wait"]["noCapacity"])
+                self.assertEqual((result["state"], result["nextMode"], result["retryAt"]), ("blocked-no-capacity", None, None))
+        self.assertIn("blocked-no-capacity", ADAPTER.BLOCKED_STATES)
+
+    def test_the_same_wait_without_the_sentence_waits(self) -> None:
+        result = observe(self.refused("> Limit details are below."), "F")
+        self.assertFalse(result["rateLimit"]["wait"]["noCapacity"])
+        self.assertEqual((result["state"], result["retryAt"]), ("waiting", offset(99 + 58 * 60 + 60)))
+
+    def test_a_run_stops_without_a_trigger(self) -> None:
+        gh = self.refused("Waiting won't change this")
+        answering(gh, "F")
+        final, _reason, _value = run(gh, "F", offset(99 + 2 * 3600))
+        self.assertEqual((final, gh.posts), ("blocked-no-capacity", []))
+
+    def test_the_recorder_keeps_only_the_sentence(self) -> None:
+        spec = importlib.util.spec_from_file_location(
+            "record_coderabbit", Path(__file__).resolve().parent / "record_coderabbit.py"
+        )
+        assert spec and spec.loader
+        recorder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(recorder)
+        line = "> Every seat is assigned. Waiting won't change this, ask an admin to [free a seat](https://example.com)."
+        self.assertEqual(recorder.reduce_body(line), "Waiting won't change this")
+        self.assertEqual(recorder.reduce_body(recorder.reduce_body(line)), "Waiting won't change this")
 
 
 class BoundTest(unittest.TestCase):

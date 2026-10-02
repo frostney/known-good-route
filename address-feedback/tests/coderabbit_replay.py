@@ -11,8 +11,9 @@ the recorded history:
 
 - `completion`: a head is complete only when CodeRabbit posted a findings
   review of that exact head, or a matching coverage marker followed by a
-  `Review completed` status on it, after the head's latest push, open or
-  ready event and the latest trigger on the pull request;
+  `Review completed` status on it, on any recorded pull request of that
+  commit, after the head's latest push, open or ready event and the latest
+  trigger on the pull request;
 - `refused-trigger`: no trigger while the head's latest refusal states a wait
   that is still running, unless a recorded trigger at that point was
   accepted;
@@ -316,8 +317,10 @@ class History:
         return max(moment for moment in moments if moment <= now)
 
     def completed_with_evidence(self, pull: dict[str, Any], sha: str, now: float) -> bool:
+        """Whether the commit was reviewed since this pull request's cycle start, on any pull request."""
         cutoff = self.cycle_start(pull, sha, now)
-        for review in pull["reviews"]:
+        sharing = [other for other in self.by_repo[pull["repo"]] if sha in other["heads"]]
+        for review in (review for other in sharing for review in other["reviews"]):
             submitted = at(review["submitted_at"])
             if review["commit_id"] == sha and cutoff < submitted <= now and ADAPTER.findings_review([review], sha):
                 return True
@@ -325,7 +328,8 @@ class History:
         covered = {sha} | ({parents[0]} if len(parents) > 1 else set())
         markers = [
             at(edited)
-            for item in pull["comments"]
+            for other in sharing
+            for item in other["comments"]
             for edited, body in item["versions"]
             if at(edited) <= now
             and ADAPTER.clean_review([{"body": body}], sorted(covered))

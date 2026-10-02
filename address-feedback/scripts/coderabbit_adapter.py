@@ -18,15 +18,19 @@ head commit, merged across the open pull requests whose head it is:
 The latest review cycle wins: evidence, triggers and pending statuses from
 before the latest trigger or the requested pull request's latest push, open
 or ready event are superseded, and among a pending status, a trigger and a
-findings review the newest decides. Every state that waits on CodeRabbit ends
-after a fixed bound: the wait for its own review becomes a trigger, and an
-unanswered trigger, a stalled review, an unexplained refusal and a second
-lock loss each become a blocked state. A GitHub read that fails is an
-operational error, never missing evidence. Triggers are serialized by a lock
-per user account, GitHub API root and repository owner: CodeRabbit's review
-allowance belongs to the organization or account that owns the repository,
-so runs for different owners never wait on each other. The API root is the
-one gh sends requests to.
+findings review the newest decides. A review that completed the commit
+after the cycle's start keeps it complete for every pull request on it,
+whatever status CodeRabbit posts on the commit later, unless that status is
+pending. Every state that waits on CodeRabbit ends after a fixed bound: the
+wait for its own review becomes a trigger, and an unanswered trigger, a
+stalled review, an unexplained refusal and a second lock loss each become a
+blocked state. A refusal whose notice says waiting won't change it is
+blocked at once. A GitHub read that fails is an operational error, never
+missing evidence. Triggers are serialized by a lock per user account, GitHub
+API root and repository owner: CodeRabbit's review allowance belongs to the
+organization or account that owns the repository, so runs for different
+owners never wait on each other. The API root is the one gh sends requests
+to.
 """
 
 from __future__ import annotations
@@ -79,6 +83,11 @@ STATUS_LOCK_LOSS = re.compile(r"^\s*review stopped after lock loss\b", re.IGNORE
 # "Next included review available in 12 minutes."
 STATED_WAIT = re.compile(
     r"Next (?:included )?review available in[\s*:]*(\d+)\s*(minute|second)s?\b", re.IGNORECASE
+)
+# "Waiting won't change this": the stated wait is not a retry time, because
+# every seat is assigned and the review ran on the free tier.
+NO_CAPACITY = re.compile(
+    r"\bwaiting\s+(?:won['\u2019]?t|will\s+not)\s+change\s+(?:this|that|it)\b", re.IGNORECASE
 )
 
 # A findings review names its findings in its body.
@@ -153,6 +162,7 @@ HEAD_STATES = frozenset(
         "blocked-unanswered",
         "blocked-stalled",
         "blocked-unknown-wait",
+        "blocked-no-capacity",
         "blocked-unconfirmed",
         "blocked-lock-loss",
         "unrecognized-status",
@@ -178,6 +188,7 @@ BLOCKED_STATES = frozenset(
         "blocked-unanswered",
         "blocked-stalled",
         "blocked-unknown-wait",
+        "blocked-no-capacity",
         "blocked-unconfirmed",
         "blocked-lock-loss",
         "unrecognized-status",
@@ -352,7 +363,7 @@ def correlated_wait(
     Returns the wait, or None and why there is none.
     """
     start = status_at - CORRELATION_SECONDS
-    best: tuple[float, float, int, dict[str, Any]] | None = None
+    best: tuple[float, float, int, dict[str, Any], bool] | None = None
     for item in comments:
         if not is_summary(item):
             continue
@@ -363,18 +374,19 @@ def correlated_wait(
             if seconds is None or not start <= at <= status_at:
                 continue
             if best is None or at + seconds > best[0]:
-                best = (at + seconds, at, seconds, item)
+                best = (at + seconds, at, seconds, item, bool(NO_CAPACITY.search(body)))
     if best is None:
         return None, (
             f"no summary-comment version stating a wait was set within {CORRELATION_SECONDS} s "
             "before the status"
         )
-    available, at, seconds, item = best
+    available, at, seconds, item, no_capacity = best
     return (
         {
             "commentId": item.get("id"),
             "editedAt": format_timestamp(at),
             "statedSeconds": seconds,
+            "noCapacity": no_capacity,
             "availableAt": format_timestamp(available),
             "retryAt": format_timestamp(available + WAIT_BUFFER_SECONDS),
             "retryAtEpoch": available + WAIT_BUFFER_SECONDS,
@@ -662,6 +674,12 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
                 f"CodeRabbit rate-limited the head at {refusal['statusAt']} and {refusal['missing']}",
                 mode,
             )
+        if refusal and refusal["wait"]["noCapacity"]:
+            return result(
+                "blocked-no-capacity",
+                f"CodeRabbit refused the head at {refusal['statusAt']} and its notice says waiting "
+                "won't change this",
+            )
         if refusal and refusal["wait"]["retryAtEpoch"] > now:
             return result(
                 "waiting",
@@ -699,6 +717,11 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
     trigger_newer = latest is not None and (status_at is None or latest["at"] >= status_at)
     review = evidence["findingsReview"]
     reviewed_at = parse_timestamp(review["submittedAt"], "review submitted_at") if review else None
+    history = [
+        (parse_timestamp(item["createdAt"], "status createdAt"), item["kind"])
+        for item in evidence["statusHistory"]
+    ]
+    completed_at = max((when for when, seen in history if seen == "completed"), default=None)
     # Among a pending status, a trigger and a findings review, the newest decides.
     if reviewed_at is not None and reviewed_at > begun and (kind != "in-progress" or reviewed_at > status_at):
         return result("review-complete", "a CodeRabbit review of exactly this head states findings")
@@ -711,7 +734,9 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
             f"CodeRabbit has reported {status['description']!r} on the head since {status['createdAt']}",
         )
     # CodeRabbit keeps the marker while it reviews again; the completed status dates the pass.
-    if evidence["cleanReview"] and kind == "completed" and status_at > begun:
+    # A later status that is not pending, such as a skip for another pull request on the
+    # commit, leaves the commit reviewed.
+    if evidence["cleanReview"] and completed_at is not None and completed_at > begun:
         return result(
             "clean-complete",
             f"CodeRabbit's summary marks {evidence['cleanReview']['coveredCommitId']} covered "
@@ -745,10 +770,6 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
     if unreviewed:
         return gate("incremental")
     if kind == "lock-loss":
-        history = [
-            (parse_timestamp(item["createdAt"], "status createdAt"), item["kind"])
-            for item in evidence["statusHistory"]
-        ]
         losses = [when for when, seen in history if seen == "lock-loss" and when >= start]
         if len(losses) > 1:
             return result(
