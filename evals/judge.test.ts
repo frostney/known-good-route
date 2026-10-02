@@ -13,6 +13,7 @@ import {
   judgeAnswer,
   judgeInput,
   judgeItems,
+  judgeTask,
   messageRubric,
   judgesFromFlags,
   loadJudgeCalibration,
@@ -244,8 +245,15 @@ describe("calibration gate", () => {
     const judged = judgeItems({ ...target, expected: { ...target.expected, messageRubric: [{ id: "names-the-pr", question: "Does the message name the PR?" }] } });
     expect(judged.filter((item) => item.kind === "outcome").map((item) => item.id)).toEqual(target.expected.rubric!.map((item) => item.id));
     expect(judged.filter((item) => item.kind === "message").map((item) => item.id)).toEqual([...messageRubric.map((item) => item.id), "names-the-pr"]);
-    expect(messageRubric.length).toBeLessThanOrEqual(6);
+    expect(messageRubric.length).toBeLessThanOrEqual(8);
     expect(() => validateRubric({ ...target, expected: { ...target.expected, messageRubric: [{ id: "concise", question: "Again?" }] } })).toThrow("duplicate rubric id");
+  });
+  test("the judge reads the repository settings that set how far the run goes", () => {
+    const configured = evalCases.find((c) => c.fixture.environment?.orchestration?.entryPoints === "stop")!;
+    expect(judgeTask(configured)).toContain(`entry-points stop`);
+    const unconfigured = evalCases.find((c) => c.fixture.environment && c.fixture.environment.orchestration === null)!;
+    expect(judgeTask(unconfigured)).toContain("no ORCHESTRATION.md");
+    expect(judgeTask(unconfigured).startsWith(unconfigured.prompt)).toBeTrue();
   });
   test("labels must come from a named labeller and cover exactly the labelled items", async () => {
     const committed = await loadJudgeCalibration();

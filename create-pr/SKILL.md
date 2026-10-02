@@ -117,7 +117,9 @@ readiness. Recording a walkthrough does not replace behavior testing.
 7. Commit uncommitted relevant work under `git-workflow`: stage only relevant
    files, excluding secrets and unrelated local work, and use a concise
    Conventional Commit subject. Never amend and never skip hooks. Preserve
-   already-published history and add a new commit for any correction.
+   already-published history and add a new commit for any correction. Run the
+   [publication guard](../git-workflow/SKILL.md#publication-guard) at each
+   commit, push and PR write.
 8. Title each pull request with a Conventional Commit subject covering the whole
    change; `git-workflow`'s squash merge makes that title the base-branch commit
    subject. Follow
@@ -164,9 +166,9 @@ readiness. Recording a walkthrough does not replace behavior testing.
 13. Once the PR is missing nothing required by the publication and PR-specific
     phases and all applicable CI is observed green for its exact head, mark it
     ready for review. Return every affected URL and linked issue, native stack
-    order when applicable, final states, metadata changes, supplied completion evidence,
-    and observed readiness and CI evidence. Include incomplete walkthrough
-    requirements and actionable remedies, even when the PR is ready. Started
-    directly, continue under the
+    order when applicable, final states, metadata changes, supplied completion
+    evidence, what the publication guard rewrote, and observed readiness and CI
+    evidence. Include incomplete walkthrough requirements and actionable
+    remedies, even when the PR is ready. Started directly, continue under the
     [delivery settings](../deliver/SKILL.md#delivery-settings); with
     `entry-points: deliver`, the ready PR goes on to `/address-feedback`.

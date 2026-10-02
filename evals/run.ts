@@ -11,6 +11,7 @@ import {
   combineJudgement,
   judgeAnswer,
   judgeItems,
+  judgeTask,
   judgesFromFlags,
   parseJudgeEffort,
   loadJudgeCalibration,
@@ -396,7 +397,7 @@ export async function judgeRecord(options: {
   // Message items judge what the person reads, so a worker's answer to its
   // parent is judged on its outcome items only.
   const units: Array<{ scope: string; items: JudgeItem[]; task: string; output: string; ledger: RunLedger }> = [
-    { scope: "parent", items: judgeItems(evalCase), task: evalCase.prompt, output: record.output, ledger: record.ledger },
+    { scope: "parent", items: judgeItems(evalCase), task: judgeTask(evalCase), output: record.output, ledger: record.ledger },
   ];
   for (const worker of record.ledger.workers ?? []) {
     const scenario = (options.cases ?? evalCases).find((c) => c.id === worker.caseId);

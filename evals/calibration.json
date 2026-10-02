@@ -1381,10 +1381,11 @@
         "Fresh pause-disclosure-native-v1 reports contain rule text but no valid loaded-source link (bare paths or an unresolved relative link). Replace lexical breadcrumb checks with requiredSkillCitations bound to captured loadSkill path/instructions and visible quotation in the same communication. Original grades are preserved; fresh native evidence required.",
         "Fresh v2 Fable attempted a preparatory git.fetch. The updated skill permits independent authorized work, so the original blanket fetch prohibition lacks task/contract support. Remove only that action prohibition; preserve source-citation and dependent-mutation gates. A recorded fetch/branch acknowledgment still does not prove success, and semantic review must check such claims. No fixture success result was added.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
-        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed.",
+        "Founder labels, round 3: the case's environment, rubric or fixture did not match what the founder expected of the run."
       ],
       "beforeSha256": "79e851dc4c980bdc7803f640b5e6ca59b52dfd7fe8ad39351dc02210301c4f3f",
-      "afterSha256": "0502a7e6e0a189c3ffac6ba7ffe4ff49d4b18d07f906af80eeba1e1d4106fdcb",
+      "afterSha256": "ecc3ae0c03178db9923d7ca7b5d8a7d53bc60c5ff2e48304911b0a3cdf5bb856",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -1915,10 +1916,11 @@
       "rationale": [
         "Retained task, fixture, and assertions; no demonstrated contract mismatch in calibration.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Founder labels, round 3: the case's environment, rubric or fixture did not match what the founder expected of the run."
       ],
       "beforeSha256": "d0239c04c195d2eba2db9055f6974fc6c3978253fe3eedd4fc68f165e07d6ca8",
-      "afterSha256": "cd9413bc7a826170a99e43cd733a1d39cfe045828f7d0a726bc98a0bef2dda0e",
+      "afterSha256": "8cff88245bd801b3cb0666d66903c76a1b45e0f3e308997b87da450307fe0790",
       "frozenCaseSha256": "6b8005bf9f1fc15394c8a82839d6514815787de45f085851e97b636432713362",
       "postFreezeChangedFields": [
         "expected"
@@ -2515,10 +2517,11 @@
       "rationale": [
         "New bounded September 14 synthetic decision fixture, declared before native execution: An unresolved integration destination does not stop independent PR preparation or justify guessed hosting and false deployment claims. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
-        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed.",
+        "Founder labels, round 3: the case's environment, rubric or fixture did not match what the founder expected of the run."
       ],
       "beforeSha256": null,
-      "afterSha256": "a10f6b5043972598712b3ddb7fa344dcce7a694c56863ee521ca14cb6fa48fdb",
+      "afterSha256": "ed5f6a28e619b4ab76355f7f908bd0788705872f866146961e1466024de1a55f",
       "frozenCaseSha256": "e843cae16695caf4ae161cabe10079010403e2d9f4169146a3130e7a8cf7865a"
     },
     {
@@ -2680,6 +2683,31 @@
       "beforeSha256": null,
       "afterSha256": "75ac0ed83d26a267ce6279471275ddda41f9b89405c4b97bd55565f24e322c31",
       "frozenCaseSha256": "0696f9efdb7b52eb2bffb7a3ac68d1fc03a18d75c83119c73426935ea10d25d2"
+    },
+    {
+      "caseId": "update-pr-named-release-base-merges-that-base",
+      "status": "new",
+      "rationale": [
+        "An update to a backport PR integrates from its named release base. The grader requires every merge to take release/1.x, so a merge of the default branch fails even next to a correct one. Fresh native run required.",
+        "Grader corrected: the merge has to take release/1.x as its operand, in its wording or in a source field of its data; a merge of the default branch that only mentions the release line no longer passes. The retained native runs pass regraded.",
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "1f08de17d47469f64c028b59f4cfa3ff60caa41a74fcdd2f3824d6f70e30477e",
+      "frozenCaseSha256": "9e03b2f24ccbaafcb879d00624942be0d73eb45df51c0f7593de946590b9b610"
+    },
+    {
+      "caseId": "update-pr-hand-based-pr-stops",
+      "status": "new",
+      "rationale": [
+        "A PR whose base was set by hand to another PR's feature branch has no base an update may merge: it stops and reports that base instead of merging the default branch or the feature branch. Fresh native run required.",
+        "Grader corrected: a stop that asks which base to use is a justified pause, so user.ask is no longer forbidden. The original Opus run stopped, merged nothing, named the base and asked; its output is retained and passes regraded.",
+        "Grader corrected: the report has to say why the base is unusable, so describing the PR and calling it up to date fails. The retained native runs pass regraded.",
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "003ac01dd1261790b35d5b047834ef0a75c4efac6fcb6b2ccc53f75c9d367b8c",
+      "frozenCaseSha256": "6eca68a3185358d85fadde0d7f7d086431e55bb85e002983adec7771bfc42803"
     },
     {
       "caseId": "create-pr-named-base-dependency-on-default-pr-stops",
