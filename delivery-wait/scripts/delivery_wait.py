@@ -23,11 +23,13 @@ from kgr_github import (
     WaitError,
     default_state_path,
     emit,
+    load_state,
     parse_time,
     positive_interval,
     result_envelope,
     stable_digest,
     wait_for_transition,
+    write_state,
 )
 
 
@@ -35,9 +37,10 @@ PR_QUERY = """
 query($owner:String!,$name:String!,$number:Int!){
   repository(owner:$owner,name:$name){
     pullRequest(number:$number){
-      headRefOid merged mergedAt mergeCommit{oid}
+      headRefOid state merged mergedAt mergeCommit{oid}
       commits(last:1){nodes{commit{statusCheckRollup{contexts(first:100){nodes{
-        __typename ... on CheckRun{name status conclusion detailsUrl startedAt completedAt}
+        __typename ... on CheckRun{name status conclusion detailsUrl startedAt completedAt databaseId
+          checkSuite{databaseId app{slug} workflowRun{event workflow{databaseId}}}}
         ... on StatusContext{context state targetUrl createdAt}
       } pageInfo{hasNextPage}}}}}}
     }
@@ -65,7 +68,10 @@ TERMINAL_CHECK_CONCLUSIONS = {
     "NEUTRAL",
     "TIMED_OUT",
     "ACTION_REQUIRED",
+    "STARTUP_FAILURE",
+    "STALE",
 }
+PASSING_CHECK_CONCLUSIONS = {"SUCCESS", "NEUTRAL", "SKIPPED"}
 
 
 def repo_parts(repo: str) -> tuple[str, str]:
@@ -93,10 +99,17 @@ def pr_snapshot(gh: Gh, repo: str, number: int) -> dict[str, Any]:
         checks = []
         for node in nodes or []:
             if node.get("__typename") == "CheckRun":
-                checks.append({"name": node.get("name"), "status": node.get("status"), "conclusion": node.get("conclusion"), "completedAt": node.get("completedAt"), "observedAt": node.get("startedAt") or node.get("completedAt")})
+                suite = node.get("checkSuite") or {}
+                workflow_run = suite.get("workflowRun") or {}
+                source = check_source(
+                    (suite.get("app") or {}).get("slug"),
+                    (workflow_run.get("workflow") or {}).get("databaseId"),
+                    workflow_run.get("event"),
+                )
+                checks.append({"name": node.get("name"), "status": node.get("status"), "conclusion": node.get("conclusion"), "completedAt": node.get("completedAt"), "observedAt": node.get("startedAt") or node.get("completedAt"), "suite": suite.get("databaseId"), "source": source})
             else:
-                checks.append({"name": node.get("context"), "status": "COMPLETED", "conclusion": node.get("state"), "observedAt": node.get("createdAt")})
-        return {"head": pull.get("headRefOid"), "merged": bool(pull.get("merged")), "mergedAt": pull.get("mergedAt"), "mergeCommit": (pull.get("mergeCommit") or {}).get("oid"), "checks": sorted(checks, key=lambda item: str(item["name"]))}
+                checks.append({"name": node.get("context"), "status": "COMPLETED", "conclusion": node.get("state"), "observedAt": node.get("createdAt"), "source": "status"})
+        return {"head": pull.get("headRefOid"), "state": pull.get("state"), "merged": bool(pull.get("merged")), "mergedAt": pull.get("mergedAt"), "mergeCommit": (pull.get("mergeCommit") or {}).get("oid"), "checks": sorted(checks, key=lambda item: str(item["name"]))}
     except RateLimited:
         gh.metrics.rate_limit_fallbacks += 1
         pull = gh.rest(f"repos/{repo}/pulls/{number}")
@@ -107,15 +120,42 @@ def pr_snapshot(gh: Gh, repo: str, number: int) -> dict[str, Any]:
             f"repos/{repo}/commits/{pull['head']['sha']}/statuses?per_page=100"
         )
         runs = [run for page in run_pages for run in page.get("check_runs", [])]
-        statuses = [status for page in status_pages for status in page]
+        # A check run names only its suite; the workflow run of that suite
+        # names the workflow and event, as GraphQL does in one query.
+        workflows = {
+            item.get("check_suite_id"): item
+            for item in rest_census(
+                gh.rest_pages(f"repos/{repo}/actions/runs?head_sha={quote(pull['head']['sha'], safe='')}&per_page=100"),
+                "workflow_runs",
+                "workflow run",
+            )
+        } if runs else {}
+        for run in runs:
+            suite = (run.get("check_suite") or {}).get("id")
+            if (run.get("app") or {}).get("slug") == "github-actions" and suite not in workflows:
+                raise TransientError(f"no workflow run is listed yet for check suite {suite}")
+        # The statuses endpoint lists every state a context has had, newest
+        # first; the GraphQL rollup has only the current one.
+        statuses: dict[str, dict[str, Any]] = {}
+        for page in status_pages:
+            for item in page:
+                statuses.setdefault(item.get("context"), item)
         checks = [
-            {"name": run.get("name"), "status": str(run.get("status", "")).upper(), "conclusion": str(run.get("conclusion") or "").upper(), "completedAt": run.get("completed_at"), "observedAt": run.get("started_at") or run.get("completed_at")}
+            {"name": run.get("name"), "status": str(run.get("status", "")).upper(), "conclusion": str(run.get("conclusion") or "").upper(), "completedAt": run.get("completed_at"), "observedAt": run.get("started_at") or run.get("completed_at"), "suite": (run.get("check_suite") or {}).get("id"), "source": check_source(
+                (run.get("app") or {}).get("slug"),
+                workflows.get((run.get("check_suite") or {}).get("id"), {}).get("workflow_id"),
+                workflows.get((run.get("check_suite") or {}).get("id"), {}).get("event"),
+            )}
             for run in runs
         ] + [
-            {"name": item.get("context"), "status": "COMPLETED", "conclusion": str(item.get("state", "")).upper(), "observedAt": item.get("created_at")}
-            for item in statuses
+            {"name": item.get("context"), "status": "COMPLETED", "conclusion": str(item.get("state", "")).upper(), "observedAt": item.get("created_at"), "source": "status"}
+            for item in statuses.values()
         ]
-        return {"head": pull["head"]["sha"], "merged": bool(pull.get("merged")), "mergedAt": pull.get("merged_at"), "mergeCommit": pull.get("merge_commit_sha"), "checks": sorted(checks, key=lambda item: str(item["name"]))}
+        # REST reports a merged pull request as closed and gives an unmerged one
+        # its test merge commit; GraphQL reports MERGED and no merge commit.
+        merged = bool(pull.get("merged"))
+        state = "MERGED" if merged else str(pull.get("state") or "").upper() or None
+        return {"head": pull["head"]["sha"], "state": state, "merged": merged, "mergedAt": pull.get("merged_at"), "mergeCommit": pull.get("merge_commit_sha") if merged else None, "checks": sorted(checks, key=lambda item: str(item["name"]))}
 
 
 def check_is_terminal(check: dict[str, Any]) -> bool:
@@ -128,6 +168,54 @@ def check_is_terminal(check: dict[str, Any]) -> bool:
     )
 
 
+def check_source(app: Any, workflow: Any, event: Any) -> str:
+    """What produced a check run: its app and, for Actions, workflow and event.
+
+    GraphQL gives no app for one the token cannot see, so such apps share a source.
+    """
+    return "/".join(str(part) for part in (app, workflow, event) if part is not None)
+
+
+def checks_by_name(observation: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    """The current contexts of each check name from each source.
+
+    A source's newer check suite replaces its older one: a re-run, a run
+    cancelled by a newer one, or a re-check after a pull request edit. GitHub
+    numbers suites in creation order, while a job's start time can come after
+    a newer run's. Sources differ by app, workflow and event, so one workflow
+    triggered by both push and pull_request has two current runs. A commit
+    status has no suite and counts by its latest state.
+    """
+    def order(check: dict[str, Any]) -> tuple[int, str]:
+        suite = check.get("suite")
+        return (suite, "") if suite else (0, str(check.get("observedAt") or ""))
+
+    current: dict[tuple[str, Any], list[dict[str, Any]]] = {}
+    for check in observation.get("checks", []):
+        key = (str(check.get("name")), check.get("source"))
+        kept = current.get(key)
+        if not kept or order(check) > order(kept[0]):
+            current[key] = [check]
+        elif order(check) == order(kept[0]):
+            kept.append(check)
+    observed: dict[str, list[dict[str, Any]]] = {}
+    for (name, _source), checks in current.items():
+        observed.setdefault(name, []).extend(checks)
+    return observed
+
+
+def check_failed(check: dict[str, Any]) -> bool:
+    return check_is_terminal(check) and str(check.get("conclusion", "")).upper() not in PASSING_CHECK_CONCLUSIONS
+
+
+def failed_checks(expected: set[str], observed: dict[str, list[dict[str, Any]]]) -> list[str]:
+    """Expected check names with at least one context that ended without passing."""
+    return sorted(
+        name for name in expected & set(observed)
+        if any(check_failed(check) for check in observed[name])
+    )
+
+
 def classify_pr(
     kind: str,
     expected_head: str,
@@ -137,24 +225,23 @@ def classify_pr(
     if observation.get("head") != expected_head:
         return "invalidated", f"expected head {expected_head}, observed {observation.get('head')}"
     if kind == "pr-merged":
-        return ("satisfied", "pull request merged") if observation.get("merged") else ("waiting", "pull request remains open")
-    observed: dict[str, dict[str, Any]] = {}
-    for check in observation.get("checks", []):
-        name = str(check.get("name"))
-        current = observed.get(name)
-        if current is None or str(check.get("observedAt") or "") >= str(
-            current.get("observedAt") or ""
-        ):
-            observed[name] = check
+        if observation.get("merged"):
+            return "satisfied", "pull request merged"
+        if observation.get("state") == "CLOSED":
+            return "changed", "pull request was closed without merging"
+        return "waiting", "pull request remains open"
+    observed = checks_by_name(observation)
+    failed = failed_checks(expected_checks, observed)
+    if failed:
+        # One failed check decides the result; the others need not finish.
+        return "changed", f"a check reached a non-success terminal result: {', '.join(failed)}"
     missing = expected_checks - set(observed)
     if missing:
         return "waiting", f"expected checks have not appeared: {', '.join(sorted(missing))}"
-    checks = [observed[name] for name in sorted(expected_checks)]
-    if not checks or any(not check_is_terminal(check) for check in checks):
+    if not expected_checks or not all(
+        check_is_terminal(check) for name in expected_checks for check in observed[name]
+    ):
         return "waiting", "checks are not terminal"
-    successful = {"SUCCESS", "NEUTRAL", "SKIPPED"}
-    if any(str(check.get("conclusion", "")).upper() not in successful for check in checks):
-        return "changed", "a check reached a non-success terminal result"
     return "satisfied", "all expected checks are terminal-success"
 
 
@@ -165,8 +252,8 @@ query($owner:String!,$name:String!,$number:Int!){
 """
 
 
-# GitHub Actions run and job conclusions that pass, matching the check-context
-# convention in classify_pr. Every other terminal conclusion is a failure.
+# GitHub Actions run and job conclusions that pass, matching
+# PASSING_CHECK_CONCLUSIONS. Every other terminal conclusion is a failure.
 PASSING_WORKFLOW_CONCLUSIONS = {"success", "neutral", "skipped"}
 
 
@@ -291,13 +378,13 @@ class WorkflowCensusGate:
 
     def failures(self, observation: dict[str, Any]) -> list[str]:
         failures = workflow_failures(observation)
-        if self.checks and classify_pr("checks-terminal", self.head, self.checks, observation)[0] == "changed":
-            failures += sorted(
-                f"check {check.get('name')}: {str(check.get('conclusion')).lower()}"
-                for check in observation.get("checks", [])
-                if check.get("name") in self.checks and check_is_terminal(check)
-                and str(check.get("conclusion", "")).upper() not in {"SUCCESS", "NEUTRAL", "SKIPPED"}
-            )
+        observed = checks_by_name(observation)
+        failures += [
+            f"check {name}: " + ", ".join(sorted({
+                str(check.get("conclusion")).lower() for check in observed[name] if check_failed(check)
+            }))
+            for name in failed_checks(self.checks, observed)
+        ]
         return failures
 
     def __call__(self, observation: dict[str, Any]) -> tuple[str, str]:
@@ -380,6 +467,35 @@ def tag_snapshot(gh: Gh, repo: str, tag: str) -> dict[str, Any]:
             else:
                 raise
         return {"tag": tag, "target": oid, "release": None if release is None else {"draft": release.get("draft"), "prerelease": release.get("prerelease"), "url": release.get("html_url"), "assets": sorted(asset.get("name") for asset in release.get("assets", []))}}
+
+
+def legacy_checks_digests(observation: dict[str, Any]) -> set[str]:
+    """Digests that helpers before 2026-10 saved for a checks-terminal observation.
+
+    Their key listed every terminal check that did not succeed, named or not.
+    Only a wait on the same head reuses a checkpoint, so this can go once the
+    heads awaited before 2026-10 are merged or abandoned.
+    """
+    names = sorted(
+        check.get("name") for check in observation.get("checks", [])
+        if check_is_terminal(check) and str(check.get("conclusion", "")).upper() != "SUCCESS"
+    )
+    return {
+        stable_digest({"head": observation.get("head"), "nonSuccess": names, "terminal": terminal})
+        for terminal in (False, True)
+    }
+
+
+def rekey_legacy_checkpoint(path: Path | None, identity: dict[str, Any], transition_key: Any) -> None:
+    """Re-digest a checkpoint saved under the old key, so upgrading is not a change."""
+    prior = load_state(path)
+    observation = (prior or {}).get("observation")
+    # Another wait's checkpoint is invalidated, never rewritten.
+    if not observation or prior.get("kind") != "checks-terminal" or prior.get("identity") != identity:
+        return
+    digest = stable_digest(transition_key(observation))
+    if prior.get("digest") != digest and prior.get("digest") in legacy_checks_digests(observation):
+        write_state(path, {**prior, "digest": digest})
 
 
 def parser() -> argparse.ArgumentParser:
@@ -511,14 +627,11 @@ def main() -> int:
                         return {"head": value.get("head"), "failures": gate.failures(value)}
                     if args.kind == "checks-terminal":
                         terminal = classify(value)[0]
+                        # Only the named checks can wake the wait, judged as classify_pr
+                        # judges them.
                         return {
                             "head": value.get("head"),
-                            "nonSuccess": sorted(
-                                check.get("name")
-                                for check in value.get("checks", [])
-                                if check_is_terminal(check)
-                                and str(check.get("conclusion", "")).upper() != "SUCCESS"
-                            ),
+                            "nonSuccess": failed_checks(set(args.check), checks_by_name(value)),
                             "terminal": terminal == "satisfied",
                         }
                     if args.kind == "pr-merged":
@@ -538,6 +651,8 @@ def main() -> int:
                 deadline = parse_time(args.deadline)
                 args.interval = positive_interval(args.interval)
                 with StateLock(state_path):
+                    if args.kind == "checks-terminal" and not args.all_workflows:
+                        rekey_legacy_checkpoint(state_path, identity, transition_key)
                     output = wait_for_transition(kind=args.kind, identity=identity, observe=observe, classify=classify, state_path=state_path, deadline=deadline, interval=args.interval, metrics=metrics, transition_key=transition_key)
         emit(output, args.json)
         return 0
