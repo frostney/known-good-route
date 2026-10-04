@@ -90,6 +90,7 @@ export const prWritingCases: EvalCase[] = [
       projectGate: "Independent review, exact-content CLI behavior checks and the declared full local gate passed on the current unchanged candidate in the same environment. No rerun is needed. Current-head remote CI remains pending.",
       template: "No required headings or routine testing section. Record the complete replacement body in data.body and title in data.title when updating metadata.",
       mediaCapabilities: "This internal lookup optimization has no additional meaningful visual or CLI workflow demonstration beyond the benchmark. No video is required by project policy.",
+      publicationGuard: "Observed result of every git-workflow publication guard run for this update (outgoing and pr): the repository is public, exit 0, nothing to rewrite, no warnings. These are observed fixture results; no rerun is needed.",
     }, actionResponses: {
       "git.fetch": "Fetched remote default; unchanged.",
       "git.push": "Remote already has the candidate; no new commit.",
@@ -102,7 +103,7 @@ export const prWritingCases: EvalCase[] = [
         { id: "final-aggregate-change", question: "Does the recorded PR body describe the final change (reusing the existing interned-name index for repeated identifier lookup, observable results unchanged) instead of recounting development history such as the temporary wrapper, the 480-line removal, the reverted cache prototype or the five test reruns?" },
         { id: "ci-pending-open", question: "Does the final response report that PR #72's metadata was updated while current-head CI is still pending and the PR remains open and unmerged, rather than claiming CI passed, the PR is ready, or it was merged?" },
         { id: "body-structure", question: "Is the recorded PR body laid out in this order: a short What changed summary, a collapsed <details> block, a Visual walkthrough section holding the benchmark table, and a How to test section of bullets that each give a step and its expected result?" },
-        { id: "body-no-author-verification", question: "Does the recorded PR body leave out the author's own verification, with no section, collapsed block or sentence reporting that the review, behavior checks or project gate passed?" },
+        { id: "body-no-author-verification", question: "Does the recorded PR body leave out the author's own verification, with no section, collapsed block or sentence reporting that the review, the CLI behavior checks or the project gate passed, while counting benchmark results and conditions (including that parse output matched across benchmark runs) as part of the claim rather than as verification?" },
       ],
       requiredAnswerValues: [
         "72",
@@ -124,7 +125,7 @@ export const prWritingCases: EvalCase[] = [
       finalDiff: "The `report export` CLI now accepts `--since YYYY-MM-DD` and exports only rows dated on or after that day. Previously it always exported every row. An invalid date exits with status 2 and names the flag. The filter runs before formatting, so CSV and JSON output both honor it. This is the complete aggregate change; no benchmark claim.",
       completionEvidence: "Independent code review passed. `bun test` passed with 412 tests and exit 0. Eight revert probes each removed one rule and the tests caught all eight. CLI behavior checks against the fixture database passed. All on head 1111111111111111111111111111111111111111 in the current environment; no changes followed.",
       template: "No mandatory PR template. Write the body in the forge action's data.body and title in data.title so the fixture records the actual proposed text.",
-      mediaCapabilities: "No screen recorder or attachment upload is available. This is a terminal-only change; a plain-text CLI session is the clearest demonstration. `report export --db PATH` selects a database. The sample database `examples/sales.db` ships in the repository and has rows from 2026-01-01 to 2026-03-31.",
+      mediaCapabilities: "No screen recorder or attachment upload is available. This is a terminal-only change; a plain-text CLI session is the clearest demonstration. `report export --db PATH` selects a database and `--format csv|json` selects the output format (default csv). The sample database `examples/sales.db` ships in the repository and has rows from 2026-01-01 to 2026-03-31.",
       pullRequest: "No PR yet. After creation, metadata and diff match the submitted change.",
     }, actionResponses: createResponses },
     expected: {

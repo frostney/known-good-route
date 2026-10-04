@@ -2419,21 +2419,21 @@
       "rationale": [
         "Fresh bounded PR prose/media decision scenario; native Astra/Fable runs and manual review are declared in .agent/pr-writing-evaluation/PLAN.md.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
-        "PR body structure: rubric items require What changed, a <details> block, the benchmark table under Visual walkthrough and How to test bullets, and no author verification in the body; exact values check the four section markers. Rerun affected models."
+        "PR body structure: rubric items require What changed, a <details> block, the benchmark table under Visual walkthrough and How to test bullets, and no author verification in the body, where benchmark results and conditions are part of the claim; exact values check the four section markers. The fixture now reports the observed publication guard result. Rerun affected models."
       ],
       "beforeSha256": null,
-      "afterSha256": "68eb41b9fcb64992da8641af70ddd0603c75892c38ba2115c116eb8d9dfc2d57",
+      "afterSha256": "f8d2821f28431ab16fe5274f34b73c3cf3a15e6328afebc75558692421e3fe34",
       "frozenCaseSha256": "02acd2b2a1949c2d0832f1f379fc3390bbbb2818c24913a3f0e19a0f13cf9397"
     },
     {
       "caseId": "pr-writing-structured-body",
       "status": "new",
       "rationale": [
-        "Fresh bounded PR body structure scenario: a terminal-only change with a linked issue gets What changed, a Closes line, a collapsed <details> block, a Visual walkthrough with a CLI session and runnable How to test bullets, with the author's verification only in the final response. Native runs are pending."
+        "Fresh bounded PR body structure scenario: a terminal-only change with a linked issue gets What changed, a Closes line, a collapsed <details> block, a Visual walkthrough with a CLI session and runnable How to test bullets, with the author's verification only in the final response. The fixture names the output-format flag so How to test can give an exact command for the JSON run."
       ],
       "beforeSha256": null,
-      "afterSha256": "b4e6bbd83bea7c6d439218a31c005d8337655157867463b688979b9359d4eeed",
-      "frozenCaseSha256": "b4e6bbd83bea7c6d439218a31c005d8337655157867463b688979b9359d4eeed"
+      "afterSha256": "93721624536e1cb59d3d80a1b651779f02ad216ccb30a93018851bfa9d48918e",
+      "frozenCaseSha256": "93721624536e1cb59d3d80a1b651779f02ad216ccb30a93018851bfa9d48918e"
     },
     {
       "caseId": "pr-writing-reuse-complete-walkthrough",
