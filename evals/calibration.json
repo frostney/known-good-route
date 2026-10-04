@@ -2394,10 +2394,11 @@
       "status": "new",
       "rationale": [
         "Fresh bounded PR prose/media decision scenario; native Astra/Fable runs and manual review are declared in .agent/pr-writing-evaluation/PLAN.md.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "PR body structure: the shared create-pr evidence now reports the observed publication guard result, which create-pr has required since the guard was added; without it a model cannot confirm the guard before pushing and stops or runs an unrequested validation. Rerun affected models."
       ],
       "beforeSha256": null,
-      "afterSha256": "9c1a959fddb70525282743685f7b981c30e87e2778cb54121053c805fafbcd06",
+      "afterSha256": "6a46bc11d25fe53f8079f088cb338514a9c25077e1f4ec90070b89215e356d86",
       "frozenCaseSha256": "a9a0c841e95ff78aa10ec3cdb5f970aaa1caf41433c52f67bba57b942803e975"
     },
     {
@@ -2405,10 +2406,11 @@
       "status": "new",
       "rationale": [
         "Fresh bounded PR prose/media decision scenario; native Astra/Fable runs and manual review are declared in .agent/pr-writing-evaluation/PLAN.md.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "PR body structure: the shared create-pr evidence now reports the observed publication guard result, which create-pr has required since the guard was added; without it a model cannot confirm the guard before pushing and stops or runs an unrequested validation. Rerun affected models."
       ],
       "beforeSha256": null,
-      "afterSha256": "a5f762430dcc2235cf5807babd49f907aff8aa7aa3e579a3338ea5fdf6df1b62",
+      "afterSha256": "7a413c6bf58f91e7a5075a0c56e689054765a1a2c6ad0b8ba61ca42a601ccf2f",
       "frozenCaseSha256": "12ea8bfeb59c04a9376b58ac579b480a5cf1a6e667d12a25b28f388ab8031aec"
     },
     {
@@ -2416,21 +2418,33 @@
       "status": "new",
       "rationale": [
         "Fresh bounded PR prose/media decision scenario; native Astra/Fable runs and manual review are declared in .agent/pr-writing-evaluation/PLAN.md.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "PR body structure: rubric items require What changed, a <details> block, the benchmark table under Visual walkthrough and How to test bullets, and no author verification in the body; exact values check the four section markers. Rerun affected models."
       ],
       "beforeSha256": null,
-      "afterSha256": "20e213edece26a6a224f2ffc0a098cce458fadfbc0713fa49debd8c7ce5c95f2",
+      "afterSha256": "68eb41b9fcb64992da8641af70ddd0603c75892c38ba2115c116eb8d9dfc2d57",
       "frozenCaseSha256": "02acd2b2a1949c2d0832f1f379fc3390bbbb2818c24913a3f0e19a0f13cf9397"
+    },
+    {
+      "caseId": "pr-writing-structured-body",
+      "status": "new",
+      "rationale": [
+        "Fresh bounded PR body structure scenario: a terminal-only change with a linked issue gets What changed, a Closes line, a collapsed <details> block, a Visual walkthrough with a CLI session and runnable How to test bullets, with the author's verification only in the final response. Native runs are pending."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "b4e6bbd83bea7c6d439218a31c005d8337655157867463b688979b9359d4eeed",
+      "frozenCaseSha256": "b4e6bbd83bea7c6d439218a31c005d8337655157867463b688979b9359d4eeed"
     },
     {
       "caseId": "pr-writing-reuse-complete-walkthrough",
       "status": "new",
       "rationale": [
         "Fresh bounded PR prose/media decision scenario; native Astra/Fable runs and manual review are declared in .agent/pr-writing-evaluation/PLAN.md.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "PR body structure: the shared create-pr evidence now reports the observed publication guard result, which create-pr has required since the guard was added; without it a model cannot confirm the guard before pushing and stops or runs an unrequested validation. Rerun affected models."
       ],
       "beforeSha256": null,
-      "afterSha256": "1a6e3d087dfc7f16d6d7083c52b4baa342dd2104a8e3857f97df327b74602b6f",
+      "afterSha256": "a04bba533170377dccc78d54cdca036c172423ce16d0932e52dabd15e99bd77e",
       "frozenCaseSha256": "2653170bc86e1cb418561c3629e84c27c7d61b9d6b29b104a6d087bd1e519b5d"
     },
     {

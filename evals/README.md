@@ -9,9 +9,10 @@ The larger suite below is supporting regression and diagnostic infrastructure;
 its full model matrix is not a mandatory gate for every skill edit.
 
 For PR description and walkthrough changes, select cases that cover final-change
-writing, explicit Testing templates, current before/after evidence and incomplete
-media capabilities. Assess whether the agent reports each missing requirement
-and remedy while continuing otherwise-authorized publication. The contracts live
+writing, the default body structure, explicit Testing templates, current
+before/after evidence and incomplete media capabilities. Assess whether the
+agent reports each missing requirement and remedy while continuing
+otherwise-authorized publication. The contracts live
 in [PR descriptions](../agent-writing/references/pr-descriptions.md) and
 [walkthroughs](../create-pr/references/walkthroughs.md).
 
@@ -42,18 +43,20 @@ executable, for example a newer version in a temporary cache. Existing global
 installations and login files are not modified. `codex:gpt-6.1-sol` needs Codex
 CLI 0.159.3 or later; 0.157.1 rejects it for a ChatGPT login.
 
-For PR description and walkthrough decisions, run the four focused cases:
+For PR description and walkthrough decisions, run the five focused cases:
 
 ```bash
 bun run eval -- --model codex:gpt-6-astra --model claude:claude-fable-5-1 \
   --case pr-writing-ui-media-unavailable \
   --case pr-writing-docs-required-template \
   --case pr-writing-performance-update \
+  --case pr-writing-structured-body \
   --case pr-writing-reuse-complete-walkthrough
 ```
 
 These cover nonblocking media gaps with actionable user reports, required
-templates, final-change benchmark comparisons and reuse of verified media.
+templates, final-change benchmark comparisons, the default body structure
+without author verification and reuse of verified media.
 The media and publication observations are simulated; the runs do not capture,
 synthesize or upload a video. Inspect the complete reports as well as automated
 grades: a correct workflow can still contain an unsupported environment claim.
