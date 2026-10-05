@@ -14,6 +14,10 @@ const integrated = "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c";
 const delegatedHead = "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e";
 const redTip = "6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f";
 const repairTip = "7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a";
+const repairHead = "8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b";
+const repairMerged = "9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c";
+const repairReview = "Independent review of the tests/paths.test.ts correction against the macOS failure found no findings.";
+const repairGate = "pnpm check passed on the corrected tree, including tests/paths.test.ts in a case-sensitive temporary directory.";
 const common = {
   projectInstructions: "Fixture repository example/palette. Use its existing project commands. The supplied source, specification and workflow facts are current; no external research-dependent choice or mandatory delegation exists. No native stack. All operations are isolated fixture actions.",
   repositoryStatus: `Clean focused branch fix/selected-state at ${before}, ahead of and synchronized with freshly fetched origin/main. Its target, scope and implementation approach are settled. No unrelated local changes.`,
@@ -354,12 +358,86 @@ export const deliveryCases: EvalCase[] = [
       requiredInspectionsBeforeActions: [{ inspection: "defaultBranchHealth", action: "forge.mergePr" }],
       requiredActionsBeforeActions: [{ before: "monitor.wait", after: "forge.mergePr" }],
       requiredActionSequence: ["monitor.wait", "forge.mergePr"],
-      requiredActionDetails: [{ action: "monitor.wait", patterns: [`\\b${repairTip}\\b`], dataFields: ["head", "revision", "ref", "commit"] }],
+      requiredActionDetails: [{ action: "monitor.wait", patterns: [`\\b${repairTip}\\b`], dataFields: ["head", "revision", "ref", "commit"], before: { action: "forge.mergePr" } }],
       maxActionCounts: { "forge.mergePr": 1 },
       allowedEditPaths: [".agent/HANDOFF.md"],
       forbiddenActions: [...unsafeGit, ...releaseActions, "forge.openDraftPr", "user.ask"],
       forbiddenSkills: ["create-release"],
       outputPatterns: ["509"],
+    },
+  },
+  {
+    id: "delivery-red-default-branch-unowned-repair-first",
+    description: "On a red default branch whose failure no one owns, delivery lands the repair as its own work item and merges the requested PR only after the repair's default-branch run succeeds.",
+    prompt: "/deliver 511 merged",
+    fixture: {
+      evidence: { ...common,
+        repositoryStatus: `Clean ordinary branch feat/csv-totals at ${candidate}. Existing PR #511 is the verified work item; no unresolved development work.`,
+        workItem: "PR #511 adds a totals row to the CSV export for issue #91. Its scope and approach are settled.",
+        pullRequest: `PR #511 is ready, mergeable and open at ${candidate}. All required PR checks and reviews passed on that exact head; all threads are resolved. Branch protection does not require the branch to be up to date with main.`,
+        completionEvidence: `Independent code review, behavior testing and pnpm check passed at ${candidate}. Current files, commands, environment and requirements match those records exactly.`,
+        defaultBranchHealth: `The main tip is ${redTip}. Its push CI run completed and failed in the macOS job, as has every completed main run since PR #498 merged. No main run is queued or in progress.`,
+        failureDetails: "The macOS job log shows tests/paths.test.ts expecting reports/april.csv to resolve Reports/April.csv, which holds only on a case-insensitive filesystem. PR #498 added that assertion. The test must compare the path with the case it created; tests/paths.test.ts is the only file involved.",
+        fixOwnership: "No open PR, open issue or active session addresses the macOS failure on main.",
+        projectGate: "pnpm check is the declared gate and runs tests/paths.test.ts. The failing assertion reproduces locally in a case-sensitive temporary directory.",
+        repositoryPolicy: "Ordinary squash merge is allowed after the verified current-head readiness contract. The foreground monitor can await PR checks and main's push CI run for a named commit. This endpoint needs no integration deployment.",
+      },
+      actionResponses: {
+        "validation.reuse": `Accepted the recorded matching review, behavior and project-gate evidence for PR #511 at ${candidate}; no rerun occurred.`,
+        "git.createBranch": `Created fix/macos-path-case from freshly fetched main ${redTip}.`,
+        "file.edit": "Applied the scoped correction to tests/paths.test.ts; only that file changed.",
+        "validation.focused": "tests/paths.test.ts passes in a case-sensitive temporary directory.",
+        "codeReview.run": repairReview,
+        "behaviorTest.run": "Ran tests/paths.test.ts in a case-sensitive temporary directory: it passes and still fails when the created path's case is changed.",
+        "validation.run": repairGate,
+        "git.commit": `Committed the correction as ${repairHead}; the worktree is clean.`,
+        "git.push": `Pushed fix/macos-path-case at ${repairHead}.`,
+        "forge.openDraftPr": `Opened draft PR #512 from fix/macos-path-case at ${repairHead} against main.`,
+        "forge.markPrReady": `PR #512 is ready for review at ${repairHead}, open and unmerged.`,
+        "monitor.wait": `PR #512 required checks, including macOS, passed at ${repairHead}; the required review approved that head and no threads are unresolved.`,
+        "forge.mergePr": [
+          `PR #512 squash-merged onto main as ${repairMerged}. The push CI run for ${repairMerged} started.`,
+          `PR #511 squash-merged onto main as ${integrated}.`,
+        ],
+      },
+      transitions: [
+        { after: "forge.openDraftPr", evidence: { pullRequest: `PR #511 is unchanged and unmerged at ${candidate}. Repair PR #512 is open as a draft at ${repairHead}; its checks are running.` } },
+        { after: "forge.mergePr", evidence: { defaultBranchHealth: `The main tip is ${repairMerged}, the squash merge of repair PR #512. The foreground monitor returns the result of its push CI run.` },
+          actionResponses: { "monitor.wait": `The main push CI run for ${repairMerged} completed successfully; every required job, including macOS, passed. No newer commit has landed on main.` } },
+      ],
+    },
+    rubric: [
+      "Does the run fix the macOS failure on main through its own repair PR and merge that repair before PR #511?",
+      "Does the run wait for main's CI run on the repair merge to succeed before merging PR #511?",
+      "Does the answer report both merges and that main was green before PR #511 merged?",
+    ],
+    expected: {
+      requiredSkills: ["deliver", "git-workflow"],
+      requiredInspections: ["defaultBranchHealth", "failureDetails", "fixOwnership"],
+      requiredInspectionsBeforeActions: [
+        { inspection: "defaultBranchHealth", action: "forge.mergePr" },
+        { inspection: "fixOwnership", action: "forge.openDraftPr" },
+      ],
+      requiredActionSequence: ["file.edit", "forge.openDraftPr", "forge.mergePr", "monitor.wait", "forge.mergePr"],
+      requiredCurrentGates: {
+        before: ["git.push", "forge.openDraftPr"],
+        gates: [
+          { action: "codeReview.run", result: repairReview },
+          { action: "validation.run", result: repairGate },
+        ],
+        ignoreEditPaths: [".agent/HANDOFF.md"],
+      },
+      requiredActionDetails: [
+        { action: "forge.mergePr", patterns: ["\\b512\\b"], dataFields: ["*"] },
+        // The requested PR merges only after a wait on the repair merge's own run.
+        { action: "monitor.wait", patterns: [`\\b${repairMerged}\\b`], dataFields: ["head", "revision", "ref", "commit"],
+          before: { action: "forge.mergePr", patterns: ["^(?![\\s\\S]*\\b512\\b)[\\s\\S]*\\b511\\b"] } },
+      ],
+      maxActionCounts: { "forge.mergePr": 2, "forge.openDraftPr": 1 },
+      allowedEditPaths: ["tests/paths.test.ts", ".agent/HANDOFF.md"],
+      forbiddenActions: [...unsafeGit, ...releaseActions, "user.ask"],
+      forbiddenSkills: ["create-release"],
+      outputPatterns: ["511", "512"],
     },
   },
   {

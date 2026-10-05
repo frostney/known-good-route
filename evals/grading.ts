@@ -252,7 +252,19 @@ export function gradeRun(
   }
 
   for (const requirement of expected.requiredActionDetails ?? []) {
-    const details = ledger.actions
+    const limit = requirement.before;
+    const end = limit
+      ? ledger.actions.findIndex(
+          (a) =>
+            a.action === limit.action &&
+            (limit.patterns ?? []).every((pattern) =>
+              new RegExp(pattern, "i").test(
+                `${actionText(a)}\n${JSON.stringify(a.data ?? {})}`,
+              ),
+            ),
+        )
+      : -1;
+    const details = (end < 0 ? ledger.actions : ledger.actions.slice(0, end))
       .filter((a) => a.action === requirement.action)
       .map((a) =>
         [
@@ -272,7 +284,9 @@ export function gradeRun(
         new RegExp(pattern, "i").test(text),
       );
     checks.push({
-      name: `${requirement.action} evidence`,
+      name: limit
+        ? `${requirement.action} evidence before ${limit.action}`
+        : `${requirement.action} evidence`,
       passed:
         details.length > 0 &&
         (requirement.every ? details.every(matches) : details.some(matches)),
@@ -525,7 +539,7 @@ export function validateCases(
       ...(evalCase.expected.reportPatterns ?? []),
       ...(evalCase.expected.forbiddenOutputPatterns ?? []),
       ...(evalCase.expected.requiredActionDetails ?? []).flatMap(
-        (r) => r.patterns,
+        (r) => [...r.patterns, ...(r.before?.patterns ?? [])],
       ),
     ]) {
       try {

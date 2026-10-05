@@ -2457,11 +2457,21 @@
       "caseId": "delivery-red-default-branch-waits-for-repair",
       "status": "new",
       "rationale": [
-        "Rebuilt from a run of parallel deliveries that kept merging onto a default branch whose push CI had failed for hours, each merge cancelling the previous run. A ready PR must not merge while the repair's run on the default-branch tip is in progress; delivery waits for that tip's own run to succeed, then merges. Fresh native run required."
+        "Rebuilt from a run of parallel deliveries that kept merging onto a default branch whose push CI had failed for hours, each merge cancelling the previous run. A ready PR must not merge while the repair's run on the default-branch tip is in progress; delivery waits for that tip's own run to succeed, then merges. The wait must name the tip and precede the merge. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "f7079a51793edd55c19370857ffcbeb238be29368373d87a0a1763a0864b5b09",
-      "frozenCaseSha256": "f7079a51793edd55c19370857ffcbeb238be29368373d87a0a1763a0864b5b09"
+      "afterSha256": "e75407152602574361425232ae4067d7d563d67fc6d5c16380d0b6686d94d556",
+      "frozenCaseSha256": "e75407152602574361425232ae4067d7d563d67fc6d5c16380d0b6686d94d556"
+    },
+    {
+      "caseId": "delivery-red-default-branch-unowned-repair-first",
+      "status": "new",
+      "rationale": [
+        "The core of the same incident: the default branch is red, no PR, issue or session owns the failure, and an unrelated PR is ready. Delivery must land the repair as its own work item, wait for the repair merge's own default-branch run to succeed, and only then merge the requested PR. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "6f3f88dd5ebbfda5285cf8a0699ee7768b2cb6613af7017e656ad8c51ac72a98",
+      "frozenCaseSha256": "6f3f88dd5ebbfda5285cf8a0699ee7768b2cb6613af7017e656ad8c51ac72a98"
     },
     {
       "caseId": "create-pr-dependency-on-hand-based-pr-stops",

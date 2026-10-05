@@ -120,23 +120,31 @@ Act on its result:
 
 ## Default-branch health
 
-Work starts and lands only on a green default branch. It is green when the
-project's required integration CI succeeded for the current default-branch tip
-commit, judged by the newest completed run for that commit. Match runs to the
-tip itself: a run for an earlier commit says nothing about the tip. A failed
-run makes the branch red. A queued, in-progress, cancelled or superseded run is
-not green.
+Establish the default branch's health before new work starts, and recheck it
+immediately before each merge. Check the CI the project requires on
+default-branch commits, such as its push CI, not an integration deployment.
+Judge the current tip commit by its newest completed run; a run for an earlier
+commit says nothing about the tip.
 
-- When it is red, getting it green comes first. Identify the failing job and its
-  cause, then look for an owner of the fix: an open PR, an issue or another
-  session. Without one, deliver the repair as its own work item through
-  `/deliver` and land it before any other work. Independent local
-  investigation can continue; nothing else merges.
-- Merge onto a red default branch only the repair itself. While the repair's
-  run, or another run that can turn the branch green, is in flight, do not
-  merge anything that would supersede or cancel it; wait for its result.
-- The rule is strict by default. Only the person or the project can relax it,
-  explicitly, for example to let an unrelated docs-only change land.
+- **Green:** that run succeeded, or the project requires no CI on
+  default-branch commits. Work starts and merges.
+- **Pending:** the tip has no completed run yet, and one is queued or in
+  progress. Pending is not green: await its result with `delivery-wait` before
+  starting or merging, and never merge anything that would supersede or cancel
+  it.
+- **No result:** the tip's newest run was cancelled or superseded with nothing
+  replacing it, or it has no run. This is not green either. Rerun or trigger
+  its required CI where the project allows; otherwise report it.
+- **Red:** that run failed. Getting it green comes first, and only its repair
+  starts or merges. Identify the failing job and its cause, then look for an
+  owner of the fix: an open PR, an issue or another session. When no one owns
+  it and the active request authorizes merging, deliver the repair as its own
+  work item through `/deliver` and land it first. Otherwise report the failing
+  job, its cause and the repair it needs. Independent local investigation can
+  continue; nothing else starts development or merges.
+
+The rule is strict by default. Only the person or the project can relax it,
+explicitly, for example to let an unrelated docs-only change land.
 
 ## Merge
 

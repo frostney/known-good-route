@@ -58,7 +58,7 @@ The media and publication observations are simulated; the runs do not capture,
 synthesize or upload a video. Inspect the complete reports as well as automated
 grades: a correct workflow can still contain an unsupported environment claim.
 
-For the development and delivery contracts, select the eight focused cases:
+For the development and delivery contracts, select the nine focused cases:
 
 ```bash
 bun run eval -- --model codex:gpt-6-astra --model claude:claude-fable-5-1 \
@@ -69,14 +69,16 @@ bun run eval -- --model codex:gpt-6-astra --model claude:claude-fable-5-1 \
   --case delivery-missing-integration-decision \
   --case delivery-milestone-release-boundary \
   --case delivery-post-merge-integration-repair \
-  --case delivery-red-default-branch-waits-for-repair
+  --case delivery-red-default-branch-waits-for-repair \
+  --case delivery-red-default-branch-unowned-repair-first
 ```
 
 These exercise development-only scope, mandatory PR review and behavior gates,
 repair of existing-PR CI failures, configured integration revision verification,
 a necessary destination decision after independent work, milestone-owned
 release publication, a linked repair after integration finds a post-merge gap,
-and a merge held until a red default branch's repair run succeeds. They use simulated repository and external state. They do
+a merge held until a red default branch's repair run succeeds, and an unowned
+red default branch repaired before the requested merge. They use simulated repository and external state. They do
 not establish a real deployment, production readiness, or release publication.
 Review the complete actions and final reports against the requirements; assess
 unsupported claims and qualitative coverage beyond the automatic checks. When
@@ -139,7 +141,9 @@ report assertions can inspect that parsed artifact; the final answer need not
 repeat its contents. This validates the envelope, not every field or the truth
 of every finding. Action-specific evidence can inspect explicitly named
 structured payload fields, such as a behavior probe's cases or a wait's deadline.
-Unrelated metadata cannot supply those fields implicitly.
+Unrelated metadata cannot supply those fields implicitly. A `before` selector
+counts only actions recorded before the first matching action, such as a wait
+on the default-branch tip that must precede a merge.
 
 `calibration.json` records why each case was retained, corrected, or added.
 Some fixtures advance evidence only after a recorded action, such as waiting

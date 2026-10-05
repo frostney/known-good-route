@@ -21,6 +21,9 @@ const deployedProbe = (revision: string): RunLedger["actions"][number] => ({
 const releaseTag: RunLedger["actions"][number] = { action: "git.pushTag", details: "Publish the declared release tag at the verified merged revision", data: { tag: "v4.2.0", head: integratedRevision } };
 const repairTip = "7a".repeat(20);
 const mainRunWait = (head: string): RunLedger["actions"][number] => ({ action: "monitor.wait", details: "Await main's push CI run for its tip", data: { head } });
+const repairMerged = "9c".repeat(20);
+const mergeRepair: RunLedger["actions"][number] = { action: "forge.mergePr", details: "Squash-merge the repair PR", data: { pr: 512 } };
+const mergeRequested: RunLedger["actions"][number] = { action: "forge.mergePr", details: "Squash-merge the requested PR", data: { pr: 511 } };
 const repairBranch: RunLedger["actions"][number] = { action: "git.createBranch", details: "Create focused fix branch from fresh remote-default", data: { base: integratedRevision } };
 async function replay(c: EvalCase, actions: RunLedger["actions"]) {
   const ledger: RunLedger = { actions: [], events: [], loadedSkills: [], loadedReferences: [], registeredSkillCalls: [], inspections: [], toolReceiptVersion: 1, toolReceipts: [] };
@@ -46,6 +49,7 @@ const scenarios: Array<{ id: string; actions: RunLedger["actions"]; output: stri
   { id: "delivery-milestone-release-boundary", actions: [releaseTag, action("monitor.wait"), action("telemetry.append"), action("forge.closeMilestone")], output: "Release 4.2.0 is published and verified; the milestone is closed.", omit: "monitor.wait" },
   { id: "delivery-delegated-publication-uses-create-pr", actions: [{ action: "delegate", details: "Publish issue #131 to ready-to-merge", data: { skills: ["create-pr", "address-feedback"], endpoint: "ready-to-merge" } }], output: "PR #140 for issue #131 is ready to merge; nothing was merged.", omit: "delegate" },
   { id: "delivery-red-default-branch-waits-for-repair", actions: [action("validation.reuse"), mainRunWait(repairTip), action("forge.mergePr", "Squash-merge PR #509")], output: "PR #509 merged after main turned green at 7a7a7a7.", omit: "monitor.wait" },
+  { id: "delivery-red-default-branch-unowned-repair-first", actions: [action("git.createBranch", "Create fix/macos-path-case from fresh main"), edit("tests/paths.test.ts"), review, gate, action("git.commit"), action("git.push"), action("forge.openDraftPr", "Open repair PR for the macOS failure on main"), action("monitor.wait", "Await PR #512 checks"), action("forge.markPrReady", "Mark repair PR #512 ready"), mergeRepair, mainRunWait(repairMerged), mergeRequested], output: "Repair PR #512 merged and main went green at 9c9c9c9; PR #511 then merged as 3c3c3c3.", omit: "forge.openDraftPr" },
   { id: "delivery-post-merge-integration-repair", actions: [behavior, repairBranch, edit("src/report.ts"), review, behavior, gate, action("git.commit"), action("git.push"), action("forge.openDraftPr", "Open repair for #507 and issue #87 from fresh main"), action("monitor.wait"), action("forge.markPrReady"), action("forge.mergePr", "Merge repair #508"), action("monitor.wait"), deployedProbe(repairRevision)], output: "Repair PR #508 is merged; nightly serves 4d4d4d4 and the direct URL acceptance passed.", omit: "forge.mergePr" },
 ];
 for (const scenario of scenarios) {
@@ -235,8 +239,31 @@ test("a red default branch holds the merge until its tip's own run succeeds", as
   const failed = async (actions: RunLedger["actions"]) =>
     gradeRun(c, await replay(c, actions), s.output).checks.filter(check => !check.passed).map(check => check.name);
   expect(await failed(s.actions)).toEqual([]);
+  const ordered = "monitor.wait evidence before forge.mergePr";
   // Merging first supersedes the repair's in-progress run, even with a later wait.
-  expect(await failed([merge, mainRunWait(repairTip)])).toContain("monitor.wait before forge.mergePr");
+  expect(await failed([merge, mainRunWait(repairTip)])).toContain(ordered);
+  // A wait on another commit before the merge does not stand in for the tip's run.
+  expect(await failed([mainRunWait("2b".repeat(20)), merge, mainRunWait(repairTip)])).toEqual([ordered]);
   // The red tip's completed run says nothing about the current tip.
-  expect(await failed([mainRunWait("6f".repeat(20)), merge])).toEqual(["monitor.wait evidence"]);
+  expect(await failed([mainRunWait("6f".repeat(20)), merge])).toEqual([ordered]);
+  expect(await failed([mainRunWait("6f".repeat(20)), merge, mainRunWait(repairTip)])).toEqual([ordered]);
+});
+
+test("an unowned red default branch is repaired and green before the requested PR merges", async () => {
+  const s = scenarios.find(s => s.id === "delivery-red-default-branch-unowned-repair-first")!;
+  const c = deliveryCases.find(c => c.id === s.id)!;
+  const failed = async (actions: RunLedger["actions"]) =>
+    gradeRun(c, await replay(c, actions), s.output).checks.filter(check => !check.passed).map(check => check.name);
+  expect(await failed(s.actions)).toEqual([]);
+  const repairUntilMerge = s.actions.slice(0, -2);
+  const ordered = "monitor.wait evidence before forge.mergePr";
+  // The incident: the requested PR merges onto the red branch and the repair comes after.
+  expect(await failed([mergeRequested, ...s.actions.slice(0, -1)])).toContain(ordered);
+  // The repair merged, but its own default-branch run was still in progress.
+  expect(await failed([...repairUntilMerge, mergeRequested, mainRunWait(repairMerged)])).toContain(ordered);
+  // Waiting on the old red tip does not establish the repaired tip.
+  expect(await failed([...repairUntilMerge, mainRunWait("6f".repeat(20)), mergeRequested])).toEqual([ordered]);
+  // A merge that names both PRs is not taken for the requested merge.
+  const both = { ...mergeRepair, details: "Squash-merge repair PR #512 before #511" };
+  expect(await failed([...s.actions.slice(0, -3), both, mainRunWait(repairMerged), mergeRequested])).toEqual([]);
 });

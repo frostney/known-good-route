@@ -86,11 +86,10 @@ capability. Do not invent a successful handoff. Reuse matching evidence for
 unchanged content, command, environment and requirements; rerun only missing or
 invalidated checks. Preserve independent review judgment.
 
-A red default branch comes before this work item. Apply `git-workflow`'s
+Apply `git-workflow`'s
 [default-branch health](../git-workflow/SKILL.md#default-branch-health) gate
-before development starts and again before each merge. Its repair, when no one
-owns it, is a separate `/deliver` work item that lands first; this item's merge
-waits until the default branch is green.
+before development starts and again before each merge. A default-branch repair
+it calls for is a separate work item that comes before this one.
 
 Integration delivery and release publication are separate outcomes. Never
 invoke `/create-release` from this single-item loop or use a milestone release
