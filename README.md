@@ -66,8 +66,8 @@ flowchart TD
 `deliver` owns continuation through CI failures, feedback and integration checks.
 It updates the same open PR; a gap found after merge uses a linked repair PR and
 keeps the original work item active until integration verification succeeds.
-New work starts and merges land only on a green default branch; when it is
-red, its repair comes first.
+New work starts and merges land only on a green default branch, except the
+repair of a red one, which comes first.
 `implement` owns development: implement, run and inspect, review, test, and fix
 until every verified requirement gap is resolved. Visual quality is judged
 against agreed references and affected states, not inferred from passing tests.

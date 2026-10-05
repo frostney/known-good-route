@@ -2470,8 +2470,8 @@
         "The core of the same incident: the default branch is red, no PR, issue or session owns the failure, and an unrelated PR is ready. Delivery must land the repair as its own work item, wait for the repair merge's own default-branch run to succeed, and only then merge the requested PR. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "6f3f88dd5ebbfda5285cf8a0699ee7768b2cb6613af7017e656ad8c51ac72a98",
-      "frozenCaseSha256": "6f3f88dd5ebbfda5285cf8a0699ee7768b2cb6613af7017e656ad8c51ac72a98"
+      "afterSha256": "bd4b64bef639bebbf179d9c13414a68b9b04b1e17868a2154215be4bf0f668e9",
+      "frozenCaseSha256": "bd4b64bef639bebbf179d9c13414a68b9b04b1e17868a2154215be4bf0f668e9"
     },
     {
       "caseId": "create-pr-dependency-on-hand-based-pr-stops",

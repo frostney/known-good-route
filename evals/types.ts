@@ -80,9 +80,9 @@ export interface EvalExpectations {
     // "*" includes the action's complete data.
     dataFields?: string[];
     every?: boolean;
-    // Only actions recorded before the first action whose text and data match
-    // this selector count; with no such action, every action counts.
-    before?: { action: ActionName; patterns?: string[] };
+    // Only actions recorded before this occurrence (default 1) of the named
+    // action count; the check fails when that occurrence is absent.
+    before?: { action: ActionName; occurrence?: number };
   }>;
 
   requiredWorker?: boolean;

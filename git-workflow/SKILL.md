@@ -128,8 +128,8 @@ commit says nothing about the tip.
 
 - **Green:** that run succeeded, or the project requires no CI on
   default-branch commits. Work starts and merges.
-- **Pending:** the tip has no completed run yet, and one is queued or in
-  progress. Pending is not green: await its result with `delivery-wait` before
+- **Pending:** the tip has no succeeded or failed run yet, and one is queued
+  or in progress. Pending is not green: await its result with `delivery-wait` before
   starting or merging, and never merge anything that would supersede or cancel
   it.
 - **No result:** the tip's newest run was cancelled or superseded with nothing

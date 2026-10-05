@@ -263,7 +263,15 @@ test("an unowned red default branch is repaired and green before the requested P
   expect(await failed([...repairUntilMerge, mergeRequested, mainRunWait(repairMerged)])).toContain(ordered);
   // Waiting on the old red tip does not establish the repaired tip.
   expect(await failed([...repairUntilMerge, mainRunWait("6f".repeat(20)), mergeRequested])).toEqual([ordered]);
-  // A merge that names both PRs is not taken for the requested merge.
+  // Naming the repair in the requested merge, or no PR at all, does not hide its order.
+  for (const requested of [
+    { ...mergeRequested, details: "Merge PR #511 now that repair #512 landed" },
+    { action: "forge.mergePr" as const, details: "Squash-merge the requested PR" },
+  ])
+    expect(await failed([...repairUntilMerge, action("monitor.wait", "Await PR #511 checks"), requested, mainRunWait(repairMerged)])).toContain(ordered);
+  // A repair merge that names both PRs still counts as the repair.
   const both = { ...mergeRepair, details: "Squash-merge repair PR #512 before #511" };
   expect(await failed([...s.actions.slice(0, -3), both, mainRunWait(repairMerged), mergeRequested])).toEqual([]);
+  // The requested PR merged first fails, whatever follows.
+  expect(await failed([...s.actions.slice(0, -3), mergeRequested, mainRunWait(repairMerged), mergeRepair])).toContain("forge.mergePr evidence before forge.mergePr");
 });

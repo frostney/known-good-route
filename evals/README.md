@@ -142,8 +142,9 @@ repeat its contents. This validates the envelope, not every field or the truth
 of every finding. Action-specific evidence can inspect explicitly named
 structured payload fields, such as a behavior probe's cases or a wait's deadline.
 Unrelated metadata cannot supply those fields implicitly. A `before` selector
-counts only actions recorded before the first matching action, such as a wait
-on the default-branch tip that must precede a merge.
+counts only actions recorded before a given occurrence of another action, such
+as a wait on the default-branch tip that must precede a merge, and fails when
+that occurrence is missing.
 
 `calibration.json` records why each case was retained, corrected, or added.
 Some fixtures advance evidence only after a recorded action, such as waiting

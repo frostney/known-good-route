@@ -254,17 +254,12 @@ export function gradeRun(
   for (const requirement of expected.requiredActionDetails ?? []) {
     const limit = requirement.before;
     const end = limit
-      ? ledger.actions.findIndex(
-          (a) =>
-            a.action === limit.action &&
-            (limit.patterns ?? []).every((pattern) =>
-              new RegExp(pattern, "i").test(
-                `${actionText(a)}\n${JSON.stringify(a.data ?? {})}`,
-              ),
-            ),
-        )
-      : -1;
-    const details = (end < 0 ? ledger.actions : ledger.actions.slice(0, end))
+      ? ledger.actions
+          .map((a, index) => (a.action === limit.action ? index : -1))
+          .filter((index) => index >= 0)[(limit.occurrence ?? 1) - 1] ?? 0
+      : ledger.actions.length;
+    const details = ledger.actions
+      .slice(0, end)
       .filter((a) => a.action === requirement.action)
       .map((a) =>
         [
@@ -539,7 +534,7 @@ export function validateCases(
       ...(evalCase.expected.reportPatterns ?? []),
       ...(evalCase.expected.forbiddenOutputPatterns ?? []),
       ...(evalCase.expected.requiredActionDetails ?? []).flatMap(
-        (r) => [...r.patterns, ...(r.before?.patterns ?? [])],
+        (r) => r.patterns,
       ),
     ]) {
       try {

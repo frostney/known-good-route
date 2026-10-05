@@ -428,10 +428,11 @@ export const deliveryCases: EvalCase[] = [
         ignoreEditPaths: [".agent/HANDOFF.md"],
       },
       requiredActionDetails: [
-        { action: "forge.mergePr", patterns: ["\\b512\\b"], dataFields: ["*"] },
-        // The requested PR merges only after a wait on the repair merge's own run.
+        // The first merge is the repair; the second, the requested PR, follows a
+        // wait on the repair merge's own default-branch run.
+        { action: "forge.mergePr", patterns: ["\\b512\\b"], dataFields: ["*"], before: { action: "forge.mergePr", occurrence: 2 } },
         { action: "monitor.wait", patterns: [`\\b${repairMerged}\\b`], dataFields: ["head", "revision", "ref", "commit"],
-          before: { action: "forge.mergePr", patterns: ["^(?![\\s\\S]*\\b512\\b)[\\s\\S]*\\b511\\b"] } },
+          before: { action: "forge.mergePr", occurrence: 2 } },
       ],
       maxActionCounts: { "forge.mergePr": 2, "forge.openDraftPr": 1 },
       allowedEditPaths: ["tests/paths.test.ts", ".agent/HANDOFF.md"],
