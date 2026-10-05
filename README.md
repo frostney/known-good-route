@@ -66,6 +66,8 @@ flowchart TD
 `deliver` owns continuation through CI failures, feedback and integration checks.
 It updates the same open PR; a gap found after merge uses a linked repair PR and
 keeps the original work item active until integration verification succeeds.
+A red default branch comes first: work starts and merges only once the default
+branch is green, and its repair lands before anything else.
 `implement` owns development: implement, run and inspect, review, test, and fix
 until every verified requirement gap is resolved. Visual quality is judged
 against agreed references and affected states, not inferred from passing tests.
@@ -262,7 +264,7 @@ and evaluates them on the intended workload.
 | `create-release` | Owns milestone versioning, changelog, release PR and the repository's single established release publisher. It remains directly invocable for an explicit release request. |
 | `test-against-spec` | Tests externally observable behavior against explicit requirements. Reports by default; `fix` authorizes in-scope repairs. It does not replace source review or own the aggregate project gate. |
 | `code-review`, `codebase-audit` | Retain assessment-only defaults and delegate review lanes by default for non-trivial scopes; `no-subagents` keeps them local. `fix-all` permits in-scope remediation under the caller's acceptance criteria. |
-| `git-workflow`, `delivery-wait` | Own Git rules, guarded native stacks and deterministic waits underneath the delivery skills. |
+| `git-workflow`, `delivery-wait` | Own Git rules, the default-branch health gate, guarded native stacks and deterministic waits underneath the delivery skills. |
 | `run-retro` | Proposes improvements and applies only selected actions. An explicitly selected immediate delivery enters `deliver`; the retrospective remains active until that action is delivered or blocked. |
 | `status-report` | Reads current PR, CI, review and worktree evidence without invoking delivery or mutating state. |
 
@@ -292,6 +294,7 @@ not a required full-matrix run or a claim that every scenario currently passes:
 | Missing or stale PR review/behavior evidence | Runs the required missing checks and fixes verified gaps before readiness; reuses valid evidence. |
 | CI or review exposes an in-scope defect | Repairs it, revalidates affected behavior and updates the same PR instead of stopping at diagnosis. |
 | Requested visual or interaction fidelity | Compares the actual result with requirements and references; does not treat a test count as acceptance. |
+| Red or pending default branch | Lands the default-branch repair first and waits for it to go green; does not merge onto a red branch or supersede the repair's run. |
 | Configured integration delivery | Verifies the intended revision and behavior at the configured target; does not trigger milestone release or mistake a queued job for deployment. |
 | Material decision or unavailable required access | Completes independent work and reports the specific unresolved requirement without claiming completion. |
 | Explicit read-only review or an earlier delivery endpoint | Preserves that boundary; does not infer edit, merge, deployment or release authority. |

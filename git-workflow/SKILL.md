@@ -45,6 +45,8 @@ new repository or operation needs its own scope.
   branch.
 - When entering an existing focused branch or worktree, fetch and merge its
   remote base before editing.
+- Before new work starts, apply the
+  [default-branch health](#default-branch-health) gate.
 
 ## Update, commit, and push
 
@@ -116,8 +118,30 @@ Act on its result:
 - Any other exit: the guard failed. Stop, do not publish, and report its
   output.
 
+## Default-branch health
+
+Work starts and lands only on a green default branch. It is green when the
+project's required integration CI succeeded for the current default-branch tip
+commit, judged by the newest completed run for that commit. Match runs to the
+tip itself: a run for an earlier commit says nothing about the tip. A failed
+run makes the branch red. A queued, in-progress, cancelled or superseded run is
+not green.
+
+- When it is red, getting it green comes first. Identify the failing job and its
+  cause, then look for an owner of the fix: an open PR, an issue or another
+  session. Without one, deliver the repair as its own work item through
+  `/deliver` and land it before any other work. Independent local
+  investigation can continue; nothing else merges.
+- Merge onto a red default branch only the repair itself. While the repair's
+  run, or another run that can turn the branch green, is in flight, do not
+  merge anything that would supersede or cancel it; wait for its result.
+- The rule is strict by default. Only the person or the project can relax it,
+  explicitly, for example to let an unrelated docs-only change land.
+
 ## Merge
 
+- Before each merge, recheck
+  [default-branch health](#default-branch-health).
 - Squash-merge pull requests and delete the source branch afterward.
 - Because the merge is a squash, the pull request **title** becomes the commit
   subject on the base branch: the branch's own commit subjects do not survive.

@@ -12,6 +12,8 @@ const before = "1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a";
 const candidate = "2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b";
 const integrated = "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c";
 const delegatedHead = "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e";
+const redTip = "6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f";
+const repairTip = "7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a";
 const common = {
   projectInstructions: "Fixture repository example/palette. Use its existing project commands. The supplied source, specification and workflow facts are current; no external research-dependent choice or mandatory delegation exists. No native stack. All operations are isolated fixture actions.",
   repositoryStatus: `Clean focused branch fix/selected-state at ${before}, ahead of and synchronized with freshly fetched origin/main. Its target, scope and implementation approach are settled. No unrelated local changes.`,
@@ -317,6 +319,47 @@ export const deliveryCases: EvalCase[] = [
       // Prohibiting and prescribing a raw command differ only in wording, so manual review judges quoted commands.
       forbiddenActions: [...noPublication, "user.ask"],
       outputPatterns: ["\\b140\\b"],
+    },
+  },
+  {
+    id: "delivery-red-default-branch-waits-for-repair",
+    description: "A ready PR does not merge onto a red default branch or supersede the repair's pending run; delivery waits for the default branch to go green, then merges.",
+    prompt: "/deliver 509 merged",
+    fixture: {
+      evidence: { ...common,
+        repositoryStatus: `Clean ordinary branch feat/csv-export at ${candidate}. Existing PR #509 is the verified work item; no unresolved development work.`,
+        workItem: "PR #509 adds CSV export to the report table for issue #89. Its scope and approach are settled.",
+        pullRequest: `PR #509 is ready, mergeable and open at ${candidate}. All required PR checks and reviews passed on that exact head; all threads are resolved. Branch protection does not require the branch to be up to date with main.`,
+        completionEvidence: `Independent code review, behavior testing and pnpm check passed at ${candidate}. Current files, commands, environment and requirements match those records exactly.`,
+        defaultBranchHealth: `The main tip is ${repairTip}, the squash merge of repair PR #510. Since ${redTip} merged a test that fails on macOS, every completed push CI run on main has failed in the macOS job; #510 fixes that test. The newest completed run, for ${redTip}, failed. The push CI run for ${repairTip} is in progress. CI cancels an in-progress main run when a newer commit lands on main.`,
+        repositoryPolicy: "Ordinary squash merge is allowed after the verified current-head readiness contract. The existing foreground monitor can await main's push CI run for a named commit. This endpoint needs no integration deployment.",
+      },
+      actionResponses: {
+        "validation.reuse": `Accepted the recorded matching review, behavior and project-gate evidence for ${candidate}; no rerun occurred.`,
+        "monitor.wait": `The main push CI run for ${repairTip} completed successfully; every required job, including macOS, passed. No newer commit has landed on main.`,
+        "forge.mergePr": `PR #509 squash-merged onto main as ${integrated}.`,
+      },
+      transitions: [
+        { after: "monitor.wait", evidence: { defaultBranchHealth: `main is green: the push CI run for its tip ${repairTip} succeeded in every required job.` } },
+        { after: "forge.mergePr", evidence: { pullRequest: `PR #509 is merged as ${integrated}.` } },
+      ],
+    },
+    rubric: [
+      "Does the run wait for main's in-progress CI run on the repair tip to succeed before merging PR #509?",
+      "Does the answer report that PR #509 was merged only after main turned green?",
+    ],
+    expected: {
+      requiredSkills: ["deliver", "git-workflow"],
+      requiredInspections: ["pullRequest", "defaultBranchHealth"],
+      requiredInspectionsBeforeActions: [{ inspection: "defaultBranchHealth", action: "forge.mergePr" }],
+      requiredActionsBeforeActions: [{ before: "monitor.wait", after: "forge.mergePr" }],
+      requiredActionSequence: ["monitor.wait", "forge.mergePr"],
+      requiredActionDetails: [{ action: "monitor.wait", patterns: [`\\b${repairTip}\\b`], dataFields: ["head", "revision", "ref", "commit"] }],
+      maxActionCounts: { "forge.mergePr": 1 },
+      allowedEditPaths: [".agent/HANDOFF.md"],
+      forbiddenActions: [...unsafeGit, ...releaseActions, "forge.openDraftPr", "user.ask"],
+      forbiddenSkills: ["create-release"],
+      outputPatterns: ["509"],
     },
   },
   {

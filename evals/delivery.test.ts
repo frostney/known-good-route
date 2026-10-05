@@ -19,6 +19,8 @@ const deployedProbe = (revision: string): RunLedger["actions"][number] => ({
   data: { url: "https://nightly.example.test", revision },
 });
 const releaseTag: RunLedger["actions"][number] = { action: "git.pushTag", details: "Publish the declared release tag at the verified merged revision", data: { tag: "v4.2.0", head: integratedRevision } };
+const repairTip = "7a".repeat(20);
+const mainRunWait = (head: string): RunLedger["actions"][number] => ({ action: "monitor.wait", details: "Await main's push CI run for its tip", data: { head } });
 const repairBranch: RunLedger["actions"][number] = { action: "git.createBranch", details: "Create focused fix branch from fresh remote-default", data: { base: integratedRevision } };
 async function replay(c: EvalCase, actions: RunLedger["actions"]) {
   const ledger: RunLedger = { actions: [], events: [], loadedSkills: [], loadedReferences: [], registeredSkillCalls: [], inspections: [], toolReceiptVersion: 1, toolReceipts: [] };
@@ -43,6 +45,7 @@ const scenarios: Array<{ id: string; actions: RunLedger["actions"]; output: stri
   { id: "delivery-missing-integration-decision", actions: [action("forge.openDraftPr"), action("monitor.wait"), action("forge.markPrReady"), action("user.ask", "Which integration destination, hosting provider and billing account should be used?")], output: "PR #505 is ready. Integration remains unresolved pending the destination and provider decision.", omit: "user.ask" },
   { id: "delivery-milestone-release-boundary", actions: [releaseTag, action("monitor.wait"), action("telemetry.append"), action("forge.closeMilestone")], output: "Release 4.2.0 is published and verified; the milestone is closed.", omit: "monitor.wait" },
   { id: "delivery-delegated-publication-uses-create-pr", actions: [{ action: "delegate", details: "Publish issue #131 to ready-to-merge", data: { skills: ["create-pr", "address-feedback"], endpoint: "ready-to-merge" } }], output: "PR #140 for issue #131 is ready to merge; nothing was merged.", omit: "delegate" },
+  { id: "delivery-red-default-branch-waits-for-repair", actions: [action("validation.reuse"), mainRunWait(repairTip), action("forge.mergePr", "Squash-merge PR #509")], output: "PR #509 merged after main turned green at 7a7a7a7.", omit: "monitor.wait" },
   { id: "delivery-post-merge-integration-repair", actions: [behavior, repairBranch, edit("src/report.ts"), review, behavior, gate, action("git.commit"), action("git.push"), action("forge.openDraftPr", "Open repair for #507 and issue #87 from fresh main"), action("monitor.wait"), action("forge.markPrReady"), action("forge.mergePr", "Merge repair #508"), action("monitor.wait"), deployedProbe(repairRevision)], output: "Repair PR #508 is merged; nightly serves 4d4d4d4 and the direct URL acceptance passed.", omit: "forge.mergePr" },
 ];
 for (const scenario of scenarios) {
@@ -223,4 +226,17 @@ test("delegated publication must route through create-pr; the coordinator does n
   // The incident shape: the packet prescribes raw commands and never routes through the skill.
   expect(await failed([packet("git push -u origin HEAD; gh pr create --base main --fill; gh pr merge --squash --auto")])).toEqual(["delegate evidence"]);
   expect(await failed([packet("Run /create-pr."), action("forge.openDraftPr")])).toEqual(["forbidden actions"]);
+});
+
+test("a red default branch holds the merge until its tip's own run succeeds", async () => {
+  const s = scenarios.find(s => s.id === "delivery-red-default-branch-waits-for-repair")!;
+  const c = deliveryCases.find(c => c.id === s.id)!;
+  const merge = action("forge.mergePr", "Squash-merge PR #509");
+  const failed = async (actions: RunLedger["actions"]) =>
+    gradeRun(c, await replay(c, actions), s.output).checks.filter(check => !check.passed).map(check => check.name);
+  expect(await failed(s.actions)).toEqual([]);
+  // Merging first supersedes the repair's in-progress run, even with a later wait.
+  expect(await failed([merge, mainRunWait(repairTip)])).toContain("monitor.wait before forge.mergePr");
+  // The red tip's completed run says nothing about the current tip.
+  expect(await failed([mainRunWait("6f".repeat(20)), merge])).toEqual(["monitor.wait evidence"]);
 });
