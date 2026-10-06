@@ -2454,6 +2454,26 @@
       "frozenCaseSha256": "f02d3321eff8f3a0b4385e49b482f56f3952b2275adfc3a95ad39f5d8891428b"
     },
     {
+      "caseId": "delivery-red-default-branch-waits-for-repair",
+      "status": "new",
+      "rationale": [
+        "Rebuilt from a run of parallel deliveries that kept merging onto a default branch whose push CI had failed for hours, each merge cancelling the previous run. A ready PR must not merge while the repair's run on the default-branch tip is in progress; delivery waits for that tip's own run to succeed, then merges. The wait must name the tip and precede the merge. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "e75407152602574361425232ae4067d7d563d67fc6d5c16380d0b6686d94d556",
+      "frozenCaseSha256": "e75407152602574361425232ae4067d7d563d67fc6d5c16380d0b6686d94d556"
+    },
+    {
+      "caseId": "delivery-red-default-branch-unowned-repair-first",
+      "status": "new",
+      "rationale": [
+        "The core of the same incident: the default branch is red, no PR, issue or session owns the failure, and an unrelated PR is ready. Delivery must land the repair as its own work item, wait for the repair merge's own default-branch run to succeed, and only then merge the requested PR. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "bd4b64bef639bebbf179d9c13414a68b9b04b1e17868a2154215be4bf0f668e9",
+      "frozenCaseSha256": "bd4b64bef639bebbf179d9c13414a68b9b04b1e17868a2154215be4bf0f668e9"
+    },
+    {
       "caseId": "create-pr-dependency-on-hand-based-pr-stops",
       "status": "new",
       "rationale": [
