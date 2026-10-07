@@ -44,7 +44,7 @@ export const deliveryCases: EvalCase[] = [
     description: "Standalone implementation completes the specified development and fidelity work without entering publication.",
     prompt: "/implement 81",
     fixture: {
-      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: { ...common,
         workItem: "Open issue #81 is implementation-ready. Its approved scope is preserving the selected month across chart/table changes, with the selected label matching the supplied title-case reference. No other behavior or design choice is open.",
         source: "src/report.ts currently resets month to January during switchView and renders the selected label in uppercase. The existing keepSelection helper and titleCaseLabel formatter provide the intended behavior. tests/report.test.ts is the existing regression home.",
@@ -80,7 +80,7 @@ export const deliveryCases: EvalCase[] = [
     description: "PR creation obtains missing independent gates, repairs a discovered requirement gap and finishes ready for review.",
     prompt: "/create-pr for the import-error correction in the current branch.",
     fixture: {
-      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: { ...common,
         specification: "Issue #82 requires the import CLI to return exit 2 and JSON code MissingFile for an absent input, while retaining successful imports. The current branch contains an attempted fix. No unresolved product decision exists.",
         source: "The attempted correction is in src/import.ts, with coverage in tests/import.test.ts. Both files and the built CLI are available to independent review and interface testing. The author has not supplied a validated correctness verdict.",

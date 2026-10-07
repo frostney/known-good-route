@@ -20,7 +20,7 @@ const projectAgentsMd = [
 ].join("\n");
 // Diagnosis ends with the explanation; nothing continues into delivery.
 const environment: EvalEnvironment = {
-  orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" },
+  orchestration: { endpoint: "deployed", entryPoints: "stop" },
   files: { "AGENTS.md": projectAgentsMd },
 };
 const reportsReview = {
