@@ -279,6 +279,13 @@ configuration that changes the outcome, such as the integration destination,
 or the project's own `AGENTS.md` text, which the generator keeps outside its
 skills block.
 `validateCases` rejects a case without a valid environment.
+Most cases declare entry-points `stop` and test that the setting is honoured.
+Each delivery-chain entry skill (`/create-pr`, `/implement`, `/update-pr`,
+`/address-feedback`, `/code-review` and `/test-against-spec`) also has a
+`<skill>-default-continues-to-ready-to-merge` case with no `ORCHESTRATION.md`,
+which expects the founder's default: continue into delivery to ready-to-merge
+and stop only for a secret, a paid action, an account action or a decision
+that belongs to the person.
 
 Before each run the runner writes the case's `ORCHESTRATION.md` and declared
 files into the eval workspace. It generates the AGENTS.md block with the

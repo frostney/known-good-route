@@ -109,3 +109,14 @@ test("a project's own AGENTS.md text stays beside the generated skills block and
   expect(instructions).not.toContain('<file path="AGENTS.md">');
   expect(instructions.split("Always apply `deep-dive`").length).toBe(2);
 });
+
+test("every delivery-chain entry skill has a default case that delivers to ready-to-merge without ORCHESTRATION.md", () => {
+  for (const skill of ["create-pr", "implement", "update-pr", "address-feedback", "code-review", "test-against-spec"]) {
+    const c = evalCases.find((x) => x.id === `${skill}-default-continues-to-ready-to-merge`);
+    expect(c, skill).toBeDefined();
+    expect(c!.prompt.startsWith(`/${skill}`)).toBeTrue();
+    expect(c!.fixture.environment?.orchestration).toBeNull();
+    expect(c!.expected.rubric!.map((item) => item.id)).toEqual(expect.arrayContaining(["delivered-to-ready-to-merge", "stops-only-for-blockers"]));
+    expect(c!.expected.forbiddenActions).toContain("forge.mergePr");
+  }
+});

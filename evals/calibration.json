@@ -2850,6 +2850,66 @@
       "beforeSha256": null,
       "afterSha256": "ff35229b0348e584d66c6d4a635d34e8cf7626659c266079157c0aaa86ebfc03",
       "frozenCaseSha256": "2a36b105550cd75961c0e265f47490eac89493b632b5da1324f67927b8a0d259"
+    },
+    {
+      "caseId": "create-pr-default-continues-to-ready-to-merge",
+      "status": "new",
+      "rationale": [
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery up to ready-to-merge, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. It reuses an existing case's fixture with the responses that delivery needs. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "156a8549c144a477d4d8db02ad5cd7fc8b45257bf5db1c1ec337dca4f40d7c41",
+      "frozenCaseSha256": "156a8549c144a477d4d8db02ad5cd7fc8b45257bf5db1c1ec337dca4f40d7c41"
+    },
+    {
+      "caseId": "implement-default-continues-to-ready-to-merge",
+      "status": "new",
+      "rationale": [
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery up to ready-to-merge, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. It reuses an existing case's fixture with the responses that delivery needs. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "38830602ef1f7fb2fd32b1522c48440838f72b5a48e9dd3b95db3be2e936ede0",
+      "frozenCaseSha256": "38830602ef1f7fb2fd32b1522c48440838f72b5a48e9dd3b95db3be2e936ede0"
+    },
+    {
+      "caseId": "update-pr-default-continues-to-ready-to-merge",
+      "status": "new",
+      "rationale": [
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery up to ready-to-merge, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. It reuses an existing case's fixture with the responses that delivery needs. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "13c96583b301d77a24a954b92cc429eb0fcc96bc4490142edab97d7fc8580f25",
+      "frozenCaseSha256": "13c96583b301d77a24a954b92cc429eb0fcc96bc4490142edab97d7fc8580f25"
+    },
+    {
+      "caseId": "address-feedback-default-continues-to-ready-to-merge",
+      "status": "new",
+      "rationale": [
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery up to ready-to-merge, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. It reuses an existing case's fixture with the responses that delivery needs. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "175bee4fc2df6beb8c0c8b583e0a23c157f331605e902017819ede3d08a03d41",
+      "frozenCaseSha256": "175bee4fc2df6beb8c0c8b583e0a23c157f331605e902017819ede3d08a03d41"
+    },
+    {
+      "caseId": "code-review-default-continues-to-ready-to-merge",
+      "status": "new",
+      "rationale": [
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery up to ready-to-merge, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. It reuses an existing case's fixture with the responses that delivery needs. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "dfd601910cafd01b18829c8061a13c16df937997941e96fb03a49b8c28d4c747",
+      "frozenCaseSha256": "dfd601910cafd01b18829c8061a13c16df937997941e96fb03a49b8c28d4c747"
+    },
+    {
+      "caseId": "test-against-spec-default-continues-to-ready-to-merge",
+      "status": "new",
+      "rationale": [
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery up to ready-to-merge, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. It reuses an existing case's fixture with the responses that delivery needs. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "a0f9019ac772f16261a6106f87427c8fd0688741bbea5cae5944802974e781b7",
+      "frozenCaseSha256": "a0f9019ac772f16261a6106f87427c8fd0688741bbea5cae5944802974e781b7"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",
