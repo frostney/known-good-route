@@ -18,8 +18,10 @@ metadata:
 
 Update the established PR through integration, relevant commits, a normal push
 and current metadata. The request includes resolving routine conflicts and
-running the declared PR gate; it does not authorize merging. Reuse the selected
-target and prior authorization. Ask only when the intended PR, a material
+running the declared PR gate; merging belongs to `/deliver` under the
+[delivery settings](../deliver/SKILL.md#delivery-settings). Reuse the selected target
+and prior authorization. Ask only when the intended PR, a
+[material](../software-engineering-excellence/SKILL.md#blockers-and-decisions)
 conflict-resolution choice or another material choice within this update
 remains unclear.
 
@@ -68,7 +70,14 @@ not block the update.
 8. Report the updated PR, any new commit, metadata changes, what the
    publication guard rewrote and observed validation. Include stack position
    and rewritten branches when applicable.
-   Distinguish passed local checks from pending current-head CI. Return the
+   Distinguish passed local checks from pending current-head CI. A draft PR
+   stays draft until `delivery-wait` observes every required check green on the
+   pushed head; only then may it be marked ready for review. Return the
    exact current head and next transition to the active publication or delivery
-   caller; that caller continues through CI and feedback. Report missing
-   walkthrough requirements with remedies.
+   caller; that caller continues through CI and feedback. Started directly,
+   continue under the [delivery settings](../deliver/SKILL.md#delivery-settings);
+   with `entry-points: deliver`, the pushed head goes on to `/deliver`, which
+   awaits its CI and review and takes the PR to the configured endpoint
+   (`ready-to-merge` when there is no `ORCHESTRATION.md`). With `stop`, end
+   with this report.
+   Report missing walkthrough requirements with remedies.

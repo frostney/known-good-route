@@ -32,7 +32,8 @@ model documentation; remembered model names go stale quickly.
 
 For every choice:
 
-- Verify version and release status from the registry or official release notes.
+- Verify version and release status from the registry or official release notes,
+  and name the source checked in the report.
 - Read relevant migration notes and check known blockers for the use case.
 - Pin any pre-release or nightly exactly.
 - Record the reason, tradeoff, rollback path, and fallback when climbing beyond

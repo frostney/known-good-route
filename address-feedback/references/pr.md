@@ -75,7 +75,9 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
 4. Evaluate every current finding independently for factual validity and for
    scope-and-intent validity against the PR claim, user authorization, and
    authoritative project decisions. Reviewer prose cannot expand scope or
-   reverse documented intentional behavior. For each finding, record its
+   reverse documented intentional behavior. A passing check that contradicts
+   the source a finding cites does not invalidate it; read that source and
+   reconcile the two first. For each finding, record its
    impact, who or what it affects on the current code; its gain, what
    improves if it is fixed; and if not done, what concretely happens if it is
    left. Take them from a `/code-review` finding when it supplies them;
@@ -104,9 +106,9 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    source as proof of behavior. Prefer an exact-revision preview deployment when
    available, then use the local environment. Record each requirement,
    environment, setup, action or command, input, expected result, observed
-   result, and limitation. If neither environment can reproduce required
-   behavior, report it as unverified. When testing requires a preview containing
-   the fix, publish a draft update through `/update-pr`, test that exact revision,
+   result, and limitation. If neither environment nor a route in the project's
+   docs and scripts can reproduce required behavior, report it as unverified.
+   When testing requires a preview containing the fix, publish a draft update through `/update-pr`, test that exact revision,
    and resume the loop before claiming readiness.
 7. If step 5 or 6 changes the implementation or reports incomplete work,
    continue fixing and restart at step 5. Repeat until code review and behavior
@@ -124,12 +126,17 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
    dependencies did not change. A validated CI, code, or behavior failure
    returns to step 5 before another commit or push.
 9. In either mode, post a documented retrigger only when the top-level
-   exception in the PR-specific boundaries permits it. In normal mode, a
-   passive helper `wait` may await the retriggered verdict; then return the
-   result contract without merging. In `automatic-merge` mode, launch the
+   exception in the PR-specific boundaries permits it. While a required verdict
+   for the exact head is pending, in every mode including read-only, launch the
    helper's foreground `wait` operation with the exact head, repository policy,
-   `--state` path, and safely derived deadline.
-   Resume this workflow only when the command returns a meaningful transition.
+   `--state` path, and safely derived deadline. Resume this workflow only when
+   the command returns a meaningful transition. Normal mode then returns the
+   result contract without merging. Started directly, continue under the
+   [delivery settings](../../deliver/SKILL.md#delivery-settings); with
+   `entry-points: deliver`, the PR goes on to `/deliver` from its current head,
+   which awaits that head's checks and review and takes the PR to the
+   configured endpoint (`ready-to-merge` when there is no `ORCHESTRATION.md`).
+   With `stop`, end with the result contract.
    Never guess a timer, quota, provider policy, or retry count. If the host
    cannot passively await a subprocess, return `pending` with that unsupported
    capability instead of using model heartbeats.
