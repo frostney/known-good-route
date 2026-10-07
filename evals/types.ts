@@ -110,6 +110,9 @@ export interface EvalExpectations {
     values: ExactValue[];
     fields?: string[];
     every?: boolean;
+    // Only actions recorded before this occurrence (default 1) of the named
+    // action count; the check fails when that occurrence is absent.
+    before?: { action: ActionName; occurrence?: number };
   }>;
 
   requiredWorker?: boolean;

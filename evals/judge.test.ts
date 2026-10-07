@@ -249,8 +249,10 @@ describe("calibration gate", () => {
     expect(() => validateRubric({ ...target, expected: { ...target.expected, messageRubric: [{ id: "concise", question: "Again?" }] } })).toThrow("duplicate rubric id");
   });
   test("the judge reads the repository settings that set how far the run goes", () => {
-    const configured = evalCases.find((c) => c.fixture.environment?.orchestration?.entryPoints === "stop")!;
-    expect(judgeTask(configured)).toContain(`entry-points stop`);
+    const configured = evalCases.find((c) => c.fixture.environment?.orchestration?.endpoint === "merged")!;
+    expect(judgeTask(configured)).toContain("endpoint merged and entry-points deliver");
+    const stopping = { ...configured, fixture: { ...configured.fixture, environment: { orchestration: { endpoint: "ready-to-merge" as const, entryPoints: "stop" as const } } } };
+    expect(judgeTask(stopping)).toContain("entry-points stop");
     const unconfigured = evalCases.find((c) => c.fixture.environment && c.fixture.environment.orchestration === null)!;
     expect(judgeTask(unconfigured)).toContain("no ORCHESTRATION.md");
     expect(judgeTask(unconfigured).startsWith(unconfigured.prompt)).toBeTrue();

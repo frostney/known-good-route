@@ -33,7 +33,7 @@ export const promptingCases: EvalCase[] = [
       mode: "claude-agent",
     },
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         context:
           "Only PR #627 at c319e42 is in scope. The worker has a separate connection to current repository evidence. An earlier coordinator note called this ready at old head a218d31; do not treat that note as evidence for the new head.",
@@ -66,7 +66,7 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "Inspect PR #627 at c319e42 in example/project using address-feedback, read-only. Read the applicable PR and readiness procedures. No mutations or delegation. Report readiness and the evidence supporting it.",
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         context:
           "The sole target is ordinary PR #627 at c319e42. This is a read-only inspection.",
@@ -111,7 +111,7 @@ export const promptingCases: EvalCase[] = [
       "A confirmed approach proceeds without another comparison or interview and reuses matching gates.",
     prompt:
       "/implement #81. Continue our selected D1 null-guard approach; its scope and publication are already approved. The fixture has the decision history and current evidence.",
-    fixture: { environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } }, evidence: settledEvidence },
+    fixture: { environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } }, evidence: settledEvidence },
     expected: {
       rubric: [
         { id: "implemented-settled-approach", question: "Does the answer report that the settled D1 approach for issue #81 (a null guard using the existing cache helper so empty cache values are preserved) was implemented, rather than presenting new options or asking the user to choose an approach?" },
@@ -135,7 +135,7 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "Earlier I asked you to draft issue text. Now create that issue automatically with the exact settled scope; my draft-review waiver applies to this issue. Use /create-issue.",
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         conversation:
           "User authorized creating the issue in the latest turn. The agreed scope and acceptance criteria are complete.",
@@ -174,7 +174,7 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "Earlier in this workstream I explicitly authorized amending this one unpublished local commit. After my status question, please apply that approved amendment now. Use git-workflow and the current fixture evidence.",
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         context:
           "User explicitly authorized amending only the unpublished local commit abc123, and has not revoked it.",
@@ -199,7 +199,7 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "The agreed change is complete and verified. Please give me the final handoff; we have not requested a retrospective.",
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         completion:
           "The feature is complete. The applicable gate passed on the exact final tree, review is clean, and there are no open requirements.",
@@ -225,7 +225,7 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "Use software-engineering-excellence to assess whether this completed fix meets our bar. Assessment only: all requested behavior is verified. A nearby unrelated refactor could make a later change easier.",
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         completion:
           "Requested outcome, scope, regression tests, real-interface behavior, and aggregate gate all passed on the current unchanged tree. Review found no in-scope issue. The adjacent refactor is unrelated to this outcome.",
@@ -256,7 +256,7 @@ export const promptingCases: EvalCase[] = [
       caseId: "prompting-native-worker-pr",
     },
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         context:
           "Parent scope is one PR #622 at head 91ce117 in example/project. Complete PR-readiness inspection only. No mutations or further delegation.",
@@ -287,7 +287,7 @@ export const promptingCases: EvalCase[] = [
       mode: "claude-agent",
     },
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         context:
           "Read-only PR #622 at 91ce117 in example/project. Native fixture-reviewer has a separate MCP connection for worker evidence. Parent must not claim worker completion without an actual Agent result.",
@@ -318,7 +318,7 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "Inspect PR #622 at 91ce117 in example/project through address-feedback, read-only. It belongs to stack 17 but the scope is only this PR. No edits, replies, merge, or further delegation. Read the relevant skill and references and report readiness.",
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         context:
           "PR #622 is the sole target; scope is read-only. Repository example/project. Native stack 17 contains #622 and #623; do not expand to #623.",
@@ -359,7 +359,7 @@ export const promptingCases: EvalCase[] = [
       "A plain-language request to open a pull request runs create-pr with its gates.",
     prompt: "Can you open a PR for the parser fix on this branch?",
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         repositoryStatus:
           "Branch feature/parser is clean, tracks origin/feature/parser, and is one commit ahead of origin/main.",
@@ -397,7 +397,7 @@ export const promptingCases: EvalCase[] = [
     prompt:
       "File an issue: the CLI crashes when the configuration file is empty.",
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         projectContext:
           "The project is a command-line configuration linter. VISION.md lists robust handling of malformed input as a goal.",
@@ -430,7 +430,7 @@ export const promptingCases: EvalCase[] = [
       "A plain-language review request runs code-review and stays read-only.",
     prompt: "Can you review the changes on this branch before I open a PR?",
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         repositoryStatus:
           "Branch feature/cache is clean and two commits ahead of origin/main.",

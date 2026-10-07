@@ -18,7 +18,7 @@ export const executionCases: EvalCase[] = [
     prompt:
       "/implement the selected cache fix in the disposable CLI. Preserve every supplied non-null value including empty string, false and zero; only null or absent value maps to 'missing'. Use the existing expression seam, reproduce with the actual CLI check, then fix and verify. Keep this local; no commit or publication. Use the actual execution tools, not simulated edit/test receipts.",
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         ...common,
         context:
@@ -49,7 +49,7 @@ export const executionCases: EvalCase[] = [
     prompt:
       "/implement the agreed one-line boundary correction in the disposable CLI: authenticated requests accept counts 0 through 100 and reject counts above 100 with error 'limit'. Every unauthenticated request must still return error 'unauthorized', regardless of count. Reproduce, fix and verify with the actual execution tools. No redesign, commit or publication.",
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: {
         ...common,
         context:

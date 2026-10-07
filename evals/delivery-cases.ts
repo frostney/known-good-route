@@ -12,6 +12,12 @@ const before = "1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a";
 const candidate = "2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b";
 const integrated = "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c";
 const delegatedHead = "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e";
+const redTip = "6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f";
+const repairTip = "7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a";
+const repairHead = "8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b";
+const repairMerged = "9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c";
+const repairReview = "Independent review of the tests/paths.test.ts correction against the macOS failure found no findings.";
+const repairGate = "pnpm check passed on the corrected tree, including tests/paths.test.ts in a case-sensitive temporary directory.";
 const common = {
   projectInstructions: "Fixture repository example/palette. Use its existing project commands. The supplied source, specification and workflow facts are current; no external research-dependent choice or mandatory delegation exists. No native stack. All operations are isolated fixture actions.",
   repositoryStatus: `Clean focused branch fix/selected-state at ${before}, ahead of and synchronized with freshly fetched origin/main. Its target, scope and implementation approach are settled. No unrelated local changes.`,
@@ -38,7 +44,7 @@ export const deliveryCases: EvalCase[] = [
     description: "Standalone implementation completes the specified development and fidelity work without entering publication.",
     prompt: "/implement 81",
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: { ...common,
         workItem: "Open issue #81 is implementation-ready. Its approved scope is preserving the selected month across chart/table changes, with the selected label matching the supplied title-case reference. No other behavior or design choice is open.",
         source: "src/report.ts currently resets month to January during switchView and renders the selected label in uppercase. The existing keepSelection helper and titleCaseLabel formatter provide the intended behavior. tests/report.test.ts is the existing regression home.",
@@ -74,7 +80,7 @@ export const deliveryCases: EvalCase[] = [
     description: "PR creation obtains missing independent gates, repairs a discovered requirement gap and finishes ready for review.",
     prompt: "/create-pr for the import-error correction in the current branch.",
     fixture: {
-      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: { ...common,
         specification: "Issue #82 requires the import CLI to return exit 2 and JSON code MissingFile for an absent input, while retaining successful imports. The current branch contains an attempted fix. No unresolved product decision exists.",
         source: "The attempted correction is in src/import.ts, with coverage in tests/import.test.ts. Both files and the built CLI are available to independent review and interface testing. The author has not supplied a validated correctness verdict.",
@@ -240,7 +246,7 @@ export const deliveryCases: EvalCase[] = [
   },
   {
     id: "delivery-missing-integration-decision",
-    description: "An unresolved integration destination does not stop the work independent of it: the PR is prepared and merged, or merging is put to the person as a choice, and the destination decision goes to the person without guessed hosting or false deployment claims.",
+    description: "An unresolved integration destination does not stop the work independent of it: the PR is prepared and merged, and only the destination decision goes to the person, without guessed hosting or false deployment claims.",
     prompt: "/deliver the completed import-error correction",
     fixture: {
       environment: { orchestration: { endpoint: "deployed", entryPoints: "deliver" } },
@@ -263,7 +269,7 @@ export const deliveryCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "pr-505-merged-or-offered", question: "Does the answer report that PR #505 was merged after its required checks and reviews passed, or, if it was not merged, does it put merging it now to the person as a choice, rather than recommending that it stay unmerged until a destination is chosen?" },
+        { id: "pr-505-merged", question: "Does the answer report that PR #505 was merged after its required checks and reviews passed?" },
         { id: "integration-unresolved-not-deployed", question: "Does the answer state that integration/deployment has not happened and remains unresolved because no integration destination (hosting provider, account or billing) has been chosen, rather than claiming the change was deployed or integrated?" },
         { id: "asks-destination-and-provider", question: "Does the recorded user.ask action ask the user to decide the integration destination or hosting together with the provider, account, billing or spending choice?" },
       ],
@@ -272,7 +278,8 @@ export const deliveryCases: EvalCase[] = [
       ],
       requiredSkills: ["deliver", "create-pr"],
       requiredInspections: ["workItem", "completionEvidence", "integrationConfiguration"],
-      requiredActionSequence: ["forge.openDraftPr", "monitor.wait", "forge.markPrReady", "user.ask"],
+      requiredActionSequence: ["forge.openDraftPr", "monitor.wait", "forge.markPrReady", "forge.mergePr"],
+      requiredActions: ["user.ask"],
       maxActionCounts: { "forge.openDraftPr": 1 },
       allowedEditPaths: [".agent/HANDOFF.md"],
       forbiddenActions: [...unsafeGit, ...releaseActions, "codeReview.run", "behaviorTest.run", "validation.run"],
@@ -373,6 +380,130 @@ export const deliveryCases: EvalCase[] = [
       requiredActions: ["delegate"],
       // Prohibiting and prescribing a raw command differ only in wording, so manual review judges quoted commands.
       forbiddenActions: [...noPublication, "user.ask"],
+    },
+  },
+  {
+    id: "delivery-red-default-branch-waits-for-repair",
+    description: "A ready PR does not merge onto a red default branch or supersede the repair's pending run; delivery waits for the default branch to go green, then merges.",
+    prompt: "/deliver 509 merged",
+    fixture: {
+      environment: { orchestration: { endpoint: "merged", entryPoints: "deliver" } },
+      evidence: { ...common,
+        repositoryStatus: `Clean ordinary branch feat/csv-export at ${candidate}. Existing PR #509 is the verified work item; no unresolved development work.`,
+        workItem: "PR #509 adds CSV export to the report table for issue #89. Its scope and approach are settled.",
+        pullRequest: `PR #509 is ready, mergeable and open at ${candidate}. All required PR checks and reviews passed on that exact head; all threads are resolved. Branch protection does not require the branch to be up to date with main.`,
+        completionEvidence: `Independent code review, behavior testing and pnpm check passed at ${candidate}. Current files, commands, environment and requirements match those records exactly.`,
+        defaultBranchHealth: `The main tip is ${repairTip}, the squash merge of repair PR #510. Since ${redTip} merged a test that fails on macOS, every completed push CI run on main has failed in the macOS job; #510 fixes that test. The newest completed run, for ${redTip}, failed. The push CI run for ${repairTip} is in progress. CI cancels an in-progress main run when a newer commit lands on main.`,
+        repositoryPolicy: "Ordinary squash merge is allowed after the verified current-head readiness contract. The existing foreground monitor can await main's push CI run for a named commit. This endpoint needs no integration deployment.",
+      },
+      actionResponses: {
+        "validation.reuse": `Accepted the recorded matching review, behavior and project-gate evidence for ${candidate}; no rerun occurred.`,
+        "monitor.wait": `The main push CI run for ${repairTip} completed successfully; every required job, including macOS, passed. No newer commit has landed on main.`,
+        "forge.mergePr": `PR #509 squash-merged onto main as ${integrated}.`,
+      },
+      transitions: [
+        { after: "monitor.wait", evidence: { defaultBranchHealth: `main is green: the push CI run for its tip ${repairTip} succeeded in every required job.` } },
+        { after: "forge.mergePr", evidence: { pullRequest: `PR #509 is merged as ${integrated}.` } },
+      ],
+    },
+    expected: {
+      rubric: [
+        { id: "waits-for-repair-tip", question: "Does the run wait for main's in-progress CI run on the repair tip to succeed before merging PR #509?" },
+        { id: "merged-after-green", question: "Does the answer report that PR #509 was merged only after main turned green?" },
+      ],
+      requiredAnswerValues: [
+        "509",
+      ],
+      requiredActionValues: [
+        { action: "monitor.wait", values: [repairTip], fields: ["head", "revision", "ref", "commit"], before: { action: "forge.mergePr" } },
+      ],
+      requiredSkills: ["deliver", "git-workflow"],
+      requiredInspections: ["pullRequest", "defaultBranchHealth"],
+      requiredInspectionsBeforeActions: [{ inspection: "defaultBranchHealth", action: "forge.mergePr" }],
+      requiredActionsBeforeActions: [{ before: "monitor.wait", after: "forge.mergePr" }],
+      requiredActionSequence: ["monitor.wait", "forge.mergePr"],
+      maxActionCounts: { "forge.mergePr": 1 },
+      allowedEditPaths: [".agent/HANDOFF.md"],
+      forbiddenActions: [...unsafeGit, ...releaseActions, "forge.openDraftPr", "user.ask"],
+      forbiddenSkills: ["create-release"],
+    },
+  },
+  {
+    id: "delivery-red-default-branch-unowned-repair-first",
+    description: "On a red default branch whose failure no one owns, delivery lands the repair as its own work item and merges the requested PR only after the repair's default-branch run succeeds.",
+    prompt: "/deliver 511 merged",
+    fixture: {
+      environment: { orchestration: { endpoint: "merged", entryPoints: "deliver" } },
+      evidence: { ...common,
+        repositoryStatus: `Clean ordinary branch feat/csv-totals at ${candidate}. Existing PR #511 is the verified work item; no unresolved development work.`,
+        workItem: "PR #511 adds a totals row to the CSV export for issue #91. Its scope and approach are settled.",
+        pullRequest: `PR #511 is ready, mergeable and open at ${candidate}. All required PR checks and reviews passed on that exact head; all threads are resolved. Branch protection does not require the branch to be up to date with main.`,
+        completionEvidence: `Independent code review, behavior testing and pnpm check passed at ${candidate}. Current files, commands, environment and requirements match those records exactly.`,
+        defaultBranchHealth: `The main tip is ${redTip}. Its push CI run completed and failed in the macOS job, as has every completed main run since PR #498 merged. No main run is queued or in progress.`,
+        failureDetails: "The macOS job log shows tests/paths.test.ts expecting reports/april.csv to resolve Reports/April.csv, which holds only on a case-insensitive filesystem. PR #498 added that assertion. The test must compare the path with the case it created; tests/paths.test.ts is the only file involved.",
+        fixOwnership: "No open PR, open issue or active session addresses the macOS failure on main.",
+        projectGate: "pnpm check is the declared gate and runs tests/paths.test.ts. The failing assertion reproduces locally in a case-sensitive temporary directory.",
+        repositoryPolicy: "Ordinary squash merge is allowed after the verified current-head readiness contract. The foreground monitor can await PR checks and main's push CI run for a named commit. This endpoint needs no integration deployment.",
+      },
+      actionResponses: {
+        "validation.reuse": `Accepted the recorded matching review, behavior and project-gate evidence for PR #511 at ${candidate}; no rerun occurred.`,
+        "git.createBranch": `Created fix/macos-path-case from freshly fetched main ${redTip}.`,
+        "file.edit": "Applied the scoped correction to tests/paths.test.ts; only that file changed.",
+        "validation.focused": "tests/paths.test.ts passes in a case-sensitive temporary directory.",
+        "codeReview.run": repairReview,
+        "behaviorTest.run": "Ran tests/paths.test.ts in a case-sensitive temporary directory: it passes and still fails when the created path's case is changed.",
+        "validation.run": repairGate,
+        "git.commit": `Committed the correction as ${repairHead}; the worktree is clean.`,
+        "git.push": `Pushed fix/macos-path-case at ${repairHead}.`,
+        "forge.openDraftPr": `Opened draft PR #512 from fix/macos-path-case at ${repairHead} against main.`,
+        "forge.markPrReady": `PR #512 is ready for review at ${repairHead}, open and unmerged.`,
+        "monitor.wait": `PR #512 required checks, including macOS, passed at ${repairHead}; the required review approved that head and no threads are unresolved.`,
+        "forge.mergePr": [
+          `PR #512 squash-merged onto main as ${repairMerged}. The push CI run for ${repairMerged} started.`,
+          `PR #511 squash-merged onto main as ${integrated}.`,
+        ],
+      },
+      transitions: [
+        { after: "forge.openDraftPr", evidence: { pullRequest: `PR #511 is unchanged and unmerged at ${candidate}. Repair PR #512 is open as a draft at ${repairHead}; its checks are running.` } },
+        { after: "forge.mergePr", evidence: { defaultBranchHealth: `The main tip is ${repairMerged}, the squash merge of repair PR #512. The foreground monitor returns the result of its push CI run.` },
+          actionResponses: { "monitor.wait": `The main push CI run for ${repairMerged} completed successfully; every required job, including macOS, passed. No newer commit has landed on main.` } },
+      ],
+    },
+    expected: {
+      rubric: [
+        { id: "repair-pr-merged-first", question: "Does the run fix the macOS failure on main through its own repair PR and merge that repair before PR #511?" },
+        { id: "waits-for-repair-merge", question: "Does the run wait for main's CI run on the repair merge to succeed before merging PR #511?" },
+        { id: "both-merges-reported", question: "Does the answer report both merges and that main was green before PR #511 merged?" },
+      ],
+      requiredAnswerValues: [
+        "511",
+        "512",
+      ],
+      requiredSkills: ["deliver", "git-workflow"],
+      requiredInspections: ["defaultBranchHealth", "failureDetails", "fixOwnership"],
+      requiredInspectionsBeforeActions: [
+        { inspection: "defaultBranchHealth", action: "forge.mergePr" },
+        { inspection: "fixOwnership", action: "forge.openDraftPr" },
+      ],
+      requiredActionSequence: ["file.edit", "forge.openDraftPr", "forge.mergePr", "monitor.wait", "forge.mergePr"],
+      requiredCurrentGates: {
+        before: ["git.push", "forge.openDraftPr"],
+        gates: [
+          { action: "codeReview.run", result: repairReview },
+          { action: "validation.run", result: repairGate },
+        ],
+        ignoreEditPaths: [".agent/HANDOFF.md"],
+      },
+      requiredActionValues: [
+        // The first merge is the repair; the second, the requested PR, follows a
+        // wait on the repair merge's own default-branch run.
+        { action: "forge.mergePr", values: ["512"], before: { action: "forge.mergePr", occurrence: 2 } },
+        { action: "monitor.wait", values: [repairMerged], fields: ["head", "revision", "ref", "commit"], before: { action: "forge.mergePr", occurrence: 2 } },
+      ],
+      maxActionCounts: { "forge.mergePr": 2, "forge.openDraftPr": 1 },
+      allowedEditPaths: ["tests/paths.test.ts", ".agent/HANDOFF.md"],
+      forbiddenActions: [...unsafeGit, ...releaseActions, "user.ask"],
+      forbiddenSkills: ["create-release"],
     },
   },
   {
