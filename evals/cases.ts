@@ -4542,7 +4542,7 @@ export const evalCases: EvalCase[] = [
         sdkPackage:
           "The installed node_modules/@harbor-cloud/storage-sdk/package.json is version 3.4.1 and names its official documentation at https://docs.harbor-cloud.example/storage-sdk/3.4. The package ships CHANGELOG.md and TypeScript declarations.",
         officialDocs:
-          "Web search could not reach these docs (see webResearch). A direct fetch of https://docs.harbor-cloud.example/storage-sdk/3.4/resumable-uploads (the pinned package's documentation URL) succeeds. The official 3.4 documentation describes createResumableSession(), uploadChunk(sessionId, offset, bytes) with chunks in multiples of 256 KiB, and getCommittedOffset(sessionId) for resuming after an interruption. The installed 3.4.1 declarations export the same three functions.",
+          "A direct fetch of https://docs.harbor-cloud.example/storage-sdk/3.4/resumable-uploads (the pinned package's documentation URL) succeeds. The official 3.4 documentation describes createResumableSession(), uploadChunk(sessionId, offset, bytes) with chunks in multiples of 256 KiB, and getCommittedOffset(sessionId) for resuming after an interruption. The installed 3.4.1 declarations export the same three functions.",
         tests:
           "A local storage emulator (`bun run storage:emulator`) supports resumable sessions for integration and behavior tests through the adapter's public upload entry point.",
         repositoryStatus:

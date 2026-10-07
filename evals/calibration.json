@@ -1384,10 +1384,11 @@
         "Fresh v2 Fable attempted a preparatory git.fetch. The updated skill permits independent authorized work, so the original blanket fetch prohibition lacks task/contract support. Remove only that action prohibition; preserve source-citation and dependent-mutation gates. A recorded fetch/branch acknowledgment still does not prove success, and semantic review must check such claims. No fixture success result was added.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
         "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed.",
-        "Founder labels, round 3: the case's environment, rubric or fixture did not match what the founder expected of the run."
+        "Founder labels, round 3: the case's environment, rubric or fixture did not match what the founder expected of the run.",
+        "The officialDocs hint that web search could not reach the docs (240bd8c) is removed, because the founder's note on this case asks the run to work out why the documentation was unavailable itself."
       ],
       "beforeSha256": "79e851dc4c980bdc7803f640b5e6ca59b52dfd7fe8ad39351dc02210301c4f3f",
-      "afterSha256": "ecc3ae0c03178db9923d7ca7b5d8a7d53bc60c5ff2e48304911b0a3cdf5bb856",
+      "afterSha256": "cdf46f3b1c0d4770bb988f4e1f2ef7f1034764ba0f44df4d081434878c39c48a",
       "postFreezeChangedFields": [
         "expected"
       ],
@@ -2521,10 +2522,11 @@
         "New bounded September 14 synthetic decision fixture, declared before native execution: An unresolved integration destination does not stop independent PR preparation or justify guessed hosting and false deployment claims. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
         "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed.",
-        "Founder labels, round 3: the case's environment, rubric or fixture did not match what the founder expected of the run."
+        "Founder labels, round 3: the case's environment, rubric or fixture did not match what the founder expected of the run.",
+        "Restored to the founder's no-hand-back rule: merging deploys nothing and does not depend on the integration destination, so PR #505 must be merged before only the destination decision goes to the person. The round-3 item that also accepted putting the merge to the person as a choice (13a08e0) is reverted, and forge.mergePr is now part of the required sequence."
       ],
       "beforeSha256": null,
-      "afterSha256": "ed5f6a28e619b4ab76355f7f908bd0788705872f866146961e1466024de1a55f",
+      "afterSha256": "5bd4892cb443600c024a2a8ffa54d4577063ea842a0ba0fb5514262c1c4f788b",
       "frozenCaseSha256": "e843cae16695caf4ae161cabe10079010403e2d9f4169146a3130e7a8cf7865a"
     },
     {
