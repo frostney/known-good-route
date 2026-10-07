@@ -18,8 +18,7 @@ metadata:
 Establish whether the requested review scope is correct, necessary, clear, and
 ready for its claimed use. Without an explicit file or prior-findings input,
 review the complete change. Review first; remediate only in an authorized fix
-mode. Started directly, hand the findings on under the
-[delivery settings](../deliver/SKILL.md#delivery-settings).
+mode.
 
 ## Operations, remediation, and boundaries
 
@@ -232,7 +231,13 @@ the map's term and describe your own role there as the `coordinator`. A short
 report may compress wording but keeps every applicable field below.
 
 For a fresh review, lead with the verdict: `APPROVE`,
-`APPROVE WITH IMPROVEMENTS`, or `REQUEST CHANGES`.
+`APPROVE WITH IMPROVEMENTS`, or `REQUEST CHANGES`. The report ends this
+skill's step. Started directly, continue under the
+[delivery settings](../deliver/SKILL.md#delivery-settings); with
+`entry-points: deliver`, the reviewed change and its validated findings go on
+to `/deliver`, which fixes the findings, verifies and publishes the change up to
+the configured endpoint (`ready-to-merge` when there is no `ORCHESTRATION.md`).
+With `stop`, end with this report.
 
 Include:
 

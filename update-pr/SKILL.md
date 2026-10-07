@@ -75,5 +75,9 @@ not block the update.
    pushed head; only then may it be marked ready for review. Return the
    exact current head and next transition to the active publication or delivery
    caller; that caller continues through CI and feedback. Started directly,
-   continue under the [delivery settings](../deliver/SKILL.md#delivery-settings).
+   continue under the [delivery settings](../deliver/SKILL.md#delivery-settings);
+   with `entry-points: deliver`, the pushed head goes on to `/deliver`, which
+   awaits its CI and review and takes the PR to the configured endpoint
+   (`ready-to-merge` when there is no `ORCHESTRATION.md`). With `stop`, end
+   with this report.
    Report missing walkthrough requirements with remedies.

@@ -15,11 +15,9 @@ metadata:
 
 Establish whether the delivered behavior matches the explicit specification.
 Report by default. With the exact `fix` qualifier, fix observed in-scope gaps
-and retest them. Started directly, continue under the
-[delivery settings](../deliver/SKILL.md#delivery-settings). This skill does not
-replace or run source review or the repository's full project gate; the caller
-owns those, and source review and unit-test success alone are not behavior
-evidence.
+and retest them. This skill does not replace or run source review or the
+repository's full project gate; the caller owns those, and source review and
+unit-test success alone are not behavior evidence.
 
 Reuse recorded real-interface evidence when the implementation, requirement,
 environment, and inputs match, except that fix mode reproduces each failure
@@ -79,4 +77,9 @@ Return a structured summary in the active workflow, not a committed or ignored
 artifact. Include the tested revision, environments, specification sources,
 each requirement labeled `passed`, `failed`, `unverified`, or `out of scope`
 with its evidence or limitation, fixes and changed files when applicable, and whether any
-behavior remains failed or unverified.
+behavior remains failed or unverified. Started directly, continue under the
+[delivery settings](../deliver/SKILL.md#delivery-settings); with
+`entry-points: deliver`, the tested change, including any fix, goes on to
+`/deliver`, which reviews, gates and publishes it up to the configured endpoint
+(`ready-to-merge` when there is no `ORCHESTRATION.md`). With `stop`, end with
+this summary.
