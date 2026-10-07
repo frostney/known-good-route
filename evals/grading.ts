@@ -308,11 +308,17 @@ export function gradeRun(
       detail: "Exact value must not appear in the final response or communication actions.",
     });
   for (const requirement of expected.requiredActionValues ?? []) {
-    const records = ledger.actions.filter((a) => a.action === requirement.action);
+    const limit = requirement.before;
+    const end = limit
+      ? (ledger.actions
+          .map((a, index) => (a.action === limit.action ? index : -1))
+          .filter((index) => index >= 0)[(limit.occurrence ?? 1) - 1] ?? 0)
+      : ledger.actions.length;
+    const records = ledger.actions.slice(0, end).filter((a) => a.action === requirement.action);
     const carriesAll = (record: RunLedger["actions"][number]) =>
       requirement.values.every((value) => actionCarries(record, value, requirement.fields));
     checks.push({
-      name: `${requirement.action} carries ${requirement.values.map(describe).join(", ")}`,
+      name: `${requirement.action} carries ${requirement.values.map(describe).join(", ")}${limit ? ` before ${limit.action}` : ""}`,
       passed:
         records.length > 0 &&
         (requirement.every ? records.every(carriesAll) : records.some(carriesAll)),

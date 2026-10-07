@@ -58,7 +58,7 @@ The media and publication observations are simulated; the runs do not capture,
 synthesize or upload a video. Inspect the complete reports as well as automated
 grades: a correct workflow can still contain an unsupported environment claim.
 
-For the development and delivery contracts, select the seven focused cases:
+For the development and delivery contracts, select the nine focused cases:
 
 ```bash
 bun run eval -- --model codex:gpt-6-astra --model claude:claude-fable-5-1 \
@@ -68,13 +68,17 @@ bun run eval -- --model codex:gpt-6-astra --model claude:claude-fable-5-1 \
   --case delivery-default-integration-current-revision \
   --case delivery-missing-integration-decision \
   --case delivery-milestone-release-boundary \
-  --case delivery-post-merge-integration-repair
+  --case delivery-post-merge-integration-repair \
+  --case delivery-red-default-branch-waits-for-repair \
+  --case delivery-red-default-branch-unowned-repair-first
 ```
 
 These exercise development-only scope, mandatory PR review and behavior gates,
 repair of existing-PR CI failures, configured integration revision verification,
 a necessary destination decision after independent work, milestone-owned
-release publication, and a linked repair after integration finds a post-merge gap. They use simulated repository and external state. They do
+release publication, a linked repair after integration finds a post-merge gap,
+a merge held until a red default branch's repair run succeeds, and an unowned
+red default branch repaired before the requested merge. They use simulated repository and external state. They do
 not establish a real deployment, production readiness, or release publication.
 Review the complete actions and final reports against the requirements; assess
 unsupported claims and qualitative coverage beyond the automatic checks. When
@@ -154,7 +158,9 @@ them (it confused a 40-character revision with a 42-character one):
 - `requiredActionValues` lists values a recorded action must carry, either as
   the exact value of a named data field (or an element of an array field) or
   as a whole token in its details or data. `every` applies it to every such
-  action.
+  action. `before` counts only actions recorded before a given occurrence of
+  another action, such as a wait on the default-branch tip that must precede
+  a merge, and fails when that occurrence is missing.
 
 A whole token is not preceded or followed by a letter, digit or underscore, so
 `503` does not match `1503`. Matching is literal and case-sensitive.
