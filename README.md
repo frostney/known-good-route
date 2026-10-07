@@ -146,11 +146,10 @@ confirmation of the main operation does not establish its requested side effects
 
 `create-pr` and `update-pr` describe the complete final change against its base,
 following the [PR writing guidance](agent-writing/references/pr-descriptions.md).
-Keep ordinary descriptions concise, preserve explicit project templates and
-omit routine testing prose unless required. Material limitations stay visible;
-use diagrams, code examples and longer rationale when they help review.
-Show visible before/after media and benchmark tables, identifying the target
-branch baseline and PR candidate for performance comparisons.
+A body has a short What changed summary, a collapsed Details block, a Visual
+walkthrough and How to test steps that a human or agent reviewer can follow.
+The author's own verification goes in the final handoff, not the body.
+Explicit project templates take precedence.
 
 When meaningful UI, CLI or backend behavior benefits from a demonstration,
 prepare a short video with voice-over and synchronized subtitles using the

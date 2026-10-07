@@ -124,11 +124,13 @@ readiness. Recording a walkthrough does not replace behavior testing.
    change; `git-workflow`'s squash merge makes that title the base-branch commit
    subject. Follow
    [../agent-writing/references/pr-descriptions.md](../agent-writing/references/pr-descriptions.md)
-   for the body, preserving explicit project-template requirements. Before
+   for the body's section order and character limits, preserving explicit
+   project-template requirements. Leave the author's verification out of the
+   body; the final handoff reports it. Before
    writing it, search open and closed issues and recent sibling sessions or
    adjacent branches when available for related findings and duplicates. Put
-   each closing keyword on its own line as `Closes #N`, and only on the layer
-   that completes that issue.
+   each closing keyword on its own line as `Closes #N` after the change
+   summary, and only on the layer that completes that issue.
 9. After the publication checks pass, or under the preview-only draft rule
    above, push an ordinary branch normally and set its upstream when needed,
    then open one draft PR against the remote default or the named base.

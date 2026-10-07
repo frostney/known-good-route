@@ -120,8 +120,8 @@ freshly fetched remote base and pushing normally.
   stack update. Its Git guard does not constrain later PR metadata writes; do not
   use that combined path to preserve a frozen dependency during top-layer publication.
   Reconcile every
-  PR's title, body, base, draft state, linked requirements, and observed
-  validation after submission. Put a closing keyword only on the layer that
+  PR's title, body, base, draft state and linked requirements after submission,
+  and check each layer's observed validation. Put a closing keyword only on the layer that
   completes the issue.
 - Treat every layer as a real PR. Validate its exact head and review its own
   claim; do not let evidence from one layer stand in for another.
