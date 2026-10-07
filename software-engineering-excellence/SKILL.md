@@ -8,7 +8,7 @@ description: >-
 license: Unlicense OR MIT
 metadata:
   agents-role: ambient
-  agents-text: Base every factual claim on a file, command result or page read this session, or mark it not checked; in substantial technical tasks, keep the agreed scope and finish verified work.
+  agents-text: Base each material claim about current project state or a completed action on a file, command result or page read this session, or on what the person said, and keep what was observed apart from what was inferred; in substantial technical tasks, keep the agreed scope and finish verified work.
 ---
 
 # Software engineering excellence
@@ -91,10 +91,12 @@ subskills contribute applicable evidence without rerunning it. Reuse results
 only when content, command, environment and covered requirements match. Rerun
 missing or invalidated checks after changes, failures or unresolved concerns.
 Keep independent review judgment. Never weaken coverage or hide a failure to
-obtain a pass. Diagnose an observed anomaly that affects acceptance. Fix a
-defect in the touched area, and every other instance of the same defect, in
-this change or a stacked layer; never defer in-scope work to an issue. Record
-an unrelated finding as a tracked follow-up without asking.
+obtain a pass. Diagnose an observed anomaly that affects acceptance. Fix every
+instance of the defect the change addresses in this change or a stacked layer;
+never defer in-scope work to an issue. Record a different defect, even one
+nearby, as a follow-up in the handoff, or in the harness's task mechanism where
+one exists, without asking; open an external issue only when the work's
+authority or repository policy covers it.
 
 Write regression tests for observable behavior or consequential invariants,
 with expectations derived from independent requirements, never from the
