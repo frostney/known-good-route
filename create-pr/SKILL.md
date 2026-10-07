@@ -158,13 +158,13 @@ readiness. Recording a walkthrough does not replace behavior testing.
     in-scope causes to step 11. If expected PR checks have no run, inspect
     mergeability and resolve an established conflict through `/update-pr`
     before considering a retrigger. An unavailable external dependency remains
-    pending or blocked, never a passed check. Report CI as green only by quoting
-    the `satisfied` result and its `identity.head` for the exact head; report a
-    local check as passing from its actual command result on the tested content.
-    Call a failure flaky or transient only with its failing log line and
-    evidence that it is intermittent. Blaming something other than the change,
-    or leaving the failure out of repair, needs its own evidence; a flaky
-    failure the change introduced is in scope.
+    pending or blocked, never a passed check. Call CI green only after the
+    wait reports it satisfied for the current head, and then say so in plain
+    words. Call a local check passing from its actual result on the tested
+    content. Treat a failure as flaky or transient only after its failing log
+    shows it is intermittent. Blaming something other than the change, or
+    leaving the failure out of repair, needs its own evidence; a flaky failure
+    the change introduced is in scope.
 13. Once the PR is missing nothing required by the publication and PR-specific
     phases and all applicable CI is observed green for its exact head, mark it
     ready for review. Return every affected URL, native stack order when

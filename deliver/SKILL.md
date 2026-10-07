@@ -120,11 +120,10 @@ claims or label them unconfirmed, without implying failure. Apply this to the
 whole report, including tables and parenthetical remarks; see
 [agent-writing](../agent-writing/SKILL.md) for shared writing guidance.
 
-Call remote CI green or passing, or a PR ready, only by quoting the
-`delivery-wait` result for the exact head commit: its `state` of `satisfied`
-and its `identity.head`. Report a local check as passing from its actual
-command result on the tested content. Call a failure flaky or transient only
-with its failing log line and evidence that it is intermittent. Blaming
-something other than the change, or leaving the failure out of the required
-repair, needs its own evidence; a flaky failure the change introduced is in
-scope.
+Call remote CI green, or a PR ready, only after `delivery-wait` reports it
+satisfied for the current head commit, and then say so in plain words. Call a
+local check passing from its actual result on the tested content. Treat a
+failure as flaky or transient only after its failing log shows it is
+intermittent. Blaming something other than the change, or leaving the failure
+out of the required repair, needs its own evidence; a flaky failure the change
+introduced is in scope.
