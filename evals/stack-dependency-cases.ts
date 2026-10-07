@@ -34,9 +34,6 @@ const stopped: ActionName[] = [
   ...publication, "forge.markPrReady", "forge.updatePrMetadata", "git.stackInit", "git.stackSubmit",
 ];
 export const historyInspections = ["openPullRequests", "pullRequestHeads", "branchHistory"];
-// "merge [up to five words, none naming main] release/1.x", or a data field that names the merged ref.
-const mergesReleaseBranch =
-  'merg(?:e|es|ed|ing)\\s+(?:(?!\\S*\\bmain\\b)\\S+\\s+){0,5}(?:origin/)?release/1\\.x|"(?:ref|source|sourceRef|from|upstream)":"(?:origin/)?release/1\\.x"';
 
 export const stackDependencyCases: EvalCase[] = [
   {
@@ -44,6 +41,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "A change whose history contains another open PR's commits is published as a native stack adopting that PR, not as a PR whose base is set by hand to its branch.",
     prompt: "/create-pr for issue #121.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         ...common,
         openPullRequests: listing(pr(120, "feat/allowance-budget", budget), pr(118, "fix/parser-escape", parser)),
@@ -59,15 +57,24 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "native-stack-120-under-122", question: "Does the answer report that the change was published as a native stack with existing PR #120 (feat/allowance-budget) as the lower layer and new PR #122 (feat/budget-report) on top, with #122 ready for review?" },
+        { id: "stack-init-adopts-only-dependency", question: "Does every recorded git.stackInit action adopt no branch other than feat/allowance-budget and feat/budget-report (in particular not fix/parser-escape of PR #118, which shares no commits; merely naming it as excluded is acceptable)?" },
+      ],
+      requiredAnswerValues: [
+        "120",
+        "122",
+      ],
+      requiredActionValues: [
+        { action: "git.stackInit", values: [["init feat/allowance-budget feat/budget-report","[\"feat/allowance-budget\",\"feat/budget-report\"]"]], every: true },
+      ],
       requiredSkills: ["create-pr", "git-workflow"],
       requiredReferences: ["git-workflow/references/github-stacks.md"],
       requiredInspectionsBeforeActions: historyInspections.map(inspection => ({ inspection, action: "git.stackInit" as const })),
       requiredActions: ["git.stackInit", "git.stackSubmit", "forge.markPrReady"],
       // Every init adopts exactly the PR whose commits the branch contains, bottom to top.
-      requiredActionDetails: [{ action: "git.stackInit", patterns: ['init\\s+feat/allowance-budget\\s+feat/budget-report\\b|\\["feat/allowance-budget","feat/budget-report"\\]'], dataFields: ["*"], every: true }],
       requiredActionsBeforeActions: [{ before: "git.stackInit", after: "git.stackSubmit" }],
       forbiddenActions: publication,
-      reportPatterns: ["stack", "\\b120\\b", "\\b122\\b"],
     },
   },
   {
@@ -75,6 +82,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "When the PR a change builds on is based by hand on another PR's branch instead of the default, publication stops and reports the topology rather than changing either PR.",
     prompt: "/create-pr for issue #121.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         ...common,
         branchHistory: `$ git rev-list origin/main..HEAD\n${report}\n${budget}\n${schema}\n$ git log --oneline origin/main..HEAD\n2222222 feat(report): show remaining allowance\n1111111 feat(budget): add allowance budget\n0000000 feat(budget): define the budget schema`,
@@ -85,12 +93,18 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "stopped-hand-based-120", question: "Does the answer state that publication stopped without opening or changing any PR because PR #120, whose commits this branch contains, is based on feat/budget-schema (PR #119's branch) rather than on main?" },
+      ],
+      requiredAnswerValues: [
+        "120",
+        ["budget-schema", "119"],
+      ],
       requiredSkills: ["create-pr", "git-workflow"],
       requiredReferences: ["git-workflow/references/github-stacks.md"],
       requiredInspections: historyInspections,
       requiredAnyActions: ["user.ask", "report"],
       forbiddenActions: stopped,
-      reportPatterns: ["\\b120\\b", "\\bbase", "budget-schema|#?119\\b"],
     },
   },
   {
@@ -98,6 +112,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "A change that contains a fork PR's commits cannot stack on it, so publication stops and reports instead of opening an ordinary PR that carries those commits.",
     prompt: "/create-pr for issue #121.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         ...common,
         openPullRequests: listing(pr(130, "main", budget, "main", true)),
@@ -106,11 +121,16 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "stopped-fork-130", question: "Does the answer state that publication stopped because this branch contains commits of fork (cross-repository) PR #130, which cannot serve as a stack base, instead of opening an ordinary PR that carries those commits?" },
+      ],
+      requiredAnswerValues: [
+        "130",
+      ],
       requiredSkills: ["create-pr"],
       requiredInspections: historyInspections,
       requiredAnyActions: ["user.ask", "report"],
       forbiddenActions: stopped,
-      reportPatterns: ["\\b130\\b", "fork|cross.repositor"],
     },
   },
   {
@@ -118,6 +138,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "Open PRs that share no commits with the change, including a fork PR from a branch named main, leave an ordinary publication against the default branch.",
     prompt: "/create-pr for issue #121.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         ...common,
         repositoryStatus: `Repository example/project on github.com. The clean current branch feat/budget-report is at ${report}, one commit ahead of freshly fetched origin/main at ${main}. No unrelated local work.`,
@@ -135,12 +156,19 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "pr-122-ready", question: "Does the answer report that PR #122 for feat/budget-report is ready for review as an ordinary publication, rather than stopping or stacking because of PR #118 or fork PR #130?" },
+      ],
+      requiredAnswerValues: [
+        "122",
+      ],
+      requiredActionValues: [
+        { action: "forge.openDraftPr", values: ["main"], fields: ["base"], every: true },
+      ],
       requiredSkills: ["create-pr"],
       requiredInspections: historyInspections,
       requiredActions: ["git.push", "forge.openDraftPr", "forge.markPrReady"],
-      requiredActionDetails: [{ action: "forge.openDraftPr", patterns: ["(?:^|\\n)main$"], dataFields: ["base"], every: true }],
       forbiddenActions: ["forge.mergePr", "git.amend", "git.forcePush", "git.rebase", "git.stackInit", "git.stackSubmit", "git.stackMerge", "user.ask"],
-      reportPatterns: ["\\b122\\b"],
     },
   },
   {
@@ -148,6 +176,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "A backport onto a user-named release branch publishes as an ordinary PR against that branch, even while an open PR has the release branch as its head and an up-to-date default-branch PR shares a default commit the backport merged.",
     prompt: "/create-pr for issue #140. This is a backport onto release/1.x.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         repositoryStatus: `Repository example/project on github.com. The clean current branch backport/retry-budget is at ${backport}, created from freshly fetched origin/release/1.x at ${release}. Freshly fetched origin/main is at ${main}. No unrelated local work.`,
         branchHistory: `$ git log --oneline HEAD ^origin/release/1.x\n5555555 fix(retry): bound the retry budget\n9999999 Merge the timeout hotfix from main\n8888888 fix(http): restore the request timeout\n$ git rev-list HEAD ^origin/release/1.x\n${backport}\n${mergeCommit}\n${hotfix}\n$ git rev-list HEAD ^origin/release/1.x ^origin/main\n${backport}\n${mergeCommit}\n$ git merge-base --is-ancestor ${hotfix} origin/main && echo on-main\non-main`,
@@ -168,13 +197,21 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "pr-151-ready-on-release", question: "Does the answer report that backport PR #151 is ready for review as an ordinary PR against release/1.x, rather than stopping or stacking on PR #150 or PR #160?" },
+      ],
+      requiredAnswerValues: [
+        "151",
+        "release/1.x",
+      ],
+      requiredActionValues: [
+        { action: "forge.openDraftPr", values: ["release/1.x"], fields: ["base"], every: true },
+      ],
       requiredSkills: ["create-pr"],
       requiredInspections: historyInspections,
       requiredActions: ["git.push", "forge.openDraftPr", "forge.markPrReady"],
       // The base field is appended last, so the pattern checks that field rather than any mention of the branch.
-      requiredActionDetails: [{ action: "forge.openDraftPr", patterns: ["(?:^|\\n)release/1\\.x$"], dataFields: ["base"], every: true }],
       forbiddenActions: ["forge.mergePr", "git.amend", "git.forcePush", "git.rebase", "git.stackInit", "git.stackSubmit", "git.stackMerge", "user.ask"],
-      reportPatterns: ["\\b151\\b", "release/1\\.x"],
     },
   },
   {
@@ -182,6 +219,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "Updating a backport PR whose base is a documented release branch merges that branch, never the default branch.",
     prompt: "/update-pr 151.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         repositoryStatus: `Repository example/project on github.com. The clean current branch backport/retry-budget is at ${backport}. It is one commit behind freshly fetched origin/release/1.x at ${releaseFix} and forty commits behind freshly fetched origin/main at ${main}. No unrelated local work and no conflicts.`,
         pullRequest: "PR #151 is open from backport/retry-budget into release/1.x. Its title and body match the change.",
@@ -197,11 +235,13 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "merges-release-base", question: "Does every recorded git.merge action merge release/1.x (the PR's base) into backport/retry-budget, with no merge of main or origin/main, before the gate and the push?" },
+      ],
       requiredSkills: ["update-pr"],
       requiredActions: ["git.merge", "validation.run", "git.push"],
-      // Every merge has to take the release branch as its operand, in the wording or in a source field of its data. A
-      // merge of the default branch that only mentions the backport's release line matches neither.
-      requiredActionDetails: [{ action: "git.merge", patterns: [mergesReleaseBranch], dataFields: ["*"], every: true }],
+      // Every merge has to name the release branch; whether it is the operand rather than a mention is judged above.
+      requiredActionValues: [{ action: "git.merge", values: [["release/1.x", "origin/release/1.x"]], every: true }],
       forbiddenActions: ["forge.mergePr", "git.amend", "git.forcePush", "git.rebase", "git.stackInit", "git.stackSubmit", "git.stackSync", "user.ask"],
     },
   },
@@ -210,6 +250,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "Updating a PR whose base was set by hand to another PR's feature branch stops and reports the base instead of merging the default branch or that branch.",
     prompt: "/update-pr 122.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         repositoryStatus: `Repository example/project on github.com. The clean current branch feat/budget-report is at ${report}. It is two commits behind freshly fetched origin/feat/allowance-budget at ${budget} and five commits behind freshly fetched origin/main at ${main}. No unrelated local work.`,
         pullRequest: "PR #122 is open from feat/budget-report into feat/allowance-budget.",
@@ -220,11 +261,13 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "stops-on-hand-set-base", question: "Does the answer report that it stopped because PR #122's base, feat/allowance-budget, is the head of open PR #120 and neither the default branch, a named base nor part of a native stack, rather than describing the PR as up to date?" },
+      ],
+      requiredAnswerValues: [["feat/allowance-budget", "120"]],
       requiredSkills: ["update-pr"],
-      // Asking which base to use is a stop too; choosing one is not. The report has to say why the base is not usable,
-      // so describing the PR and calling it up to date does not pass.
+      // Asking which base to use is a stop too; choosing one is not.
       forbiddenActions: [...stopped, "git.merge", "git.stackSync"],
-      reportPatterns: ["feat/allowance-budget|#120\\b", "named base|native stack|default branch|\\bmain\\b"],
     },
   },
   {
@@ -232,6 +275,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "A backport onto a named release base that contains a default-branch PR's commits stops and reports instead of stacking the backport on the default trunk.",
     prompt: "/create-pr for issue #140. This is a backport onto release/1.x.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         repositoryStatus: `Repository example/project on github.com. The clean current branch backport/retry-budget is at ${backport}, created from freshly fetched origin/release/1.x at ${release}. Freshly fetched origin/main is at ${main}. No unrelated local work.`,
         branchHistory: `$ git log --oneline HEAD ^origin/release/1.x ^origin/main\n5555555 fix(retry): bound the retry budget\n9999999 Merge feat/allowance-budget into backport/retry-budget\n1111111 feat(budget): add allowance budget\n$ git rev-list HEAD ^origin/release/1.x ^origin/main\n${backport}\n${mergeCommit}\n${budget}`,
@@ -245,11 +289,16 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "stopped-default-pr-120", question: "Does the answer state that publication stopped (nothing pushed or published) because the release/1.x backport contains commits of PR #120, which is based on main (the default trunk) rather than release/1.x, so the backport cannot stack on it?" },
+      ],
+      requiredAnswerValues: [
+        "120",
+      ],
       requiredSkills: ["create-pr"],
       requiredInspections: historyInspections,
       requiredAnyActions: ["user.ask", "report"],
       forbiddenActions: stopped,
-      reportPatterns: ["\\b120\\b", "\\bmain\\b|\\bbase"],
     },
   },
   {
@@ -259,6 +308,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "An open-PR listing that returns exactly its limit may be truncated, so publication does not proceed on it.",
     prompt: "/create-pr for issue #121.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         ...common,
         // gh lists newest first, so the rows dropped past the limit are the oldest PRs.
@@ -269,11 +319,16 @@ export const stackDependencyCases: EvalCase[] = [
       },
     },
     expected: {
+      rubric: [
+        { id: "stopped-truncated-listing", question: "Does the answer state that publication stopped (nothing published) because the open-PR listing returned as many rows as its limit (1000), so it may be truncated or incomplete?" },
+      ],
+      requiredAnswerValues: [
+        ["1000", "1,000"],
+      ],
       requiredSkills: ["create-pr"],
       requiredInspections: ["openPullRequests"],
       requiredAnyActions: ["user.ask", "report"],
       forbiddenActions: stopped,
-      reportPatterns: ["1,?000", "truncat|limit|incomplete|complete list"],
     },
   },
 ];

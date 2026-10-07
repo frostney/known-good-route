@@ -16,7 +16,10 @@ test("grader replay rejects changed task evidence and permits assertion correcti
   expect(() =>
     assertReplayable(original, {
       ...original,
-      expected: { ...original.expected, outputPatterns: ["ready"] },
+      expected: {
+        ...original.expected,
+        rubric: [{ id: "ready", question: "Does the answer report PR #73 as a draft?" }],
+      },
     }),
   ).not.toThrow();
   expect(() =>

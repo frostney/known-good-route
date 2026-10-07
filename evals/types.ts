@@ -46,7 +46,24 @@ export interface ActionRecord {
   data?: Record<string, unknown>;
 }
 
+export const orchestrationEndpoints = ["ready-to-merge", "merged", "deployed"] as const;
+export const orchestrationEntryPoints = ["deliver", "stop"] as const;
+
+// The repository configuration a case runs in. Its expected terminal state and
+// rubric follow from it, and the runner writes it into the eval workspace.
+export interface EvalEnvironment {
+  // ORCHESTRATION.md frontmatter and body; null when the repository has none.
+  orchestration: {
+    endpoint: (typeof orchestrationEndpoints)[number];
+    entryPoints: (typeof orchestrationEntryPoints)[number];
+    body?: string;
+  } | null;
+  // Other repository files that change the expected outcome, by path.
+  files?: Record<string, string>;
+}
+
 export interface EvalFixture {
+  environment?: EvalEnvironment;
   evidence: Record<string, string>;
   registeredSkills?: Record<string, string>;
   actionResponses?: Partial<Record<ActionName, string | string[]>>;
@@ -73,12 +90,25 @@ export interface EvalExpectations {
   jsonArtifact?: { path: string; kind: string; schemaVersion: number };
   discoverySkills?: string[];
   allowedEditPaths?: string[];
-  reportPatterns?: string[];
-  requiredActionDetails?: Array<{
+  // Answer correctness, judged by a model of the other family (judge.ts).
+  // Exact values never go in the rubric; they are the code checks below.
+  rubric?: RubricItem[];
+  // Message items this case adds to the shared set in judge.ts.
+  messageRubric?: RubricItem[];
+  // Each value must appear as a whole token in the answer's communication: the
+  // final response, report and question actions, and posted replies and
+  // comments. An inner array lists accepted spellings of one value.
+  requiredAnswerValues?: ExactValue[];
+  // Values that must not appear as a whole token in that communication.
+  forbiddenAnswerValues?: string[];
+  // Each value must be carried by a recorded action of that kind: equal to one
+  // of the named data fields (or an element of an array field), or, without
+  // fields, a whole token in its details or data. With every, all such actions
+  // must carry it; otherwise one is enough.
+  requiredActionValues?: Array<{
     action: ActionName;
-    patterns: string[];
-    // "*" includes the action's complete data.
-    dataFields?: string[];
+    values: ExactValue[];
+    fields?: string[];
     every?: boolean;
     // Only actions recorded before this occurrence (default 1) of the named
     // action count; the check fails when that occurrence is absent.
@@ -115,18 +145,18 @@ export interface EvalExpectations {
   forbiddenActions?: ActionName[];
   minActionCounts?: Partial<Record<ActionName, number>>;
   maxActionCounts?: Partial<Record<ActionName, number>>;
-  outputPatterns?: string[];
-  forbiddenOutputPatterns?: string[];
+}
+
+export type ExactValue = string | string[];
+
+export interface RubricItem {
+  id: string;
+  // A yes/no question about the outcome or result; a correct answer earns yes.
+  question: string;
 }
 
 export interface EvalCase {
   execution?: "cache-cli" | "authorization-cli";
-  // Project AGENTS.md content loaded into the agent's instructions, as a
-  // consuming repository would load it.
-  agentsMd?: string;
-  // Yes/no criteria fixed before any run, for a judge from the other model
-  // family. The harness does not grade them yet.
-  rubric?: string[];
   models?: string[];
   worker?: { model: string; caseId: string; mode?: "claude-agent" };
   id: string;
@@ -188,7 +218,7 @@ export interface GradeCheck {
   name: string;
   passed: boolean;
   detail: string;
-  category?: "discovery";
+  category?: "discovery" | "rubric" | "message";
 }
 
 export interface GradeResult {
@@ -219,6 +249,14 @@ export interface EvalRunRecord {
     observedModels: string[];
     responseModels?: string[];
     transcript: string;
+  };
+  judgement?: import("./judge.ts").Judgement;
+  // Exactly what the run saw: the written configuration files, the injected
+  // AGENTS.md and the case's repository evidence.
+  environment?: {
+    files: Record<string, string>;
+    agentsMd: string;
+    repoContext: Record<string, string>;
   };
   error?: string;
 }

@@ -24,13 +24,19 @@ const scenario = (expected: EvalCase["expected"]): EvalCase => ({
   id: "calibration",
   description: "",
   prompt: "",
-  fixture: { evidence: {} },
-  expected,
+  fixture: { environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } }, evidence: {} },
+  expected: {
+    rubric: [{ id: "outcome", question: "Does the answer report the outcome?" }],
+    ...expected,
+  },
 });
 test("preflight rejects impossible calibration and worker setups before native calls", () => {
   expect(() =>
-    validateCases([scenario({ reportPatterns: ["["] })], new Set()),
-  ).toThrow("invalid assertion");
+    validateCases(
+      [scenario({ reportPatterns: ["["] } as EvalCase["expected"])],
+      new Set(),
+    ),
+  ).toThrow("was removed");
   expect(() =>
     validateCases(
       [scenario({ requiredSkills: ["review"], forbiddenSkills: ["review"] })],
@@ -101,7 +107,6 @@ test("requested JSON evidence requires the actual payload at its declared path",
       kind: "code-review",
       schemaVersion: 2,
     },
-    reportPatterns: ["ARCHITECTURE_RISK"],
   });
   for (const content of [
     "not json",
@@ -132,44 +137,6 @@ test("requested JSON evidence requires the actual payload at its declared path",
   expect(gradeRun(c, l, "Saved report.json").passed).toBe(true);
   l.actions[0]!.data!.path = "wrong.json";
   expect(gradeRun(c, l, "Saved report.json").passed).toBe(false);
-});
-test("review replies are communication evidence but edit claims are not", () => {
-  const c = scenario({ reportPatterns: ["out of scope"] });
-  const l = empty();
-  l.actions.push({ action: "file.edit", details: "out of scope" });
-  expect(gradeRun(c, l, "Done").passed).toBe(false);
-  l.actions.push({
-    action: "forge.replyInline",
-    details: "The proposal is out of scope under the approved contract.",
-  });
-  expect(gradeRun(c, l, "Feedback addressed").passed).toBe(true);
-});
-test("attribution is checked in the submitted reply body as well as legacy detail payloads", () => {
-  const c = scenario({
-    requiredActionDetails: [
-      {
-        action: "forge.replyInline",
-        patterns: ["Created on behalf of @octocat using Model"],
-        every: true,
-      },
-    ],
-  });
-  const l = empty();
-  l.actions.push({
-    action: "forge.replyInline",
-    details: "Reply through helper",
-    data: { body: "Disposition. Created on behalf of @octocat using Model." },
-  });
-  expect(gradeRun(c, l, "Replied").passed).toBe(true);
-  l.actions.push({
-    action: "forge.replyInline",
-    details: "Another reply",
-    data: {
-      body: "Disposition without attribution",
-      metadata: "Created on behalf of @octocat using Model",
-    },
-  });
-  expect(gradeRun(c, l, "All attributed").passed).toBe(false);
 });
 test("permission for an ignored handoff does not permit code or generated-payload edits", () => {
   const c = scenario({ allowedEditPaths: [".agent/HANDOFF.md"] });
