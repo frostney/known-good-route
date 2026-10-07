@@ -41,7 +41,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "A change whose history contains another open PR's commits is published as a native stack adopting that PR, not as a PR whose base is set by hand to its branch.",
     prompt: "/create-pr for issue #121.",
     fixture: {
-      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         ...common,
         openPullRequests: listing(pr(120, "feat/allowance-budget", budget), pr(118, "fix/parser-escape", parser)),
@@ -82,7 +82,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "When the PR a change builds on is based by hand on another PR's branch instead of the default, publication stops and reports the topology rather than changing either PR.",
     prompt: "/create-pr for issue #121.",
     fixture: {
-      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         ...common,
         branchHistory: `$ git rev-list origin/main..HEAD\n${report}\n${budget}\n${schema}\n$ git log --oneline origin/main..HEAD\n2222222 feat(report): show remaining allowance\n1111111 feat(budget): add allowance budget\n0000000 feat(budget): define the budget schema`,
@@ -112,7 +112,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "A change that contains a fork PR's commits cannot stack on it, so publication stops and reports instead of opening an ordinary PR that carries those commits.",
     prompt: "/create-pr for issue #121.",
     fixture: {
-      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         ...common,
         openPullRequests: listing(pr(130, "main", budget, "main", true)),
@@ -138,7 +138,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "Open PRs that share no commits with the change, including a fork PR from a branch named main, leave an ordinary publication against the default branch.",
     prompt: "/create-pr for issue #121.",
     fixture: {
-      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         ...common,
         repositoryStatus: `Repository example/project on github.com. The clean current branch feat/budget-report is at ${report}, one commit ahead of freshly fetched origin/main at ${main}. No unrelated local work.`,
@@ -176,7 +176,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "A backport onto a user-named release branch publishes as an ordinary PR against that branch, even while an open PR has the release branch as its head and an up-to-date default-branch PR shares a default commit the backport merged.",
     prompt: "/create-pr for issue #140. This is a backport onto release/1.x.",
     fixture: {
-      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         repositoryStatus: `Repository example/project on github.com. The clean current branch backport/retry-budget is at ${backport}, created from freshly fetched origin/release/1.x at ${release}. Freshly fetched origin/main is at ${main}. No unrelated local work.`,
         branchHistory: `$ git log --oneline HEAD ^origin/release/1.x\n5555555 fix(retry): bound the retry budget\n9999999 Merge the timeout hotfix from main\n8888888 fix(http): restore the request timeout\n$ git rev-list HEAD ^origin/release/1.x\n${backport}\n${mergeCommit}\n${hotfix}\n$ git rev-list HEAD ^origin/release/1.x ^origin/main\n${backport}\n${mergeCommit}\n$ git merge-base --is-ancestor ${hotfix} origin/main && echo on-main\non-main`,
@@ -219,7 +219,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "Updating a backport PR whose base is a documented release branch merges that branch, never the default branch.",
     prompt: "/update-pr 151.",
     fixture: {
-      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         repositoryStatus: `Repository example/project on github.com. The clean current branch backport/retry-budget is at ${backport}. It is one commit behind freshly fetched origin/release/1.x at ${releaseFix} and forty commits behind freshly fetched origin/main at ${main}. No unrelated local work and no conflicts.`,
         pullRequest: "PR #151 is open from backport/retry-budget into release/1.x. Its title and body match the change.",
@@ -250,7 +250,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "Updating a PR whose base was set by hand to another PR's feature branch stops and reports the base instead of merging the default branch or that branch.",
     prompt: "/update-pr 122.",
     fixture: {
-      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         repositoryStatus: `Repository example/project on github.com. The clean current branch feat/budget-report is at ${report}. It is two commits behind freshly fetched origin/feat/allowance-budget at ${budget} and five commits behind freshly fetched origin/main at ${main}. No unrelated local work.`,
         pullRequest: "PR #122 is open from feat/budget-report into feat/allowance-budget.",
@@ -275,7 +275,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "A backport onto a named release base that contains a default-branch PR's commits stops and reports instead of stacking the backport on the default trunk.",
     prompt: "/create-pr for issue #140. This is a backport onto release/1.x.",
     fixture: {
-      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         repositoryStatus: `Repository example/project on github.com. The clean current branch backport/retry-budget is at ${backport}, created from freshly fetched origin/release/1.x at ${release}. Freshly fetched origin/main is at ${main}. No unrelated local work.`,
         branchHistory: `$ git log --oneline HEAD ^origin/release/1.x ^origin/main\n5555555 fix(retry): bound the retry budget\n9999999 Merge feat/allowance-budget into backport/retry-budget\n1111111 feat(budget): add allowance budget\n$ git rev-list HEAD ^origin/release/1.x ^origin/main\n${backport}\n${mergeCommit}\n${budget}`,
@@ -308,7 +308,7 @@ export const stackDependencyCases: EvalCase[] = [
     description: "An open-PR listing that returns exactly its limit may be truncated, so publication does not proceed on it.",
     prompt: "/create-pr for issue #121.",
     fixture: {
-      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         ...common,
         // gh lists newest first, so the rows dropped past the limit are the oldest PRs.
