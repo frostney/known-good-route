@@ -158,7 +158,10 @@ readiness. Recording a walkthrough does not replace behavior testing.
     in-scope causes to step 11. If expected PR checks have no run, inspect
     mergeability and resolve an established conflict through `/update-pr`
     before considering a retrigger. An unavailable external dependency remains
-    pending or blocked, never a passed check.
+    pending or blocked, never a passed check. Report CI as green only by quoting
+    the `satisfied` result and its `identity.head` for the exact head, and a
+    failure as flaky or transient only with its failing log line and why the
+    change did not cause it.
 13. Once the PR is missing nothing required by the publication and PR-specific
     phases and all applicable CI is observed green for its exact head, mark it
     ready for review. Return every affected URL, native stack order when

@@ -119,3 +119,8 @@ cleanup or message delivery. Verify required outcomes; omit optional unconfirmed
 claims or label them unconfirmed, without implying failure. Apply this to the
 whole report, including tables and parenthetical remarks; see
 [agent-writing](../agent-writing/SKILL.md) for shared writing guidance.
+
+Call checks green or passing, or a PR ready, only by quoting the `delivery-wait`
+result for the exact head commit: its `state` of `satisfied` and its
+`identity.head`. Call a failure flaky or transient only with its failing log
+line and why the change did not cause it.
