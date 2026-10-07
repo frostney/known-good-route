@@ -401,6 +401,18 @@ export function gradeRun(
     });
   }
 
+  for (const action of expected.requiredWorkerBeforeActions ?? []) {
+    const started = ledger.workers?.[0]?.startedAtEvent;
+    const actionIndex = ledger.events.findIndex(
+      (event) => event.kind === "action" && event.name === action,
+    );
+    checks.push({
+      name: `worker before ${action}`,
+      passed: started !== undefined && actionIndex >= 0 && started <= actionIndex,
+      detail: `workerStartedAtEvent=${started ?? "none"} actionIndex=${actionIndex}`,
+    });
+  }
+
   for (const order of expected.requiredActionsBeforeActions ?? []) {
     const beforeIndex = ledger.events.findIndex(
       (event) => event.kind === "action" && event.name === order.before,

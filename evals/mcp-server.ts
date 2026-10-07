@@ -76,6 +76,7 @@ export async function serve(root: string, caseId: string, ledgerPath: string) {
       execute: async ({ context }) => {
         if (started) throw new Error("This scenario permits one worker only");
         started = true;
+        const startedAtEvent = ledger.events.length;
         const target = evalCase.worker!;
         const workerCase = evalCases.find((c) => c.id === target.caseId);
         if (!workerCase || workerCase.worker)
@@ -102,6 +103,7 @@ export async function serve(root: string, caseId: string, ledgerPath: string) {
           context,
           transcript,
           ...(verdictFile ? { verdictFile } : {}),
+          startedAtEvent,
           observedModels: result.observedModels,
           responseModels: result.responseModels,
           effort: "medium",
