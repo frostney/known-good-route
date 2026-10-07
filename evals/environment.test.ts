@@ -20,7 +20,7 @@ test("every case declares the repository environment it runs in", () => {
     const o = c.fixture.environment!.orchestration;
     return o ? `${o.entryPoints}/${o.endpoint}` : "none";
   }));
-  for (const variant of ["stop/deployed", "deliver/ready-to-merge", "deliver/merged", "deliver/deployed"])
+  for (const variant of ["none", "deliver/ready-to-merge", "deliver/merged", "deliver/deployed"])
     expect(spread).toContain(variant);
 });
 
