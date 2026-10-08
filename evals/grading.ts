@@ -252,7 +252,14 @@ export function gradeRun(
   }
 
   for (const requirement of expected.requiredActionDetails ?? []) {
+    const limit = requirement.before;
+    const end = limit
+      ? ledger.actions
+          .map((a, index) => (a.action === limit.action ? index : -1))
+          .filter((index) => index >= 0)[(limit.occurrence ?? 1) - 1] ?? 0
+      : ledger.actions.length;
     const details = ledger.actions
+      .slice(0, end)
       .filter((a) => a.action === requirement.action)
       .map((a) =>
         [
@@ -272,7 +279,9 @@ export function gradeRun(
         new RegExp(pattern, "i").test(text),
       );
     checks.push({
-      name: `${requirement.action} evidence`,
+      name: limit
+        ? `${requirement.action} evidence before ${limit.action}`
+        : `${requirement.action} evidence`,
       passed:
         details.length > 0 &&
         (requirement.every ? details.every(matches) : details.some(matches)),
