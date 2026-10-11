@@ -4980,6 +4980,69 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "delivery-wait-host-command-limit",
+    description:
+      "A wait longer than the host's limit for one command resumes the same state in bounded invocations instead of detaching.",
+    prompt:
+      "Use the internal delivery wait for main's push CI run 9001 at head abc90 until it finishes.",
+    fixture: {
+      evidence: {
+        deliveryState:
+          "owner/repo push CI run 9001 for main at head abc90 is in progress. These runs take up to three hours. The host runs one command for at most two hours, in the background, and resumes the session when it exits. Use state path .agent/waits/run-9001.json.",
+      },
+      actionResponses: {
+        "monitor.wait":
+          '{"state":"timed-out","kind":"workflow-terminal","runId":9001,"head":"abc90","reason":"deadline reached; run in progress"}',
+      },
+      transitions: [
+        {
+          after: "monitor.wait",
+          occurrence: 1,
+          evidence: {
+            deliveryState:
+              '{"state":"timed-out","kind":"workflow-terminal","runId":9001,"head":"abc90","reason":"deadline reached; run in progress"}',
+          },
+          actionResponses: {
+            "monitor.wait":
+              '{"state":"satisfied","kind":"workflow-terminal","runId":9001,"head":"abc90","reason":"workflow is terminal-success"}',
+          },
+        },
+        {
+          after: "monitor.wait",
+          occurrence: 2,
+          evidence: {
+            deliveryState:
+              '{"state":"satisfied","kind":"workflow-terminal","runId":9001,"head":"abc90","reason":"workflow is terminal-success"}',
+          },
+        },
+      ],
+    },
+    expected: {
+      requiredSkills: ["delivery-wait"],
+      requiredActionSequence: ["monitor.wait", "monitor.wait", "report"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.mergePr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      maxActionCounts: {
+        "monitor.wait": 2,
+      },
+      forbiddenOutputPatterns: ["setsid|nohup"],
+      reportPatterns: ["abc90|9001", "satisfied|succeeded|success"],
+      requiredActionDetails: [
+        {
+          action: "monitor.wait",
+          patterns: ["workflow-terminal", "9001", "run-9001"],
+          dataFields: ["*"],
+          every: true,
+        },
+      ],
+    },
+  },
+  {
     id: "delivery-wait-release-assets",
     description:
       "Release delivery waits retain tag identity and required asset evidence.",
@@ -5262,7 +5325,7 @@ export const evalCases: EvalCase[] = [
       forbiddenActions: ["user.ask"],
       forbiddenOutputPatterns: ["cannot continue|say continue|manually resume"],
       reportPatterns: [
-        "foreground wait|deterministic wait",
+        "foreground|blocking|deterministic wait",
         "complete|verified",
       ],
       discoverySkills: ["software-engineering-excellence"],
