@@ -189,7 +189,9 @@ and Anthropic's
   evidence before accepting it. `no-subagents` keeps the work local.
 - For autonomous orchestration, repository-owned capability classes, context
   envelopes, token checkpoints, and escalation policy belong in
-  `ORCHESTRATION.md`. Provider-specific model selection and harness plumbing stay
+  `ORCHESTRATION.md`. `deliver` defines one context boundary itself: the next
+  work item starts from the handoff, not the previous item's context.
+  Provider-specific model selection and harness plumbing stay
   in the host; reusable skills express only capability and observable behavior.
 - Ground progress and completion claims in current tool or source evidence.
   Finish authorized reversible work. Name the early stops to avoid: a summary
