@@ -1695,10 +1695,10 @@
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Separate ambient standards discovery from task outcome and authority contracts.",
         "Continuing through an external wait requires reconciliation, not rerunning unchanged local checks.",
-        "Accept any description of a blocking or foreground wait: delivery-wait now names host capabilities instead of a foreground child, so the exact phrase \"foreground wait\" grades wording, not behavior."
+        "Grade the reported outcome, not its wording: accept any description of a blocking or foreground wait (delivery-wait now names host capabilities instead of a foreground child), and a report that the checks passed or succeeded as well as one that says complete or verified."
       ],
       "beforeSha256": "0f973117b2a39fcfc07c9cd037a2368b5bf53c021ddc68592a34b549aaa4b3dc",
-      "afterSha256": "b2bd855c783a04a6ab6f286337a1c6d0902ff8991034901775e685938710f2ee",
+      "afterSha256": "54d67c2705df07a16015b39ede276653e6ce70845ce02e7adcc9a621a55e9038",
       "frozenCaseSha256": "3e48a99774b3ece99d83557f5a9dd6e6abd2ef722100b580782e091cade7c2f1",
       "postFreezeChangedFields": [
         "expected"

@@ -5326,7 +5326,7 @@ export const evalCases: EvalCase[] = [
       forbiddenOutputPatterns: ["cannot continue|say continue|manually resume"],
       reportPatterns: [
         "foreground|blocking|deterministic wait",
-        "complete|verified",
+        "complete|verified|passed|succeeded",
       ],
       discoverySkills: ["software-engineering-excellence"],
     },
