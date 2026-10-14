@@ -74,14 +74,18 @@ class ValidationTests(unittest.TestCase):
     def test_malformed_link_is_refused(self):
         flagged = copy.deepcopy(self.admission)
         flagged["refs"].append({"ref": "refs/heads/--open", "source": "c" * 40, "expected": "d" * 40})
+        numeric = copy.deepcopy(self.admission)
+        numeric["refs"] += [{"ref": "refs/heads/" + name, "source": "c" * 40, "expected": "d" * 40}
+                            for name in ("+13", "013")]
         for targets, admission in [
                 (["12"], self.admission), (["12", "13", "12"], self.admission),
                 (["12", "feature/naïve-key", "unapproved"], self.admission),
                 (["feature/naïve-key", "12"], self.admission), (["0", "12"], self.admission),
                 (["012", "13"], self.admission), (["12", "²"], self.admission),
-                (["12", "https://github.com/owner/repo/pull/13"], self.admission),
+                (["12", "https://github.com/github/gh-stack/pull/13"], self.admission),
                 (["12", "13", "--open"], self.admission), (["12", "13", "--base", "main"], self.admission),
-                (["12", "--open"], flagged)]:
+                (["12", "--open"], flagged), (["12", "1٣"], self.admission), (["12", "13x"], self.admission),
+                (["12", "+13"], numeric), (["12", "013"], numeric)]:
             with self.subTest(targets=targets):
                 with self.assertRaises(guard.GuardError):
                     guard.validate_native_command(["gh", "stack", "link", *targets, "--remote", "upstream"], admission)

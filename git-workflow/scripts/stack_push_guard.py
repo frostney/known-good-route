@@ -265,6 +265,9 @@ def hook(config_path, remote, url):
 VALIDATED_NATIVE_VERSIONS = frozenset({"gh stack version 0.1.0", "gh stack version 0.1.1",
                                        "gh stack version 0.2.1"})
 POSITIVE_NUMBER = re.compile(r"[1-9][0-9]*")
+# What Go's strconv.Atoi parses; link tries such an argument as a PR number first
+# (cmd/link.go:538-551), so a branch named like one is not a safe branch argument.
+ATOI_NUMBER = re.compile(r"[+-]?[0-9]+")
 
 
 def validate_native_command(command, admission):
@@ -276,7 +279,7 @@ def validate_native_command(command, admission):
     if tail == ["push", "--remote", admission["remote"]]:
         return
     # link STACK-OR-PR BRANCH-OR-PR... --remote REMOTE: each later argument is a
-    # PR number or an admitted branch that cannot be read as a flag. A number
+    # PR number or an admitted branch that cannot be read as a flag or a number. A number
     # that also names a local branch is pushed, and the hook refuses it unless
     # that branch is admitted.
     admitted = {r["ref"] for r in admission["refs"]}
@@ -284,7 +287,8 @@ def validate_native_command(command, admission):
     if (len(tail) >= 5 and tail[0] == "link" and tail[-2:] == ["--remote", admission["remote"]]
             and POSITIVE_NUMBER.fullmatch(tail[1]) and len(set(targets)) == len(targets)
             and all(POSITIVE_NUMBER.fullmatch(argument)
-                    or (not argument.startswith("-") and "refs/heads/" + argument in admitted)
+                    or (not argument.startswith("-") and not ATOI_NUMBER.fullmatch(argument)
+                        and "refs/heads/" + argument in admitted)
                     for argument in targets[1:])):
         return
     raise GuardError("unsupported native publication command; do not bypass hooks")

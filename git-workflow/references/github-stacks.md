@@ -175,13 +175,16 @@ changes. This helper guards Git updates; it
 does not deduplicate GitHub requests or authorize retrying an uncertain command.
 
 It accepts `gh stack link NUMBER BRANCH-OR-PR... --remote REMOTE`: a stack or PR
-number, then one or more PR numbers or admitted branches, each listed once and
-none starting with `-`. In every validated gh-stack version, a first number that
-names a stack appends the rest to its top. Otherwise list every PR the stack
-already holds, bottom to top, or link refuses to drop them. Link pushes only the
-arguments that name local branches, then moves each existing PR's base onto the
-PR below it; a refused base change only warns. Check every PR's base and the
-stack again afterwards.
+number, then one or more PR numbers or admitted branches, each listed once. A
+branch argument may not start with `-` or read as a number, because link would
+take it for a flag or try it as a PR number first. In every validated gh-stack
+version, a first number that names a stack and is not also a local branch name
+appends the rest to the stack's top. Otherwise list every PR the stack already
+holds, bottom to top, or link refuses to drop them. Link pushes only the
+arguments that name local branches and opens a draft PR for each branch without
+one. It then moves each existing PR's base onto the PR below it, and the bottom
+one onto the default branch, or onto the stack's top when appending; a refused
+base change only warns. Check every PR's base and the stack again afterwards.
 
 Each invocation freezes the helper, records its Python runtime and admission,
 and keeps hook receipts under the checkout's Git directory in `kgr-push-guards`.
@@ -214,8 +217,9 @@ no visible PR does not establish that creation would be safe.
 
 When recovery has an existing PR at the approved head and base, use GitHub's
 [native stack append endpoint](https://docs.github.com/en/rest/pulls/stacks#add-pull-requests-to-a-pull-request-stack).
-In gh-stack 0.1.0, `gh stack link` can retarget that PR's base before appending;
-a concurrent new top could therefore change the approved dependency. The direct
+In every validated gh-stack version, `gh stack link` can retarget that PR's
+base before appending; a concurrent new top could therefore change the approved
+dependency. The direct
 endpoint requires the candidate's base ref to match the current native top's
 head ref and does not first change the candidate's base.
 
