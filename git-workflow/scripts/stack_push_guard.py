@@ -245,7 +245,26 @@ def hook(config_path, remote, url):
 
 # 0.1.1 leaves the guarded submit, push and link paths and internal/git unchanged
 # from 0.1.0; its ListStacks pagination and init trunk fallback do not push.
-VALIDATED_NATIVE_VERSIONS = frozenset({"gh stack version 0.1.0", "gh stack version 0.1.1"})
+# 0.2.1 (tag v0.2.1, 29a36d3) keeps every Push call and Push itself as in 0.1.1:
+# push and submit pass force=true with per-branch --force-with-lease and
+# fully qualified refs/heads/B:refs/heads/B refspecs, push non-atomically after a
+# best-effort tracking fetch (cmd/push.go:106-108, cmd/submit.go:204,245); link
+# pushes only arguments naming local branches, without force and atomically
+# (cmd/link.go:425-458); internal/git/gitops.go:257-290 builds those arguments.
+# No guarded path pushes with --no-verify or a + refspec. Pushes still run in
+# the current checkout through the unscoped executor; the new worktree-scoped
+# executor drops GIT_CONFIG but keeps GIT_CONFIG_COUNT/KEY/VALUE
+# (internal/git/git.go:49-69). The flags are still --auto, --open and --remote
+# for submit, --remote for push, and --base, --open and --remote for link.
+# link takes a stack or PR number, branch, or PR URL, then one or more
+# branch-or-PR arguments, as in 0.1.0 and 0.1.1 (cmd/link.go:27,73); a number
+# naming a stack appends to it, otherwise every PR the stack holds must be
+# listed (cmd/link.go:170-191,644-671). Its base corrections only warn on failure
+# (cmd/link.go:718-761); the release notifier writes only to stderr
+# (cmd/root.go:56-82), so --version stdout keeps its template (cmd/root.go:84).
+VALIDATED_NATIVE_VERSIONS = frozenset({"gh stack version 0.1.0", "gh stack version 0.1.1",
+                                       "gh stack version 0.2.1"})
+POSITIVE_NUMBER = re.compile(r"[1-9][0-9]*")
 
 
 def validate_native_command(command, admission):
@@ -256,9 +275,17 @@ def validate_native_command(command, admission):
         return
     if tail == ["push", "--remote", admission["remote"]]:
         return
-    if (len(tail) == 5 and tail[0] == "link" and tail[1].isdigit() and int(tail[1]) > 0
-            and tail[3:] == ["--remote", admission["remote"]]
-            and ((tail[2].isdigit() and int(tail[2]) > 0) or "refs/heads/" + tail[2] in {r["ref"] for r in admission["refs"]})):
+    # link STACK-OR-PR BRANCH-OR-PR... --remote REMOTE: each later argument is a
+    # PR number or an admitted branch that cannot be read as a flag. A number
+    # that also names a local branch is pushed, and the hook refuses it unless
+    # that branch is admitted.
+    admitted = {r["ref"] for r in admission["refs"]}
+    targets = tail[1:-2]
+    if (len(tail) >= 5 and tail[0] == "link" and tail[-2:] == ["--remote", admission["remote"]]
+            and POSITIVE_NUMBER.fullmatch(tail[1]) and len(set(targets)) == len(targets)
+            and all(POSITIVE_NUMBER.fullmatch(argument)
+                    or (not argument.startswith("-") and "refs/heads/" + argument in admitted)
+                    for argument in targets[1:])):
         return
     raise GuardError("unsupported native publication command; do not bypass hooks")
 

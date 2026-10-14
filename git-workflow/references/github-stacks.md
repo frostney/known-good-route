@@ -144,7 +144,7 @@ freshly fetched remote base and pushing normally.
 
 Use [scripts/stack_push_guard.py](../scripts/stack_push_guard.py) from this
 installed skill. It requires Python 3.11+, Git, a POSIX shell, and the tested
-official gh-stack 0.1.0 or 0.1.1 command. It has no third-party Python or
+official gh-stack 0.1.0, 0.1.1 or 0.2.1 command. It has no third-party Python or
 eval-harness dependency. Existing authorization and native-topology checks
 still apply.
 
@@ -173,6 +173,15 @@ separate creation and append procedure below for recovery. The wrapper retains
 support for native link commands, but its Git hook does not prevent their PR-base
 changes. This helper guards Git updates; it
 does not deduplicate GitHub requests or authorize retrying an uncertain command.
+
+It accepts `gh stack link NUMBER BRANCH-OR-PR... --remote REMOTE`: a stack or PR
+number, then one or more PR numbers or admitted branches, each listed once and
+none starting with `-`. In every validated gh-stack version, a first number that
+names a stack appends the rest to its top. Otherwise list every PR the stack
+already holds, bottom to top, or link refuses to drop them. Link pushes only the
+arguments that name local branches, then moves each existing PR's base onto the
+PR below it; a refused base change only warns. Check every PR's base and the
+stack again afterwards.
 
 Each invocation freezes the helper, records its Python runtime and admission,
 and keeps hook receipts under the checkout's Git directory in `kgr-push-guards`.
