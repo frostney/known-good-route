@@ -1045,8 +1045,9 @@ fix head. Each invocation freezes the Python helper and records its runtime,
 admission and hook receipts under the Git directory. New native repair root
 configurations also bind the selected Python path/version and pass that selection
 to the driver. Older snapshots retain their original runtime guarantees.
-The command wrapper permits the tested gh-stack 0.1.0, 0.1.1 or 0.2.1 push/submit/link invocations,
-which do not disable hooks. It does not authorize commands, deduplicate GitHub
+The command wrapper permits only push/submit/link invocations of the official
+gh-stack extension, which do not disable hooks; it checks that the command is
+gh-stack, not its version. It does not authorize commands, deduplicate GitHub
 requests or defend against arbitrary local bypass/tampering.
 
 Five adapter tests retain the real Git creation, refreshed-lease rollback,
@@ -1055,7 +1056,7 @@ Sixteen Python tests additionally cover standalone skill copies, actual SHA-256
 publication with a Unicode branch and non-origin remote, hook configuration
 restoration/forwarding, copied-helper/admission tampering, dirty worktrees,
 changed push URLs, bounded command routing including multi-argument links,
-rejected unvalidated gh-stack versions and malformed update records.
+refused commands that are not gh-stack and malformed update records.
 
 ```sh
 bun evals/stack-push-race-live-run.ts --execute \

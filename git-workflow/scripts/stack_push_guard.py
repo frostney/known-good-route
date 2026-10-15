@@ -243,27 +243,25 @@ def hook(config_path, remote, url):
         write_once(root / ("check-" + str(uuid.uuid4()) + ".json"), receipt)
 
 
-# 0.1.1 leaves the guarded submit, push and link paths and internal/git unchanged
-# from 0.1.0; its ListStacks pagination and init trunk fallback do not push.
-# 0.2.1 (tag v0.2.1, 29a36d3) keeps every Push call and Push itself as in 0.1.1:
-# push and submit pass force=true with per-branch --force-with-lease and
-# fully qualified refs/heads/B:refs/heads/B refspecs, push non-atomically after a
-# best-effort tracking fetch (cmd/push.go:106-108, cmd/submit.go:204,245); link
-# pushes only arguments naming local branches, without force and atomically
-# (cmd/link.go:425-458); internal/git/gitops.go:257-290 builds those arguments.
-# No guarded path pushes with --no-verify or a + refspec. Pushes still run in
-# the current checkout through the unscoped executor; the new worktree-scoped
-# executor drops GIT_CONFIG but keeps GIT_CONFIG_COUNT/KEY/VALUE
-# (internal/git/git.go:49-69). The flags are still --auto, --open and --remote
-# for submit, --remote for push, and --base, --open and --remote for link.
-# link takes a stack or PR number, branch, or PR URL, then one or more
-# branch-or-PR arguments, as in 0.1.0 and 0.1.1 (cmd/link.go:27,73); a number
-# naming a stack appends to it, otherwise every PR the stack holds must be
-# listed (cmd/link.go:170-191,644-671). Its base corrections only warn on failure
-# (cmd/link.go:718-761); the release notifier writes only to stderr
-# (cmd/root.go:56-82), so --version stdout keeps its template (cmd/root.go:84).
-VALIDATED_NATIVE_VERSIONS = frozenset({"gh stack version 0.1.0", "gh stack version 0.1.1",
-                                       "gh stack version 0.2.1"})
+# The guard follows the latest gh-stack release (checked at tag v0.2.1, 29a36d3)
+# and checks only that the command is gh-stack, not its version: --version prints
+# "gh stack version VERSION" on stdout (cmd/root.go:84), and the release notifier
+# writes only to stderr (cmd/root.go:56-82). push and submit pass force=true with
+# per-branch --force-with-lease and fully qualified refs/heads/B:refs/heads/B
+# refspecs, pushing non-atomically after a best-effort tracking fetch
+# (cmd/push.go:106-108, cmd/submit.go:204,245); link pushes only arguments naming
+# local branches, without force and atomically (cmd/link.go:425-458);
+# internal/git/gitops.go:257-290 builds those arguments. No guarded path pushes
+# with --no-verify or a + refspec. Pushes run in the current checkout through the
+# unscoped executor; the worktree-scoped executor drops GIT_CONFIG but keeps
+# GIT_CONFIG_COUNT/KEY/VALUE (internal/git/git.go:49-69). The flags are --auto,
+# --open and --remote for submit, --remote for push, and --base, --open and
+# --remote for link. link takes a stack or PR number, branch, or PR URL, then one
+# or more branch-or-PR arguments (cmd/link.go:27,73); a number naming a stack
+# appends to it, otherwise every PR the stack holds must be listed
+# (cmd/link.go:170-191,644-671). Its base corrections only warn on failure
+# (cmd/link.go:718-761).
+GH_STACK_IDENTITY = re.compile(r"gh stack version \S+")
 POSITIVE_NUMBER = re.compile(r"[1-9][0-9]*")
 # What Go's strconv.Atoi parses; link tries such an argument as a PR number first
 # (cmd/link.go:538-551), so a branch named like one is not a safe branch argument.
@@ -316,9 +314,12 @@ def main(argv=None):
         raise GuardError("prepare does not execute a command")
     if args.operation == "run":
         validate_native_command(command, admission)
-        version = subprocess.run([command[0], "stack", "--version"], capture_output=True, text=True, check=True)
-        if version.stdout.strip() not in VALIDATED_NATIVE_VERSIONS:
-            raise GuardError("native stack CLI version has not been validated")
+        try:
+            version = subprocess.run([command[0], "stack", "--version"], capture_output=True, text=True)
+        except OSError:
+            version = None
+        if version is None or version.returncode or not GH_STACK_IDENTITY.fullmatch(version.stdout.strip()):
+            raise GuardError("command is not the gh-stack extension")
     prepared = prepare(admission)
     if args.operation == "prepare":
         print(json.dumps(prepared))
