@@ -2488,6 +2488,36 @@
       "frozenCaseSha256": "bd4b64bef639bebbf179d9c13414a68b9b04b1e17868a2154215be4bf0f668e9"
     },
     {
+      "caseId": "delivery-earlier-merge-run-does-not-hold-merge",
+      "status": "new",
+      "rationale": [
+        "Rebuilt from a day of parallel deliveries in one repository whose default-branch CI took 35 to 80 minutes: the health gate made every merge wait for the newest main run, each merge cancelled the run in progress, no main run completed for hours and merges went one per run. A ready PR on a green default branch now merges at once; the run still in progress from a parallel delivery's merge does not hold it, and a branch that is only behind keeps its head. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "1df65b3d14fc8bb0d9a3885090f7c8d3f5ca29d164f6ceedeee161ed1de0bbb5",
+      "frozenCaseSha256": "1df65b3d14fc8bb0d9a3885090f7c8d3f5ca29d164f6ceedeee161ed1de0bbb5"
+    },
+    {
+      "caseId": "delivery-full-ci-rule-before-merge",
+      "status": "new",
+      "rationale": [
+        "Some changes need a full CI run before they are ready. When the repository's declared full-CI rule covers the change, delivery starts that run for the PR's head, awaits it and merges, and does not also wait for main's run from an earlier merge. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "5d40287a0483aaa488bb740b6db21d2ee1c1048f60c781bf6c7446ee87b05f46",
+      "frozenCaseSha256": "5d40287a0483aaa488bb740b6db21d2ee1c1048f60c781bf6c7446ee87b05f46"
+    },
+    {
+      "caseId": "delivery-ready-stack-merges-in-one-go",
+      "status": "new",
+      "rationale": [
+        "In the same incident, stacks merged one layer at a time, each waiting for main. When every layer of a native stack is ready, delivery merges it in one stack merge. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "94e43eb4cfad3632a358d25b55ad2c864b14c9aec2e7b2821e15c5e4a8400dea",
+      "frozenCaseSha256": "94e43eb4cfad3632a358d25b55ad2c864b14c9aec2e7b2821e15c5e4a8400dea"
+    },
+    {
       "caseId": "create-pr-dependency-on-hand-based-pr-stops",
       "status": "new",
       "rationale": [

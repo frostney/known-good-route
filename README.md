@@ -66,8 +66,11 @@ flowchart TD
 `deliver` owns continuation through CI failures, feedback and integration checks.
 It updates the same open PR; a gap found after merge uses a linked repair PR and
 keeps the original work item active until integration verification succeeds.
-New work starts and merges land only on a green default branch, except the
-repair of a red one, which comes first.
+A PR or stack merges as soon as it is ready on its own exact head, including
+any full CI the repository requires for the change; ready stack layers merge
+together. Default-branch runs still in progress from earlier merges hold
+nothing. When a completed default-branch run fails, merging stops and the
+repair lands first.
 `implement` owns development: implement, run and inspect, review, test, and fix
 until every verified requirement gap is resolved. Visual quality is judged
 against agreed references and affected states, not inferred from passing tests.
@@ -296,7 +299,9 @@ not a required full-matrix run or a claim that every scenario currently passes:
 | Missing or stale PR review/behavior evidence | Runs the required missing checks and fixes verified gaps before readiness; reuses valid evidence. |
 | CI or review exposes an in-scope defect | Repairs it, revalidates affected behavior and updates the same PR instead of stopping at diagnosis. |
 | Requested visual or interaction fidelity | Compares the actual result with requirements and references; does not treat a test count as acceptance. |
-| Red or pending default branch | Lands the default-branch repair first and waits for it to go green; does not merge onto a red branch or supersede the repair's run. |
+| Red default branch | Lands the default-branch repair first and waits for it to go green; does not merge onto a red branch or supersede the repair's run. |
+| Default-branch run in progress from an earlier merge | Merges a ready PR at once; does not wait for that run or take turns with parallel deliveries. |
+| Several ready native stack layers | Merges them in one stack merge, not layer by layer. |
 | Configured integration delivery | Verifies the intended revision and behavior at the configured target; does not trigger milestone release or mistake a queued job for deployment. |
 | Material decision or unavailable required access | Completes independent work and reports the specific unresolved requirement without claiming completion. |
 | Explicit read-only review or an earlier delivery endpoint | Preserves that boundary; does not infer edit, merge, deployment or release authority. |

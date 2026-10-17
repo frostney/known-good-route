@@ -141,10 +141,11 @@ errored, missing, or head-ambiguous verdict is pending rather than passed.
     ordinary PR is `ready` under the exact final-head contract and
     `git-workflow`'s
     [default-branch health](../../git-workflow/SKILL.md#default-branch-health)
-    gate passes. Await a pending default-branch run with `delivery-wait`'s
-    `workflow-terminal` wait, then recheck. If the branch is still
-    not green or the host cannot wait, return `ready` and unmerged with the
-    default branch's state as the blocker. After the merge, sync the local
+    gate passes. When the gate finds the branch red and its repair's run
+    in progress, await that run with `delivery-wait`'s `workflow-terminal`
+    wait, then recheck. If the branch is still red or the host cannot wait,
+    return `ready` and unmerged with the default branch's state as the
+    blocker. After the merge, sync the local
     default branch, remove only
     clean worktrees owned by this run, and report the merged PR, final head,
     validation, reviews, and cleanup. For a native

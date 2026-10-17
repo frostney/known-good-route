@@ -62,12 +62,16 @@ service as an incidental fix.
 - At `ready-to-merge`, require the complete readiness contract defined by
   `address-feedback`'s readiness references for the selected PR's exact head: all verified
   requirement gaps resolved, current behavior and project evidence, successful
-  required CI and reviews, and completed required thread handling. For a native
-  stack, require its complete-stack readiness, including every needed fix
-  layer. Ready for review alone does not satisfy this endpoint.
+  required CI and reviews, and completed required thread handling. When the
+  repository's declared full-CI rule requires a full or extended CI run for
+  the change, start it as that rule says once required checks and reviews have
+  converged on the final head, and await it; it is part of readiness. For a
+  native stack, require its complete-stack readiness, including every needed
+  fix layer. Ready for review alone does not satisfy this endpoint.
 - For `merged` or `deployed`, recheck readiness and use `git-workflow` to merge
-  the authorized ordinary PR or complete native stack. Verify the resulting
-  integrated revision. A partial prefix below a required fix layer is not done.
+  the authorized ordinary PR or complete native stack as soon as it is ready.
+  Verify the resulting integrated revision. A partial prefix below a required
+  fix layer is not done.
 - For `deployed`, run or await the existing integration path, then verify its
   destination, delivered revision or artifact provenance, and the required
   behavior in that environment. When later commits are included, verify that

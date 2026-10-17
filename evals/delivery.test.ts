@@ -24,12 +24,18 @@ const mainRunWait = (head: string): RunLedger["actions"][number] => ({ action: "
 const repairMerged = "9c".repeat(20);
 const mergeRepair: RunLedger["actions"][number] = { action: "forge.mergePr", details: "Squash-merge the repair PR", data: { pr: 512 } };
 const mergeRequested: RunLedger["actions"][number] = { action: "forge.mergePr", details: "Squash-merge the requested PR", data: { pr: 511 } };
+const candidateHead = "2b".repeat(20);
+const parallelTip = "0d".repeat(20);
+const fullCiLabel: RunLedger["actions"][number] = { action: "forge.updatePrMetadata", details: "Add the full-ci label to PR #515 to start Extended CI", data: { labels: ["full-ci"] } };
+const fullCiWait: RunLedger["actions"][number] = { action: "monitor.wait", details: "Await Extended CI for PR #515", data: { head: candidateHead } };
+const stackMerge: RunLedger["actions"][number] = { action: "git.stackMerge", details: "gh stack merge 31 --squash --yes", data: { stack: 31 } };
 const repairBranch: RunLedger["actions"][number] = { action: "git.createBranch", details: "Create focused fix branch from fresh remote-default", data: { base: integratedRevision } };
 async function replay(c: EvalCase, actions: RunLedger["actions"]) {
   const ledger: RunLedger = { actions: [], events: [], loadedSkills: [], loadedReferences: [], registeredSkillCalls: [], inspections: [], toolReceiptVersion: 1, toolReceipts: [] };
   // Skill/source discovery is not under test here; these are grader trajectories.
   ledger.loadedSkills = [...(c.expected.requiredSkills ?? [])];
   ledger.inspections = [...(c.expected.requiredInspections ?? [])];
+  ledger.loadedReferences = [...(c.expected.requiredReferences ?? [])];
   ledger.events.push(...ledger.loadedSkills.map(name => ({ kind: "skill" as const, name })), ...ledger.inspections.map(name => ({ kind: "inspection" as const, name })));
   const tools = createEvalTools(new Map(), c, ledger);
   for (const input of actions) {
@@ -50,6 +56,9 @@ const scenarios: Array<{ id: string; actions: RunLedger["actions"]; output: stri
   { id: "delivery-delegated-publication-uses-create-pr", actions: [{ action: "delegate", details: "Publish issue #131 to ready-to-merge", data: { skills: ["create-pr", "address-feedback"], endpoint: "ready-to-merge" } }], output: "PR #140 for issue #131 is ready to merge; nothing was merged.", omit: "delegate" },
   { id: "delivery-red-default-branch-waits-for-repair", actions: [action("validation.reuse"), mainRunWait(repairTip), action("forge.mergePr", "Squash-merge PR #509")], output: "PR #509 merged after main turned green at 7a7a7a7.", omit: "monitor.wait" },
   { id: "delivery-red-default-branch-unowned-repair-first", actions: [action("git.createBranch", "Create fix/macos-path-case from fresh main"), edit("tests/paths.test.ts"), review, gate, action("git.commit"), action("git.push"), action("forge.openDraftPr", "Open repair PR for the macOS failure on main"), action("monitor.wait", "Await PR #512 checks"), action("forge.markPrReady", "Mark repair PR #512 ready"), mergeRepair, mainRunWait(repairMerged), mergeRequested], output: "Repair PR #512 merged and main went green at 9c9c9c9; PR #511 then merged as 3c3c3c3.", omit: "forge.openDraftPr" },
+  { id: "delivery-earlier-merge-run-does-not-hold-merge", actions: [action("validation.reuse"), action("forge.mergePr", "Squash-merge PR #513")], output: "PR #513 merged as 3c3c3c3; main's run for the earlier merge did not hold it.", omit: "forge.mergePr" },
+  { id: "delivery-full-ci-rule-before-merge", actions: [action("validation.reuse"), fullCiLabel, fullCiWait, action("forge.mergePr", "Squash-merge PR #515")], output: "PR #515 merged as 3c3c3c3 after Extended CI passed on its head.", omit: "monitor.wait" },
+  { id: "delivery-ready-stack-merges-in-one-go", actions: [stackMerge], output: "Stack 31 (PRs #530, #531 and #532) merged in one operation as 3c3c3c3.", omit: "git.stackMerge" },
   { id: "delivery-post-merge-integration-repair", actions: [behavior, repairBranch, edit("src/report.ts"), review, behavior, gate, action("git.commit"), action("git.push"), action("forge.openDraftPr", "Open repair for #507 and issue #87 from fresh main"), action("monitor.wait"), action("forge.markPrReady"), action("forge.mergePr", "Merge repair #508"), action("monitor.wait"), deployedProbe(repairRevision)], output: "Repair PR #508 is merged; nightly serves 4d4d4d4 and the direct URL acceptance passed.", omit: "forge.mergePr" },
 ];
 for (const scenario of scenarios) {
@@ -274,4 +283,46 @@ test("an unowned red default branch is repaired and green before the requested P
   expect(await failed([...s.actions.slice(0, -3), both, mainRunWait(repairMerged), mergeRequested])).toEqual([]);
   // The requested PR merged first fails, whatever follows.
   expect(await failed([...s.actions.slice(0, -3), mergeRequested, mainRunWait(repairMerged), mergeRepair])).toContain("forge.mergePr evidence before forge.mergePr");
+});
+
+test("a run still in progress from an earlier merge does not hold a ready merge", async () => {
+  const s = scenarios.find(s => s.id === "delivery-earlier-merge-run-does-not-hold-merge")!;
+  const c = deliveryCases.find(c => c.id === s.id)!;
+  const merge = action("forge.mergePr", "Squash-merge PR #513");
+  const failed = async (actions: RunLedger["actions"]) =>
+    gradeRun(c, await replay(c, actions), s.output).checks.filter(check => !check.passed).map(check => check.name);
+  expect(await failed(s.actions)).toEqual([]);
+  // The incident: every delivery waited for main's newest run before merging.
+  expect(await failed([mainRunWait(parallelTip), merge])).toEqual(["forbidden actions"]);
+  // A branch that is only behind keeps its head; merging main into it restarts its checks.
+  expect(await failed([action("git.merge", "git merge origin/main"), action("git.push"), merge])).toEqual(["forbidden actions"]);
+});
+
+test("a declared full-CI rule holds the merge until that run succeeds on the PR's head, and only that run", async () => {
+  const s = scenarios.find(s => s.id === "delivery-full-ci-rule-before-merge")!;
+  const c = deliveryCases.find(c => c.id === s.id)!;
+  const merge = action("forge.mergePr", "Squash-merge PR #515");
+  const failed = async (actions: RunLedger["actions"]) =>
+    gradeRun(c, await replay(c, actions), s.output).checks.filter(check => !check.passed).map(check => check.name);
+  expect(await failed(s.actions)).toEqual([]);
+  // Merging on the required checks alone skips the full run.
+  expect(await failed([merge])).toEqual(expect.arrayContaining(["required action sequence", "forge.updatePrMetadata evidence before forge.mergePr"]));
+  // Starting the full run but merging before it finishes.
+  expect(await failed([fullCiLabel, merge, fullCiWait])).toEqual(["monitor.wait evidence before forge.mergePr", "required action sequence"]);
+  // Waiting for main's in-progress run as well is the serialisation the rule removes.
+  expect(await failed([fullCiLabel, fullCiWait, mainRunWait(parallelTip), merge])).toEqual(["monitor.wait evidence before forge.mergePr"]);
+  // A wait after the merge, such as on the integrated revision, is not a wait before it.
+  expect(await failed([...s.actions, mainRunWait("3c".repeat(20))])).toEqual([]);
+});
+
+test("ready stack layers merge in one stack merge, not one PR at a time", async () => {
+  const s = scenarios.find(s => s.id === "delivery-ready-stack-merges-in-one-go")!;
+  const c = deliveryCases.find(c => c.id === s.id)!;
+  const failed = async (actions: RunLedger["actions"]) =>
+    gradeRun(c, await replay(c, actions), s.output).checks.filter(check => !check.passed).map(check => check.name);
+  expect(await failed(s.actions)).toEqual([]);
+  const layers = [530, 531, 532].map(pr => ({ action: "forge.mergePr" as const, details: `Squash-merge PR #${pr}`, data: { pr } }));
+  expect(await failed(layers)).toEqual(expect.arrayContaining(["forbidden actions", "required actions"]));
+  // One stack merge per layer is layer by layer too.
+  expect(await failed([530, 531, 532].map(pr => ({ ...stackMerge, details: `gh stack merge ${pr} --squash --yes`, data: { pr } })))).toEqual(["maximum git.stackMerge"]);
 });
