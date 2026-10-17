@@ -141,10 +141,25 @@ superseded and skipped runs carry no result.
 - **Green:** each deciding run succeeded, or the project requires no CI on
   default-branch commits. Work starts and merges. Runs still queued or in
   progress for later commits hold neither, and a merge may supersede or cancel
-  them. Never wait for them, and never make parallel deliveries take turns or
-  hold a shared merge token to keep a run alive. When a required workflow has
-  no run that succeeded or failed, trigger one where the project allows and
-  report the gap; it does not hold merges.
+  them. Never make parallel deliveries take turns or hold a shared merge token
+  to keep a run alive; wait for a default-branch run only under **Stale**.
+- **Stale:** the deciding run lags the tip because the required workflows
+  cancel in-progress runs on each push (a `concurrency` group with
+  `cancel-in-progress`), or run long or queue, so later commits have only
+  cancelled or unfinished runs. The same listing shows it: the deciding run's
+  commit is behind the tip, and `git rev-list --count --first-parent
+  DECIDING-SHA..origin/DEFAULT` counts the commits no completed run covers.
+  Merges continue: each PR's own required checks, and any full CI run its
+  declared rule requires, stay the merge gate, and only a completed failed run
+  stops merging. Bound the gap with the project's declared limit, or without
+  one, five uncovered commits or a deciding commit that landed more than twice
+  the workflow's usual run time ago. A required workflow with no run that
+  succeeded or failed is past the bound. Past it, get one run on the current
+  tip to complete before the next merge: await the tip's run with
+  `delivery-wait`'s `workflow-terminal` wait, or dispatch one where the
+  workflow allows a run outside its cancelling group. Merge nothing that would
+  cancel it; every delivery waits on that same run. When it completes, its
+  result decides, and everything that became ready meanwhile merges.
 - **Red:** a deciding run failed. Stop merging: getting the branch green comes
   first, and only its repair starts or merges. It stays red until a rerun of
   that run or a later run of that workflow succeeds, even after the repair

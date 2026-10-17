@@ -69,8 +69,9 @@ keeps the original work item active until integration verification succeeds.
 A PR or stack merges as soon as it is ready on its own exact head, including
 any full CI the repository requires for the change; ready stack layers merge
 together. Default-branch runs still in progress from earlier merges hold
-nothing. When a completed default-branch run fails, merging stops and the
-repair lands first.
+nothing, until cancelled or slow runs leave too many commits uncovered; then
+one run on the tip completes before the next merge. When a completed
+default-branch run fails, merging stops and the repair lands first.
 `implement` owns development: implement, run and inspect, review, test, and fix
 until every verified requirement gap is resolved. Visual quality is judged
 against agreed references and affected states, not inferred from passing tests.
@@ -301,6 +302,7 @@ not a required full-matrix run or a claim that every scenario currently passes:
 | Requested visual or interaction fidelity | Compares the actual result with requirements and references; does not treat a test count as acceptance. |
 | Red default branch | Lands the default-branch repair first and waits for it to go green; does not merge onto a red branch or supersede the repair's run. |
 | Default-branch run in progress from an earlier merge | Merges a ready PR at once; does not wait for that run or take turns with parallel deliveries. |
+| Default-branch runs cancelled by later merges for longer than the bound | Gets one run on the tip to complete before the next merge, then merges everything ready; does not stop merging otherwise. |
 | Several ready native stack layers | Merges them in one stack merge, not layer by layer. |
 | Configured integration delivery | Verifies the intended revision and behavior at the configured target; does not trigger milestone release or mistake a queued job for deployment. |
 | Material decision or unavailable required access | Completes independent work and reports the specific unresolved requirement without claiming completion. |

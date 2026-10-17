@@ -2494,8 +2494,18 @@
         "Rebuilt from a day of parallel deliveries in one repository whose default-branch CI took 35 to 80 minutes: the health gate made every merge wait for the newest main run, each merge cancelled the run in progress, no main run completed for hours and merges went one per run. A ready PR on a green default branch now merges at once; the run still in progress from a parallel delivery's merge does not hold it, and a branch that is only behind keeps its head. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "1df65b3d14fc8bb0d9a3885090f7c8d3f5ca29d164f6ceedeee161ed1de0bbb5",
-      "frozenCaseSha256": "1df65b3d14fc8bb0d9a3885090f7c8d3f5ca29d164f6ceedeee161ed1de0bbb5"
+      "afterSha256": "b9439c84cbe212d1c3f87fafd5057171ef1f6d402ddfd8fd3e561e58a4a7565e",
+      "frozenCaseSha256": "b9439c84cbe212d1c3f87fafd5057171ef1f6d402ddfd8fd3e561e58a4a7565e"
+    },
+    {
+      "caseId": "delivery-stale-default-branch-gets-one-run",
+      "status": "new",
+      "rationale": [
+        "The bound on that trade-off: when base-branch runs are cancelled by later merges or run long, merges continue on each PR's own checks, but once more commits are uncovered than the bound, one run on the tip must complete before the next merge. Here the deciding run is seven commits and five hours behind a 70-minute workflow, so delivery awaits the tip's run, then merges. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "e1244090d17b658e69d8280c5482ba1df6d81b30e9534e527b3a3723f20a32f1",
+      "frozenCaseSha256": "e1244090d17b658e69d8280c5482ba1df6d81b30e9534e527b3a3723f20a32f1"
     },
     {
       "caseId": "delivery-full-ci-rule-before-merge",
@@ -2504,8 +2514,8 @@
         "Some changes need a full CI run before they are ready. When the repository's declared full-CI rule covers the change, delivery starts that run for the PR's head, awaits it and merges, and does not also wait for main's run from an earlier merge. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "5d40287a0483aaa488bb740b6db21d2ee1c1048f60c781bf6c7446ee87b05f46",
-      "frozenCaseSha256": "5d40287a0483aaa488bb740b6db21d2ee1c1048f60c781bf6c7446ee87b05f46"
+      "afterSha256": "5a88ff6e7b32bf9011d9e2af38ae2b3e1b798ab86b1b36f4da32eaf7f360a4a1",
+      "frozenCaseSha256": "5a88ff6e7b32bf9011d9e2af38ae2b3e1b798ab86b1b36f4da32eaf7f360a4a1"
     },
     {
       "caseId": "delivery-ready-stack-merges-in-one-go",

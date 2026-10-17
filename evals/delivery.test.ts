@@ -57,6 +57,7 @@ const scenarios: Array<{ id: string; actions: RunLedger["actions"]; output: stri
   { id: "delivery-red-default-branch-waits-for-repair", actions: [action("validation.reuse"), mainRunWait(repairTip), action("forge.mergePr", "Squash-merge PR #509")], output: "PR #509 merged after main turned green at 7a7a7a7.", omit: "monitor.wait" },
   { id: "delivery-red-default-branch-unowned-repair-first", actions: [action("git.createBranch", "Create fix/macos-path-case from fresh main"), edit("tests/paths.test.ts"), review, gate, action("git.commit"), action("git.push"), action("forge.openDraftPr", "Open repair PR for the macOS failure on main"), action("monitor.wait", "Await PR #512 checks"), action("forge.markPrReady", "Mark repair PR #512 ready"), mergeRepair, mainRunWait(repairMerged), mergeRequested], output: "Repair PR #512 merged and main went green at 9c9c9c9; PR #511 then merged as 3c3c3c3.", omit: "forge.openDraftPr" },
   { id: "delivery-earlier-merge-run-does-not-hold-merge", actions: [action("validation.reuse"), action("forge.mergePr", "Squash-merge PR #513")], output: "PR #513 merged as 3c3c3c3; main's run for the earlier merge did not hold it.", omit: "forge.mergePr" },
+  { id: "delivery-stale-default-branch-gets-one-run", actions: [action("validation.reuse"), mainRunWait(parallelTip), action("forge.mergePr", "Squash-merge PR #516")], output: "PR #516 merged as 3c3c3c3 after main's run on 0d0d0d0 completed green.", omit: "monitor.wait" },
   { id: "delivery-full-ci-rule-before-merge", actions: [action("validation.reuse"), fullCiLabel, fullCiWait, action("forge.mergePr", "Squash-merge PR #515")], output: "PR #515 merged as 3c3c3c3 after Extended CI passed on its head.", omit: "monitor.wait" },
   { id: "delivery-ready-stack-merges-in-one-go", actions: [stackMerge], output: "Stack 31 (PRs #530, #531 and #532) merged in one operation as 3c3c3c3.", omit: "git.stackMerge" },
   { id: "delivery-post-merge-integration-repair", actions: [behavior, repairBranch, edit("src/report.ts"), review, behavior, gate, action("git.commit"), action("git.push"), action("forge.openDraftPr", "Open repair for #507 and issue #87 from fresh main"), action("monitor.wait"), action("forge.markPrReady"), action("forge.mergePr", "Merge repair #508"), action("monitor.wait"), deployedProbe(repairRevision)], output: "Repair PR #508 is merged; nightly serves 4d4d4d4 and the direct URL acceptance passed.", omit: "forge.mergePr" },
@@ -325,4 +326,17 @@ test("ready stack layers merge in one stack merge, not one PR at a time", async 
   expect(await failed(layers)).toEqual(expect.arrayContaining(["forbidden actions", "required actions"]));
   // One stack merge per layer is layer by layer too.
   expect(await failed([530, 531, 532].map(pr => ({ ...stackMerge, details: `gh stack merge ${pr} --squash --yes`, data: { pr } })))).toEqual(["maximum git.stackMerge"]);
+});
+
+test("past the uncovered-commit bound, one run on the tip completes before the next merge", async () => {
+  const s = scenarios.find(s => s.id === "delivery-stale-default-branch-gets-one-run")!;
+  const c = deliveryCases.find(c => c.id === s.id)!;
+  const merge = action("forge.mergePr", "Squash-merge PR #516");
+  const failed = async (actions: RunLedger["actions"]) =>
+    gradeRun(c, await replay(c, actions), s.output).checks.filter(check => !check.passed).map(check => check.name);
+  expect(await failed(s.actions)).toEqual([]);
+  // Merging cancels the tip's run again and leaves the gap growing.
+  expect(await failed([merge, mainRunWait(parallelTip)])).toEqual(["monitor.wait evidence before forge.mergePr", "required action sequence"]);
+  // A wait on the old deciding commit does not cover the tip.
+  expect(await failed([mainRunWait("e1".repeat(20)), merge])).toEqual(["monitor.wait evidence before forge.mergePr"]);
 });
