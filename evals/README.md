@@ -84,7 +84,7 @@ release publication, a linked repair after integration finds a post-merge gap,
 a merge held until a red default branch's repair run succeeds, an unowned
 red default branch repaired before the requested merge, a ready merge that a
 default-branch run from an earlier merge does not hold, one completed run on
-the tip once cancelled runs leave too many commits uncovered, a declared full-CI run
+the tip once cancelled runs pass the staleness bound `ORCHESTRATION.md` declares, a declared full-CI run
 awaited before merging, and a ready native stack merged in one stack merge.
 They use simulated repository and external state. They do
 not establish a real deployment, production readiness, or release publication.

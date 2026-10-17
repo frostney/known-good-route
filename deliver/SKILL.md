@@ -92,8 +92,10 @@ invalidated checks. Preserve independent review judgment.
 
 Apply `git-workflow`'s
 [default-branch health](../git-workflow/SKILL.md#default-branch-health) gate
-before development starts and again before each merge. A default-branch repair
-it calls for is a separate work item that comes before this one.
+before development starts and again before each merge, with the staleness
+bound repository-root `ORCHESTRATION.md` declares or the gate's reported
+default. A default-branch repair it calls for is a separate work item that
+comes before this one.
 
 Integration delivery and release publication are separate outcomes. Never
 invoke `/create-release` from this single-item loop or use a milestone release

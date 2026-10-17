@@ -151,10 +151,15 @@ superseded and skipped runs carry no result.
   DECIDING-SHA..origin/DEFAULT` counts the commits no completed run covers.
   Merges continue: each PR's own required checks, and any full CI run its
   declared rule requires, stay the merge gate, and only a completed failed run
-  stops merging. Bound the gap with the project's declared limit, or without
-  one, five uncovered commits or a deciding commit that landed more than twice
-  the workflow's usual run time ago. A required workflow with no run that
-  succeeded or failed is past the bound. Past it, get one run on the current
+  stops merging. The gap's bound is repository-owned monitoring policy: read
+  repository-root `ORCHESTRATION.md` for a default-branch staleness bound,
+  which may limit uncovered commits, the deciding commit's age, or both. When
+  the file or the setting is absent, use the conservative default of five
+  uncovered commits or a deciding commit that landed more than twice the
+  workflow's usual run time ago, and report the fallback. A setting that is
+  malformed or contradicts higher-authority instructions counts as already
+  exceeded; report it. A required workflow with no run that succeeded or
+  failed is past any bound. Past it, get one run on the current
   tip to complete before the next merge: await the tip's run with
   `delivery-wait`'s `workflow-terminal` wait, or dispatch one where the
   workflow allows a run outside its cancelling group. Merge nothing that would

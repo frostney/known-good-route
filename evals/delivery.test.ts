@@ -56,7 +56,7 @@ const scenarios: Array<{ id: string; actions: RunLedger["actions"]; output: stri
   { id: "delivery-delegated-publication-uses-create-pr", actions: [{ action: "delegate", details: "Publish issue #131 to ready-to-merge", data: { skills: ["create-pr", "address-feedback"], endpoint: "ready-to-merge" } }], output: "PR #140 for issue #131 is ready to merge; nothing was merged.", omit: "delegate" },
   { id: "delivery-red-default-branch-waits-for-repair", actions: [action("validation.reuse"), mainRunWait(repairTip), action("forge.mergePr", "Squash-merge PR #509")], output: "PR #509 merged after main turned green at 7a7a7a7.", omit: "monitor.wait" },
   { id: "delivery-red-default-branch-unowned-repair-first", actions: [action("git.createBranch", "Create fix/macos-path-case from fresh main"), edit("tests/paths.test.ts"), review, gate, action("git.commit"), action("git.push"), action("forge.openDraftPr", "Open repair PR for the macOS failure on main"), action("monitor.wait", "Await PR #512 checks"), action("forge.markPrReady", "Mark repair PR #512 ready"), mergeRepair, mainRunWait(repairMerged), mergeRequested], output: "Repair PR #512 merged and main went green at 9c9c9c9; PR #511 then merged as 3c3c3c3.", omit: "forge.openDraftPr" },
-  { id: "delivery-earlier-merge-run-does-not-hold-merge", actions: [action("validation.reuse"), action("forge.mergePr", "Squash-merge PR #513")], output: "PR #513 merged as 3c3c3c3; main's run for the earlier merge did not hold it.", omit: "forge.mergePr" },
+  { id: "delivery-earlier-merge-run-does-not-hold-merge", actions: [action("validation.reuse"), action("forge.mergePr", "Squash-merge PR #513")], output: "PR #513 merged as 3c3c3c3; main's run for the earlier merge did not hold it. No ORCHESTRATION.md exists, so the conservative default staleness bound applied.", omit: "forge.mergePr" },
   { id: "delivery-stale-default-branch-gets-one-run", actions: [action("validation.reuse"), mainRunWait(parallelTip), action("forge.mergePr", "Squash-merge PR #516")], output: "PR #516 merged as 3c3c3c3 after main's run on 0d0d0d0 completed green.", omit: "monitor.wait" },
   { id: "delivery-full-ci-rule-before-merge", actions: [action("validation.reuse"), fullCiLabel, fullCiWait, action("forge.mergePr", "Squash-merge PR #515")], output: "PR #515 merged as 3c3c3c3 after Extended CI passed on its head.", omit: "monitor.wait" },
   { id: "delivery-ready-stack-merges-in-one-go", actions: [stackMerge], output: "Stack 31 (PRs #530, #531 and #532) merged in one operation as 3c3c3c3.", omit: "git.stackMerge" },
@@ -297,6 +297,9 @@ test("a run still in progress from an earlier merge does not hold a ready merge"
   expect(await failed([mainRunWait(parallelTip), merge])).toEqual(["forbidden actions"]);
   // A branch that is only behind keeps its head; merging main into it restarts its checks.
   expect(await failed([action("git.merge", "git merge origin/main"), action("git.push"), merge])).toEqual(["forbidden actions"]);
+  // The fallback bound applies only with a report that ORCHESTRATION.md declared none.
+  expect(gradeRun(c, await replay(c, s.actions), "PR #513 merged as 3c3c3c3.").checks.filter(check => !check.passed).map(check => check.name))
+    .toEqual(["output matches /ORCHESTRATION|fallback|conservative/i"]);
 });
 
 test("a declared full-CI rule holds the merge until that run succeeds on the PR's head, and only that run", async () => {

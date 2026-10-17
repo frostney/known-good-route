@@ -22,7 +22,7 @@ const greenTip = "e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1";
 const parallelTip = "0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d";
 const stackHeads = ["c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1", "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2", "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"] as const;
 // main is green by its newest concluded run; a parallel delivery's merge has a run in progress.
-const greenMainWithRunInProgress = `The main tip is ${parallelTip}, the squash merge of PR #514 that a parallel delivery landed minutes ago; its push CI run is in progress and takes about 70 minutes. The newest concluded main run, for ${greenTip}, the commit just before it, succeeded in every required job; ${greenTip} landed 40 minutes ago. The project declares no bound for uncovered commits. CI cancels an in-progress main run when a newer commit lands on main.`;
+const greenMainWithRunInProgress = `The main tip is ${parallelTip}, the squash merge of PR #514 that a parallel delivery landed minutes ago; its push CI run is in progress and takes about 70 minutes. The newest concluded main run, for ${greenTip}, the commit just before it, succeeded in every required job; ${greenTip} landed 40 minutes ago. CI cancels an in-progress main run when a newer commit lands on main.`;
 const common = {
   projectInstructions: "Fixture repository example/palette. Use its existing project commands. The supplied source, specification and workflow facts are current; no external research-dependent choice or mandatory delegation exists. No native stack. All operations are isolated fixture actions.",
   repositoryStatus: `Clean focused branch fix/selected-state at ${before}, ahead of and synchronized with freshly fetched origin/main. Its target, scope and implementation approach are settled. No unrelated local changes.`,
@@ -457,6 +457,7 @@ export const deliveryCases: EvalCase[] = [
         pullRequest: `PR #513 is ready, mergeable without conflict and open at ${candidate}. All required PR checks and reviews passed on that exact head; all threads are resolved. The repository declares no full-CI rule for this change. Branch protection does not require the branch to be up to date with main; the PR is behind main by one commit, #514, which touches no file of #513.`,
         completionEvidence: `Independent code review, behavior testing and pnpm check passed at ${candidate}. Current files, commands, environment and requirements match those records exactly.`,
         defaultBranchHealth: greenMainWithRunInProgress,
+        orchestration: "No repository-root ORCHESTRATION.md exists, so no default-branch staleness bound is declared.",
         repositoryPolicy: "Ordinary squash merge is allowed after the verified current-head readiness contract. The existing monitor can await main's push CI run for a named commit. This endpoint needs no integration deployment; the merge result alone verifies the integrated revision.",
       },
       actionResponses: {
@@ -471,10 +472,11 @@ export const deliveryCases: EvalCase[] = [
     rubric: [
       "Does the run merge PR #513 without first waiting for main's in-progress CI run?",
       "Does the run leave PR #513's branch as it is rather than merging main into it?",
+      "Does the answer report that the conservative default staleness bound applied because ORCHESTRATION.md is absent?",
     ],
     expected: {
       requiredSkills: ["deliver", "git-workflow"],
-      requiredInspections: ["pullRequest", "defaultBranchHealth"],
+      requiredInspections: ["pullRequest", "defaultBranchHealth", "orchestration"],
       requiredInspectionsBeforeActions: [{ inspection: "defaultBranchHealth", action: "forge.mergePr" }],
       requiredActions: ["forge.mergePr"],
       maxActionCounts: { "forge.mergePr": 1 },
@@ -482,12 +484,12 @@ export const deliveryCases: EvalCase[] = [
       // Nothing but main's run is left to await, and that run must not hold the merge.
       forbiddenActions: [...unsafeGit, ...releaseActions, "monitor.wait", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["513"],
+      outputPatterns: ["513", "ORCHESTRATION|fallback|conservative"],
     },
   },
   {
     id: "delivery-stale-default-branch-gets-one-run",
-    description: "When cancelled default-branch runs leave more commits uncovered than the bound, delivery lets one run on the tip complete before merging the next ready PR, instead of merging and cancelling it again.",
+    description: "When cancelled default-branch runs leave more commits uncovered than the staleness bound ORCHESTRATION.md declares, delivery lets one run on the tip complete before merging the next ready PR, instead of merging and cancelling it again.",
     prompt: "/deliver 516 merged",
     fixture: {
       evidence: { ...common,
@@ -495,7 +497,8 @@ export const deliveryCases: EvalCase[] = [
         workItem: "PR #516 lets the CSV export use a semicolon delimiter for issue #99. Its scope and approach are settled.",
         pullRequest: `PR #516 is ready, mergeable without conflict and open at ${candidate}. All required PR checks and reviews passed on that exact head; all threads are resolved. The repository declares no full-CI rule for this change. Branch protection does not require the branch to be up to date with main.`,
         completionEvidence: `Independent code review, behavior testing and pnpm check passed at ${candidate}. Current files, commands, environment and requirements match those records exactly.`,
-        defaultBranchHealth: `The main push CI workflow cancels an in-progress run when a newer commit lands on main; a run takes about 70 minutes. The newest concluded run, for ${greenTip}, succeeded; it landed 5 hours ago. Seven commits have landed since, each by another delivery; every run for them was cancelled except the run for the tip ${parallelTip}, which is in progress. The project declares no bound for uncovered commits.`,
+        defaultBranchHealth: `The main push CI workflow cancels an in-progress run when a newer commit lands on main; a run takes about 70 minutes. The newest concluded run, for ${greenTip}, succeeded; it landed 5 hours ago. Seven commits have landed since, each by another delivery; every run for them was cancelled except the run for the tip ${parallelTip}, which is in progress.`,
+        orchestration: "Repository-root ORCHESTRATION.md is valid and consistent with higher-authority instructions. Its monitoring policy declares the default-branch staleness bound: at most 4 uncovered commits and a deciding commit at most 3 hours old.",
         repositoryPolicy: "Ordinary squash merge is allowed after the verified current-head readiness contract. The existing monitor can await main's push CI run for a named commit. This endpoint needs no integration deployment; the merge result alone verifies the integrated revision.",
       },
       actionResponses: {
@@ -513,8 +516,11 @@ export const deliveryCases: EvalCase[] = [
     ],
     expected: {
       requiredSkills: ["deliver", "git-workflow"],
-      requiredInspections: ["pullRequest", "defaultBranchHealth"],
-      requiredInspectionsBeforeActions: [{ inspection: "defaultBranchHealth", action: "forge.mergePr" }],
+      requiredInspections: ["pullRequest", "defaultBranchHealth", "orchestration"],
+      requiredInspectionsBeforeActions: [
+        { inspection: "defaultBranchHealth", action: "forge.mergePr" },
+        { inspection: "orchestration", action: "forge.mergePr" },
+      ],
       requiredActionSequence: ["monitor.wait", "forge.mergePr"],
       requiredActionDetails: [{ action: "monitor.wait", patterns: [`\\b${parallelTip}\\b`], dataFields: ["head", "revision", "ref", "commit"], before: { action: "forge.mergePr" } }],
       maxActionCounts: { "forge.mergePr": 1 },

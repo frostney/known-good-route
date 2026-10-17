@@ -6,8 +6,10 @@ spawning any worker.
 ## Policy gate
 
 A valid file is authoritative for repository-owned capability classes, routing
-rules, context envelopes, token checkpoints, monitoring requirements, and
-escalation policy. It must use host-neutral capabilities rather than requiring a
+rules, context envelopes, token checkpoints, monitoring requirements, such as
+the default-branch staleness bound that `git-workflow`'s
+[default-branch health](../../git-workflow/SKILL.md#default-branch-health)
+gate applies, and escalation policy. It must use host-neutral capabilities rather than requiring a
 particular provider or model. Higher-authority repository instructions still
 win.
 
