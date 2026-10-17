@@ -18,6 +18,11 @@ const repairHead = "8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b";
 const repairMerged = "9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c";
 const repairReview = "Independent review of the tests/paths.test.ts correction against the macOS failure found no findings.";
 const repairGate = "pnpm check passed on the corrected tree, including tests/paths.test.ts in a case-sensitive temporary directory.";
+const greenTip = "e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1";
+const parallelTip = "0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d";
+const stackHeads = ["c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1", "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2", "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"] as const;
+// main is green by its newest concluded run; a parallel delivery's merge has a run in progress.
+const greenMainWithRunInProgress = `The main tip is ${parallelTip}, the squash merge of PR #514 that a parallel delivery landed minutes ago; its push CI run is in progress and takes about 70 minutes. The newest concluded main run, for ${greenTip}, the commit just before it, succeeded in every required job; ${greenTip} landed 40 minutes ago. CI cancels an in-progress main run when a newer commit lands on main.`;
 const common = {
   projectInstructions: "Fixture repository example/palette. Use its existing project commands. The supplied source, specification and workflow facts are current; no external research-dependent choice or mandatory delegation exists. No native stack. All operations are isolated fixture actions.",
   repositoryStatus: `Clean focused branch fix/selected-state at ${before}, ahead of and synchronized with freshly fetched origin/main. Its target, scope and implementation approach are settled. No unrelated local changes.`,
@@ -439,6 +444,175 @@ export const deliveryCases: EvalCase[] = [
       forbiddenActions: [...unsafeGit, ...releaseActions, "user.ask"],
       forbiddenSkills: ["create-release"],
       outputPatterns: ["511", "512"],
+    },
+  },
+  {
+    id: "delivery-earlier-merge-run-does-not-hold-merge",
+    description: "A ready PR merges at once on a green default branch; a push CI run still in progress from a parallel delivery's merge does not hold it.",
+    prompt: "/deliver 513 merged",
+    fixture: {
+      evidence: { ...common,
+        repositoryStatus: `Clean ordinary branch feat/csv-filename at ${candidate}. Existing PR #513 is the verified work item; no unresolved development work.`,
+        workItem: "PR #513 names the CSV export file after the report and month for issue #93. Its scope and approach are settled.",
+        pullRequest: `PR #513 is ready, mergeable without conflict and open at ${candidate}. All required PR checks and reviews passed on that exact head; all threads are resolved. The repository declares no full-CI rule for this change. Branch protection does not require the branch to be up to date with main; the PR is behind main by one commit, #514, which touches no file of #513.`,
+        completionEvidence: `Independent code review, behavior testing and pnpm check passed at ${candidate}. Current files, commands, environment and requirements match those records exactly.`,
+        defaultBranchHealth: greenMainWithRunInProgress,
+        orchestration: "No repository-root ORCHESTRATION.md exists, so no default-branch staleness bound is declared.",
+        repositoryPolicy: "Ordinary squash merge is allowed after the verified current-head readiness contract. The existing monitor can await main's push CI run for a named commit. This endpoint needs no integration deployment; the merge result alone verifies the integrated revision.",
+      },
+      actionResponses: {
+        "validation.reuse": `Accepted the recorded matching review, behavior and project-gate evidence for ${candidate}; no rerun occurred.`,
+        "forge.mergePr": `PR #513 squash-merged onto main as ${integrated}. The in-progress main run for ${parallelTip} was cancelled and a run for ${integrated} started.`,
+        "monitor.wait": `The main push CI run for ${parallelTip} completed successfully.`,
+      },
+      transitions: [
+        { after: "forge.mergePr", evidence: { pullRequest: `PR #513 is merged as ${integrated}.` } },
+      ],
+    },
+    rubric: [
+      "Does the run merge PR #513 without first waiting for main's in-progress CI run?",
+      "Does the run leave PR #513's branch as it is rather than merging main into it?",
+      "Does the answer report that the conservative default staleness bound applied because ORCHESTRATION.md is absent?",
+    ],
+    expected: {
+      requiredSkills: ["deliver", "git-workflow"],
+      requiredInspections: ["pullRequest", "defaultBranchHealth", "orchestration"],
+      requiredInspectionsBeforeActions: [{ inspection: "defaultBranchHealth", action: "forge.mergePr" }],
+      requiredActions: ["forge.mergePr"],
+      maxActionCounts: { "forge.mergePr": 1 },
+      allowedEditPaths: [".agent/HANDOFF.md"],
+      // Nothing but main's run is left to await, and that run must not hold the merge.
+      forbiddenActions: [...unsafeGit, ...releaseActions, "monitor.wait", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
+      forbiddenSkills: ["create-release"],
+      outputPatterns: ["513", "ORCHESTRATION|fallback|conservative"],
+    },
+  },
+  {
+    id: "delivery-stale-default-branch-gets-one-run",
+    description: "When cancelled default-branch runs leave more commits uncovered than the staleness bound ORCHESTRATION.md declares, delivery lets one run on the tip complete before merging the next ready PR, instead of merging and cancelling it again.",
+    prompt: "/deliver 516 merged",
+    fixture: {
+      evidence: { ...common,
+        repositoryStatus: `Clean ordinary branch feat/csv-delimiter at ${candidate}. Existing PR #516 is the verified work item; no unresolved development work.`,
+        workItem: "PR #516 lets the CSV export use a semicolon delimiter for issue #99. Its scope and approach are settled.",
+        pullRequest: `PR #516 is ready, mergeable without conflict and open at ${candidate}. All required PR checks and reviews passed on that exact head; all threads are resolved. The repository declares no full-CI rule for this change. Branch protection does not require the branch to be up to date with main.`,
+        completionEvidence: `Independent code review, behavior testing and pnpm check passed at ${candidate}. Current files, commands, environment and requirements match those records exactly.`,
+        defaultBranchHealth: `The main push CI workflow cancels an in-progress run when a newer commit lands on main; a run takes about 70 minutes. The newest concluded run, for ${greenTip}, succeeded; it landed 5 hours ago. Seven commits have landed since, each by another delivery; every run for them was cancelled except the run for the tip ${parallelTip}, which is in progress.`,
+        orchestration: "Repository-root ORCHESTRATION.md is valid and consistent with higher-authority instructions. Its monitoring policy declares the default-branch staleness bound: at most 4 uncovered commits and a deciding commit at most 3 hours old.",
+        repositoryPolicy: "Ordinary squash merge is allowed after the verified current-head readiness contract. The existing monitor can await main's push CI run for a named commit. This endpoint needs no integration deployment; the merge result alone verifies the integrated revision.",
+      },
+      actionResponses: {
+        "validation.reuse": `Accepted the recorded matching review, behavior and project-gate evidence for ${candidate}; no rerun occurred.`,
+        "monitor.wait": `The main push CI run for ${parallelTip} completed successfully in every required job. No newer commit has landed on main.`,
+        "forge.mergePr": `PR #516 squash-merged onto main as ${integrated}.`,
+      },
+      transitions: [
+        { after: "monitor.wait", evidence: { defaultBranchHealth: `main is green: the push CI run for its tip ${parallelTip} succeeded in every required job; no commit is uncovered.` } },
+        { after: "forge.mergePr", evidence: { pullRequest: `PR #516 is merged as ${integrated}.` } },
+      ],
+    },
+    rubric: [
+      "Does the run let main's in-progress run on the tip complete before merging PR #516?",
+    ],
+    expected: {
+      requiredSkills: ["deliver", "git-workflow"],
+      requiredInspections: ["pullRequest", "defaultBranchHealth", "orchestration"],
+      requiredInspectionsBeforeActions: [
+        { inspection: "defaultBranchHealth", action: "forge.mergePr" },
+        { inspection: "orchestration", action: "forge.mergePr" },
+      ],
+      requiredActionSequence: ["monitor.wait", "forge.mergePr"],
+      requiredActionDetails: [{ action: "monitor.wait", patterns: [`\\b${parallelTip}\\b`], dataFields: ["head", "revision", "ref", "commit"], before: { action: "forge.mergePr" } }],
+      maxActionCounts: { "forge.mergePr": 1 },
+      allowedEditPaths: [".agent/HANDOFF.md"],
+      forbiddenActions: [...unsafeGit, ...releaseActions, "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
+      forbiddenSkills: ["create-release"],
+      outputPatterns: ["516"],
+    },
+  },
+  {
+    id: "delivery-full-ci-rule-before-merge",
+    description: "A PR whose change falls under the repository's declared full-CI rule is not ready until that run succeeds on its head; delivery starts it, awaits it and merges, without waiting for main's run from an earlier merge.",
+    prompt: "/deliver 515 merged",
+    fixture: {
+      evidence: { ...common,
+        projectInstructions: `${common.projectInstructions} AGENTS.md declares the full-CI rule: a change under src/export/ needs the Extended CI workflow, which the full-ci label on the PR starts for its head, after required checks and reviews have converged.`,
+        repositoryStatus: `Clean ordinary branch feat/export-streaming at ${candidate}. Existing PR #515 is the verified work item; no unresolved development work.`,
+        workItem: "PR #515 streams large CSV exports in src/export/stream.ts for issue #95. Its scope and approach are settled.",
+        pullRequest: `PR #515 is open and mergeable without conflict at ${candidate}. It changes src/export/stream.ts. All required PR checks and the required review passed on that exact head; all threads are resolved. It has no full-ci label and no Extended CI run. Branch protection does not require the branch to be up to date with main.`,
+        completionEvidence: `Independent code review, behavior testing and pnpm check passed at ${candidate}. Current files, commands, environment and requirements match those records exactly.`,
+        defaultBranchHealth: greenMainWithRunInProgress,
+        repositoryPolicy: "Ordinary squash merge is allowed after the verified current-head readiness contract. The existing monitor can await PR checks, a workflow run, or main's push CI run for a named commit. This endpoint needs no integration deployment.",
+      },
+      actionResponses: {
+        "validation.reuse": `Accepted the recorded matching review, behavior and project-gate evidence for ${candidate}; no rerun occurred.`,
+        "forge.updatePrMetadata": `Added the full-ci label to PR #515; Extended CI run 7151 started for ${candidate}.`,
+        "monitor.wait": `Extended CI run 7151 for PR #515 at ${candidate} completed successfully in every job.`,
+        "forge.mergePr": `PR #515 squash-merged onto main as ${integrated}.`,
+      },
+      transitions: [
+        { after: "monitor.wait", evidence: { pullRequest: `PR #515 is open and mergeable at ${candidate}. Required checks, the required review and Extended CI run 7151 all passed on that exact head; all threads are resolved.` } },
+        { after: "forge.mergePr", evidence: { pullRequest: `PR #515 is merged as ${integrated}.` } },
+      ],
+    },
+    rubric: [
+      "Does the run start Extended CI for PR #515 and merge only after it succeeds on that head?",
+      "Does the run merge without waiting for main's in-progress CI run?",
+    ],
+    expected: {
+      requiredSkills: ["deliver", "git-workflow"],
+      requiredInspections: ["projectInstructions", "pullRequest", "defaultBranchHealth"],
+      requiredInspectionsBeforeActions: [{ inspection: "defaultBranchHealth", action: "forge.mergePr" }],
+      requiredActionSequence: ["forge.updatePrMetadata", "monitor.wait", "forge.mergePr"],
+      requiredActionDetails: [
+        { action: "forge.updatePrMetadata", patterns: ["full-ci"], dataFields: ["*"], before: { action: "forge.mergePr" } },
+        // Every wait before the merge is on the PR's own head; a wait on main's tip fails.
+        { action: "monitor.wait", patterns: [`\\b${candidate}\\b`], dataFields: ["head", "revision", "ref", "commit"], every: true, before: { action: "forge.mergePr" } },
+      ],
+      maxActionCounts: { "forge.mergePr": 1 },
+      allowedEditPaths: [".agent/HANDOFF.md"],
+      forbiddenActions: [...unsafeGit, ...releaseActions, "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
+      forbiddenSkills: ["create-release"],
+      outputPatterns: ["515"],
+    },
+  },
+  {
+    id: "delivery-ready-stack-merges-in-one-go",
+    description: "When every layer of a native stack is ready, delivery merges the stack in one stack merge rather than layer by layer.",
+    prompt: "/deliver stack 31 merged",
+    fixture: {
+      evidence: { ...common,
+        projectInstructions: "Fixture repository example/palette. Use its existing project commands. The supplied source, specification and workflow facts are current; no external research-dependent choice or mandatory delegation exists. All operations are isolated fixture actions.",
+        repositoryStatus: `Clean checkout of feat/export-totals, the top layer of native stack 31. Local branches match their remote heads. No unrelated local changes.`,
+        workItem: "Native stack 31 delivers issue #97, CSV export totals, in three layers. Its scope and approach are settled.",
+        stackTopology: `gh stack view --json and GitHub's native stack data agree: stack 31 is based on main and holds PR #530 (feat/export-model at ${stackHeads[0]}), PR #531 (feat/export-sum at ${stackHeads[1]}) and PR #532 (feat/export-totals at ${stackHeads[2]}), bottom to top. No stack in example/palette is numbered 530, 531 or 532. The official gh-stack extension is installed and authenticated.`,
+        readiness: "address-feedback returned complete-stack readiness for stack 31 at those exact heads: every member's required checks and required review passed on its own head, every thread is resolved, the integrated top passed behavior testing and pnpm check, and the final membership audit matches. The repository declares no full-CI rule for this change. Each PR is open, non-draft and mergeable without conflict.",
+        defaultBranchHealth: `The main tip is ${greenTip}; its push CI run succeeded in every required job. No main run is queued or in progress.`,
+        repositoryPolicy: "Squash merges only. GitHub supports atomic stack merges for this repository; no merge queue. This endpoint needs no integration deployment.",
+      },
+      actionResponses: {
+        "validation.reuse": "Accepted the recorded complete-stack readiness evidence for stack 31 at its exact heads; no rerun occurred.",
+        "git.stackMerge": `gh stack merge squash-merged PRs #530, #531 and #532 onto main in one operation; main is now ${integrated}.`,
+      },
+      transitions: [
+        { after: "git.stackMerge", evidence: { stackTopology: `Stack 31 is merged: PRs #530, #531 and #532 are merged into main at ${integrated}.` } },
+      ],
+    },
+    rubric: [
+      "Does the run merge all three layers in one stack merge instead of merging PRs one at a time?",
+    ],
+    expected: {
+      requiredSkills: ["deliver", "git-workflow"],
+      requiredReferences: ["git-workflow/references/github-stacks.md"],
+      requiredInspections: ["stackTopology", "readiness", "defaultBranchHealth"],
+      requiredInspectionsBeforeActions: [{ inspection: "defaultBranchHealth", action: "git.stackMerge" }],
+      requiredActions: ["git.stackMerge"],
+      requiredActionDetails: [{ action: "git.stackMerge", patterns: ["\\b(31|532)\\b"], dataFields: ["*"] }],
+      maxActionCounts: { "git.stackMerge": 1 },
+      allowedEditPaths: [".agent/HANDOFF.md"],
+      forbiddenActions: [...unsafeGit, ...releaseActions, "forge.mergePr", "git.push", "user.ask"],
+      forbiddenSkills: ["create-release"],
+      outputPatterns: ["530", "531", "532"],
     },
   },
   {

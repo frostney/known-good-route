@@ -33,13 +33,16 @@ not block the update.
 
 1. Apply `git-workflow`. Inspect the current PR and its base branch, the
    branch, relevant local changes, recent commits and the fetched remote base
-   as `git-workflow` defines it. Resolve a behind-base or conflicting branch
-   before deciding whether missing CI needs any action.
+   as `git-workflow` defines it. Resolve a branch that needs the base under
+   step 3 before deciding whether missing CI needs any action.
 2. Stop if on the base branch or no open PR exists; report the required next
    workflow. Stop likewise when `git-workflow` gives the PR no remote base.
-3. When an ordinary branch is behind the remote base, merge it into the branch.
-   Preserve both sides' required behavior in additive conflicts; regenerate
-   generated files using the project's tool. Continue through validation when
+3. Merge the remote base into an ordinary branch when `git-workflow` says the
+   branch needs it: a conflict, a repository that requires up-to-date
+   branches, base commits the change needs, or relevant changes to commit
+   here. A branch that is only behind keeps its head and its checks. Preserve
+   both sides' required behavior in additive conflicts; regenerate generated
+   files using the project's tool. Continue through validation when
    the resolution is established. For a verified native stack, capture remote
    heads and use the guarded `gh stack sync` or narrower official stack
    operation; never use raw rebase or force-push commands.

@@ -56,6 +56,12 @@ new repository or operation needs its own scope.
   release branch for a backport. Never merge the remote default into a branch
   whose PR targets a named base. Without an open PR, the remote base is the
   remote default.
+- Outside an edit, merge the remote base into an open PR's branch only when
+  GitHub reports a conflict, the repository requires branches to be up to date
+  before merging (GitHub then reports the PR's `mergeStateStatus` as
+  `BEHIND`), or the change needs base commits to build or validate. Being
+  behind alone is no reason: every base merge restarts the PR's checks,
+  including any full CI run.
 - A layer of a native stack is updated through the stack reference. When an
   open PR targets any other non-default branch, it has no remote base: stop
   before merging or pushing and report that base instead of choosing one. The
@@ -120,34 +126,68 @@ Act on its result:
 
 ## Default-branch health
 
-Establish the default branch's health before new work starts, and recheck it
-immediately before each merge. Check the CI the project requires on
-default-branch commits, such as its push CI, not an integration deployment.
-Judge the current tip commit by its newest completed run; a run for an earlier
-commit says nothing about the tip.
+A pull request's own checks protect the default branch; the default branch's
+push CI reports on what already landed. Establish the default branch's health
+before new work starts, and recheck it immediately before each merge, from the
+CI the project requires on default-branch commits, such as its push CI, not an
+integration deployment. For each required workflow, find its newest
+default-branch push run that succeeded and its newest that failed (`failure`,
+`timed_out` or `startup_failure`), for example with `gh run list --workflow
+WORKFLOW --branch DEFAULT --event push --status success --limit 1 --json
+databaseId,headSha,createdAt` and the same query for each failing status. The
+newer of the two is the deciding run, whichever commit it ran for. Cancelled,
+superseded and skipped runs carry no result.
 
-- **Green:** that run succeeded, or the project requires no CI on
-  default-branch commits. Work starts and merges.
-- **Pending:** the tip has no succeeded or failed run yet, and one is queued
-  or in progress. Pending is not green: await its result with `delivery-wait` before
-  starting or merging, and never merge anything that would supersede or cancel
-  it.
-- **No result:** the tip's newest run was cancelled or superseded with nothing
-  replacing it, or it has no run. This is not green either. Rerun or trigger
-  its required CI where the project allows; otherwise report it.
-- **Red:** that run failed. Getting it green comes first, and only its repair
-  starts or merges. Identify the failing job and its cause, then look for an
-  owner of the fix: an open PR, an issue or another session. When no one owns
-  it and the active request authorizes merging, deliver the repair as its own
-  work item through `/deliver` and land it first. Otherwise report the failing
-  job, its cause and the repair it needs. Independent local investigation can
-  continue; nothing else starts development or merges.
+- **Green:** each deciding run succeeded, or the project requires no CI on
+  default-branch commits. Work starts and merges. Runs still queued or in
+  progress for later commits hold neither, and a merge may supersede or cancel
+  them. Never make parallel deliveries take turns or hold a shared merge token
+  to keep a run alive; wait for a default-branch run only under **Stale**.
+- **Stale:** the deciding run lags the tip because the required workflows
+  cancel in-progress runs on each push (a `concurrency` group with
+  `cancel-in-progress`), or run long or queue, so later commits have only
+  cancelled or unfinished runs. The same listing shows it: the deciding run's
+  commit is behind the tip, and `git rev-list --count --first-parent
+  DECIDING-SHA..origin/DEFAULT` counts the commits no completed run covers.
+  Merges continue: each PR's own required checks, and any full CI run its
+  declared rule requires, stay the merge gate, and only a completed failed run
+  stops merging. The gap's bound is repository-owned monitoring policy: read
+  repository-root `ORCHESTRATION.md` for a default-branch staleness bound,
+  which may limit uncovered commits, the deciding commit's age, or both. When
+  the file or the setting is absent, use the conservative default of five
+  uncovered commits or a deciding commit that landed more than twice the
+  workflow's usual run time ago, and report the fallback. A setting that is
+  malformed or contradicts higher-authority instructions counts as already
+  exceeded; report it. A required workflow with no run that succeeded or
+  failed is past any bound. Past it, get one run on the current
+  tip to complete before the next merge: await the tip's run with
+  `delivery-wait`'s `workflow-terminal` wait, or dispatch one where the
+  workflow allows a run outside its cancelling group. Merge nothing that would
+  cancel it; every delivery waits on that same run. When it completes, its
+  result decides, and everything that became ready meanwhile merges.
+- **Red:** a deciding run failed. Stop merging: getting the branch green comes
+  first, and only its repair starts or merges. It stays red until a rerun of
+  that run or a later run of that workflow succeeds, even after the repair
+  lands. Identify the failing job and its cause; a flake is cleared by
+  rerunning the failed jobs where the project allows. Otherwise look for an
+  owner of the fix: an open PR, an issue or another session. When no one owns it and the active request authorizes
+  merging, deliver the repair as its own work item through `/deliver` and land
+  it first. Otherwise report the failing job, its cause and the repair it
+  needs. Once the repair has landed, await its run with `delivery-wait`'s
+  `workflow-terminal` wait, and merge nothing that would supersede or cancel
+  it. Independent local investigation can continue; nothing else starts
+  development or merges.
 
-The rule is strict by default. Only the person or the project can relax it,
+The red rule is strict by default. Only the person or the project can relax it,
 explicitly, for example to let an unrelated docs-only change land.
 
 ## Merge
 
+- Merge a pull request as soon as it is ready under the
+  [readiness contract](../address-feedback/references/pr-readiness.md) for its
+  exact head, which includes any full CI run the repository's declared
+  full-CI rule requires. Never wait for the base branch's push CI from earlier
+  merges.
 - Before each merge, recheck
   [default-branch health](#default-branch-health).
 - Squash-merge pull requests and delete the source branch afterward.

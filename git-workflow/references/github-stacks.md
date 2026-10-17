@@ -130,13 +130,26 @@ freshly fetched remote base and pushing normally.
   finding with a later top fix layer. A covered lower layer is not independently
   merge-ready: the required overlay and every layer beneath it form one
   indivisible ready stack.
-- Before merging, re-read native topology and exact remote heads. Use
-  `gh stack merge --squash` for a selected atomic prefix only after every PR in
-  that prefix independently satisfies its current-head checks, review, and
-  readiness gates. When `/address-feedback` supplied whole-stack readiness, select
-  the complete reported stack only after its final membership audit still
-  matches; never merge a prefix beneath its top overlays. Never select
+- Before merging, re-read native topology and exact remote heads. Merge every
+  ready layer in one go with `gh stack merge NUMBER --squash --yes`: NUMBER is
+  the stack number when the whole stack is ready, otherwise the highest PR of
+  the ready prefix. GitHub merges every layer up to it in one all-or-nothing
+  operation, or adds them to the base's merge queue when it has one. gh-stack
+  reads a bare number as a stack number first, so pass a PR number only after
+  `gh api repos/OWNER/REPO/stacks/NUMBER` answers 404, showing that no stack
+  has that number. Never merge ready layers one at a
+  time, and never wait for the base branch's push CI between layers. A prefix
+  is ready only when every PR in it independently satisfies its current-head
+  checks, review, and readiness gates. When `/address-feedback` supplied whole-stack readiness,
+  select the complete reported stack only after its final membership audit
+  still matches; never merge a prefix beneath its top overlays. Never select
   rebase-merge merely because stack maintenance used rebases.
+- Fall back to layers only when `gh stack merge` is unavailable, the prefix's
+  top PR number also names a stack, or GitHub refuses the stack merge for a
+  reason other than a readiness gate. Then squash-merge the bottom ready
+  layer, move the layers above it onto the updated base with the guarded
+  `gh stack sync`, and merge the next layer as soon as its new head is ready;
+  repeat up the prefix. Report the reason for the fallback.
 - After merge, use the official stack cleanup/sync path, remove only clean local
   branches owned by the run, and verify the integrated remote default.
 
