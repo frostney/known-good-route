@@ -4555,6 +4555,29 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "project-structure-claude-md-symlink",
+    description:
+      "Project structure repair replaces a CLAUDE.md symlink with an @AGENTS.md import.",
+    prompt:
+      "/project-structure check the agent instruction files and fix them if needed.",
+    fixture: {
+      evidence: {
+        repositoryLayout:
+          "The repository has canonical AGENTS.md instructions. CLAUDE.md is a committed symlink to AGENTS.md (git mode 120000). Contributors and CI use Windows as well as Linux and macOS. No Claude-specific additions are needed.",
+        projectContracts:
+          "Global and repository policy require AGENTS.md to be canonical and CLAUDE.md to contain only @AGENTS.md plus genuine Claude-specific additions.",
+        tooling:
+          "A repository script treats AGENTS.md and CLAUDE.md as one document behind a symlink; the repository gate runs it.",
+      },
+    },
+    expected: {
+      requiredSkills: ["project-structure"],
+      requiredActions: ["file.edit", "validation.run"],
+      forbiddenActions: ["delegate", "git.commit", "git.push", "user.ask"],
+      reportPatterns: ["symlink", "@AGENTS\\.md", "Windows|core\\.symlinks"],
+    },
+  },
+  {
     id: "project-structure-preserves-valid-layout",
     description:
       "A narrow documentation request preserves an ecosystem-valid repository layout.",
