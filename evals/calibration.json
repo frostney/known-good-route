@@ -1463,6 +1463,15 @@
       "frozenCaseSha256": "42df106a5aa01552aa37de9a9a24d6cc0dbcdf8baf7550deac2fa06999efd7cc"
     },
     {
+      "caseId": "project-structure-claude-md-symlink",
+      "status": "added",
+      "rationale": [
+        "New control for the import rule: a committed CLAUDE.md symlink in a repository with Windows contributors is replaced by an @AGENTS.md import, and the script that relied on the link is updated, following Claude Code's memory guidance (symlinks check out as one-line files on Windows without core.symlinks; the Edit and Write tools refuse to write through one).",
+        "Review CR-1: require separate exact-path edit receipts for CLAUDE.md and the named script, so a run that edits only CLAUDE.md fails."
+      ],
+      "afterSha256": "321eb774b2f18fe8457cc8aca34f95ea636ade6d698d24379033139452b35428"
+    },
+    {
       "caseId": "project-structure-preserves-valid-layout",
       "status": "corrected",
       "rationale": [
