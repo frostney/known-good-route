@@ -4567,13 +4567,25 @@ export const evalCases: EvalCase[] = [
         projectContracts:
           "Global and repository policy require AGENTS.md to be canonical and CLAUDE.md to contain only @AGENTS.md plus genuine Claude-specific additions.",
         tooling:
-          "A repository script treats AGENTS.md and CLAUDE.md as one document behind a symlink; the repository gate runs it.",
+          "scripts/check-docs.ts treats AGENTS.md and CLAUDE.md as one document behind a symlink in a comment and a deduplication branch; the repository gate runs it.",
       },
     },
     expected: {
       requiredSkills: ["project-structure"],
       requiredActions: ["file.edit", "validation.run"],
       forbiddenActions: ["delegate", "git.commit", "git.push", "user.ask"],
+      requiredActionDetails: [
+        {
+          action: "file.edit",
+          patterns: ["(?:^|\\n)CLAUDE\\.md$"],
+          dataFields: ["path"],
+        },
+        {
+          action: "file.edit",
+          patterns: ["(?:^|\\n)scripts/check-docs\\.ts$"],
+          dataFields: ["path"],
+        },
+      ],
       reportPatterns: ["symlink", "@AGENTS\\.md", "Windows|core\\.symlinks"],
     },
   },

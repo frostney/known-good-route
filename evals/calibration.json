@@ -1466,9 +1466,10 @@
       "caseId": "project-structure-claude-md-symlink",
       "status": "added",
       "rationale": [
-        "New control for the import rule: a committed CLAUDE.md symlink in a repository with Windows contributors is replaced by an @AGENTS.md import, and the script that relied on the link is updated, following Claude Code's memory guidance (symlinks check out as one-line files on Windows without core.symlinks; the Edit and Write tools refuse to write through one)."
+        "New control for the import rule: a committed CLAUDE.md symlink in a repository with Windows contributors is replaced by an @AGENTS.md import, and the script that relied on the link is updated, following Claude Code's memory guidance (symlinks check out as one-line files on Windows without core.symlinks; the Edit and Write tools refuse to write through one).",
+        "Review CR-1: require separate exact-path edit receipts for CLAUDE.md and the named script, so a run that edits only CLAUDE.md fails."
       ],
-      "afterSha256": "cdca29ce14eef9bc04c84c3be38483cb1f7026ff198e1ca7873c4b0df12b9d06"
+      "afterSha256": "321eb774b2f18fe8457cc8aca34f95ea636ade6d698d24379033139452b35428"
     },
     {
       "caseId": "project-structure-preserves-valid-layout",
