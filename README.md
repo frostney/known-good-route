@@ -184,9 +184,10 @@ and Anthropic's
   self-check, double-check, or verifier passes around them. Size committed
   tests to the stated behavior; low-impact reversible changes need no new test.
 - Delegate sizeable independent parts to context-isolated workers by default
-  when the host supports it; keep small or tightly coupled work local. The coordinator
-  keeps working on independent work while workers run and checks each result's
-  evidence before accepting it. `no-subagents` keeps the work local.
+  when the host supports it; keep small or tightly coupled work local. The
+  coordinator keeps working on independent work while workers run and checks
+  each result's evidence before accepting it. `no-subagents` keeps the work
+  local.
 - Delegated lanes run on the
   [capability tiers](milestone-rush/references/orchestration.md#capability-tiers),
   which name no model, provider or effort level. For autonomous orchestration,

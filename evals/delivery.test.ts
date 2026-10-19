@@ -350,4 +350,3 @@ test("a lane finishes work on its tier, reruns review after fixing a finding, an
   expect(await failed(trap, [...merged, action("delegate", "Hand the diagnosis to another lane")], stoppedLane)).toEqual(["forbidden actions"]);
   expect(await failed(trap, [...merged, edit("src/export.ts")], stoppedLane)).toEqual(["file edit scope"]);
 });
-

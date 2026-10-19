@@ -162,3 +162,16 @@ test("reference citations use the reference file's path instead of the parent en
   expect(response.content).toBe(await Bun.file(response.path).text());
   expect(response.path).not.toBe(resolve(root,"implement/SKILL.md"));
 });
+
+test("a reference link with a heading anchor reads and records the file", async () => {
+  const { loadSkills } = await import("./skill-loader.ts");
+  const { resolve } = await import("node:path");
+  const root = resolve(import.meta.dir, "..");
+  const state = ledger();
+  const tools = createEvalTools(await loadSkills(root), scenario, state);
+  await tools.loadSkill.execute({name:"milestone-rush"});
+  const response = await tools.readSkillReference.execute({skillName:"milestone-rush",path:"references/orchestration.md#capability-tiers"}) as {ok:boolean;path:string;content:string};
+  expect(response.ok).toBeTrue();
+  expect(response.path).toBe(resolve(root,"milestone-rush/references/orchestration.md"));
+  expect(state.loadedReferences).toEqual(["milestone-rush/references/orchestration.md"]);
+});

@@ -1,7 +1,11 @@
 import { recordedActionAcknowledgment } from "./action-evidence.ts";
 import { z } from "zod";
 import { join, resolve } from "node:path";
-import { type LoadedSkill, readSkillReference, stripAnchor } from "./skill-loader.ts";
+import {
+  type LoadedSkill,
+  readSkillReference,
+  stripAnchor,
+} from "./skill-loader.ts";
 import { actionNames, type EvalCase, type RunLedger } from "./types.ts";
 
 function tool<S extends z.ZodType>(definition: {

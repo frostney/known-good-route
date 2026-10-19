@@ -10,9 +10,9 @@ envelopes, token checkpoints, monitoring requirements, and escalation policy.
 It may narrow the [capability tiers](#capability-tiers) but never widen them.
 Unlike the `escalate` usage-limit intervention below, the tier escalation rule
 under Capability tiers is not repository-owned: no repository rule may resume a
-lane that stopped, or raise its tier in place. The
-file must use host-neutral capabilities rather than requiring a particular
-provider or model. Higher-authority repository instructions still win.
+lane that stopped, or raise its tier in place. The file must use host-neutral
+capabilities rather than requiring a particular provider or model.
+Higher-authority repository instructions still win.
 
 - If absent, use a conservative provider-neutral fallback: the capability
   tiers without repository narrowing, compact isolated context, host-default
