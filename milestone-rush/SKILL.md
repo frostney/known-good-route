@@ -91,7 +91,7 @@ work-item deliveries and the release at the verified milestone boundary.
    graph state, worker admission and replacement, delivery-state promotion,
    integration, merge, and milestone closure. Detailed investigation,
    implementation, remediation, and validation belong to workers, each on the
-   [capability tier](references/orchestration.md) its packet
+   [capability tier](references/orchestration.md#capability-tiers) its packet
    records.
 2. Give each worker one context-isolated task packet and its dependencies.
    Use `/deliver` with the issue or confirmed roadmap item, required endpoint,
@@ -110,8 +110,8 @@ work-item deliveries and the release at the verified milestone boundary.
    competing workers authority over the same stack or merge a partial prefix
    beneath a required fix layer.
 5. Keep remediation validation focused on the changed behavior. Run the
-   repository's complete local gate once only after implementation and bounded
-   review fixes converge on the intended head, unless a new material source
+   repository's complete local gate once only after implementation and review
+   fixes converge on the intended head, unless a new material source
    change invalidates it. Do not repeatedly use a complete suite as the
    diagnostic loop.
 6. Treat heavyweight full CI as terminal promotion evidence, never as a remote

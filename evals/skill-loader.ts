@@ -117,8 +117,10 @@ export async function validateSkillReferences(
       if (!referencePath) {
         continue;
       }
-      await readSkillReference(skill, referencePath);
-      checked.push(`${skill.name}/${referencePath}`);
+      // A link may end in a heading anchor; the file is what must exist.
+      const file = referencePath.split("#")[0] ?? referencePath;
+      await readSkillReference(skill, file);
+      checked.push(`${skill.name}/${file}`);
     }
   }
 

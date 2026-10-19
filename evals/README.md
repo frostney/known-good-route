@@ -104,7 +104,10 @@ reviews its final head again, and a mechanical lane that meets a timeout that
 looks like a flake: the lane stops and returns it, and the coordinator starts
 an open lane with that finding. The grader cannot tell a new lane from a
 resumed one in a simulated `delegate` action; the rubric records that
-criterion for manual review.
+criterion for manual review. The trap lane case bans a second wait, a file edit
+and a delegation, but not a focused, validation or behavior run, because
+`/update-pr` may run a check before its push; a diagnosing run after the
+failure is graded manually from the rubric.
 
 Unavailable authentication, unsupported models, and incomplete runs are errors;
 no fallback model is configured. Native host behavior is part of this evaluation.

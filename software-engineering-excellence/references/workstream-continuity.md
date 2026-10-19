@@ -36,7 +36,7 @@ Give a worker only what its lane needs:
 
 ```markdown
 - Parent objective: <why this result is needed>
-- Lane outcome: <one bounded result>
+- Lane outcome: <one scoped result>
 - Fresh state: <repository, branch, exact head, external identities>
 - Applicable decisions: <stable IDs and selected contracts>
 - In scope: <owned files, questions, or mutations>
@@ -59,7 +59,7 @@ Every worker returns:
 
 ```markdown
 - Lane status: complete | blocked | checkpoint
-- Delivered: <bounded result>
+- Delivered: <scoped result>
 - Evidence: <exact observations and validation>
 - Mutations: <files, commits, issues, PRs, or external state changed>
 - Remaining obligations: <new or unresolved work>

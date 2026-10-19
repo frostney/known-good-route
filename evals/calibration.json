@@ -2503,8 +2503,8 @@
         "A coordinator hands a base-branch merge whose conflicts are only in append-only files to a lane and records the mechanical tier in its packet. Built from a coordinator that routed twelve mechanical and bounded lanes by capability. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "b00608efe571f74032400388c43f003ea5a741f08023b03b6474cc7a2378e31e",
-      "frozenCaseSha256": "b00608efe571f74032400388c43f003ea5a741f08023b03b6474cc7a2378e31e"
+      "afterSha256": "d6cd3daca9b663af9363f0591ec542eebbc09e5e34dc83f55d36d188ab38bb26",
+      "frozenCaseSha256": "d6cd3daca9b663af9363f0591ec542eebbc09e5e34dc83f55d36d188ab38bb26"
     },
     {
       "caseId": "delivery-tier-mechanical-lane",
@@ -2523,8 +2523,8 @@
         "A bounded lane fixes a review finding and reviews the final head again before pushing. Rebuilt from a lane that fixed its review findings but did not rerun the review. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "b6abfca6f31cde36aa163218d24a446f303702b12d3b80dd04842a1ce10b1460",
-      "frozenCaseSha256": "b6abfca6f31cde36aa163218d24a446f303702b12d3b80dd04842a1ce10b1460"
+      "afterSha256": "8295c6a3bdf4ac9f9c78c57f9a2fb60aa8dbeaf3815ac9e717935672c54be7cd",
+      "frozenCaseSha256": "8295c6a3bdf4ac9f9c78c57f9a2fb60aa8dbeaf3815ac9e717935672c54be7cd"
     },
     {
       "caseId": "delivery-tier-trap-lane-stops",
@@ -2533,8 +2533,8 @@
         "A mechanical lane whose check fails with a timeout that looks like a flake stops and returns the finding instead of re-running, diagnosing or fixing it. Rebuilt from a lane that called a CI failure a timing flake whose real cause was found later. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "b878972c72d2fd2b4b21203a6365048ecc460f68ce1dc4bfab60287d1416de76",
-      "frozenCaseSha256": "b878972c72d2fd2b4b21203a6365048ecc460f68ce1dc4bfab60287d1416de76"
+      "afterSha256": "3bc7661a9035cacc163600e26802f91a50661dce1ecb78100ef58dc2ca45de96",
+      "frozenCaseSha256": "3bc7661a9035cacc163600e26802f91a50661dce1ecb78100ef58dc2ca45de96"
     },
     {
       "caseId": "delivery-tier-trap-coordinator-new-lane",
@@ -2543,8 +2543,8 @@
         "After a mechanical lane returns a failure that needs diagnosis, the coordinator starts a new open lane with that finding. Whether the coordinator resumed the old lane instead is left to the rubric and manual review, since a simulated delegate action does not show it. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "60c0f4f9e41e674da3737dc02542e51cb4224a22ce9634fe001c0e3af19365af",
-      "frozenCaseSha256": "60c0f4f9e41e674da3737dc02542e51cb4224a22ce9634fe001c0e3af19365af"
+      "afterSha256": "b0078441fb9bbd6faf6d543d7bce75a6d80d59f5205600f61a11159f7edf7f94",
+      "frozenCaseSha256": "b0078441fb9bbd6faf6d543d7bce75a6d80d59f5205600f61a11159f7edf7f94"
     },
     {
       "caseId": "create-pr-dependency-on-hand-based-pr-stops",

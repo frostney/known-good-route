@@ -130,8 +130,8 @@ implementation.
 
 For substantial work with independent parts, the coordinator owns confirmed
 decisions, dependencies, integration and user communication. Delegate each
-sizeable independent part to a bounded worker by default when the host supports
-delegation; keep small or tightly coupled work local. `no-subagents` or an
+sizeable independent part to a context-isolated worker by default when the
+host supports delegation; keep small or tightly coupled work local. `no-subagents` or an
 equivalent user instruction keeps all of the work local. An applicable
 orchestrator owns its more specific coordination contract.
 
