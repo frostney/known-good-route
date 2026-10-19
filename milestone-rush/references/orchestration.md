@@ -8,8 +8,9 @@ spawning any worker.
 A valid file is authoritative for repository-owned routing rules, context
 envelopes, token checkpoints, monitoring requirements, and escalation policy.
 It may narrow the [capability tiers](#capability-tiers) but never widen them.
-The escalation rule under Capability tiers is not repository-owned: no
-repository rule may resume a lane that stopped, or raise its tier in place. The
+Unlike the `escalate` usage-limit intervention below, the tier escalation rule
+under Capability tiers is not repository-owned: no repository rule may resume a
+lane that stopped, or raise its tier in place. The
 file must use host-neutral capabilities rather than requiring a particular
 provider or model. Higher-authority repository instructions still win.
 
@@ -17,10 +18,10 @@ provider or model. Higher-authority repository instructions still win.
   tiers without repository narrowing, compact isolated context, host-default
   usage limits, explicit escalation for material decisions, and only supported
   non-LLM waits. Report the fallback.
-- If malformed, contradictory, widening a capability tier, incompatible with
-  higher-authority instructions, or dependent on unsupported host
-  capabilities, stop before spawning and request resolution. Do not silently
-  weaken it.
+- If malformed, contradictory, widening a capability tier, overriding the tier
+  escalation rule, incompatible with higher-authority instructions, or
+  dependent on unsupported host capabilities, stop before spawning and request
+  resolution. Do not silently weaken it.
 - Repository-owned soft usage limits trigger the declared `continue`, `split`,
   `replace`, or `escalate` intervention after a durable checkpoint. Never
   silently lower a lane's tier or stop solely because a threshold was crossed.

@@ -297,10 +297,14 @@ test("a coordinator records the tier a lane's work needs, and a new open lane ca
   expect(await failed(merge, [tierPacket("Capability tier: open. Run /update-pr to merge origin/main.")], ready)).toEqual(["delegate evidence"]);
   expect(await failed(merge, [tierPacket("Run /update-pr to merge origin/main.")], ready)).toEqual(["delegate evidence"]);
   // The packet template writes the tier as Markdown; every ordinary way of recording it counts.
-  for (const recorded of ["- **Capability tier:** mechanical", "Capability tier \u2014 `mechanical`", "Tier: **mechanical**", "the mechanical capability tier"]) {
+  for (const recorded of ["- **Capability tier:** mechanical", "Capability tier \u2014 `mechanical`", "Tier: **mechanical**", "the mechanical capability tier", "Capability tier:\n  mechanical"]) {
     expect(await failed(merge, [tierPacket(`${recorded}\nRun /update-pr to merge origin/main.`)], ready)).toEqual([]);
   }
+  // Arguments passed as data fields record the tier too.
+  expect(await failed(merge, [{ action: "delegate", details: "Hand the base-branch update to a lane", data: { capabilityTier: "mechanical", task: "Run /update-pr to merge origin/main." } }], ready)).toEqual([]);
+  expect(await failed(merge, [{ action: "delegate", details: "Hand the base-branch update to a lane", data: { capability_tier: "open", task: "Run /update-pr to merge origin/main." } }], ready)).toEqual(["delegate evidence"]);
   // A different tier, or one that is only mentioned elsewhere in the packet, is not the recorded tier.
+  expect(await failed(merge, [tierPacket("Capability tier: open, not mechanical\nRun /update-pr to merge origin/main.")], ready)).toEqual(["delegate evidence"]);
   expect(await failed(merge, [tierPacket("- **Capability tier:** open\nRun /update-pr to merge origin/main.")], ready)).toEqual(["delegate evidence"]);
   const trap = "delivery-tier-trap-coordinator-new-lane";
   const done = "PR #161 is ready to merge; nothing was merged.";

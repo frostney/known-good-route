@@ -35,7 +35,7 @@ optional and confirmation-gated.
   tests, or primary specifications as Done, Partial, or Absent with evidence.
   Propose only Partial or Absent work.
 
-Delegate independent, sizeable evidence areas to bounded subagents by default
+Delegate independent, sizeable evidence areas to context-isolated subagents by default
 when the host supports it; work directly on small or coupled areas. Synthesize
 before planning.
 

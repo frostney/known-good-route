@@ -86,7 +86,7 @@ Measure at least:
   incorrectly closed the parent;
 - unsupported completion or freshness claims; and
 - effective behavior worth promoting: current-source grounding, retained
-  objective ownership, bounded delegation, automatic resumption, parent
+  objective ownership, scoped delegation, automatic resumption, parent
   integration, and exact completion evidence.
 
 For subagents, distinguish human-authored prompts from agent-authored worker

@@ -1,7 +1,7 @@
 import { recordedActionAcknowledgment } from "./action-evidence.ts";
 import { z } from "zod";
 import { join, resolve } from "node:path";
-import { type LoadedSkill, readSkillReference } from "./skill-loader.ts";
+import { type LoadedSkill, readSkillReference, stripAnchor } from "./skill-loader.ts";
 import { actionNames, type EvalCase, type RunLedger } from "./types.ts";
 
 function tool<S extends z.ZodType>(definition: {
@@ -52,9 +52,10 @@ export function createEvalTools(
           };
         }
         const content = await readSkillReference(skill, path);
-        ledger.loadedReferences.push(`${skillName}/${path}`);
-        ledger.events.push({ kind: "reference", name: `${skillName}/${path}` });
-        return { ok: true, path: resolve(skill.directory, path), content };
+        const file = stripAnchor(path);
+        ledger.loadedReferences.push(`${skillName}/${file}`);
+        ledger.events.push({ kind: "reference", name: `${skillName}/${file}` });
+        return { ok: true, path: resolve(skill.directory, file), content };
       },
     }),
     inspectFixture: tool({

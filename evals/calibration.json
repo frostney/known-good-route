@@ -2503,8 +2503,8 @@
         "A coordinator hands a base-branch merge whose conflicts are only in append-only files to a lane and records the mechanical tier in its packet. Built from a coordinator that routed twelve mechanical and bounded lanes by capability. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "d6cd3daca9b663af9363f0591ec542eebbc09e5e34dc83f55d36d188ab38bb26",
-      "frozenCaseSha256": "d6cd3daca9b663af9363f0591ec542eebbc09e5e34dc83f55d36d188ab38bb26"
+      "afterSha256": "3a69f60d5c72200f7c01cb57378d473d7337989003a3c9f80653ded4ca6170b3",
+      "frozenCaseSha256": "3a69f60d5c72200f7c01cb57378d473d7337989003a3c9f80653ded4ca6170b3"
     },
     {
       "caseId": "delivery-tier-mechanical-lane",
@@ -2533,8 +2533,8 @@
         "A mechanical lane whose check fails with a timeout that looks like a flake stops and returns the finding instead of re-running, diagnosing or fixing it. Rebuilt from a lane that called a CI failure a timing flake whose real cause was found later. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "3bc7661a9035cacc163600e26802f91a50661dce1ecb78100ef58dc2ca45de96",
-      "frozenCaseSha256": "3bc7661a9035cacc163600e26802f91a50661dce1ecb78100ef58dc2ca45de96"
+      "afterSha256": "46fcc3a03c895c0d60df1b75683b644941c5cdcae02483229f3d3e5c0b9cfe19",
+      "frozenCaseSha256": "46fcc3a03c895c0d60df1b75683b644941c5cdcae02483229f3d3e5c0b9cfe19"
     },
     {
       "caseId": "delivery-tier-trap-coordinator-new-lane",
@@ -2543,8 +2543,8 @@
         "After a mechanical lane returns a failure that needs diagnosis, the coordinator starts a new open lane with that finding. Whether the coordinator resumed the old lane instead is left to the rubric and manual review, since a simulated delegate action does not show it. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "b0078441fb9bbd6faf6d543d7bce75a6d80d59f5205600f61a11159f7edf7f94",
-      "frozenCaseSha256": "b0078441fb9bbd6faf6d543d7bce75a6d80d59f5205600f61a11159f7edf7f94"
+      "afterSha256": "dd9bc12c453f1c86e6b281f807a69c238064ec7873eccf8ddb4dac712379ca2c",
+      "frozenCaseSha256": "dd9bc12c453f1c86e6b281f807a69c238064ec7873eccf8ddb4dac712379ca2c"
     },
     {
       "caseId": "create-pr-dependency-on-hand-based-pr-stops",

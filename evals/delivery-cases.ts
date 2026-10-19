@@ -47,9 +47,9 @@ const tierFixed = "a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7";
 const tierLanes = "The host supports context-isolated worker lanes with the same installed skills as this session. Each machine maps capability tiers to models in its own agent configuration. A lane receives only the packet the coordinator writes.";
 const noTierPolicy = "No repository-root ORCHESTRATION.md exists, so no repository narrowing of the capability tiers applies.";
 const tierReference = "milestone-rush/references/orchestration.md";
-// "Capability tier: mechanical", its bold, code or dash forms, and "the mechanical capability tier".
-const mechanicalTier = "\\btier\\b[^\\n.]{0,12}\\bmechanical\\b|\\bmechanical\\b(?:\\W+capability)?\\W+tier\\b";
-const openTier = "\\btier\\b[^\\n.]{0,12}\\bopen\\b|\\bopen\\b(?:\\W+capability)?\\W+tier\\b";
+// "Capability tier: mechanical", its bold, code, dash, JSON and next-line forms, and "the mechanical capability tier".
+const mechanicalTier = "tier\\b[^.]{0,6}\\bmechanical\\b|\\bmechanical\\b(?:\\W+capability)?\\W+tier\\b";
+const openTier = "tier\\b[^.]{0,6}\\bopen\\b|\\bopen\\b(?:\\W+capability)?\\W+tier\\b";
 const appendOnlyMerge = `Merging origin/main at ${tierMain} into feat/retry-budget conflicts only in CHANGELOG.md and docs/decisions.md. Both are append-only: each side added entries at the end, and keeping both sides' entries in order resolves them. No source, test or configuration file conflicts.`;
 const timeoutFailure = `Required check test (ubuntu) failed at ${tierMerged}: tests/export.test.ts "streams large exports" timed out after 5000 ms. The same test passed at ${tierBehind}. GitHub offers a re-run of the failed job.`;
 const boundedClean = "Independent review of the complete diff against DEC-152 found no findings: every rendered selected-month label uses titleCaseLabel, including the compact table header.";
@@ -677,7 +677,7 @@ export const deliveryCases: EvalCase[] = [
       maxActionCounts: { "monitor.wait": 1, "git.push": 1 },
       allowedEditPaths: [".agent/HANDOFF.md"],
       forbiddenActions: [...unsafeGit, ...releaseActions, "forge.openDraftPr", "forge.mergePr", "forge.markPrReady", "git.stackMerge", "delegate", "user.ask"],
-      reportPatterns: ["export\\.test|streams large exports", "tim(?:ed|e)[ -]?out", "tier|escalat"],
+      reportPatterns: ["export\\.test|streams large exports", "tim(?:ed|e)[ -]?out", "\\btier\\b|escalat"],
       outputPatterns: [`\\b${tierMerged.slice(0, 7)}`],
     },
   },
