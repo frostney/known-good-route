@@ -43,12 +43,15 @@ Give a worker only what its lane needs:
 - Out of scope: <explicit exclusions>
 - Dependencies: <inputs and blocked successors>
 - Authority and gates: <what the worker may do and where it must stop>
+- Capability tier: <mechanical | bounded | open>
 - Required evidence: <tests, source, rendered result, or external proof>
 - Return contract: <result envelope fields below>
 ```
 
-Full conversation inheritance, instead of an isolated context with only the
-directly relevant recent turns, requires a recorded reason.
+The [capability tiers](../../milestone-rush/references/orchestration.md#capability-tiers)
+define what each tier covers and how a lane escalates. Full conversation
+inheritance, instead of an isolated context with only the directly relevant
+recent turns, requires a recorded reason.
 
 ## Result envelope
 

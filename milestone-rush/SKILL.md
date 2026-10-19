@@ -90,7 +90,9 @@ work-item deliveries and the release at the verified milestone boundary.
 1. Keep the coordinator thin: it owns confirmed decisions and provenance,
    graph state, worker admission and replacement, delivery-state promotion,
    integration, merge, and milestone closure. Detailed investigation,
-   implementation, remediation, and validation belong to bounded workers.
+   implementation, remediation, and validation belong to workers, each on the
+   [capability tier](references/orchestration.md) its packet
+   records.
 2. Give each worker one context-isolated task packet and its dependencies.
    Use `/deliver` with the issue or confirmed roadmap item, required endpoint,
    configured integration destination and applicable evidence. Pass the selected

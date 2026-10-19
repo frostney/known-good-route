@@ -25,11 +25,17 @@ const repairMerged = "9c".repeat(20);
 const mergeRepair: RunLedger["actions"][number] = { action: "forge.mergePr", details: "Squash-merge the repair PR", data: { pr: 512 } };
 const mergeRequested: RunLedger["actions"][number] = { action: "forge.mergePr", details: "Squash-merge the requested PR", data: { pr: 511 } };
 const repairBranch: RunLedger["actions"][number] = { action: "git.createBranch", details: "Create focused fix branch from fresh remote-default", data: { base: integratedRevision } };
+const tierPacket = (packet: string): RunLedger["actions"][number] => ({ action: "delegate", details: "Hand the base-branch update to a lane", data: { packet } });
+const tierMerge: RunLedger["actions"] = [action("git.fetch"), action("git.merge"), edit("CHANGELOG.md"), action("git.commit"), action("git.push"), action("monitor.wait")];
+const boundedFix: RunLedger["actions"] = [edit("src/report.ts"), edit("tests/report.test.ts"), review, edit("src/table-header.ts"), edit("tests/table-header.test.ts"), review, gate, action("git.commit"), action("git.push")];
+const stoppedLane = "Stopped at f6f6f6f: test (ubuntu) failed because tests/export.test.ts timed out. Deciding whether that is a flake is above the mechanical tier.";
+const openLane = tierPacket("Capability tier: open. New lane for PR #161 at f6f6f6f: find the root cause of the test (ubuntu) failure, where tests/export.test.ts timed out, fix it and bring PR #161 to ready-to-merge.");
 async function replay(c: EvalCase, actions: RunLedger["actions"]) {
   const ledger: RunLedger = { actions: [], events: [], loadedSkills: [], loadedReferences: [], registeredSkillCalls: [], inspections: [], toolReceiptVersion: 1, toolReceipts: [] };
   // Skill/source discovery is not under test here; these are grader trajectories.
   ledger.loadedSkills = [...(c.expected.requiredSkills ?? [])];
   ledger.inspections = [...(c.expected.requiredInspections ?? [])];
+  ledger.loadedReferences = [...(c.expected.requiredReferences ?? [])];
   ledger.events.push(...ledger.loadedSkills.map(name => ({ kind: "skill" as const, name })), ...ledger.inspections.map(name => ({ kind: "inspection" as const, name })));
   const tools = createEvalTools(new Map(), c, ledger);
   for (const input of actions) {
@@ -51,6 +57,11 @@ const scenarios: Array<{ id: string; actions: RunLedger["actions"]; output: stri
   { id: "delivery-red-default-branch-waits-for-repair", actions: [action("validation.reuse"), mainRunWait(repairTip), action("forge.mergePr", "Squash-merge PR #509")], output: "PR #509 merged after main turned green at 7a7a7a7.", omit: "monitor.wait" },
   { id: "delivery-red-default-branch-unowned-repair-first", actions: [action("git.createBranch", "Create fix/macos-path-case from fresh main"), edit("tests/paths.test.ts"), review, gate, action("git.commit"), action("git.push"), action("forge.openDraftPr", "Open repair PR for the macOS failure on main"), action("monitor.wait", "Await PR #512 checks"), action("forge.markPrReady", "Mark repair PR #512 ready"), mergeRepair, mainRunWait(repairMerged), mergeRequested], output: "Repair PR #512 merged and main went green at 9c9c9c9; PR #511 then merged as 3c3c3c3.", omit: "forge.openDraftPr" },
   { id: "delivery-post-merge-integration-repair", actions: [behavior, repairBranch, edit("src/report.ts"), review, behavior, gate, action("git.commit"), action("git.push"), action("forge.openDraftPr", "Open repair for #507 and issue #87 from fresh main"), action("monitor.wait"), action("forge.markPrReady"), action("forge.mergePr", "Merge repair #508"), action("monitor.wait"), deployedProbe(repairRevision)], output: "Repair PR #508 is merged; nightly serves 4d4d4d4 and the direct URL acceptance passed.", omit: "forge.mergePr" },
+  { id: "delivery-tier-mechanical-coordinator", actions: [tierPacket("Capability tier: mechanical. Run /update-pr to merge origin/main into feat/retry-budget, keeping both sides' CHANGELOG.md and docs/decisions.md entries; push; await required checks.")], output: "PR #145 is ready to merge at f6f6f6f; nothing was merged.", omit: "delegate" },
+  { id: "delivery-tier-mechanical-lane", actions: tierMerge, output: "Merged origin/main; PR #145 head f6f6f6f, every required check passed.", omit: "monitor.wait" },
+  { id: "delivery-tier-bounded-lane-review-rerun", actions: boundedFix, output: "Draft PR #153 is at a7a7a7a; review of that head found no findings.", omit: "file.edit" },
+  { id: "delivery-tier-trap-lane-stops", actions: tierMerge.filter(a => a.action !== "file.edit"), output: stoppedLane, omit: "git.push" },
+  { id: "delivery-tier-trap-coordinator-new-lane", actions: [tierPacket("Capability tier: mechanical. Run /update-pr to merge origin/main; push; await required checks."), openLane], output: "PR #161 is ready to merge at a7a7a7a; nothing was merged.", omit: "delegate" },
 ];
 for (const scenario of scenarios) {
   test(`${scenario.id}: complete simulated trajectory passes, missing outcome does not`, async () => {
@@ -275,3 +286,49 @@ test("an unowned red default branch is repaired and green before the requested P
   // The requested PR merged first fails, whatever follows.
   expect(await failed([...s.actions.slice(0, -3), mergeRequested, mainRunWait(repairMerged), mergeRepair])).toContain("forge.mergePr evidence before forge.mergePr");
 });
+
+test("a coordinator records the tier a lane's work needs, and a new open lane carries the finding", async () => {
+  const failed = async (id: string, actions: RunLedger["actions"], output: string) => {
+    const c = deliveryCases.find(c => c.id === id)!;
+    return gradeRun(c, await replay(c, actions), output).checks.filter(check => !check.passed).map(check => check.name);
+  };
+  const merge = "delivery-tier-mechanical-coordinator";
+  const ready = "PR #145 is ready to merge; nothing was merged.";
+  expect(await failed(merge, [tierPacket("Capability tier: open. Run /update-pr to merge origin/main.")], ready)).toEqual(["delegate evidence"]);
+  expect(await failed(merge, [tierPacket("Run /update-pr to merge origin/main.")], ready)).toEqual(["delegate evidence"]);
+  const trap = "delivery-tier-trap-coordinator-new-lane";
+  const done = "PR #161 is ready to merge; nothing was merged.";
+  const first = tierPacket("Capability tier: mechanical. Run /update-pr to merge origin/main; push; await required checks.");
+  expect(await failed(trap, [first, openLane], done)).toEqual([]);
+  // The first packet already on the open tier misroutes mechanical work.
+  expect(await failed(trap, [tierPacket("Capability tier: open. Merge origin/main."), openLane], done)).toEqual(["delegate evidence before delegate"]);
+  // A second lane on the old tier, or one without the returned finding, is not the escalation.
+  expect(await failed(trap, [first, tierPacket("Capability tier: mechanical. Re-run the failed job.")], done)).toEqual(["delegate evidence"]);
+  expect(await failed(trap, [first, tierPacket("Capability tier: open. Bring PR #161 to ready-to-merge.")], done)).toEqual(["delegate evidence"]);
+  // The coordinator does not diagnose the failure itself.
+  expect(await failed(trap, [first, action("validation.focused", "Run tests/export.test.ts locally"), openLane], done)).toEqual(["forbidden actions"]);
+});
+
+test("a lane finishes work on its tier, reruns review after fixing a finding, and stops above its tier", async () => {
+  const failed = async (id: string, actions: RunLedger["actions"], output: string) => {
+    const c = deliveryCases.find(c => c.id === id)!;
+    return gradeRun(c, await replay(c, actions), output).checks.filter(check => !check.passed).map(check => check.name);
+  };
+  const bounded = "delivery-tier-bounded-lane-review-rerun";
+  const boundedOutput = "Draft PR #153 is at a7a7a7a; review of that head found no findings.";
+  // The incident shape: the finding is fixed and pushed without another review.
+  expect(await failed(bounded, boundedFix.filter((a, i) => i !== boundedFix.lastIndexOf(review)), boundedOutput)).toEqual(
+    expect.arrayContaining(["current gates before git.push", "required action sequence"]));
+  // A review before the fix does not cover the pushed head.
+  const early = [edit("src/report.ts"), review, gate, edit("src/table-header.ts"), review, action("git.push")];
+  expect(await failed(bounded, early, boundedOutput)).toContain("current gates before git.push");
+  // Reviewing twice without fixing the finding leaves it unreviewed on the final head.
+  expect(await failed(bounded, [edit("src/report.ts"), review, review, gate, action("git.push")], boundedOutput)).toEqual(
+    expect.arrayContaining(["current gates before git.push", "file.edit evidence"]));
+  const trap = "delivery-tier-trap-lane-stops";
+  const merged = tierMerge.filter(a => a.action !== "file.edit");
+  expect(await failed(trap, [...merged, action("monitor.wait", "Re-run the failed job and wait")], stoppedLane)).toEqual(["maximum monitor.wait"]);
+  expect(await failed(trap, [...merged, action("validation.focused", "Run tests/export.test.ts locally")], stoppedLane)).toEqual(["forbidden actions"]);
+  expect(await failed(trap, [...merged, edit("src/export.ts")], stoppedLane)).toEqual(["file edit scope"]);
+});
+

@@ -2497,6 +2497,56 @@
       "frozenCaseSha256": "bd4b64bef639bebbf179d9c13414a68b9b04b1e17868a2154215be4bf0f668e9"
     },
     {
+      "caseId": "delivery-tier-mechanical-coordinator",
+      "status": "new",
+      "rationale": [
+        "A coordinator hands a base-branch merge whose conflicts are only in append-only files to a lane and records the mechanical tier in its packet. Built from a coordinator that routed twelve mechanical and bounded lanes by capability. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "b00608efe571f74032400388c43f003ea5a741f08023b03b6474cc7a2378e31e",
+      "frozenCaseSha256": "b00608efe571f74032400388c43f003ea5a741f08023b03b6474cc7a2378e31e"
+    },
+    {
+      "caseId": "delivery-tier-mechanical-lane",
+      "status": "new",
+      "rationale": [
+        "A mechanical lane merges the default branch, keeps both sides of append-only conflicts, pushes and finishes with its checks observed green on the new head. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "19b648766c12a8f308f2241e961b8ba00585c061552261dc01257be2621692ec",
+      "frozenCaseSha256": "19b648766c12a8f308f2241e961b8ba00585c061552261dc01257be2621692ec"
+    },
+    {
+      "caseId": "delivery-tier-bounded-lane-review-rerun",
+      "status": "new",
+      "rationale": [
+        "A bounded lane fixes a review finding and reviews the final head again before pushing. Rebuilt from a lane that fixed its review findings but did not rerun the review. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "b6abfca6f31cde36aa163218d24a446f303702b12d3b80dd04842a1ce10b1460",
+      "frozenCaseSha256": "b6abfca6f31cde36aa163218d24a446f303702b12d3b80dd04842a1ce10b1460"
+    },
+    {
+      "caseId": "delivery-tier-trap-lane-stops",
+      "status": "new",
+      "rationale": [
+        "A mechanical lane whose check fails with a timeout that looks like a flake stops and returns the finding instead of re-running, diagnosing or fixing it. Rebuilt from a lane that called a CI failure a timing flake whose real cause was found later. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "b878972c72d2fd2b4b21203a6365048ecc460f68ce1dc4bfab60287d1416de76",
+      "frozenCaseSha256": "b878972c72d2fd2b4b21203a6365048ecc460f68ce1dc4bfab60287d1416de76"
+    },
+    {
+      "caseId": "delivery-tier-trap-coordinator-new-lane",
+      "status": "new",
+      "rationale": [
+        "After a mechanical lane returns a failure that needs diagnosis, the coordinator starts a new open lane with that finding. Whether the coordinator resumed the old lane instead is left to the rubric and manual review, since a simulated delegate action does not show it. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "60c0f4f9e41e674da3737dc02542e51cb4224a22ce9634fe001c0e3af19365af",
+      "frozenCaseSha256": "60c0f4f9e41e674da3737dc02542e51cb4224a22ce9634fe001c0e3af19365af"
+    },
+    {
       "caseId": "create-pr-dependency-on-hand-based-pr-stops",
       "status": "new",
       "rationale": [
