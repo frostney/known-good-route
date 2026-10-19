@@ -2503,8 +2503,8 @@
         "A coordinator hands a base-branch merge whose conflicts are only in append-only files to a lane and records the mechanical tier in its packet. Built from a coordinator that routed twelve mechanical and bounded lanes by capability. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "3a69f60d5c72200f7c01cb57378d473d7337989003a3c9f80653ded4ca6170b3",
-      "frozenCaseSha256": "3a69f60d5c72200f7c01cb57378d473d7337989003a3c9f80653ded4ca6170b3"
+      "afterSha256": "cace0bc571c86e9515707b90588fb5477c357a0aa22448c4a44c7eea18cbed42",
+      "frozenCaseSha256": "cace0bc571c86e9515707b90588fb5477c357a0aa22448c4a44c7eea18cbed42"
     },
     {
       "caseId": "delivery-tier-mechanical-lane",
@@ -2543,8 +2543,8 @@
         "After a mechanical lane returns a failure that needs diagnosis, the coordinator starts a new open lane with that finding. Whether the coordinator resumed the old lane instead is left to the rubric and manual review, since a simulated delegate action does not show it. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "dd9bc12c453f1c86e6b281f807a69c238064ec7873eccf8ddb4dac712379ca2c",
-      "frozenCaseSha256": "dd9bc12c453f1c86e6b281f807a69c238064ec7873eccf8ddb4dac712379ca2c"
+      "afterSha256": "a5b0640f523f1dc36cb160880b6440016134ee6522725a19820dac38c4554142",
+      "frozenCaseSha256": "a5b0640f523f1dc36cb160880b6440016134ee6522725a19820dac38c4554142"
     },
     {
       "caseId": "create-pr-dependency-on-hand-based-pr-stops",

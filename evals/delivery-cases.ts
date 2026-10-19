@@ -545,7 +545,7 @@ export const deliveryCases: EvalCase[] = [
       "Does the packet route the merge through /update-pr rather than raw publication commands?",
     ],
     expected: {
-      requiredSkills: ["deliver"],
+      requiredSkills: ["deliver", "milestone-rush"],
       requiredReferences: [tierReference],
       requiredInspections: ["workItem", "baseMerge"],
       requiredActions: ["delegate"],
@@ -706,7 +706,7 @@ export const deliveryCases: EvalCase[] = [
       "Does the coordinator leave the diagnosis to that lane rather than doing it itself?",
     ],
     expected: {
-      requiredSkills: ["deliver"],
+      requiredSkills: ["deliver", "milestone-rush"],
       requiredReferences: [tierReference],
       requiredInspections: ["workItem"],
       requiredActions: ["delegate"],
