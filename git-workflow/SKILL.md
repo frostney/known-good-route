@@ -143,11 +143,13 @@ default-branch runs, for example with `gh run list --workflow WORKFLOW
 databaseId,headSha,event,status,conclusion,createdAt`. Raise `--limit` until
 the listing reaches a run that succeeded or failed (`failure`, `timed_out` or
 `startup_failure`), or the workflow's whole history. Push runs and the
-[coverage sampler](#coverage-sampler)'s dispatched runs both count. Of the
-runs that succeeded or failed, the deciding run is the one for the newest
-commit in `git log --first-parent origin/DEFAULT`, whichever event started
-it; for one commit, the attempt that completed last decides. Cancelled,
-superseded and skipped runs carry no result.
+[coverage sampler](#coverage-sampler)'s dispatched runs both count. The
+deciding commit is the newest commit in `git log --first-parent
+origin/DEFAULT` with a run that succeeded or failed, whichever event started
+it. List every run for that commit (`gh run list --workflow WORKFLOW --commit
+SHA --json databaseId,event,status,conclusion,attempt,updatedAt`); the one
+whose latest attempt completed last is the deciding run. Cancelled, superseded
+and skipped runs carry no result.
 
 - **Green:** each deciding run succeeded, or the project requires no CI on
   default-branch commits, and no run for a later commit was cancelled or
