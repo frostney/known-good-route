@@ -72,14 +72,19 @@ push with force-with-lease. They are allowed only when all of these are true:
   flaked two surfaces. Prefer a new top layer for fixes; after a sync, rerun
   flaked surfaces one at a time.
 
+A stack, like any PR branch, need not be up to date with its trunk: sync it
+onto a moved trunk only under `git-workflow`'s
+[up-to-date rule](../SKILL.md#update-commit-and-push). A squash-merged lower
+layer leaves the layers above it conflicting with the base, so they sync.
+
 Run the narrowest official command that satisfies the need. Stop on a rebase
 conflict, unexpected divergence, changed topology, lease rejection, partial
 push, or remote head that cannot be explained. Use `gh stack rebase --abort`
 when the extension offers restoration; never resolve ambiguity by invoking raw
 rebase or force-push commands.
 
-Ordinary branches never inherit this exception. Update them by merging the
-freshly fetched remote base and pushing normally.
+Ordinary branches never inherit this exception. When that rule calls for an
+update, merge the freshly fetched remote base and push normally.
 
 ## Submit, validate, and merge
 

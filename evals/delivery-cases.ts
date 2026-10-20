@@ -20,9 +20,10 @@ const repairReview = "Independent review of the tests/paths.test.ts correction a
 const repairGate = "pnpm check passed on the corrected tree, including tests/paths.test.ts in a case-sensitive temporary directory.";
 const greenTip = "e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1";
 const parallelTip = "0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d";
+const samplerTip = "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a";
 const stackHeads = ["c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1", "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2", "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"] as const;
 // main is green by its newest concluded run; a parallel delivery's merge has a run in progress.
-const greenMainWithRunInProgress = `The main tip is ${parallelTip}, the squash merge of PR #514 that a parallel delivery landed minutes ago; its push CI run is in progress and takes about 70 minutes. The newest concluded main run, for ${greenTip}, the commit just before it, succeeded in every required job; ${greenTip} landed 40 minutes ago. CI cancels an in-progress main run when a newer commit lands on main.`;
+const greenMainWithRunInProgress = `The main tip is ${parallelTip}, the squash merge of PR #514 that a parallel delivery landed minutes ago; its push CI run is in progress and takes about 70 minutes. The newest concluded main run, for ${greenTip}, the commit just before it, succeeded in every required job; ${greenTip} landed 40 minutes ago. CI cancels an in-progress main run when a newer commit lands on main; no main run has been cancelled since ${greenTip}.`;
 const common = {
   projectInstructions: "Fixture repository example/palette. Use its existing project commands. The supplied source, specification and workflow facts are current; no external research-dependent choice or mandatory delegation exists. No native stack. All operations are isolated fixture actions.",
   repositoryStatus: `Clean focused branch fix/selected-state at ${before}, ahead of and synchronized with freshly fetched origin/main. Its target, scope and implementation approach are settled. No unrelated local changes.`,
@@ -472,7 +473,7 @@ export const deliveryCases: EvalCase[] = [
     rubric: [
       "Does the run merge PR #513 without first waiting for main's in-progress CI run?",
       "Does the run leave PR #513's branch as it is rather than merging main into it?",
-      "Does the answer report that the conservative default staleness bound applied because ORCHESTRATION.md is absent?",
+      "Does the run merge without dispatching another main run, since no main run was cancelled?",
     ],
     expected: {
       requiredSkills: ["deliver", "git-workflow"],
@@ -482,14 +483,14 @@ export const deliveryCases: EvalCase[] = [
       maxActionCounts: { "forge.mergePr": 1 },
       allowedEditPaths: [".agent/HANDOFF.md"],
       // Nothing but main's run is left to await, and that run must not hold the merge.
-      forbiddenActions: [...unsafeGit, ...releaseActions, "monitor.wait", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
+      forbiddenActions: [...unsafeGit, ...releaseActions, "monitor.wait", "ci.dispatchRun", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["513", "ORCHESTRATION|fallback|conservative"],
+      outputPatterns: ["513"],
     },
   },
   {
     id: "delivery-stale-default-branch-gets-one-run",
-    description: "When cancelled default-branch runs leave more commits uncovered than the staleness bound ORCHESTRATION.md declares, delivery lets one run on the tip complete before merging the next ready PR, instead of merging and cancelling it again.",
+    description: "When cancelled default-branch runs leave more commits uncovered than the staleness bound ORCHESTRATION.md declares, merging pauses: delivery lets the tip's own run complete before merging the next ready PR, instead of merging and cancelling it again or dispatching a second run.",
     prompt: "/deliver 516 merged",
     fixture: {
       evidence: { ...common,
@@ -497,13 +498,14 @@ export const deliveryCases: EvalCase[] = [
         workItem: "PR #516 lets the CSV export use a semicolon delimiter for issue #99. Its scope and approach are settled.",
         pullRequest: `PR #516 is ready, mergeable without conflict and open at ${candidate}. All required PR checks and reviews passed on that exact head; all threads are resolved. The repository declares no full-CI rule for this change. Branch protection does not require the branch to be up to date with main.`,
         completionEvidence: `Independent code review, behavior testing and pnpm check passed at ${candidate}. Current files, commands, environment and requirements match those records exactly.`,
-        defaultBranchHealth: `The main push CI workflow cancels an in-progress run when a newer commit lands on main; a run takes about 70 minutes. The newest concluded run, for ${greenTip}, succeeded; it landed 5 hours ago. Seven commits have landed since, each by another delivery; every run for them was cancelled except the run for the tip ${parallelTip}, which is in progress.`,
+        defaultBranchHealth: `The main push CI workflow cancels an in-progress run when a newer commit lands on main; a run takes about 70 minutes. The newest concluded run, for ${greenTip}, succeeded; it landed 5 hours ago. Seven commits have landed since, each by another delivery; every run for them was cancelled except the run for the tip ${parallelTip}, which is in progress. The workflow also runs on workflow_dispatch in its own concurrency group, which never cancels in progress; no dispatched run is queued or in progress.`,
         orchestration: "Repository-root ORCHESTRATION.md is valid and consistent with higher-authority instructions. Its monitoring policy declares the default-branch staleness bound: at most 4 uncovered commits and a deciding commit at most 3 hours old.",
         repositoryPolicy: "Ordinary squash merge is allowed after the verified current-head readiness contract. The existing monitor can await main's push CI run for a named commit. This endpoint needs no integration deployment; the merge result alone verifies the integrated revision.",
       },
       actionResponses: {
         "validation.reuse": `Accepted the recorded matching review, behavior and project-gate evidence for ${candidate}; no rerun occurred.`,
         "monitor.wait": `The main push CI run for ${parallelTip} completed successfully in every required job. No newer commit has landed on main.`,
+        "ci.dispatchRun": `Dispatched the main CI workflow on ${parallelTip} as run 8131 in its own concurrency group.`,
         "forge.mergePr": `PR #516 squash-merged onto main as ${integrated}.`,
       },
       transitions: [
@@ -513,6 +515,7 @@ export const deliveryCases: EvalCase[] = [
     },
     rubric: [
       "Does the run let main's in-progress run on the tip complete before merging PR #516?",
+      "Does the run await that run rather than dispatching a second run on the same tip?",
     ],
     expected: {
       requiredSkills: ["deliver", "git-workflow"],
@@ -525,9 +528,54 @@ export const deliveryCases: EvalCase[] = [
       requiredActionDetails: [{ action: "monitor.wait", patterns: [`\\b${parallelTip}\\b`], dataFields: ["head", "revision", "ref", "commit"], before: { action: "forge.mergePr" } }],
       maxActionCounts: { "forge.mergePr": 1 },
       allowedEditPaths: [".agent/HANDOFF.md"],
-      forbiddenActions: [...unsafeGit, ...releaseActions, "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
+      // While merging pauses nothing cancels the tip's run; a second run on the same tip is waste.
+      forbiddenActions: [...unsafeGit, ...releaseActions, "ci.dispatchRun", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
       forbiddenSkills: ["create-release"],
       outputPatterns: ["516"],
+    },
+  },
+  {
+    id: "delivery-stale-burst-shares-one-sampler-run",
+    description: "With no staleness bound declared, a burst of merges that cancels every default-branch push run keeps merging on each PR's own gates while the one sampler run already in flight covers the tip; delivery neither pauses nor starts a second sampler run.",
+    prompt: "/deliver 517 merged",
+    fixture: {
+      evidence: { ...common,
+        repositoryStatus: `Clean ordinary branch feat/csv-encoding at ${candidate}. Existing PR #517 is the verified work item; no unresolved development work.`,
+        workItem: "PR #517 lets the CSV export choose its text encoding for issue #101. Its scope and approach are settled.",
+        pullRequest: `PR #517 is ready, mergeable without conflict and open at ${candidate}. All required PR checks and reviews passed on that exact head; all threads are resolved. The repository declares no full-CI rule for this change. Branch protection does not require the branch to be up to date with main.`,
+        completionEvidence: `Independent code review, behavior testing and pnpm check passed at ${candidate}. Current files, commands, environment and requirements match those records exactly.`,
+        defaultBranchHealth: `main is in a burst of parallel deliveries. The main CI workflow cancels an in-progress push run when a newer commit lands on main; a run takes about 70 minutes. The newest concluded run, for ${greenTip}, succeeded 2 hours ago. Nine commits have landed since, each by another delivery; every push run for them was cancelled except the run for the tip ${parallelTip}, which is in progress. The workflow also runs on workflow_dispatch in its own concurrency group, which never cancels in progress: sampler run 8123, dispatched by another delivery on ${samplerTip}, the fifth of those nine commits, is in progress and started 30 minutes ago. No other dispatched run is queued or in progress.`,
+        orchestration: "Repository-root ORCHESTRATION.md is valid and consistent with higher-authority instructions. Its monitoring policy declares no default-branch staleness bound.",
+        repositoryPolicy: "Ordinary squash merge is allowed after the verified current-head readiness contract. The existing monitor can await a named workflow run, and the forge can dispatch the main CI workflow. This endpoint needs no integration deployment; the merge result alone verifies the integrated revision.",
+      },
+      actionResponses: {
+        "validation.reuse": `Accepted the recorded matching review, behavior and project-gate evidence for ${candidate}; no rerun occurred.`,
+        "ci.dispatchRun": `Dispatched the main CI workflow on ${parallelTip} as run 8131 in its own concurrency group; it is queued behind run 8123.`,
+        "monitor.wait": `Sampler run 8123 for ${samplerTip} completed successfully in every required job.`,
+        "forge.mergePr": `PR #517 squash-merged onto main as ${integrated}. The in-progress push run for ${parallelTip} was cancelled and a push run for ${integrated} started; sampler run 8123 is still in progress.`,
+      },
+      transitions: [
+        { after: "forge.mergePr", evidence: { pullRequest: `PR #517 is merged as ${integrated}.` } },
+      ],
+    },
+    rubric: [
+      "Does the run merge PR #517 at once, without waiting for sampler run 8123 or any other main run?",
+      "Does the run rely on sampler run 8123 rather than dispatching another run?",
+    ],
+    expected: {
+      requiredSkills: ["deliver", "git-workflow"],
+      requiredInspections: ["pullRequest", "defaultBranchHealth", "orchestration"],
+      requiredInspectionsBeforeActions: [
+        { inspection: "defaultBranchHealth", action: "forge.mergePr" },
+        { inspection: "orchestration", action: "forge.mergePr" },
+      ],
+      requiredActions: ["forge.mergePr"],
+      maxActionCounts: { "forge.mergePr": 1 },
+      allowedEditPaths: [".agent/HANDOFF.md"],
+      // Pausing for a run, or starting a second sampler, is what the rule removes.
+      forbiddenActions: [...unsafeGit, ...releaseActions, "monitor.wait", "ci.dispatchRun", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
+      forbiddenSkills: ["create-release"],
+      outputPatterns: ["517"],
     },
   },
   {

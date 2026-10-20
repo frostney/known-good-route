@@ -68,11 +68,13 @@ It updates the same open PR; a gap found after merge uses a linked repair PR and
 keeps the original work item active until integration verification succeeds.
 A PR or stack merges as soon as it is ready on its own exact head, including
 any full CI the repository requires for the change; ready stack layers merge
-together. Default-branch runs still in progress from earlier merges hold
-nothing, until cancelled or slow runs leave more commits uncovered than the
-staleness bound in `ORCHESTRATION.md` (or the reported conservative default);
-then one run on the tip completes before the next merge. When a completed
-default-branch run fails, merging stops and the repair lands first.
+together, and a PR branch that is only behind its base keeps its head.
+Default-branch runs still in progress from earlier merges hold nothing. When
+later merges cancel those runs, one run per workflow that no merge can cancel
+samples the tip, so merging never pauses for coverage; merging pauses only
+past a staleness bound the repository declares in `ORCHESTRATION.md`. When a
+completed default-branch run fails, merging stops and the repair lands
+first.
 `implement` owns development: implement, run and inspect, review, test, and fix
 until every verified requirement gap is resolved. Visual quality is judged
 against agreed references and affected states, not inferred from passing tests.
@@ -303,7 +305,9 @@ not a required full-matrix run or a claim that every scenario currently passes:
 | Requested visual or interaction fidelity | Compares the actual result with requirements and references; does not treat a test count as acceptance. |
 | Red default branch | Lands the default-branch repair first and waits for it to go green; does not merge onto a red branch or supersede the repair's run. |
 | Default-branch run in progress from an earlier merge | Merges a ready PR at once; does not wait for that run or take turns with parallel deliveries. |
-| Default-branch runs cancelled by later merges past the `ORCHESTRATION.md` staleness bound | Gets one run on the tip to complete before the next merge, then merges everything ready; without a declared bound, applies and reports the conservative default. |
+| Default-branch runs cancelled by a burst of merges | Keeps merging on each PR's own gates while one sampler run per workflow, outside the cancelling group, covers the tip; starts no second one. |
+| Default-branch runs cancelled past a staleness bound `ORCHESTRATION.md` declares | Gets one run covering the tip to complete before the next merge, then merges everything ready. |
+| PR branch behind its base without a conflict | Keeps its head; merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. |
 | Several ready native stack layers | Merges them in one stack merge, not layer by layer. |
 | Configured integration delivery | Verifies the intended revision and behavior at the configured target; does not trigger milestone release or mistake a queued job for deployment. |
 | Material decision or unavailable required access | Completes independent work and reports the specific unresolved requirement without claiming completion. |

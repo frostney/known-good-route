@@ -58,7 +58,7 @@ The media and publication observations are simulated; the runs do not capture,
 synthesize or upload a video. Inspect the complete reports as well as automated
 grades: a correct workflow can still contain an unsupported environment claim.
 
-For the development and delivery contracts, select the thirteen focused cases:
+For the development and delivery contracts, select the fourteen focused cases:
 
 ```bash
 bun run eval -- --model codex:gpt-6-astra --model claude:claude-fable-5-1 \
@@ -73,6 +73,7 @@ bun run eval -- --model codex:gpt-6-astra --model claude:claude-fable-5-1 \
   --case delivery-red-default-branch-unowned-repair-first \
   --case delivery-earlier-merge-run-does-not-hold-merge \
   --case delivery-stale-default-branch-gets-one-run \
+  --case delivery-stale-burst-shares-one-sampler-run \
   --case delivery-full-ci-rule-before-merge \
   --case delivery-ready-stack-merges-in-one-go
 ```
@@ -84,8 +85,10 @@ release publication, a linked repair after integration finds a post-merge gap,
 a merge held until a red default branch's repair run succeeds, an unowned
 red default branch repaired before the requested merge, a ready merge that a
 default-branch run from an earlier merge does not hold, one completed run on
-the tip once cancelled runs pass the staleness bound `ORCHESTRATION.md` declares, a declared full-CI run
-awaited before merging, and a ready native stack merged in one stack merge.
+the tip once cancelled runs pass a staleness bound `ORCHESTRATION.md`
+declares, a burst of merges that keeps merging while one sampler run covers
+the tip when no bound is declared, a declared full-CI run awaited before
+merging, and a ready native stack merged in one stack merge.
 They use simulated repository and external state. They do
 not establish a real deployment, production readiness, or release publication.
 Review the complete actions and final reports against the requirements; assess
