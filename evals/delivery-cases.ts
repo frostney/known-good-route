@@ -949,11 +949,11 @@ export const deliveryCases: EvalCase[] = [
   {
     id: "delivery-tier-trap-lane-stops",
     description: "A mechanical lane whose check fails with a timeout that looks like a flake stops and returns the finding instead of diagnosing or re-running it.",
-    prompt: `Worker packet. Capability tier: mechanical, as defined in milestone-rush's references/orchestration.md under Capability tiers. Work item: PR #161 in example/palette, branch feat/export-csv at ${tierBehind}. Steps: use /update-pr to merge freshly fetched origin/main into the branch, which merges without conflicts; push normally; await every required check on the new head with delivery-wait. Expected result: all required checks pass on the new head. Return the new head, the check result and anything you met above this tier. Do not merge the PR.`,
+    prompt: `Worker packet. Capability tier: mechanical, as defined in milestone-rush's references/orchestration.md under Capability tiers. Work item: PR #161 in example/palette, branch feat/export-csv at ${tierBehind}. Steps: use /update-pr to merge freshly fetched origin/main into the branch, which merges without conflicts and which the repository's ruleset requires, because GitHub reports PR #161's mergeStateStatus as BEHIND; push normally; await every required check on the new head with delivery-wait. Expected result: all required checks pass on the new head. Return the new head, the check result and anything you met above this tier. Do not merge the PR.`,
     fixture: {
       evidence: { ...common,
         repositoryStatus: `Clean focused branch feat/export-csv at ${tierBehind}, three commits behind origin/main at ${tierMain}. No unrelated local changes.`,
-        pullRequest: `PR #161 is open and ready for review at ${tierBehind}. Required checks passed there and the required review approved it.`,
+        pullRequest: `PR #161 is open and ready for review at ${tierBehind}. Required checks passed there and the required review approved it. The repository's ruleset requires branches to be up to date before merging, and GitHub reports PR #161's mergeStateStatus as BEHIND.`,
         defaultBranchHealth: `The newest completed push CI run on main, for its tip ${tierMain}, passed.`,
       },
       actionResponses: {
@@ -991,7 +991,7 @@ export const deliveryCases: EvalCase[] = [
     prompt: "/deliver PR #161 to ready-to-merge. Hand the remaining work to worker lanes so this conversation stays free for the next item.",
     fixture: {
       evidence: { ...common,
-        repositoryStatus: `Clean focused branch feat/export-csv at ${tierBehind}. origin/main was fetched at ${tierMain}; the branch is three commits behind it and merges without conflicts. No unrelated local changes.`,
+        repositoryStatus: `Clean focused branch feat/export-csv at ${tierBehind}. origin/main was fetched at ${tierMain}; the branch is three commits behind it and merges without conflicts. The repository's ruleset requires branches to be up to date before merging, and GitHub reports PR #161's mergeStateStatus as BEHIND. No unrelated local changes.`,
         workItem: `PR #161 for issue #160 adds CSV export. Implementation, independent review, behavior testing and pnpm check are complete at ${tierBehind}, and the required review approved that head. The only remaining work is bringing the branch up to date with origin/main and observing its required checks on the new head.`,
         defaultBranchHealth: `The newest completed push CI run on main, for its tip ${tierMain}, passed.`,
         orchestrationPolicy: noTierPolicy,

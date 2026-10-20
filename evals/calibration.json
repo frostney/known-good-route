@@ -2675,21 +2675,44 @@
       "caseId": "delivery-tier-trap-lane-stops",
       "status": "new",
       "rationale": [
-        "A mechanical lane whose check fails with a timeout that looks like a flake stops and returns the finding instead of re-running, diagnosing or fixing it. Rebuilt from a lane that called a CI failure a timing flake whose real cause was found later. Fresh native run required."
+        "A mechanical lane whose check fails with a timeout that looks like a flake stops and returns the finding instead of re-running, diagnosing or fixing it. Rebuilt from a lane that called a CI failure a timing flake whose real cause was found later. Fresh native run required.",
+        "Owner ruling, 2026-10-20: a PR branch merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The branch here is only behind origin/main, so the fixture now states the repository's ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps the base merge required and leaves the case testing tier escalation. Fixture changed: fresh native runs required."
       ],
       "beforeSha256": null,
-      "afterSha256": "46fcc3a03c895c0d60df1b75683b644941c5cdcae02483229f3d3e5c0b9cfe19",
-      "frozenCaseSha256": "46fcc3a03c895c0d60df1b75683b644941c5cdcae02483229f3d3e5c0b9cfe19"
+      "afterSha256": "65e8b496c102e44ed60eeac8edc692611a11f8616c49dc2ee6c02207caef48ce",
+      "frozenCaseSha256": "46fcc3a03c895c0d60df1b75683b644941c5cdcae02483229f3d3e5c0b9cfe19",
+      "revisions": [
+        {
+          "previousAfterSha256": "46fcc3a03c895c0d60df1b75683b644941c5cdcae02483229f3d3e5c0b9cfe19",
+          "afterSha256": "65e8b496c102e44ed60eeac8edc692611a11f8616c49dc2ee6c02207caef48ce",
+          "rationale": "Owner ruling, 2026-10-20: a PR branch merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The branch here is only behind origin/main, so the fixture now states the repository's ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps the base merge required and leaves the case testing tier escalation. Fixture changed: fresh native runs required."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "prompt",
+        "fixture"
+      ]
     },
     {
       "caseId": "delivery-tier-trap-coordinator-new-lane",
       "status": "new",
       "rationale": [
-        "After a mechanical lane returns a failure that needs diagnosis, the coordinator starts a new open lane with that finding. Whether the coordinator resumed the old lane instead is left to the rubric and manual review, since a simulated delegate action does not show it. Fresh native run required."
+        "After a mechanical lane returns a failure that needs diagnosis, the coordinator starts a new open lane with that finding. Whether the coordinator resumed the old lane instead is left to the rubric and manual review, since a simulated delegate action does not show it. Fresh native run required.",
+        "Owner ruling, 2026-10-20: a PR branch merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The branch here is only behind origin/main, so the fixture now states the repository's ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps the base merge required and leaves the case testing tier escalation. Fixture changed: fresh native runs required."
       ],
       "beforeSha256": null,
-      "afterSha256": "a5b0640f523f1dc36cb160880b6440016134ee6522725a19820dac38c4554142",
-      "frozenCaseSha256": "a5b0640f523f1dc36cb160880b6440016134ee6522725a19820dac38c4554142"
+      "afterSha256": "343c4b43ffe9a2c075ba3e042308fd89465ac83dd21fe0240e848b2a922231f8",
+      "frozenCaseSha256": "a5b0640f523f1dc36cb160880b6440016134ee6522725a19820dac38c4554142",
+      "revisions": [
+        {
+          "previousAfterSha256": "a5b0640f523f1dc36cb160880b6440016134ee6522725a19820dac38c4554142",
+          "afterSha256": "343c4b43ffe9a2c075ba3e042308fd89465ac83dd21fe0240e848b2a922231f8",
+          "rationale": "Owner ruling, 2026-10-20: a PR branch merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The branch here is only behind origin/main, so the fixture now states the repository's ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps the base merge required and leaves the case testing tier escalation. Fixture changed: fresh native runs required."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "fixture"
+      ]
     },
     {
       "caseId": "create-pr-dependency-on-hand-based-pr-stops",
