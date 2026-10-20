@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { deepDiveCases } from "./deep-dive-cases.ts";
+import { agentsMd, deepDiveCases } from "./deep-dive-cases.ts";
 import { gradeRun } from "./grading.ts";
 import type { RunLedger } from "./types.ts";
 
@@ -69,4 +69,69 @@ test("a Codex reviewer's identity is configured-only, but a reported identity mu
   expect(
     gradeRun(claudeCase, { ...parent, workers: [{ ...claudeWorker, responseModels: ["claude-opus-5-5"] }] }, answer).passed,
   ).toBeTrue();
+});
+
+test("every deep-dive case runs under the AGENTS.md block the generator writes from deep-dive's own declaration", async () => {
+  const generator: string = "../.github/actions/update-project-skills/agents-block.mjs";
+  const { readRoleDeclaration, renderRegion } = (await import(generator)) as {
+    readRoleDeclaration: (source: string, label: string) => unknown;
+    renderRegion: (declarations: unknown[]) => string;
+  };
+  const source = await Bun.file(new URL("../deep-dive/SKILL.md", import.meta.url)).text();
+  expect(agentsMd).toBe(renderRegion([readRoleDeclaration(source, "deep-dive/SKILL.md")]));
+  for (const scenario of deepDiveCases.filter((c) => !c.id.endsWith("-review"))) expect(scenario.agentsMd).toBe(agentsMd);
+});
+
+// A trajectory as the run's ledger records it: inspections and actions in order.
+type Step = { inspect: string } | { act: RunLedger["actions"][number]["action"] };
+const trajectory = (steps: Step[]): RunLedger => {
+  const ledger: RunLedger = { ...empty(), loadedSkills: ["deep-dive", "deliver"] };
+  for (const step of steps) {
+    if ("inspect" in step) {
+      ledger.inspections.push(step.inspect);
+      ledger.events.push({ kind: "inspection", name: step.inspect });
+    } else {
+      ledger.actions.push({ action: step.act, details: step.act });
+      ledger.events.push({ kind: "action", name: step.act });
+    }
+  }
+  return ledger;
+};
+const deliver: Step[] = [{ act: "file.edit" }, { act: "validation.run" }, { act: "forge.openDraftPr" }];
+const loopCase = (id: string) => deepDiveCases.find((c) => c.id === id)!;
+
+test("an established cause stays in the loop: the trace is read before the fix, then the gate and the pull request follow", () => {
+  const established = loopCase("deep-dive-loop-established-cause-continues");
+  const passes = (steps: Step[]) => gradeRun(established, trajectory(steps), "Fixed and published as PR #391.").passed;
+  const read: Step[] = [{ inspect: "gateOutput" }, { inspect: "currentRunTrace" }];
+  expect(passes([...read, ...deliver])).toBeTrue();
+  expect(passes([...read, { act: "delegate" }, ...deliver])).toBeFalse();
+  // The trace read only after publishing did not establish the cause before the fix.
+  expect(passes([{ inspect: "gateOutput" }, ...deliver, { inspect: "currentRunTrace" }])).toBeFalse();
+  expect(passes(read)).toBeFalse();
+  expect(passes([...read, { act: "file.edit" }, { act: "forge.openDraftPr" }])).toBeFalse();
+});
+
+test("a cause the run had to find is investigated and reviewed before the fix, contested or not", () => {
+  for (const id of ["deep-dive-loop-unresolved-cause-reviews", "deep-dive-loop-assertion-only-reviews"]) {
+    const scenario = loopCase(id);
+    const review = deepDiveCases.find((c) => c.id === scenario.worker!.caseId)!;
+    const reviewLedger: RunLedger = { ...empty(), inspections: ["checkpointFile"], verdict: { path: verdictFile, verdict: "agree", evidence: "checkpoint lacks provenance" } };
+    const reviewer = (startedAtEvent: number) => ({
+      ...worker, caseId: review.id, startedAtEvent, ledger: reviewLedger, grade: gradeRun(review, reviewLedger, "Agree."),
+    });
+    const passes = (steps: Step[], startedAtEvent: number | null) => {
+      const ledger = trajectory(steps);
+      if (startedAtEvent !== null) ledger.workers = [reviewer(startedAtEvent)];
+      return gradeRun(scenario, ledger, `The checkpoint writer drops provenance. Fresh review: agree (${verdictFile}). PR #391 is open.`).passed;
+    };
+    const investigate: Step[] = [{ inspect: "gateOutput" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }];
+    expect(passes([...investigate, ...deliver], 3), id).toBeTrue();
+    // A review that started only after the fix came too late.
+    expect(passes([...investigate, ...deliver], 4), id).toBeFalse();
+    expect(passes([...investigate, ...deliver], null), id).toBeFalse();
+    // Investigation and review without the fix, the gate and the pull request do not finish the loop.
+    expect(passes(investigate, 3), id).toBeFalse();
+    expect(passes([{ inspect: "gateOutput" }, { act: "file.edit" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { act: "validation.run" }, { act: "forge.openDraftPr" }], 1), id).toBeFalse();
+  }
 });
