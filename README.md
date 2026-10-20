@@ -183,16 +183,20 @@ and Anthropic's
 - Preserve task-specific checks that define completion. Do not add generic
   self-check, double-check, or verifier passes around them. Size committed
   tests to the stated behavior; low-impact reversible changes need no new test.
-- Delegate sizeable independent parts to bounded workers by default when the
-  host supports it; keep small or tightly coupled work local. The coordinator
-  keeps working on independent work while workers run and checks each result's
-  evidence before accepting it. `no-subagents` keeps the work local.
-- For autonomous orchestration, repository-owned capability classes, context
-  envelopes, token checkpoints, and escalation policy belong in
-  `ORCHESTRATION.md`. `deliver` defines one context boundary itself: the next
-  work item starts from the handoff, not the previous item's context.
-  Provider-specific model selection and harness plumbing stay
-  in the host; reusable skills express only capability and observable behavior.
+- Delegate sizeable independent parts to context-isolated workers by default
+  when the host supports it; keep small or tightly coupled work local. The
+  coordinator keeps working on independent work while workers run and checks
+  each result's evidence before accepting it. `no-subagents` keeps the work
+  local.
+- Delegated lanes run on the
+  [capability tiers](milestone-rush/references/orchestration.md#capability-tiers),
+  which name no model, provider or effort level. For autonomous orchestration,
+  a repository's narrowing of those tiers, context envelopes, token
+  checkpoints, and escalation policy belong in `ORCHESTRATION.md`. `deliver`
+  defines one context boundary itself: the next work item starts from the
+  handoff, not the previous item's context. Provider-specific model selection
+  and harness plumbing stay in the host; reusable skills express only
+  capability and observable behavior.
 - Ground progress and completion claims in current tool or source evidence.
   Finish authorized reversible work. Name the early stops to avoid: a summary
   that announces the next step, an offer to continue, a non-blocking decision
@@ -296,6 +300,7 @@ not a required full-matrix run or a claim that every scenario currently passes:
 | Missing or stale PR review/behavior evidence | Runs the required missing checks and fixes verified gaps before readiness; reuses valid evidence. |
 | CI or review exposes an in-scope defect | Repairs it, revalidates affected behavior and updates the same PR instead of stopping at diagnosis. |
 | Requested visual or interaction fidelity | Compares the actual result with requirements and references; does not treat a test count as acceptance. |
+| Delegated lane | Runs on the capability tier its packet records; at work above that tier it stops and returns its finding, and the coordinator starts a new lane at the needed tier. |
 | Red or pending default branch | Lands the default-branch repair first and waits for it to go green; does not merge onto a red branch or supersede the repair's run. |
 | Configured integration delivery | Verifies the intended revision and behavior at the configured target; does not trigger milestone release or mistake a queued job for deployment. |
 | Material decision or unavailable required access | Completes independent work and reports the specific unresolved requirement without claiming completion. |

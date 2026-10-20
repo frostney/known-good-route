@@ -85,6 +85,30 @@ unsupported claims and qualitative coverage beyond the automatic checks. When
 changing delegation, also select `prompting-claude-native-agent-blocked` with
 Fable to exercise its actual Opus worker contract.
 
+For the [capability tiers](../milestone-rush/references/orchestration.md#capability-tiers),
+select the five tier cases:
+
+```bash
+bun run eval -- --model codex:gpt-6-astra --model claude:claude-fable-5-1 \
+  --case delivery-tier-mechanical-coordinator \
+  --case delivery-tier-mechanical-lane \
+  --case delivery-tier-bounded-lane-review-rerun \
+  --case delivery-tier-trap-lane-stops \
+  --case delivery-tier-trap-coordinator-new-lane
+```
+
+A coordinator case runs `/deliver` and grades the packet it records with
+`delegate`; a lane case gives the packet as the prompt. They cover a mechanical
+packet recorded and finished, a bounded lane that fixes a review finding and
+reviews its final head again, and a mechanical lane that meets a timeout that
+looks like a flake: the lane stops and returns it, and the coordinator starts
+an open lane with that finding. The grader cannot tell a new lane from a
+resumed one in a simulated `delegate` action; the rubric records that
+criterion for manual review. The trap lane case bans a second wait, a file edit
+and a delegation, but not a focused, validation or behavior run, because
+`/update-pr` may run a check before its push; a diagnosing run after the
+failure is graded manually from the rubric.
+
 Unavailable authentication, unsupported models, and incomplete runs are errors;
 no fallback model is configured. Native host behavior is part of this evaluation.
 
