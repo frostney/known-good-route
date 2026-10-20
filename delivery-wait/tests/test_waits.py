@@ -1184,6 +1184,24 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(output["state"], "satisfied")
         self.assertEqual(output["metrics"]["rateLimitFallbacks"], 1)
 
+        # With --all-workflows the fallback runs inside the workflow census,
+        # which must hand it the same page size.
+        self.reset_census()
+        self.counter.unlink(missing_ok=True)
+        self.write_scenario(
+            graphqlRateLimited=True,
+            expectedRestPageSize=5,
+            restChecks={"check_runs": [{"name": "CI", "status": "completed", "conclusion": "success"}]},
+            census=[census(workflow_run(101, matrix_jobs(1)))],
+        )
+        result, output = self.run_json(
+            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
+            "--head", "head-1", "--all-workflows", "--check", "CI", "--rest-page-size", "5",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output["metrics"]["rateLimitFallbacks"], 1)
+        self.assertEqual([run["id"] for run in output["observation"]["runs"]], [101])
+
     def test_rest_page_size_rejects_invalid_values_before_transport(self) -> None:
         for command in ("inspect", "wait"):
             for value in ("0", "101", "-1", "five"):

@@ -125,7 +125,7 @@ def pr_snapshot(gh: Gh, repo: str, number: int, rest_page_size: int = 100) -> di
         workflows = {
             item.get("check_suite_id"): item
             for item in rest_census(
-                gh.rest_pages(f"repos/{repo}/actions/runs?head_sha={quote(pull['head']['sha'], safe='')}&per_page=100"),
+                gh.rest_pages(f"repos/{repo}/actions/runs?head_sha={quote(pull['head']['sha'], safe='')}&per_page={rest_page_size}"),
                 "workflow_runs",
                 "workflow run",
             )
