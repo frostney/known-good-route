@@ -92,6 +92,13 @@ requires its own identity flags:
 There is no `--checkpoint` flag. The state path is `--state`, and the command
 derives a default path from the kind and identity when it is omitted.
 
+Both `inspect` and `wait` accept `--rest-page-size <1..100>` (default: 100).
+Use a smaller value when GitHub fails to serve large REST pages. It applies
+to workflow runs, jobs, and the REST fallback for checks and statuses. All
+pages are still read and the complete workflow census is still required.
+The option does not change GraphQL queries or the saved wait identity, so
+an existing wait can resume with a different REST page size.
+
 ## Results
 
 `--json` prints one envelope whose `state` is the result. Only `satisfied`
