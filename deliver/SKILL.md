@@ -82,7 +82,10 @@ Delegated work runs through the same skills. A worker packet routes each step
 it hands over through the skill that owns it, such as `/implement`,
 `/create-pr`, `/update-pr` or `/address-feedback`. It never prescribes raw
 publication or merge commands such as `gh pr create` or `gh pr merge`; those
-bypass the skill's gates, native stack detection and readiness checks.
+bypass the skill's gates, native stack detection and readiness checks. Each
+packet records the capability tier its lane runs on. Read
+[capability tiers](../milestone-rush/references/orchestration.md#capability-tiers)
+when you write a packet, run one, or receive a lane's escalation.
 
 Use required companion skills when available; when one is unavailable, follow
 its reachable documented contract directly or report the specific missing
@@ -137,3 +140,11 @@ cleanup or message delivery. Verify required outcomes; omit optional unconfirmed
 claims or label them unconfirmed, without implying failure. Apply this to the
 whole report, including tables and parenthetical remarks; see
 [agent-writing](../agent-writing/SKILL.md) for shared writing guidance.
+
+Call remote CI green, or a PR ready, only after `delivery-wait` reports it
+satisfied for the current head commit, and then say so in plain words. Call a
+local check passing from its actual result on the tested content. Treat a
+failure as flaky or transient only after its failing log shows it is
+intermittent. Blaming something other than the change, or leaving the failure
+out of the required repair, needs its own evidence; a flaky failure the change
+introduced is in scope.

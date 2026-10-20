@@ -62,6 +62,12 @@ describe("skill loader", () => {
     expect(
       readSkillReference(projectStructure, "../README.md"),
     ).rejects.toThrow("escapes");
+    expect(
+      await readSkillReference(
+        projectStructure,
+        "references/documentation.md#anything",
+      ),
+    ).toBe(content);
   });
 
   test("consolidated skills retain their procedures in standalone copies", async () => {
