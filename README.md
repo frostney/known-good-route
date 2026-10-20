@@ -66,8 +66,15 @@ flowchart TD
 `deliver` owns continuation through CI failures, feedback and integration checks.
 It updates the same open PR; a gap found after merge uses a linked repair PR and
 keeps the original work item active until integration verification succeeds.
-New work starts and merges land only on a green default branch, except the
-repair of a red one, which comes first.
+A PR or stack merges as soon as it is ready on its own exact head, including
+any full CI the repository requires for the change; ready stack layers merge
+together, and a PR branch that is only behind its base keeps its head.
+Default-branch runs still in progress from earlier merges hold nothing. When
+later merges cancel those runs, one run per workflow that no merge can cancel
+samples the tip, so merging never pauses for coverage; merging pauses only
+past a staleness bound the repository declares in `ORCHESTRATION.md`. When a
+completed default-branch run fails, merging stops and the repair lands
+first.
 `implement` owns development: implement, run and inspect, review, test, and fix
 until every verified requirement gap is resolved. Visual quality is judged
 against agreed references and affected states, not inferred from passing tests.
@@ -192,7 +199,8 @@ and Anthropic's
   [capability tiers](milestone-rush/references/orchestration.md#capability-tiers),
   which name no model, provider or effort level. For autonomous orchestration,
   a repository's narrowing of those tiers, context envelopes, token
-  checkpoints, and escalation policy belong in `ORCHESTRATION.md`. `deliver`
+  checkpoints, monitoring policy such as the default-branch staleness bound,
+  and escalation policy belong in `ORCHESTRATION.md`. `deliver`
   defines one context boundary itself: the next work item starts from the
   handoff, not the previous item's context. Provider-specific model selection
   and harness plumbing stay in the host; reusable skills express only
@@ -301,7 +309,12 @@ not a required full-matrix run or a claim that every scenario currently passes:
 | CI or review exposes an in-scope defect | Repairs it, revalidates affected behavior and updates the same PR instead of stopping at diagnosis. |
 | Requested visual or interaction fidelity | Compares the actual result with requirements and references; does not treat a test count as acceptance. |
 | Delegated lane | Runs on the capability tier its packet records; at work above that tier it stops and returns its finding, and the coordinator starts a new lane at the needed tier. |
-| Red or pending default branch | Lands the default-branch repair first and waits for it to go green; does not merge onto a red branch or supersede the repair's run. |
+| Red default branch | Lands the default-branch repair first and waits for it to go green; does not merge onto a red branch or supersede the repair's run. |
+| Default-branch run in progress from an earlier merge | Merges a ready PR at once; does not wait for that run or take turns with parallel deliveries. |
+| Default-branch runs cancelled by a burst of merges | Keeps merging on each PR's own gates while one sampler run per workflow, outside the cancelling group, covers the tip; starts no second one. |
+| Default-branch runs cancelled past a staleness bound `ORCHESTRATION.md` declares | Pauses merging until a completed run brings the gap back within the bound, then merges everything ready. |
+| PR branch behind its base without a conflict | Keeps its head; merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. |
+| Several ready native stack layers | Merges them in one stack merge, not layer by layer. |
 | Configured integration delivery | Verifies the intended revision and behavior at the configured target; does not trigger milestone release or mistake a queued job for deployment. |
 | Material decision or unavailable required access | Completes independent work and reports the specific unresolved requirement without claiming completion. |
 | Explicit read-only review or an earlier delivery endpoint | Preserves that boundary; does not infer edit, merge, deployment or release authority. |

@@ -666,13 +666,14 @@ export const evalCases: EvalCase[] = [
   },
   {
     id: "update-pr-behind-main",
-    description: "Updating a PR merges the remote base and pushes normally.",
+    description: "Updating a PR whose repository requires up-to-date branches merges the remote base and pushes normally.",
     prompt: "Update the current pull request.",
     fixture: {
       evidence: {
         repositoryStatus:
           "Branch feature/auth is clean and one commit behind origin/main.",
-        pullRequest: "PR #42 is open from feature/auth into main.",
+        pullRequest:
+          "PR #42 is open from feature/auth into main. The repository's ruleset requires branches to be up to date before merging, and GitHub reports the PR's mergeStateStatus as BEHIND.",
         projectGate: "The project gate must run after the merge.",
       },
       actionResponses: {
@@ -687,10 +688,39 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "update-pr-behind-base-keeps-head",
+    description: "Updating a PR that is only behind its base commits and pushes the new change without merging the base: no conflict, no up-to-date requirement, no repair and no request call for it.",
+    prompt: "Update the current pull request.",
+    fixture: {
+      evidence: {
+        repositoryStatus:
+          "Branch feature/auth-scopes has one uncommitted, relevant change to src/auth/scopes.ts that completes PR #57's stated scope; nothing else is modified. The branch is three commits behind freshly fetched origin/main.",
+        pullRequest:
+          "PR #57 is open from feature/auth-scopes into main. GitHub reports it mergeable without conflict and its mergeStateStatus as CLEAN. No ruleset or branch protection setting requires branches to be up to date. The three newer main commits touch no file of this PR, and the default branch is green.",
+        projectGate:
+          "bun run check is the declared gate; code review and behavior testing of the scopes change are already recorded as passing on the working tree.",
+      },
+      actionResponses: {
+        "validation.run":
+          "bun run check passed on the working tree, including the scopes change.",
+        "git.commit": "Committed the scopes change as 5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f.",
+        "git.push": "Ordinary push succeeded; PR #57's checks started for 5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f.",
+        "forge.updatePrMetadata": "PR #57's body now describes the scopes change and the local validation.",
+        "git.merge": "Merged origin/main into feature/auth-scopes without conflicts.",
+      },
+    },
+    expected: {
+      requiredSkills: ["update-pr"],
+      requiredActions: ["validation.run", "git.commit", "git.push"],
+      // Being behind alone is no reason to merge the base; it restarts every check.
+      forbiddenActions: ["git.merge", "git.amend", "git.forcePush", "git.rebase", "forge.mergePr"],
+    },
+  },
+  {
     id: "update-pr-native-github-stack",
     description:
       "Updating a verified native stack uses the guarded official synchronization path.",
-    prompt: "Update the current PR and its native GitHub stack.",
+    prompt: "Update the current PR and its native GitHub stack onto current origin/main.",
     fixture: {
       evidence: {
         repositoryStatus:
@@ -3843,7 +3873,7 @@ export const evalCases: EvalCase[] = [
         options:
           "All options come from the same repository and web evidence. The predeclared rubric compares compatibility, schema stability, duplication, testability, and delivery cost. Each viable option was checked against the same CLI fixtures and schema requirements. Reusing InspectionResult and the sibling renderer scores highest.",
         repositoryStatus:
-          "The selected focused branch is clean. origin/main is the remote default branch; fetching it succeeds, and merging its fresh tip is conflict-free.",
+          "The selected focused branch is clean and has no pull request yet. origin/main is the remote default branch; fetching it succeeds, and the branch does not conflict with its fresh tip.",
         projectGate:
           "After the focused CLI cases pass, the full declared gate passes on the implemented diff.",
         review:
@@ -3862,7 +3892,6 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["implement"],
       requiredActions: [
         "git.fetch",
-        "git.merge",
         "file.edit",
         "validation.run",
         "codeReview.run",
@@ -4202,7 +4231,7 @@ export const evalCases: EvalCase[] = [
         reviewDelegation:
           "Each PR records its review-axis-to-lane map and completed evidence-only workers. PR #343 cannot obtain one engineering-quality worker after bounded retry, so its implementation worker completes that lane directly and reports the single-agent fallback.",
         rollingIntegration:
-          "After each squash merge, remaining branches merge the updated remote default and their affected gates pass. The refreshed milestone contains no new out-of-scope work.",
+          "After each squash merge, the refreshed milestone contains no new out-of-scope work. No ruleset or branch protection setting requires up-to-date branches. Once #343 merges, PR #341's branch conflicts with the updated remote default in src/config.ts; merging the default into it resolves the conflict and its affected gates pass. The other remaining branches do not conflict.",
         integratedCompletion:
           "All five issues are delivered and closed, no milestone PR, check, review, or active review-tool pass is pending, and the synced default branch passes the full project gate.",
         monitoring:

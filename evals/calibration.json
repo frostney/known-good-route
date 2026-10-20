@@ -262,11 +262,33 @@
       "caseId": "update-pr-behind-main",
       "status": "updated",
       "rationale": [
-        "Provide an explicit validation result for this successful fixture path."
+        "Provide an explicit validation result for this successful fixture path.",
+        "Owner ruling, 2026-10-20: a PR branch merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The fixture now states the repository's ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps the merge required. Fixture changed: fresh native runs required."
       ],
       "beforeSha256": "ce7ce9d302c07d41897cc0de3bdbba9a54fd3be1520c6ab236ad8a07b87fa8ab",
-      "afterSha256": "2b2e2168da23cc2bb70be70a2978c53bbb4a6d6d14a61f59aaedd9017d6229ba",
-      "frozenCaseSha256": "2b2e2168da23cc2bb70be70a2978c53bbb4a6d6d14a61f59aaedd9017d6229ba"
+      "afterSha256": "a92d55f544973198fe8f168f97b6f87ec250224198f7861fa2dc613d0ed28111",
+      "frozenCaseSha256": "2b2e2168da23cc2bb70be70a2978c53bbb4a6d6d14a61f59aaedd9017d6229ba",
+      "revisions": [
+        {
+          "previousAfterSha256": "2b2e2168da23cc2bb70be70a2978c53bbb4a6d6d14a61f59aaedd9017d6229ba",
+          "afterSha256": "a92d55f544973198fe8f168f97b6f87ec250224198f7861fa2dc613d0ed28111",
+          "rationale": "Owner ruling, 2026-10-20: a PR branch merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The fixture now states the repository's ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps the merge required. Fixture changed: fresh native runs required."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "description",
+        "fixture"
+      ]
+    },
+    {
+      "caseId": "update-pr-behind-base-keeps-head",
+      "status": "new",
+      "rationale": [
+        "Owner ruling, 2026-10-20: pull request branches need not be up to date with the default branch. A PR three commits behind main, with no conflict, no up-to-date requirement, no repair need and no request, commits and pushes its new change without merging main; merging main fails. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "7d4c61c6b062cf4a3369e58aeffbea5023437e15be7d05db919f1bbbb8b6dcec",
+      "frozenCaseSha256": "7d4c61c6b062cf4a3369e58aeffbea5023437e15be7d05db919f1bbbb8b6dcec"
     },
     {
       "caseId": "update-pr-native-github-stack",
@@ -275,12 +297,14 @@
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Lease and remote-head evidence belongs to the recorded guarded stackSync action, not a duplicated final-response phrase.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
-        "Provide actual simulated synchronization, gate, publication and metadata receipts, including the rewritten heads and PR URLs the report must name. Fixture changed: fresh native runs required, no replay as current proof."
+        "Provide actual simulated synchronization, gate, publication and metadata receipts, including the rewritten heads and PR URLs the report must name. Fixture changed: fresh native runs required, no replay as current proof.",
+        "Owner ruling, 2026-10-20: a stack syncs onto a moved trunk only under the up-to-date rule. The prompt now asks for the stack to be brought onto current origin/main, which keeps the sync required. Prompt changed: fresh native runs required."
       ],
       "beforeSha256": "5c095770c9f69acf08832e94caf2142352b3f94c2f8ea5735a3d4ed8e65cd59f",
-      "afterSha256": "dc1256a47b58ee8e96250346cfd0dd36c753f7d1c208f8128f41ef5c1c15841c",
+      "afterSha256": "22bd0a9dbc72b2db77c450e85a8f53ae1fca141281db688b7ab51f2785b90df5",
       "postFreezeChangedFields": [
-        "expected"
+        "expected",
+        "prompt"
       ],
       "frozenCaseSha256": "3436caeebe72e49f8422c997cd3e76f4878d6a1a4342f1188a19fb967341c64d",
       "revisions": [
@@ -288,6 +312,11 @@
           "previousAfterSha256": "d46b9efcc3b5ea32ce22b212a8018a0ae6d3bb4e48fbb8b1b207c6539fc4d456",
           "afterSha256": "dc1256a47b58ee8e96250346cfd0dd36c753f7d1c208f8128f41ef5c1c15841c",
           "rationale": "Provide actual simulated synchronization, gate, publication and metadata receipts, including the rewritten heads and PR URLs the report must name. Fixture changed: fresh native runs required, no replay as current proof."
+        },
+        {
+          "previousAfterSha256": "dc1256a47b58ee8e96250346cfd0dd36c753f7d1c208f8128f41ef5c1c15841c",
+          "afterSha256": "22bd0a9dbc72b2db77c450e85a8f53ae1fca141281db688b7ab51f2785b90df5",
+          "rationale": "Owner ruling, 2026-10-20: a stack syncs onto a moved trunk only under the up-to-date rule. The prompt now asks for the stack to be brought onto current origin/main, which keeps the sync required. Prompt changed: fresh native runs required."
         }
       ]
     },
@@ -1206,12 +1235,14 @@
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Provide an explicit validation result for this successful fixture path.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
-        "September 14 approved hierarchy: standalone implement ends after development, independent review and observed behavior/project gates. Remove the old implicit PR publication requirement while preserving the additive JSON CLI task. No fresh native replay of this legacy case claimed."
+        "September 14 approved hierarchy: standalone implement ends after development, independent review and observed behavior/project gates. Remove the old implicit PR publication requirement while preserving the additive JSON CLI task. No fresh native replay of this legacy case claimed.",
+        "Owner ruling, 2026-10-20: entering an existing focused branch fetches its base but merges it only under the up-to-date rule. The branch has no PR and no conflict, so the base merge is no longer required; the fetch still is. Fixture and assertion changed: fresh native runs required."
       ],
       "beforeSha256": "cf6f0ac2b9b8fc6ce6fa0f3a37e699e23558be4e2497e2b3babfca6d0ac810c9",
-      "afterSha256": "0900d6672e4601b5fe2a44fddb0088b6bfa270e65781388f887602867f64513f",
+      "afterSha256": "43a1addb11463796840b0fb4b124a4a0e3b635370ad24d9c66c31ed5243a0d7e",
       "postFreezeChangedFields": [
-        "expected"
+        "expected",
+        "fixture"
       ],
       "frozenCaseSha256": "07d9475c5458675a30f2a0ead3c9f0e217add526d575817afbd58865d50daaf0",
       "revisions": [
@@ -1219,6 +1250,11 @@
           "previousAfterSha256": "1b58d59188875dbe655b4f61470df6342c0b9da01d5ab3d15bc5b064d1eb3350",
           "afterSha256": "0900d6672e4601b5fe2a44fddb0088b6bfa270e65781388f887602867f64513f",
           "rationale": "September 14 approved hierarchy: standalone implement ends after development, independent review and observed behavior/project gates. Remove the old implicit PR publication requirement while preserving the additive JSON CLI task. No fresh native replay of this legacy case claimed."
+        },
+        {
+          "previousAfterSha256": "0900d6672e4601b5fe2a44fddb0088b6bfa270e65781388f887602867f64513f",
+          "afterSha256": "43a1addb11463796840b0fb4b124a4a0e3b635370ad24d9c66c31ed5243a0d7e",
+          "rationale": "Owner ruling, 2026-10-20: entering an existing focused branch fetches its base but merges it only under the up-to-date rule. The branch has no PR and no conflict, so the base merge is no longer required; the fetch still is. Fixture and assertion changed: fresh native runs required."
         }
       ]
     },
@@ -1350,12 +1386,14 @@
         "Worker-owned PR creation must not require the coordinator to open duplicate PRs.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
         "September 14 approved release ownership: preserve parallel rolling integration and add an explicit configured milestone release plan, create-release invocation and verified release before closure. No fresh native replay of this legacy case claimed.",
-        "September 27 contract change: the delegated review default is /code-review fix-all, whose lanes fan out by default. Fresh native run required."
+        "September 27 contract change: the delegated review default is /code-review fix-all, whose lanes fan out by default. Fresh native run required.",
+        "Owner ruling, 2026-10-20: after each squash merge the base is merged only into remaining branches that need it. The fixture now names the one remaining branch that conflicts with the updated default, which keeps a base merge required; the others are not merged. Fixture changed: fresh native runs required."
       ],
       "beforeSha256": "4a77e31e0e86343d1e4e0f72ba1a2f18f4e13d4645feb94c336ef87f43123791",
-      "afterSha256": "60a5c628d8628080283e4ad35808a932b4514f3bf4be72bd03f4a3b0d61060ef",
+      "afterSha256": "2d2860f489d075e74934c969398c72f95deb4f88fffaf7c5a603fee5e2d2682e",
       "postFreezeChangedFields": [
-        "expected"
+        "expected",
+        "fixture"
       ],
       "frozenCaseSha256": "721a3f5eacebada83cd2011e0d5e40fab735cefdd9e8951d3bac5d272f6164f8",
       "revisions": [
@@ -1363,6 +1401,11 @@
           "previousAfterSha256": "a70321b47753f67802a810c419fcdfb7fe7ec0f18ff14005297c7dbfb0870887",
           "afterSha256": "17b0e762a9bb892433bb97309cf52c95fc1b4a8cfac5e16b17e539434df5c8b7",
           "rationale": "September 14 approved release ownership: preserve parallel rolling integration and add an explicit configured milestone release plan, create-release invocation and verified release before closure. No fresh native replay of this legacy case claimed."
+        },
+        {
+          "previousAfterSha256": "60a5c628d8628080283e4ad35808a932b4514f3bf4be72bd03f4a3b0d61060ef",
+          "afterSha256": "2d2860f489d075e74934c969398c72f95deb4f88fffaf7c5a603fee5e2d2682e",
+          "rationale": "Owner ruling, 2026-10-20: after each squash merge the base is merged only into remaining branches that need it. The fixture now names the one remaining branch that conflicts with the updated default, which keeps a base merge required; the others are not merged. Fixture changed: fresh native runs required."
         }
       ]
     },
@@ -2031,7 +2074,7 @@
         "Bounded historical decision reconstruction; see history-acceptance.json for provenance, attribution and manual outcome criteria."
       ],
       "beforeSha256": null,
-      "afterSha256": "fe9676de4a314515034990a7ca6bfd212b4a055e6465c7274d9cc71bc4a8b8a7",
+      "afterSha256": "241a14ebd205cc5125c7ac94cb1bbcde03abbd174d5c435c0f066302a3182b25",
       "frozenCaseSha256": "0099367cca2c9c2917dd143d14f2a236f24f7b770ad539a04d66ba9d416bb33c",
       "revisions": [
         {
@@ -2043,7 +2086,15 @@
           "previousAfterSha256": "40a5bcf51f2154af8f1aae8b5fdaed5ab0303e82c198c019a92894a88e92460d",
           "afterSha256": "fe9676de4a314515034990a7ca6bfd212b4a055e6465c7274d9cc71bc4a8b8a7",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.stackInit action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "fe9676de4a314515034990a7ca6bfd212b4a055e6465c7274d9cc71bc4a8b8a7",
+          "afterSha256": "241a14ebd205cc5125c7ac94cb1bbcde03abbd174d5c435c0f066302a3182b25",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
         }
+      ],
+      "postFreezeChangedFields": [
+        "expected"
       ]
     },
     {
@@ -2080,7 +2131,7 @@
         "Bounded historical decision reconstruction; see history-acceptance.json for provenance, attribution and manual outcome criteria."
       ],
       "beforeSha256": null,
-      "afterSha256": "4fffe37328356f5d8b7dc70273649f69b489a2138e26a2a3161d6ed0575305fe",
+      "afterSha256": "e09398f4562c2865613abadc363e678782d4080e2213c12a3b2dbfc42d73df89",
       "frozenCaseSha256": "6769d572cc28ff86dd667e9096aedc47c80204b1b61500c0fafd4b36190a4939",
       "revisions": [
         {
@@ -2092,7 +2143,15 @@
           "previousAfterSha256": "eda21ce6c35c44ab8982c4376a7bd2ebae2cedf75ef4cf35de00ccf25001bc53",
           "afterSha256": "4fffe37328356f5d8b7dc70273649f69b489a2138e26a2a3161d6ed0575305fe",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.stackInit action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "4fffe37328356f5d8b7dc70273649f69b489a2138e26a2a3161d6ed0575305fe",
+          "afterSha256": "e09398f4562c2865613abadc363e678782d4080e2213c12a3b2dbfc42d73df89",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
         }
+      ],
+      "postFreezeChangedFields": [
+        "expected"
       ]
     },
     {
@@ -2156,7 +2215,7 @@
         "Bounded historical decision reconstruction; see history-acceptance.json for provenance, attribution and manual outcome criteria."
       ],
       "beforeSha256": null,
-      "afterSha256": "fa97d5586d506769c4a93fea3fd1f38fc83173bb2bd89d1e9fca9a2a76795090",
+      "afterSha256": "86eb65571326e83675d23b917d32dbd39c5fec45757e73d214456792f9f067bd",
       "frozenCaseSha256": "54380f4fb7f5a6504a96c22ccf72cf61b706a11b8d26ccc46fd0ae309648e867",
       "revisions": [
         {
@@ -2168,7 +2227,15 @@
           "previousAfterSha256": "347fb4afd369181606029151909559d37d987e5cd72a861d7ef8bfbf11715c9e",
           "afterSha256": "fa97d5586d506769c4a93fea3fd1f38fc83173bb2bd89d1e9fca9a2a76795090",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.stackInit action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "fa97d5586d506769c4a93fea3fd1f38fc83173bb2bd89d1e9fca9a2a76795090",
+          "afterSha256": "86eb65571326e83675d23b917d32dbd39c5fec45757e73d214456792f9f067bd",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
         }
+      ],
+      "postFreezeChangedFields": [
+        "expected"
       ]
     },
     {
@@ -2232,7 +2299,7 @@
         "Bounded historical decision reconstruction; see history-acceptance.json for provenance, attribution and manual outcome criteria."
       ],
       "beforeSha256": null,
-      "afterSha256": "69dab3dbc6154a06fc97936a95a55006effbe056b4b59abc007982a427294d6a",
+      "afterSha256": "7805b26f4fe16139d98652df44f3a33d15443da211b25344fff3f55563c01f10",
       "frozenCaseSha256": "43a77e6f231059105a1d3e4838559ec22c7320a8e59cb06031d26f58ad2c5923",
       "revisions": [
         {
@@ -2244,7 +2311,15 @@
           "previousAfterSha256": "33c00605d8ca50bdf5bf212a2bef0f768f41832adb20f5f6a9d974b733c19fd1",
           "afterSha256": "69dab3dbc6154a06fc97936a95a55006effbe056b4b59abc007982a427294d6a",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.stackInit action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "69dab3dbc6154a06fc97936a95a55006effbe056b4b59abc007982a427294d6a",
+          "afterSha256": "7805b26f4fe16139d98652df44f3a33d15443da211b25344fff3f55563c01f10",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
         }
+      ],
+      "postFreezeChangedFields": [
+        "expected"
       ]
     },
     {
@@ -2497,6 +2572,76 @@
       "frozenCaseSha256": "bd4b64bef639bebbf179d9c13414a68b9b04b1e17868a2154215be4bf0f668e9"
     },
     {
+      "caseId": "delivery-earlier-merge-run-does-not-hold-merge",
+      "status": "new",
+      "rationale": [
+        "Rebuilt from a day of parallel deliveries in one repository whose default-branch CI took 35 to 80 minutes: the health gate made every merge wait for the newest main run, each merge cancelled the run in progress, no main run completed for hours and merges went one per run. A ready PR on a green default branch now merges at once; the run still in progress from a parallel delivery's merge does not hold it, a branch that is only behind keeps its head, and with no main run cancelled there is nothing for a sampler run to cover, so dispatching one fails. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "ab9e88f5aa4c67a60ff6eeb9a39bf34c5057ed888567ad404a98d622c2c1227f",
+      "frozenCaseSha256": "ab9e88f5aa4c67a60ff6eeb9a39bf34c5057ed888567ad404a98d622c2c1227f"
+    },
+    {
+      "caseId": "delivery-stale-default-branch-gets-one-run",
+      "status": "new",
+      "rationale": [
+        "A repository may still declare a staleness bound in ORCHESTRATION.md, and that bound pauses merging. Here the deciding run is seven commits and five hours behind against a declared bound of four commits and three hours, so delivery awaits the tip's own run, which nothing cancels while merging pauses, then merges; merging first or dispatching a second run on the same tip fails. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "6c60714899a3249f0976b0305f9ab067d2bd6b2efe048d4c5e8ea67d886946ed",
+      "frozenCaseSha256": "6c60714899a3249f0976b0305f9ab067d2bd6b2efe048d4c5e8ea67d886946ed"
+    },
+    {
+      "caseId": "delivery-stale-burst-shares-one-sampler-run",
+      "status": "new",
+      "rationale": [
+        "Owner ruling, 2026-10-20: a fixed staleness bound punishes high-velocity projects and bursts of merges, so without a declared bound merging never pauses for coverage. One sampler run per workflow, dispatched outside the cancelling group, covers the tip, and every delivery reuses the one in flight. In a burst with sampler run 8123 in progress, delivery merges at once; waiting for any main run or dispatching a second sampler run fails. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "f8bdf7f19cac6fd006bdfab4d78ebeb6fdb57da9837e6f51e4ef0a998db15b2a",
+      "frozenCaseSha256": "f8bdf7f19cac6fd006bdfab4d78ebeb6fdb57da9837e6f51e4ef0a998db15b2a"
+    },
+    {
+      "caseId": "delivery-stale-dispatches-one-sampler-run",
+      "status": "new",
+      "rationale": [
+        "Owner ruling, 2026-10-20: under Stale with no declared bound, coverage comes from one sampler run per workflow. With cancelled runs and no sampler in flight, delivery dispatches exactly one on the tip outside the cancelling group and merges without waiting; merging without it, waiting for it or dispatching a second fails. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "a90ea3cd3676cc4821230334427d3d4b3b2d487dc68f47935def39ec67559d00",
+      "frozenCaseSha256": "a90ea3cd3676cc4821230334427d3d4b3b2d487dc68f47935def39ec67559d00"
+    },
+    {
+      "caseId": "delivery-stale-no-sampler-reports-project-gap",
+      "status": "new",
+      "rationale": [
+        "Owner ruling, 2026-10-20: when the workflow's concurrency group would cancel a dispatched run too, no sampler can run, so delivery reports the project gap with its fix and keeps merging under the PR gates; dispatching, waiting or a report without the gap fails. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "00d26dd953e28c58ae47c195e4509b1f006c854107a516a64ad2514ac2f2ae7a",
+      "frozenCaseSha256": "00d26dd953e28c58ae47c195e4509b1f006c854107a516a64ad2514ac2f2ae7a"
+    },
+    {
+      "caseId": "delivery-full-ci-rule-before-merge",
+      "status": "new",
+      "rationale": [
+        "Some changes need a full CI run before they are ready. When the repository's declared full-CI rule covers the change, delivery starts that run for the PR's head, awaits it and merges, and does not also wait for main's run from an earlier merge. The shared default-branch fixture now also says no main run was cancelled since the deciding run. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "cbd40a280b6edc4bb67ed25782669c6fea407a4decda6a71c72fba3d9aa2d33d",
+      "frozenCaseSha256": "cbd40a280b6edc4bb67ed25782669c6fea407a4decda6a71c72fba3d9aa2d33d"
+    },
+    {
+      "caseId": "delivery-ready-stack-merges-in-one-go",
+      "status": "new",
+      "rationale": [
+        "In the same incident, stacks merged one layer at a time, each waiting for main. When every layer of a native stack is ready, delivery merges it in one stack merge. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "94e43eb4cfad3632a358d25b55ad2c864b14c9aec2e7b2821e15c5e4a8400dea",
+      "frozenCaseSha256": "94e43eb4cfad3632a358d25b55ad2c864b14c9aec2e7b2821e15c5e4a8400dea"
+    },
+    {
       "caseId": "delivery-tier-mechanical-coordinator",
       "status": "new",
       "rationale": [
@@ -2530,21 +2675,44 @@
       "caseId": "delivery-tier-trap-lane-stops",
       "status": "new",
       "rationale": [
-        "A mechanical lane whose check fails with a timeout that looks like a flake stops and returns the finding instead of re-running, diagnosing or fixing it. Rebuilt from a lane that called a CI failure a timing flake whose real cause was found later. Fresh native run required."
+        "A mechanical lane whose check fails with a timeout that looks like a flake stops and returns the finding instead of re-running, diagnosing or fixing it. Rebuilt from a lane that called a CI failure a timing flake whose real cause was found later. Fresh native run required.",
+        "Owner ruling, 2026-10-20: a PR branch merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The branch here is only behind origin/main, so the fixture now states the repository's ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps the base merge required and leaves the case testing tier escalation. Fixture changed: fresh native runs required."
       ],
       "beforeSha256": null,
-      "afterSha256": "46fcc3a03c895c0d60df1b75683b644941c5cdcae02483229f3d3e5c0b9cfe19",
-      "frozenCaseSha256": "46fcc3a03c895c0d60df1b75683b644941c5cdcae02483229f3d3e5c0b9cfe19"
+      "afterSha256": "65e8b496c102e44ed60eeac8edc692611a11f8616c49dc2ee6c02207caef48ce",
+      "frozenCaseSha256": "46fcc3a03c895c0d60df1b75683b644941c5cdcae02483229f3d3e5c0b9cfe19",
+      "revisions": [
+        {
+          "previousAfterSha256": "46fcc3a03c895c0d60df1b75683b644941c5cdcae02483229f3d3e5c0b9cfe19",
+          "afterSha256": "65e8b496c102e44ed60eeac8edc692611a11f8616c49dc2ee6c02207caef48ce",
+          "rationale": "Owner ruling, 2026-10-20: a PR branch merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The branch here is only behind origin/main, so the fixture now states the repository's ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps the base merge required and leaves the case testing tier escalation. Fixture changed: fresh native runs required."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "prompt",
+        "fixture"
+      ]
     },
     {
       "caseId": "delivery-tier-trap-coordinator-new-lane",
       "status": "new",
       "rationale": [
-        "After a mechanical lane returns a failure that needs diagnosis, the coordinator starts a new open lane with that finding. Whether the coordinator resumed the old lane instead is left to the rubric and manual review, since a simulated delegate action does not show it. Fresh native run required."
+        "After a mechanical lane returns a failure that needs diagnosis, the coordinator starts a new open lane with that finding. Whether the coordinator resumed the old lane instead is left to the rubric and manual review, since a simulated delegate action does not show it. Fresh native run required.",
+        "Owner ruling, 2026-10-20: a PR branch merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The branch here is only behind origin/main, so the fixture now states the repository's ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps the base merge required and leaves the case testing tier escalation. Fixture changed: fresh native runs required."
       ],
       "beforeSha256": null,
-      "afterSha256": "a5b0640f523f1dc36cb160880b6440016134ee6522725a19820dac38c4554142",
-      "frozenCaseSha256": "a5b0640f523f1dc36cb160880b6440016134ee6522725a19820dac38c4554142"
+      "afterSha256": "343c4b43ffe9a2c075ba3e042308fd89465ac83dd21fe0240e848b2a922231f8",
+      "frozenCaseSha256": "a5b0640f523f1dc36cb160880b6440016134ee6522725a19820dac38c4554142",
+      "revisions": [
+        {
+          "previousAfterSha256": "a5b0640f523f1dc36cb160880b6440016134ee6522725a19820dac38c4554142",
+          "afterSha256": "343c4b43ffe9a2c075ba3e042308fd89465ac83dd21fe0240e848b2a922231f8",
+          "rationale": "Owner ruling, 2026-10-20: a PR branch merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The branch here is only behind origin/main, so the fixture now states the repository's ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps the base merge required and leaves the case testing tier escalation. Fixture changed: fresh native runs required."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "fixture"
+      ]
     },
     {
       "caseId": "create-pr-dependency-on-hand-based-pr-stops",
@@ -2593,11 +2761,22 @@
       "status": "new",
       "rationale": [
         "An update to a backport PR integrates from its named release base. The grader requires every merge to take release/1.x, so a merge of the default branch fails even next to a correct one. Fresh native run required.",
-        "Grader corrected: the merge has to take release/1.x as its operand, in its wording or in a source field of its data; a merge of the default branch that only mentions the release line no longer passes. The retained native runs pass regraded."
+        "Grader corrected: the merge has to take release/1.x as its operand, in its wording or in a source field of its data; a merge of the default branch that only mentions the release line no longer passes. The retained native runs pass regraded.",
+        "Owner ruling, 2026-10-20: a PR branch merges its base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The fixture now states the release/1.x ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps merging that base required; merging the default branch still fails. Fixture changed: fresh native runs required."
       ],
       "beforeSha256": null,
-      "afterSha256": "9e03b2f24ccbaafcb879d00624942be0d73eb45df51c0f7593de946590b9b610",
-      "frozenCaseSha256": "9e03b2f24ccbaafcb879d00624942be0d73eb45df51c0f7593de946590b9b610"
+      "afterSha256": "c545b2129839449e283d0a0041f72a454da874055106465c67b3e79cc5553ba6",
+      "frozenCaseSha256": "9e03b2f24ccbaafcb879d00624942be0d73eb45df51c0f7593de946590b9b610",
+      "revisions": [
+        {
+          "previousAfterSha256": "9e03b2f24ccbaafcb879d00624942be0d73eb45df51c0f7593de946590b9b610",
+          "afterSha256": "c545b2129839449e283d0a0041f72a454da874055106465c67b3e79cc5553ba6",
+          "rationale": "Owner ruling, 2026-10-20: a PR branch merges its base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The fixture now states the release/1.x ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps merging that base required; merging the default branch still fails. Fixture changed: fresh native runs required."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "fixture"
+      ]
     },
     {
       "caseId": "update-pr-hand-based-pr-stops",
@@ -2645,8 +2824,18 @@
         "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish."
       ],
       "beforeSha256": null,
-      "afterSha256": "5317a6a43a3800bc4ead50988dab1641e5425296f7e6abfd58d8cd4df1a9d5d4",
-      "frozenCaseSha256": "328f4268f2d2c145e5cce9a3c7b949b2c514b4499522c0981e1f10501ec41f39"
+      "afterSha256": "94a109c2f52405c67ac90f5872b93ccc3fa389d1c48f460b7ef632f938c3a947",
+      "frozenCaseSha256": "328f4268f2d2c145e5cce9a3c7b949b2c514b4499522c0981e1f10501ec41f39",
+      "revisions": [
+        {
+          "previousAfterSha256": "5317a6a43a3800bc4ead50988dab1641e5425296f7e6abfd58d8cd4df1a9d5d4",
+          "afterSha256": "94a109c2f52405c67ac90f5872b93ccc3fa389d1c48f460b7ef632f938c3a947",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "expected"
+      ]
     },
     {
       "caseId": "deep-dive-wrong-lock-holder-review",
@@ -2655,8 +2844,18 @@
         "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer."
       ],
       "beforeSha256": null,
-      "afterSha256": "49d1c10d5474f580d7a49b198fbdad9d9db2d8e0b94aaa74c252018060d23a96",
-      "frozenCaseSha256": "49d1c10d5474f580d7a49b198fbdad9d9db2d8e0b94aaa74c252018060d23a96"
+      "afterSha256": "622702158326bbceb84ff4f36c005233648a0addb50df3f170be768b143a18af",
+      "frozenCaseSha256": "49d1c10d5474f580d7a49b198fbdad9d9db2d8e0b94aaa74c252018060d23a96",
+      "revisions": [
+        {
+          "previousAfterSha256": "49d1c10d5474f580d7a49b198fbdad9d9db2d8e0b94aaa74c252018060d23a96",
+          "afterSha256": "622702158326bbceb84ff4f36c005233648a0addb50df3f170be768b143a18af",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "expected"
+      ]
     },
     {
       "caseId": "deep-dive-unloaded-instruction-blamed",
@@ -2670,8 +2869,18 @@
         "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish."
       ],
       "beforeSha256": null,
-      "afterSha256": "82ef34aeeae183b9e17620881f4c535c5cdfc78055b3f4407a07b765fd7ec579",
-      "frozenCaseSha256": "71648b210e5264c120e6616c2043842b5cdcadd81002ce4415c5e0eadfb67968"
+      "afterSha256": "2c0544d17ff34a2d0cb2e36830207480c7e850242049fa15b93e172c3144d3d3",
+      "frozenCaseSha256": "71648b210e5264c120e6616c2043842b5cdcadd81002ce4415c5e0eadfb67968",
+      "revisions": [
+        {
+          "previousAfterSha256": "82ef34aeeae183b9e17620881f4c535c5cdfc78055b3f4407a07b765fd7ec579",
+          "afterSha256": "2c0544d17ff34a2d0cb2e36830207480c7e850242049fa15b93e172c3144d3d3",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "expected"
+      ]
     },
     {
       "caseId": "deep-dive-unloaded-instruction-blamed-review",
@@ -2680,8 +2889,18 @@
         "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer."
       ],
       "beforeSha256": null,
-      "afterSha256": "edea9fde8ae3e6613dd69a9f52776e4ff195484a1aec2bf0086b614117b86235",
-      "frozenCaseSha256": "edea9fde8ae3e6613dd69a9f52776e4ff195484a1aec2bf0086b614117b86235"
+      "afterSha256": "5fb75a8f3c4c8dd84b25504f3cd17dc9341349dd61f5c2c849ed14becb5ddcb8",
+      "frozenCaseSha256": "edea9fde8ae3e6613dd69a9f52776e4ff195484a1aec2bf0086b614117b86235",
+      "revisions": [
+        {
+          "previousAfterSha256": "edea9fde8ae3e6613dd69a9f52776e4ff195484a1aec2bf0086b614117b86235",
+          "afterSha256": "5fb75a8f3c4c8dd84b25504f3cd17dc9341349dd61f5c2c849ed14becb5ddcb8",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "expected"
+      ]
     },
     {
       "caseId": "deep-dive-private-data-leak",
@@ -2695,8 +2914,18 @@
         "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish."
       ],
       "beforeSha256": null,
-      "afterSha256": "4d9af14d52121e704071db3e8d5d98162f8032eba0f89691e9ca86dbafbe93b8",
-      "frozenCaseSha256": "28be22afb337053e291e987008a22cb2dbea9159e0a2dc3b19e5940ec72154df"
+      "afterSha256": "e55b8b58596f5a504bd9eec7ca7dce717fb1801e42311f227b1dc6553bffdd30",
+      "frozenCaseSha256": "28be22afb337053e291e987008a22cb2dbea9159e0a2dc3b19e5940ec72154df",
+      "revisions": [
+        {
+          "previousAfterSha256": "4d9af14d52121e704071db3e8d5d98162f8032eba0f89691e9ca86dbafbe93b8",
+          "afterSha256": "e55b8b58596f5a504bd9eec7ca7dce717fb1801e42311f227b1dc6553bffdd30",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "expected"
+      ]
     },
     {
       "caseId": "deep-dive-private-data-leak-review",
@@ -2705,8 +2934,18 @@
         "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer."
       ],
       "beforeSha256": null,
-      "afterSha256": "b4c75ee28bbe8eb9787ba8e987c45392ee8d34044aa3ff0d0e842e1b0cd03d7c",
-      "frozenCaseSha256": "b4c75ee28bbe8eb9787ba8e987c45392ee8d34044aa3ff0d0e842e1b0cd03d7c"
+      "afterSha256": "ad517144ed9bdf1267ff06188d053df1ea1f8999ad3a0635131031d9fdefd3dd",
+      "frozenCaseSha256": "b4c75ee28bbe8eb9787ba8e987c45392ee8d34044aa3ff0d0e842e1b0cd03d7c",
+      "revisions": [
+        {
+          "previousAfterSha256": "b4c75ee28bbe8eb9787ba8e987c45392ee8d34044aa3ff0d0e842e1b0cd03d7c",
+          "afterSha256": "ad517144ed9bdf1267ff06188d053df1ea1f8999ad3a0635131031d9fdefd3dd",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "expected"
+      ]
     },
     {
       "caseId": "deep-dive-script-error-masked-duplicate",
@@ -2720,8 +2959,18 @@
         "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish."
       ],
       "beforeSha256": null,
-      "afterSha256": "12c8abe6f812125be097a45394c38edc82959241e837e68ec166a66396cd6841",
-      "frozenCaseSha256": "58b294f42269c483c7858cd16a98f050f249e750847cb464a8cb60e00271dc98"
+      "afterSha256": "877581c7427d2857ffd74d17863d7555045964808cd26d1c05636c27a6cc7c3f",
+      "frozenCaseSha256": "58b294f42269c483c7858cd16a98f050f249e750847cb464a8cb60e00271dc98",
+      "revisions": [
+        {
+          "previousAfterSha256": "12c8abe6f812125be097a45394c38edc82959241e837e68ec166a66396cd6841",
+          "afterSha256": "877581c7427d2857ffd74d17863d7555045964808cd26d1c05636c27a6cc7c3f",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "expected"
+      ]
     },
     {
       "caseId": "deep-dive-script-error-masked-duplicate-review",
@@ -2730,8 +2979,18 @@
         "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer."
       ],
       "beforeSha256": null,
-      "afterSha256": "2a36b105550cd75961c0e265f47490eac89493b632b5da1324f67927b8a0d259",
-      "frozenCaseSha256": "2a36b105550cd75961c0e265f47490eac89493b632b5da1324f67927b8a0d259"
+      "afterSha256": "d530b18a2aaba0ed8ac258ae620f635a9064ee29efbc41486a8724c35f19e911",
+      "frozenCaseSha256": "2a36b105550cd75961c0e265f47490eac89493b632b5da1324f67927b8a0d259",
+      "revisions": [
+        {
+          "previousAfterSha256": "2a36b105550cd75961c0e265f47490eac89493b632b5da1324f67927b8a0d259",
+          "afterSha256": "d530b18a2aaba0ed8ac258ae620f635a9064ee29efbc41486a8724c35f19e911",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "expected"
+      ]
     },
     {
       "caseId": "deep-dive-loop-established-cause-continues",
@@ -2772,8 +3031,18 @@
         "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer."
       ],
       "beforeSha256": null,
-      "afterSha256": "0a433a8527c7098e39e1810208106c7250f0b79127f8e49766b7d975274bec80",
-      "frozenCaseSha256": "0a433a8527c7098e39e1810208106c7250f0b79127f8e49766b7d975274bec80"
+      "afterSha256": "dfd6fd833901235512730d20348950d5c3e871ad44f17b9dc5470bbb1cdec2ef",
+      "frozenCaseSha256": "0a433a8527c7098e39e1810208106c7250f0b79127f8e49766b7d975274bec80",
+      "revisions": [
+        {
+          "previousAfterSha256": "0a433a8527c7098e39e1810208106c7250f0b79127f8e49766b7d975274bec80",
+          "afterSha256": "dfd6fd833901235512730d20348950d5c3e871ad44f17b9dc5470bbb1cdec2ef",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "expected"
+      ]
     },
     {
       "caseId": "deep-dive-explicit-invocation-runs-full-procedure",
@@ -2787,8 +3056,18 @@
         "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish."
       ],
       "beforeSha256": null,
-      "afterSha256": "446243931474a83dd67d5e64178703292262c042e0c37bfff0ef4b1df30c5a40",
-      "frozenCaseSha256": "6c8de269d2fe3ca67c45dfc64e7d8e6a6ee843cf5f7c853e729be92e108a06e0"
+      "afterSha256": "f25c7a2520addbeebc9009d614f0a4cf275ba137f12dc0f5790f38a43b40d40f",
+      "frozenCaseSha256": "6c8de269d2fe3ca67c45dfc64e7d8e6a6ee843cf5f7c853e729be92e108a06e0",
+      "revisions": [
+        {
+          "previousAfterSha256": "446243931474a83dd67d5e64178703292262c042e0c37bfff0ef4b1df30c5a40",
+          "afterSha256": "f25c7a2520addbeebc9009d614f0a4cf275ba137f12dc0f5790f38a43b40d40f",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "expected"
+      ]
     },
     {
       "caseId": "deep-dive-explicit-invocation-runs-full-procedure-review",
@@ -2797,8 +3076,18 @@
         "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer."
       ],
       "beforeSha256": null,
-      "afterSha256": "0fc3b417e0747e94a0691d7115596c675c02d32181a9e08cb914cbadeac8f335",
-      "frozenCaseSha256": "0fc3b417e0747e94a0691d7115596c675c02d32181a9e08cb914cbadeac8f335"
+      "afterSha256": "fc336301bf8b17bcfd37575d7f6adfbcb841d83690bd09a467c843f0b421bd5b",
+      "frozenCaseSha256": "0fc3b417e0747e94a0691d7115596c675c02d32181a9e08cb914cbadeac8f335",
+      "revisions": [
+        {
+          "previousAfterSha256": "0fc3b417e0747e94a0691d7115596c675c02d32181a9e08cb914cbadeac8f335",
+          "afterSha256": "fc336301bf8b17bcfd37575d7f6adfbcb841d83690bd09a467c843f0b421bd5b",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "expected"
+      ]
     },
     {
       "caseId": "deep-dive-loop-assertion-only-reviews",
@@ -2821,8 +3110,18 @@
         "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer."
       ],
       "beforeSha256": null,
-      "afterSha256": "000100643cf4056743cc69276429ec92b4def6b3945e6b3676208156e8cc9681",
-      "frozenCaseSha256": "000100643cf4056743cc69276429ec92b4def6b3945e6b3676208156e8cc9681"
+      "afterSha256": "f54ee9eeb8f77590be47a9546c83435465c9ef68a21605d48df5819b9efcfe91",
+      "frozenCaseSha256": "000100643cf4056743cc69276429ec92b4def6b3945e6b3676208156e8cc9681",
+      "revisions": [
+        {
+          "previousAfterSha256": "000100643cf4056743cc69276429ec92b4def6b3945e6b3676208156e8cc9681",
+          "afterSha256": "f54ee9eeb8f77590be47a9546c83435465c9ef68a21605d48df5819b9efcfe91",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "expected"
+      ]
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

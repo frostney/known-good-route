@@ -184,7 +184,7 @@ export const stackDependencyCases: EvalCase[] = [
     fixture: {
       evidence: {
         repositoryStatus: `Repository example/project on github.com. The clean current branch backport/retry-budget is at ${backport}. It is one commit behind freshly fetched origin/release/1.x at ${releaseFix} and forty commits behind freshly fetched origin/main at ${main}. No unrelated local work and no conflicts.`,
-        pullRequest: "PR #151 is open from backport/retry-budget into release/1.x. Its title and body match the change.",
+        pullRequest: "PR #151 is open from backport/retry-budget into release/1.x. Its title and body match the change. The release/1.x ruleset requires branches to be up to date before merging, and GitHub reports the PR's mergeStateStatus as BEHIND.",
         openPullRequests: listing(pr(151, "backport/retry-budget", backport, "release/1.x"), pr(160, "feat/export-csv", exportCsv)),
         stackTopology: "gh stack view --json reports no locally tracked stack. GitHub reports no native stack.",
         projectDefinitions: "CONTRIBUTING.md: fixes for the 1.x line land on the long-lived release/1.x branch through backport PRs. Issue #140 asks for the retry budget fix on the 1.x release line.",

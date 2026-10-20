@@ -26,6 +26,7 @@ export const actionNames = [
   "git.stackMerge",
   "git.stackSubmit",
   "git.stackSync",
+  "ci.dispatchRun",
   "monitor.wait",
   "report",
   "behaviorTest.run",
