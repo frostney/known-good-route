@@ -58,7 +58,7 @@ The media and publication observations are simulated; the runs do not capture,
 synthesize or upload a video. Inspect the complete reports as well as automated
 grades: a correct workflow can still contain an unsupported environment claim.
 
-For the development and delivery contracts, select the seven focused cases:
+For the development and delivery contracts, select the nine focused cases:
 
 ```bash
 bun run eval -- --model codex:gpt-6-astra --model claude:claude-fable-5-1 \
@@ -68,18 +68,46 @@ bun run eval -- --model codex:gpt-6-astra --model claude:claude-fable-5-1 \
   --case delivery-default-integration-current-revision \
   --case delivery-missing-integration-decision \
   --case delivery-milestone-release-boundary \
-  --case delivery-post-merge-integration-repair
+  --case delivery-post-merge-integration-repair \
+  --case delivery-red-default-branch-waits-for-repair \
+  --case delivery-red-default-branch-unowned-repair-first
 ```
 
 These exercise development-only scope, mandatory PR review and behavior gates,
 repair of existing-PR CI failures, configured integration revision verification,
 a necessary destination decision after independent work, milestone-owned
-release publication, and a linked repair after integration finds a post-merge gap. They use simulated repository and external state. They do
+release publication, a linked repair after integration finds a post-merge gap,
+a merge held until a red default branch's repair run succeeds, and an unowned
+red default branch repaired before the requested merge. They use simulated repository and external state. They do
 not establish a real deployment, production readiness, or release publication.
 Review the complete actions and final reports against the requirements; assess
 unsupported claims and qualitative coverage beyond the automatic checks. When
 changing delegation, also select `prompting-claude-native-agent-blocked` with
 Fable to exercise its actual Opus worker contract.
+
+For the [capability tiers](../milestone-rush/references/orchestration.md#capability-tiers),
+select the five tier cases:
+
+```bash
+bun run eval -- --model codex:gpt-6-astra --model claude:claude-fable-5-1 \
+  --case delivery-tier-mechanical-coordinator \
+  --case delivery-tier-mechanical-lane \
+  --case delivery-tier-bounded-lane-review-rerun \
+  --case delivery-tier-trap-lane-stops \
+  --case delivery-tier-trap-coordinator-new-lane
+```
+
+A coordinator case runs `/deliver` and grades the packet it records with
+`delegate`; a lane case gives the packet as the prompt. They cover a mechanical
+packet recorded and finished, a bounded lane that fixes a review finding and
+reviews its final head again, and a mechanical lane that meets a timeout that
+looks like a flake: the lane stops and returns it, and the coordinator starts
+an open lane with that finding. The grader cannot tell a new lane from a
+resumed one in a simulated `delegate` action; the rubric records that
+criterion for manual review. The trap lane case bans a second wait, a file edit
+and a delegation, but not a focused, validation or behavior run, because
+`/update-pr` may run a check before its push; a diagnosing run after the
+failure is graded manually from the rubric.
 
 Unavailable authentication, unsupported models, and incomplete runs are errors;
 no fallback model is configured. Native host behavior is part of this evaluation.
@@ -137,7 +165,10 @@ report assertions can inspect that parsed artifact; the final answer need not
 repeat its contents. This validates the envelope, not every field or the truth
 of every finding. Action-specific evidence can inspect explicitly named
 structured payload fields, such as a behavior probe's cases or a wait's deadline.
-Unrelated metadata cannot supply those fields implicitly.
+Unrelated metadata cannot supply those fields implicitly. A `before` selector
+counts only actions recorded before a given occurrence of another action, such
+as a wait on the default-branch tip that must precede a merge, and fails when
+that occurrence is missing.
 
 `calibration.json` records why each case was retained, corrected, or added.
 Some fixtures advance evidence only after a recorded action, such as waiting
@@ -1038,17 +1069,18 @@ fix head. Each invocation freezes the Python helper and records its runtime,
 admission and hook receipts under the Git directory. New native repair root
 configurations also bind the selected Python path/version and pass that selection
 to the driver. Older snapshots retain their original runtime guarantees.
-The command wrapper permits the tested gh-stack 0.1.0 or 0.1.1 push/submit/link invocations,
-which do not disable hooks. It does not authorize commands, deduplicate GitHub
+The command wrapper permits only push/submit/link invocations of the official
+gh-stack extension, which do not disable hooks; it checks that the command is
+gh-stack, not its version. It does not authorize commands, deduplicate GitHub
 requests or defend against arbitrary local bypass/tampering.
 
 Five adapter tests retain the real Git creation, refreshed-lease rollback,
 changed-source/existing-branch, original-hook veto and receive-side race cases.
-Thirteen Python tests additionally cover standalone skill copies, actual SHA-256
+Sixteen Python tests additionally cover standalone skill copies, actual SHA-256
 publication with a Unicode branch and non-origin remote, hook configuration
 restoration/forwarding, copied-helper/admission tampering, dirty worktrees,
-changed push URLs, bounded command routing, rejected unvalidated gh-stack
-versions and malformed update records.
+changed push URLs, bounded command routing including multi-argument links,
+refused commands that are not gh-stack and malformed update records.
 
 ```sh
 bun evals/stack-push-race-live-run.ts --execute \

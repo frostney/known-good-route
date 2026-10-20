@@ -73,6 +73,12 @@ if args[:2] == ["api", "graphql"]:
     output({"data":{"repository":{"pullRequest":scenario["pull"]}}})
 
 endpoint = next((arg for arg in args if arg.startswith("repos/")), "")
+if "per_page=" in endpoint and "expectedRestPageSize" in scenario:
+    from urllib.parse import parse_qs, urlsplit
+    size = int(parse_qs(urlsplit(endpoint).query)["per_page"][0])
+    if size != scenario["expectedRestPageSize"]:
+        print("unexpected REST page size: " + str(size), file=sys.stderr)
+        sys.exit(3)
 if "user" in args:
     output({"login":"maintainer"})
 if endpoint.endswith("/pulls/comments/10"):
@@ -803,10 +809,17 @@ class WaitCommandsTest(unittest.TestCase):
             "--pr", "7", "--head", "head-1", "--all-workflows",
         )
         self.assertEqual(inspected["state"], "waiting")
+        # The census sequence, not a wall-clock deadline, bounds the wait: a
+        # short deadline can pass before the first observation completes.
         self.reset_census()
-        _, waited = self.census_wait(deadline=self.short_deadline())
-        self.assertEqual(waited["state"], "timed-out")
-        self.assertGreater(waited["metrics"]["observations"], 1)
+        complete = census(workflow_run(101, matrix_jobs(39)))
+        self.write_scenario(census=[partial, partial, complete])
+        _, waited = self.census_wait()
+        self.assertEqual(waited["state"], "satisfied")
+        self.assertEqual(len(waited["observation"]["runs"][0]["jobs"]), 39)
+        # Two identical partial observations, then two complete ones: a stable
+        # partial census never satisfies the wait.
+        self.assertEqual(waited["metrics"]["observations"], 4)
 
     def test_all_workflows_waits_for_jobs_that_spawn_later(self) -> None:
         self.write_scenario(census=[
@@ -858,6 +871,82 @@ class WaitCommandsTest(unittest.TestCase):
         )
         self.assertEqual(output["state"], "waiting")
         self.assertIn("stable", output["reason"])
+
+    def test_rest_page_size_preserves_complete_workflow_census(self) -> None:
+        runs = [
+            workflow_run(101, matrix_jobs(3)),
+            workflow_run(202, matrix_jobs(2, run_id=202), name="Follow-up"),
+        ]
+        state = census(*runs)
+        state["runPages"] = [
+            {"total_count": 2, "workflow_runs": [item["run"]]} for item in runs
+        ]
+        state["jobPages"] = {
+            str(item["run"]["id"]): [
+                {"total_count": len(item["jobs"]), "jobs": [job]} for job in item["jobs"]
+            ]
+            for item in runs
+        }
+        for size, arguments in (
+            (100, []),
+            (1, ["--rest-page-size", "1"]),
+            (100, ["--rest-page-size", "100"]),
+        ):
+            with self.subTest(size=size, arguments=arguments):
+                self.reset_census()
+                self.write_scenario(census=[state], expectedRestPageSize=size)
+                result, output = self.census_wait(*arguments)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(output["state"], "satisfied")
+                self.assertEqual(output["metrics"]["observations"], 2)
+                self.assertEqual([run["id"] for run in output["observation"]["runs"]], [101, 202])
+                self.assertEqual(sum(len(run["jobs"]) for run in output["observation"]["runs"]), 5)
+
+    def test_small_rest_pages_keep_later_failures_and_missing_pages_visible(self) -> None:
+        jobs = matrix_jobs(2)
+        jobs[-1]["conclusion"] = "failure"
+        state = census(workflow_run(101, jobs))
+        state["jobPages"]["101"] = [
+            {"total_count": 2, "jobs": [job]} for job in jobs
+        ]
+        self.write_scenario(census=[state], expectedRestPageSize=1)
+        _, output = self.census_wait("--rest-page-size", "1")
+        self.assertEqual(output["state"], "changed")
+        self.assertIn("test (1)", output["reason"])
+        self.reset_census()
+        state["jobPages"]["101"].pop()
+        self.write_scenario(census=[state], expectedRestPageSize=1)
+        _, output = self.census_wait("--rest-page-size", "1", deadline=self.short_deadline())
+        self.assertEqual(output["state"], "timed-out")
+        self.assertGreater(output["metrics"]["retries"], 0)
+
+    def test_rest_page_size_applies_to_rate_limit_fallback(self) -> None:
+        self.write_scenario(
+            graphqlRateLimited=True,
+            expectedRestPageSize=5,
+            restChecks={"check_runs": [{"name": "CI", "status": "completed", "conclusion": "success"}]},
+        )
+        result, output = self.run_json(
+            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
+            "--head", "head-1", "--check", "CI", "--rest-page-size", "5",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output["state"], "satisfied")
+        self.assertEqual(output["metrics"]["rateLimitFallbacks"], 1)
+
+    def test_rest_page_size_rejects_invalid_values_before_transport(self) -> None:
+        for command in ("inspect", "wait"):
+            for value in ("0", "101", "-1", "five"):
+                with self.subTest(command=command, value=value):
+                    result = subprocess.run(
+                        [sys.executable, str(DELIVERY), command, "checks-terminal",
+                         "--rest-page-size", value],
+                        text=True, capture_output=True, cwd=self.directory,
+                        env=self.environment, timeout=6,
+                    )
+                    self.assertEqual(result.returncode, 2)
+                    self.assertIn("--rest-page-size", result.stderr)
+                    self.assertFalse(self.counter.exists())
 
     def test_all_workflows_reports_a_later_failure(self) -> None:
         for conclusion in ("failure", "cancelled", "timed_out", "action_required"):

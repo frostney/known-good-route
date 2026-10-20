@@ -90,9 +90,11 @@ reply or resolution happened. GitHub does not make these multi-request
 operations atomic; retain any returned receipt and refresh the affected evidence.
 
 The helper is a transition source for this workflow loop, not another
-orchestrator. Its foreground wait stays silent while unchanged and returns only
+orchestrator. Its wait stays silent while unchanged and returns only
 when review becomes ready, evidence changes materially, the expected head is
 invalidated, the deadline arrives, or an operational failure needs attention.
+Run it, and the CodeRabbit adapter's `run`, under
+[`delivery-wait`'s running rules](../../delivery-wait/SKILL.md#running-a-wait).
 
 ## Provider-neutral retry time
 
@@ -148,6 +150,7 @@ came first.
 | `blocked-unanswered` | `run`, `status` | Blocked: CodeRabbit did not answer the trigger. A person checks CodeRabbit on the PR, then triggers again or pushes. |
 | `blocked-stalled` | `run`, `status` | Blocked: CodeRabbit's review never finished. A person checks CodeRabbit on the PR, then triggers again or pushes. |
 | `blocked-unknown-wait` | `run`, `status` | Blocked: CodeRabbit refused the head without a stated wait. A person reads its notice on the PR and triggers when it allows. |
+| `blocked-no-capacity` | `run`, `status` | Blocked: a person checks CodeRabbit seats or plan. |
 | `blocked-lock-loss` | `run`, `status` | Blocked: CodeRabbit stopped the head's review after lock loss again after one retry. A person checks CodeRabbit on the PR, then triggers again or pushes. |
 | `blocked-unconfirmed`, `unrecognized-status` | `run`, `status` | Blocked: escalate to a person. |
 | `closed` | `run`, `status` | Stop. |

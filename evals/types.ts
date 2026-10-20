@@ -80,6 +80,9 @@ export interface EvalExpectations {
     // "*" includes the action's complete data.
     dataFields?: string[];
     every?: boolean;
+    // Only actions recorded before this occurrence (default 1) of the named
+    // action count; the check fails when that occurrence is absent.
+    before?: { action: ActionName; occurrence?: number };
   }>;
 
   requiredWorker?: boolean;
