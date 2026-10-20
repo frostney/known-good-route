@@ -140,12 +140,14 @@ CI the project requires on default-branch commits, such as its push CI, not an
 integration deployment. For each required workflow, list its recent
 default-branch runs, for example with `gh run list --workflow WORKFLOW
 --branch DEFAULT --limit 50 --json
-databaseId,headSha,event,status,conclusion,createdAt`, and page further when
-none of them concluded. Push runs and the
-[coverage sampler](#coverage-sampler)'s dispatched runs both count. The
-deciding run is the newest that succeeded or failed (`failure`, `timed_out` or
-`startup_failure`), whichever commit it ran for. Cancelled, superseded and
-skipped runs carry no result.
+databaseId,headSha,event,status,conclusion,createdAt`. Raise `--limit` until
+the listing reaches a run that succeeded or failed (`failure`, `timed_out` or
+`startup_failure`), or the workflow's whole history. Push runs and the
+[coverage sampler](#coverage-sampler)'s dispatched runs both count. Of the
+runs that succeeded or failed, the deciding run is the one for the newest
+commit in `git log --first-parent origin/DEFAULT`, whichever event started
+it; for one commit, the attempt that completed last decides. Cancelled,
+superseded and skipped runs carry no result.
 
 - **Green:** each deciding run succeeded, or the project requires no CI on
   default-branch commits, and no run for a later commit was cancelled or
@@ -164,8 +166,8 @@ skipped runs carry no result.
   the repository declares a [staleness bound](#declared-staleness-bound).
 - **Red:** a deciding run failed. Stop merging: getting the branch green comes
   first, and only its repair starts or merges. It stays red until a rerun of
-  that run or a later run of that workflow succeeds, even after the repair
-  lands. Identify the failing job and its cause; when a sampler run failed,
+  that run, or a run of that workflow for the same or a newer commit,
+  succeeds, even after the repair lands. Identify the failing job and its cause; when a sampler run failed,
   the culprit is among the commits it newly covered, `git log --first-parent
   PREVIOUS-DECIDING-SHA..SAMPLER-SHA`. A flake is cleared by rerunning the
   failed jobs where the project allows. Otherwise look for an owner of the
@@ -193,8 +195,9 @@ land, for at most one extra run per workflow duration.
 - Every delivery reuses the run in flight; none starts its own. When the
   listing after a dispatch shows an earlier sampler run in flight for the same
   workflow, cancel the run just dispatched.
-- When it succeeds, it is the deciding run: everything up to its commit is
-  covered. When it fails, the branch is Red.
+- It decides like any other run: when it succeeds and its commit is the
+  newest with a result, everything up to that commit is covered. When it
+  fails and decides, the branch is Red.
 - A dispatch escapes the cancelling group only when the workflow has a
   `workflow_dispatch` trigger and its `concurrency` group keeps dispatches
   apart from pushes. A group keyed only on the workflow and the ref puts a

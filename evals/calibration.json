@@ -1235,12 +1235,14 @@
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Provide an explicit validation result for this successful fixture path.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
-        "September 14 approved hierarchy: standalone implement ends after development, independent review and observed behavior/project gates. Remove the old implicit PR publication requirement while preserving the additive JSON CLI task. No fresh native replay of this legacy case claimed."
+        "September 14 approved hierarchy: standalone implement ends after development, independent review and observed behavior/project gates. Remove the old implicit PR publication requirement while preserving the additive JSON CLI task. No fresh native replay of this legacy case claimed.",
+        "Owner ruling, 2026-10-20: entering an existing focused branch fetches its base but merges it only under the up-to-date rule. The branch has no PR and no conflict, so the base merge is no longer required; the fetch still is. Fixture and assertion changed: fresh native runs required."
       ],
       "beforeSha256": "cf6f0ac2b9b8fc6ce6fa0f3a37e699e23558be4e2497e2b3babfca6d0ac810c9",
-      "afterSha256": "0900d6672e4601b5fe2a44fddb0088b6bfa270e65781388f887602867f64513f",
+      "afterSha256": "43a1addb11463796840b0fb4b124a4a0e3b635370ad24d9c66c31ed5243a0d7e",
       "postFreezeChangedFields": [
-        "expected"
+        "expected",
+        "fixture"
       ],
       "frozenCaseSha256": "07d9475c5458675a30f2a0ead3c9f0e217add526d575817afbd58865d50daaf0",
       "revisions": [
@@ -1248,6 +1250,11 @@
           "previousAfterSha256": "1b58d59188875dbe655b4f61470df6342c0b9da01d5ab3d15bc5b064d1eb3350",
           "afterSha256": "0900d6672e4601b5fe2a44fddb0088b6bfa270e65781388f887602867f64513f",
           "rationale": "September 14 approved hierarchy: standalone implement ends after development, independent review and observed behavior/project gates. Remove the old implicit PR publication requirement while preserving the additive JSON CLI task. No fresh native replay of this legacy case claimed."
+        },
+        {
+          "previousAfterSha256": "0900d6672e4601b5fe2a44fddb0088b6bfa270e65781388f887602867f64513f",
+          "afterSha256": "43a1addb11463796840b0fb4b124a4a0e3b635370ad24d9c66c31ed5243a0d7e",
+          "rationale": "Owner ruling, 2026-10-20: entering an existing focused branch fetches its base but merges it only under the up-to-date rule. The branch has no PR and no conflict, so the base merge is no longer required; the fetch still is. Fixture and assertion changed: fresh native runs required."
         }
       ]
     },
@@ -1379,12 +1386,14 @@
         "Worker-owned PR creation must not require the coordinator to open duplicate PRs.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
         "September 14 approved release ownership: preserve parallel rolling integration and add an explicit configured milestone release plan, create-release invocation and verified release before closure. No fresh native replay of this legacy case claimed.",
-        "September 27 contract change: the delegated review default is /code-review fix-all, whose lanes fan out by default. Fresh native run required."
+        "September 27 contract change: the delegated review default is /code-review fix-all, whose lanes fan out by default. Fresh native run required.",
+        "Owner ruling, 2026-10-20: after each squash merge the base is merged only into remaining branches that need it. The fixture now names the one remaining branch that conflicts with the updated default, which keeps a base merge required; the others are not merged. Fixture changed: fresh native runs required."
       ],
       "beforeSha256": "4a77e31e0e86343d1e4e0f72ba1a2f18f4e13d4645feb94c336ef87f43123791",
-      "afterSha256": "60a5c628d8628080283e4ad35808a932b4514f3bf4be72bd03f4a3b0d61060ef",
+      "afterSha256": "2d2860f489d075e74934c969398c72f95deb4f88fffaf7c5a603fee5e2d2682e",
       "postFreezeChangedFields": [
-        "expected"
+        "expected",
+        "fixture"
       ],
       "frozenCaseSha256": "721a3f5eacebada83cd2011e0d5e40fab735cefdd9e8951d3bac5d272f6164f8",
       "revisions": [
@@ -1392,6 +1401,11 @@
           "previousAfterSha256": "a70321b47753f67802a810c419fcdfb7fe7ec0f18ff14005297c7dbfb0870887",
           "afterSha256": "17b0e762a9bb892433bb97309cf52c95fc1b4a8cfac5e16b17e539434df5c8b7",
           "rationale": "September 14 approved release ownership: preserve parallel rolling integration and add an explicit configured milestone release plan, create-release invocation and verified release before closure. No fresh native replay of this legacy case claimed."
+        },
+        {
+          "previousAfterSha256": "60a5c628d8628080283e4ad35808a932b4514f3bf4be72bd03f4a3b0d61060ef",
+          "afterSha256": "2d2860f489d075e74934c969398c72f95deb4f88fffaf7c5a603fee5e2d2682e",
+          "rationale": "Owner ruling, 2026-10-20: after each squash merge the base is merged only into remaining branches that need it. The fixture now names the one remaining branch that conflicts with the updated default, which keeps a base merge required; the others are not merged. Fixture changed: fresh native runs required."
         }
       ]
     },
@@ -2579,6 +2593,26 @@
       "frozenCaseSha256": "f8bdf7f19cac6fd006bdfab4d78ebeb6fdb57da9837e6f51e4ef0a998db15b2a"
     },
     {
+      "caseId": "delivery-stale-dispatches-one-sampler-run",
+      "status": "new",
+      "rationale": [
+        "Owner ruling, 2026-10-20: under Stale with no declared bound, coverage comes from one sampler run per workflow. With cancelled runs and no sampler in flight, delivery dispatches exactly one on the tip outside the cancelling group and merges without waiting; merging without it, waiting for it or dispatching a second fails. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "a90ea3cd3676cc4821230334427d3d4b3b2d487dc68f47935def39ec67559d00",
+      "frozenCaseSha256": "a90ea3cd3676cc4821230334427d3d4b3b2d487dc68f47935def39ec67559d00"
+    },
+    {
+      "caseId": "delivery-stale-no-sampler-reports-project-gap",
+      "status": "new",
+      "rationale": [
+        "Owner ruling, 2026-10-20: when the workflow's concurrency group would cancel a dispatched run too, no sampler can run, so delivery reports the project gap with its fix and keeps merging under the PR gates; dispatching, waiting or a report without the gap fails. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "00d26dd953e28c58ae47c195e4509b1f006c854107a516a64ad2514ac2f2ae7a",
+      "frozenCaseSha256": "00d26dd953e28c58ae47c195e4509b1f006c854107a516a64ad2514ac2f2ae7a"
+    },
+    {
       "caseId": "delivery-full-ci-rule-before-merge",
       "status": "new",
       "rationale": [
@@ -2645,11 +2679,22 @@
       "status": "new",
       "rationale": [
         "An update to a backport PR integrates from its named release base. The grader requires every merge to take release/1.x, so a merge of the default branch fails even next to a correct one. Fresh native run required.",
-        "Grader corrected: the merge has to take release/1.x as its operand, in its wording or in a source field of its data; a merge of the default branch that only mentions the release line no longer passes. The retained native runs pass regraded."
+        "Grader corrected: the merge has to take release/1.x as its operand, in its wording or in a source field of its data; a merge of the default branch that only mentions the release line no longer passes. The retained native runs pass regraded.",
+        "Owner ruling, 2026-10-20: a PR branch merges its base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The fixture now states the release/1.x ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps merging that base required; merging the default branch still fails. Fixture changed: fresh native runs required."
       ],
       "beforeSha256": null,
-      "afterSha256": "9e03b2f24ccbaafcb879d00624942be0d73eb45df51c0f7593de946590b9b610",
-      "frozenCaseSha256": "9e03b2f24ccbaafcb879d00624942be0d73eb45df51c0f7593de946590b9b610"
+      "afterSha256": "c545b2129839449e283d0a0041f72a454da874055106465c67b3e79cc5553ba6",
+      "frozenCaseSha256": "9e03b2f24ccbaafcb879d00624942be0d73eb45df51c0f7593de946590b9b610",
+      "revisions": [
+        {
+          "previousAfterSha256": "9e03b2f24ccbaafcb879d00624942be0d73eb45df51c0f7593de946590b9b610",
+          "afterSha256": "c545b2129839449e283d0a0041f72a454da874055106465c67b3e79cc5553ba6",
+          "rationale": "Owner ruling, 2026-10-20: a PR branch merges its base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The fixture now states the release/1.x ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps merging that base required; merging the default branch still fails. Fixture changed: fresh native runs required."
+        }
+      ],
+      "postFreezeChangedFields": [
+        "fixture"
+      ]
     },
     {
       "caseId": "update-pr-hand-based-pr-stops",

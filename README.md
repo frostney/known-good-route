@@ -306,7 +306,7 @@ not a required full-matrix run or a claim that every scenario currently passes:
 | Red default branch | Lands the default-branch repair first and waits for it to go green; does not merge onto a red branch or supersede the repair's run. |
 | Default-branch run in progress from an earlier merge | Merges a ready PR at once; does not wait for that run or take turns with parallel deliveries. |
 | Default-branch runs cancelled by a burst of merges | Keeps merging on each PR's own gates while one sampler run per workflow, outside the cancelling group, covers the tip; starts no second one. |
-| Default-branch runs cancelled past a staleness bound `ORCHESTRATION.md` declares | Gets one run covering the tip to complete before the next merge, then merges everything ready. |
+| Default-branch runs cancelled past a staleness bound `ORCHESTRATION.md` declares | Pauses merging until a completed run brings the gap back within the bound, then merges everything ready. |
 | PR branch behind its base without a conflict | Keeps its head; merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. |
 | Several ready native stack layers | Merges them in one stack merge, not layer by layer. |
 | Configured integration delivery | Verifies the intended revision and behavior at the configured target; does not trigger milestone release or mistake a queued job for deployment. |

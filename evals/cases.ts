@@ -3873,7 +3873,7 @@ export const evalCases: EvalCase[] = [
         options:
           "All options come from the same repository and web evidence. The predeclared rubric compares compatibility, schema stability, duplication, testability, and delivery cost. Each viable option was checked against the same CLI fixtures and schema requirements. Reusing InspectionResult and the sibling renderer scores highest.",
         repositoryStatus:
-          "The selected focused branch is clean. origin/main is the remote default branch; fetching it succeeds, and merging its fresh tip is conflict-free.",
+          "The selected focused branch is clean and has no pull request yet. origin/main is the remote default branch; fetching it succeeds, and the branch does not conflict with its fresh tip.",
         projectGate:
           "After the focused CLI cases pass, the full declared gate passes on the implemented diff.",
         review:
@@ -3892,7 +3892,6 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["implement"],
       requiredActions: [
         "git.fetch",
-        "git.merge",
         "file.edit",
         "validation.run",
         "codeReview.run",
@@ -4232,7 +4231,7 @@ export const evalCases: EvalCase[] = [
         reviewDelegation:
           "Each PR records its review-axis-to-lane map and completed evidence-only workers. PR #343 cannot obtain one engineering-quality worker after bounded retry, so its implementation worker completes that lane directly and reports the single-agent fallback.",
         rollingIntegration:
-          "After each squash merge, remaining branches merge the updated remote default and their affected gates pass. The refreshed milestone contains no new out-of-scope work.",
+          "After each squash merge, the refreshed milestone contains no new out-of-scope work. No ruleset or branch protection setting requires up-to-date branches. Once #343 merges, PR #341's branch conflicts with the updated remote default in src/config.ts; merging the default into it resolves the conflict and its affected gates pass. The other remaining branches do not conflict.",
         integratedCompletion:
           "All five issues are delivered and closed, no milestone PR, check, review, or active review-tool pass is pending, and the synced default branch passes the full project gate.",
         monitoring:

@@ -61,6 +61,8 @@ const scenarios: Array<{ id: string; actions: RunLedger["actions"]; output: stri
   { id: "delivery-earlier-merge-run-does-not-hold-merge", actions: [action("validation.reuse"), action("forge.mergePr", "Squash-merge PR #513")], output: "PR #513 merged as 3c3c3c3; main's run for the earlier merge did not hold it.", omit: "forge.mergePr" },
   { id: "delivery-stale-default-branch-gets-one-run", actions: [action("validation.reuse"), mainRunWait(parallelTip), action("forge.mergePr", "Squash-merge PR #516")], output: "PR #516 merged as 3c3c3c3 after main's run on 0d0d0d0 completed green.", omit: "monitor.wait" },
   { id: "delivery-stale-burst-shares-one-sampler-run", actions: [action("validation.reuse"), action("forge.mergePr", "Squash-merge PR #517")], output: "PR #517 merged as 3c3c3c3 while sampler run 8123 keeps covering main.", omit: "forge.mergePr" },
+  { id: "delivery-stale-dispatches-one-sampler-run", actions: [action("validation.reuse"), dispatchSampler(parallelTip), action("forge.mergePr", "Squash-merge PR #518")], output: "PR #518 merged as 3c3c3c3; sampler run 8140 covers main's tip.", omit: "ci.dispatchRun" },
+  { id: "delivery-stale-no-sampler-reports-project-gap", actions: [action("validation.reuse"), action("forge.mergePr", "Squash-merge PR #519")], output: "PR #519 merged as 3c3c3c3. Project gap: main CI's concurrency group cancels a dispatched run too, so no run can cover main; fix it by adding github.event_name to the group key.", omit: "forge.mergePr" },
   { id: "delivery-full-ci-rule-before-merge", actions: [action("validation.reuse"), fullCiLabel, fullCiWait, action("forge.mergePr", "Squash-merge PR #515")], output: "PR #515 merged as 3c3c3c3 after Extended CI passed on its head.", omit: "monitor.wait" },
   { id: "delivery-ready-stack-merges-in-one-go", actions: [stackMerge], output: "Stack 31 (PRs #530, #531 and #532) merged in one operation as 3c3c3c3.", omit: "git.stackMerge" },
   { id: "delivery-post-merge-integration-repair", actions: [behavior, repairBranch, edit("src/report.ts"), review, behavior, gate, action("git.commit"), action("git.push"), action("forge.openDraftPr", "Open repair for #507 and issue #87 from fresh main"), action("monitor.wait"), action("forge.markPrReady"), action("forge.mergePr", "Merge repair #508"), action("monitor.wait"), deployedProbe(repairRevision)], output: "Repair PR #508 is merged; nightly serves 4d4d4d4 and the direct URL acceptance passed.", omit: "forge.mergePr" },
@@ -362,4 +364,33 @@ test("without a declared bound, a burst keeps merging while the one sampler run 
   expect(await failed([mainRunWait(parallelTip), merge])).toEqual(["forbidden actions"]);
   // Pausing without merging at all.
   expect(await failed([mainRunWait(samplerTip)])).toEqual(expect.arrayContaining(["forbidden actions", "required actions"]));
+});
+
+test("with cancelled runs and no sampler in flight, one sampler run is dispatched and the merge does not wait", async () => {
+  const s = scenarios.find(s => s.id === "delivery-stale-dispatches-one-sampler-run")!;
+  const c = deliveryCases.find(c => c.id === s.id)!;
+  const merge = action("forge.mergePr", "Squash-merge PR #518");
+  const failed = async (actions: RunLedger["actions"]) =>
+    gradeRun(c, await replay(c, actions), s.output).checks.filter(check => !check.passed).map(check => check.name);
+  expect(await failed(s.actions)).toEqual([]);
+  // Merging without a sampler leaves the gap uncovered.
+  expect(await failed([merge])).toEqual(expect.arrayContaining(["required actions"]));
+  // Waiting for the sampler pauses merging.
+  expect(await failed([dispatchSampler(parallelTip), mainRunWait(parallelTip), merge])).toEqual(["forbidden actions"]);
+  // A second sampler run beside the first.
+  expect(await failed([dispatchSampler(parallelTip), dispatchSampler(parallelTip), merge])).toEqual(["maximum ci.dispatchRun"]);
+});
+
+test("a workflow that allows no run outside its cancelling group is reported as a gap, and merging goes on", async () => {
+  const s = scenarios.find(s => s.id === "delivery-stale-no-sampler-reports-project-gap")!;
+  const c = deliveryCases.find(c => c.id === s.id)!;
+  const merge = action("forge.mergePr", "Squash-merge PR #519");
+  const failed = async (actions: RunLedger["actions"], output = s.output) =>
+    gradeRun(c, await replay(c, actions), output).checks.filter(check => !check.passed).map(check => check.name);
+  expect(await failed(s.actions)).toEqual([]);
+  // A dispatch would join the cancelling group; waiting pauses merging.
+  expect(await failed([dispatchSampler(parallelTip), merge])).toEqual(["forbidden actions"]);
+  expect(await failed([mainRunWait(parallelTip), merge])).toEqual(["forbidden actions"]);
+  // Merging silently, without the gap, fails.
+  expect(await failed(s.actions, "PR #519 merged as 3c3c3c3.")).toEqual(expect.arrayContaining(["output matches /concurrency|cancell?ing group/i"]));
 });
