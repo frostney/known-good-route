@@ -56,8 +56,10 @@ Put the times from every source on one timeline: when each candidate started,
 when the record last changed, when the symptom began. An order a candidate
 cannot fit rules it out; report the times that decided it.
 
-A candidate that fails either probe is ruled out by the observation that broke
-it.
+A candidate that fails falsification is ruled out by the observation that broke
+it. A failed truthiness probe breaks the citation, not the candidate: correct or
+drop the citation, and keep the candidate open until other evidence fits or
+breaks it.
 
 ## Get a fresh review
 

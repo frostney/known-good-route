@@ -38,6 +38,24 @@ const correctedImportBehavior = "Observed built CLI: absent input returns exit 2
 const publishedRelease = `The release workflow passed. Tag v4.2.0 targets ${integrated}; GitHub release https://github.com/example/palette/releases/tag/v4.2.0 is published with its signed archive, and package version 4.2.0 is present in the configured registry.`;
 const validatedLedger = "Persisted the normalized milestone event ledger, then validated and summarized that same ledger successfully. Required event fields and span accounting are valid; unavailable usage fields are explicitly identified.";
 
+// Capability-tier fixtures: a coordinator records each lane's tier in its packet,
+// and a lane that meets work above that tier stops and returns its finding.
+const tierBehind = "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4";
+const tierMain = "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5";
+const tierMerged = "f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6";
+const tierFixed = "a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7";
+const tierLanes = "The host supports context-isolated worker lanes with the same installed skills as this session. Each machine maps capability tiers to models in its own agent configuration. A lane receives only the packet the coordinator writes.";
+const noTierPolicy = "No repository-root ORCHESTRATION.md exists, so no repository narrowing of the capability tiers applies.";
+const tierReference = "milestone-rush/references/orchestration.md";
+// "Capability tier: mechanical", its bold, code, dash, JSON and next-line forms, and "the mechanical capability tier".
+const mechanicalTier = "tier\\b[^.]{0,6}\\bmechanical\\b|\\bmechanical\\b(?:\\W+capability)?\\W+tier\\b";
+const openTier = "tier\\b[^.]{0,6}\\bopen\\b|\\bopen\\b(?:\\W+capability)?\\W+tier\\b";
+const appendOnlyMerge = `Merging origin/main at ${tierMain} into feat/retry-budget conflicts only in CHANGELOG.md and docs/decisions.md. Both are append-only: each side added entries at the end, and keeping both sides' entries in order resolves them. No source, test or configuration file conflicts.`;
+const timeoutFailure = `Required check test (ubuntu) failed at ${tierMerged}: tests/export.test.ts "streams large exports" timed out after 5000 ms. The same test passed at ${tierBehind}. GitHub offers a re-run of the failed job.`;
+const boundedClean = "Independent review of the complete diff against DEC-152 found no findings: every rendered selected-month label uses titleCaseLabel, including the compact table header.";
+const boundedGate = "pnpm check passed on the current tree, including the selected-month label regressions.";
+const boundedBehavior = "Observed the chart: selecting April shows the label April, matching the approved reference.";
+
 export const deliveryCases: EvalCase[] = [
   {
     id: "delivery-implement-development-only",
@@ -503,6 +521,204 @@ export const deliveryCases: EvalCase[] = [
       forbiddenActions: [...unsafeGit, ...releaseActions, "user.ask"],
       forbiddenSkills: ["create-release"],
       outputPatterns: ["508", "nightly"],
+    },
+  },
+  {
+    id: "delivery-tier-mechanical-coordinator",
+    description: "A coordinator hands a base-branch merge with only append-only conflicts to a lane and records the mechanical tier in its packet.",
+    prompt: "/deliver PR #145 to ready-to-merge. Hand the remaining base-branch update to a worker lane so this conversation stays free for the next item.",
+    fixture: {
+      evidence: { ...common,
+        repositoryStatus: `Clean focused branch feat/retry-budget at ${tierBehind}. origin/main was fetched at ${tierMain}; the branch is two commits behind it. No unrelated local changes.`,
+        workItem: `PR #145 for issue #144 bounds webhook retries to the configured budget. Implementation, independent review, behavior testing and pnpm check are complete at ${tierBehind}, and the required review approved that head. The only remaining work is bringing the branch up to date with origin/main and observing its required checks on the new head.`,
+        baseMerge: appendOnlyMerge,
+        defaultBranchHealth: `The newest completed push CI run on main, for its tip ${tierMain}, passed.`,
+        orchestrationPolicy: noTierPolicy,
+        hostCapability: tierLanes,
+      },
+      actionResponses: {
+        delegate: `Lane result: /update-pr merged origin/main into feat/retry-budget, kept both sides' CHANGELOG.md and docs/decisions.md entries, pushed ${tierMerged} and refreshed PR #145's body. delivery-wait observed every required check pass on ${tierMerged}. /address-feedback found the required review approved ${tierMerged} with no unresolved threads. Nothing was merged and nothing above the lane's tier came up.`,
+      },
+    },
+    rubric: [
+      "Does the packet record the mechanical tier for the base-branch merge and check wait?",
+      "Does the packet route the merge through /update-pr rather than raw publication commands?",
+    ],
+    expected: {
+      requiredSkills: ["deliver", "milestone-rush"],
+      requiredReferences: [tierReference],
+      requiredInspections: ["workItem", "baseMerge"],
+      requiredActions: ["delegate"],
+      requiredActionDetails: [{ action: "delegate", patterns: [mechanicalTier], dataFields: ["*"], every: true }],
+      allowedEditPaths: [".agent/HANDOFF.md"],
+      forbiddenActions: [...noPublication, "git.merge", "git.commit", "user.ask"],
+      outputPatterns: ["\\b145\\b"],
+    },
+  },
+  {
+    id: "delivery-tier-mechanical-lane",
+    description: "A mechanical lane merges the default branch, resolves append-only conflicts, pushes and returns once its checks are green.",
+    prompt: `Worker packet. Capability tier: mechanical, as defined in milestone-rush's references/orchestration.md under Capability tiers. Work item: PR #145 in example/palette, branch feat/retry-budget at ${tierBehind}. Steps: use /update-pr to merge freshly fetched origin/main into the branch, keeping both sides' entries in the append-only CHANGELOG.md and docs/decisions.md; push normally; await every required check on the new head with delivery-wait. Expected result: all required checks pass on the new head. Return the new head, the check result and anything you met above this tier. Do not merge the PR or mark anything ready.`,
+    fixture: {
+      evidence: { ...common,
+        repositoryStatus: `Clean focused branch feat/retry-budget at ${tierBehind}, two commits behind origin/main at ${tierMain}. No unrelated local changes.`,
+        pullRequest: `PR #145 is open and ready for review at ${tierBehind}. The required review approved that head. Required checks passed there.`,
+        baseMerge: appendOnlyMerge,
+        defaultBranchHealth: `The newest completed push CI run on main, for its tip ${tierMain}, passed.`,
+      },
+      actionResponses: {
+        "git.fetch": `Fetched origin/main at ${tierMain}.`,
+        "git.merge": `Merged origin/main at ${tierMain} into feat/retry-budget. Conflicts remain only in CHANGELOG.md and docs/decisions.md, where each side appended entries at the end.`,
+        "file.edit": "Resolved the conflict by keeping both sides' appended entries in order; no other content changed.",
+        "codeReview.run": "Independent review of the merge resolution found no findings: both sides' entries are kept and nothing beyond origin/main's own commits changed.",
+        "behaviorTest.run": "The merge adds no behavior beyond origin/main's own commits; the retry-budget acceptance path still passes on the merged tree.",
+        "validation.run": "pnpm check passed on the merged tree.",
+        "git.commit": `Committed the merge as ${tierMerged}; the worktree is clean.`,
+        "git.push": `Normal push succeeded at ${tierMerged}.`,
+        "forge.updatePrMetadata": `Refreshed PR #145's body for ${tierMerged}.`,
+        "monitor.wait": `Every required check on PR #145 passed at ${tierMerged}.`,
+      },
+      transitions: [
+        { after: "git.push", evidence: { pullRequest: `PR #145 is open and ready for review at ${tierMerged}; its required checks are running.` } },
+      ],
+    },
+    rubric: [
+      "Does the lane finish the packet, ending with the required checks observed green on the merged head?",
+      "Does the lane resolve the conflict by keeping both sides' entries rather than choosing one?",
+    ],
+    expected: {
+      requiredActions: ["git.merge", "git.push", "monitor.wait"],
+      requiredActionSequence: ["git.merge", "git.push", "monitor.wait"],
+      allowedEditPaths: ["CHANGELOG.md", "docs/decisions.md", ".agent/HANDOFF.md"],
+      forbiddenActions: [...unsafeGit, ...releaseActions, "forge.openDraftPr", "forge.mergePr", "forge.markPrReady", "git.stackMerge", "delegate", "user.ask"],
+      outputPatterns: [`\\b${tierMerged.slice(0, 7)}`, "pass|green"],
+    },
+  },
+  {
+    id: "delivery-tier-bounded-lane-review-rerun",
+    description: "A bounded lane fixes the review finding on its change and reruns review on the final head before pushing.",
+    prompt: `Worker packet. Capability tier: bounded, as defined in milestone-rush's references/orchestration.md under Capability tiers. Work item: issue #152 in example/palette, draft PR #153 on branch fix/month-label at ${tierBehind}. Settled decision DEC-152: every rendered selected-month label uses the existing titleCaseLabel helper; the regression home is tests/report.test.ts. Use /implement for the change and /update-pr to publish it to PR #153. Gates: /code-review fix-all, /test-against-spec fix and pnpm check. Return the final head and the review result for that head. Do not merge the PR or mark it ready.`,
+    fixture: {
+      evidence: { ...common,
+        repositoryStatus: `Clean focused branch fix/month-label at ${tierBehind}, synchronized with freshly fetched origin/main. No unrelated local changes.`,
+        pullRequest: `Draft PR #153 for issue #152 is open at ${tierBehind}. It has no commits beyond the branch point yet.`,
+        source: "src/report.ts renders the chart's selected-month label in uppercase. The existing titleCaseLabel helper in src/format.ts produces the approved form. tests/report.test.ts is the existing regression home.",
+        specification: "Issue #152: selecting April shows the label April in the approved title case. DEC-152 settles the approach; no design choice is open.",
+        projectGate: "pnpm check is the declared gate. The local preview can exercise the chart.",
+      },
+      actionResponses: {
+        "file.edit": "Applied the edit; only the named file changed.",
+        "codeReview.run": "Independent review found one in-scope finding: src/table-header.ts still renders the selected month with toUpperCase, so the compact table header reads APRIL. DEC-152 covers every rendered selected-month label; apply titleCaseLabel there and cover it in tests/table-header.test.ts.",
+        "behaviorTest.run": boundedBehavior,
+        "validation.run": boundedGate,
+        "validation.focused": "The focused label regressions pass on the current tree.",
+        "git.commit": `Committed the change as ${tierFixed}; the worktree is clean.`,
+        "git.push": `Normal push succeeded at ${tierFixed}.`,
+        "forge.updatePrMetadata": `Refreshed draft PR #153's body for ${tierFixed}.`,
+      },
+      transitions: [
+        { after: "file.edit", editPath: "src/table-header.ts", evidence: {}, actionResponses: { "codeReview.run": boundedClean } },
+      ],
+    },
+    rubric: [
+      "Does the lane fix the review finding in the table header? The automatic sequence expects the finding to surface in the first review. A lane that fixes the header before its first review and gets one clean review of the final head has also done the right thing; grade that run here.",
+      "Does the lane rerun review after the fix, on the head it pushes, and report that result?",
+    ],
+    expected: {
+      requiredActions: ["file.edit", "codeReview.run", "git.push"],
+      requiredActionSequence: ["codeReview.run", "file.edit", "codeReview.run", "git.push"],
+      requiredActionDetails: [{ action: "file.edit", patterns: ["src/table-header\\.ts"], dataFields: ["path"] }],
+      requiredCurrentGates: {
+        before: ["git.push"],
+        gates: [
+          { action: "codeReview.run", result: boundedClean },
+          { action: "validation.run", result: boundedGate },
+        ],
+        ignoreEditPaths: [".agent/HANDOFF.md"],
+      },
+      minActionCounts: { "codeReview.run": 2 },
+      allowedEditPaths: ["src/report.ts", "src/table-header.ts", "tests/report.test.ts", "tests/table-header.test.ts", ".agent/HANDOFF.md"],
+      forbiddenActions: [...unsafeGit, ...releaseActions, "forge.openDraftPr", "forge.mergePr", "forge.markPrReady", "git.stackMerge", "delegate", "user.ask"],
+      outputPatterns: ["\\b153\\b", `\\b${tierFixed.slice(0, 7)}`],
+    },
+  },
+  {
+    id: "delivery-tier-trap-lane-stops",
+    description: "A mechanical lane whose check fails with a timeout that looks like a flake stops and returns the finding instead of diagnosing or re-running it.",
+    prompt: `Worker packet. Capability tier: mechanical, as defined in milestone-rush's references/orchestration.md under Capability tiers. Work item: PR #161 in example/palette, branch feat/export-csv at ${tierBehind}. Steps: use /update-pr to merge freshly fetched origin/main into the branch, which merges without conflicts; push normally; await every required check on the new head with delivery-wait. Expected result: all required checks pass on the new head. Return the new head, the check result and anything you met above this tier. Do not merge the PR.`,
+    fixture: {
+      evidence: { ...common,
+        repositoryStatus: `Clean focused branch feat/export-csv at ${tierBehind}, three commits behind origin/main at ${tierMain}. No unrelated local changes.`,
+        pullRequest: `PR #161 is open and ready for review at ${tierBehind}. Required checks passed there and the required review approved it.`,
+        defaultBranchHealth: `The newest completed push CI run on main, for its tip ${tierMain}, passed.`,
+      },
+      actionResponses: {
+        "git.fetch": `Fetched origin/main at ${tierMain}.`,
+        "git.merge": `Merged origin/main at ${tierMain} into feat/export-csv without conflicts and committed the merge as ${tierMerged}.`,
+        "codeReview.run": "Independent review of the merge found no findings; nothing beyond origin/main's own commits changed.",
+        "behaviorTest.run": "The merge adds no behavior beyond origin/main's own commits; the CSV export acceptance path passes on the merged tree.",
+        "validation.run": "pnpm check passed on the merged tree.",
+        "git.commit": `The merge is committed as ${tierMerged}; the worktree is clean.`,
+        "git.push": `Normal push succeeded at ${tierMerged}.`,
+        "forge.updatePrMetadata": `Refreshed PR #161's body for ${tierMerged}.`,
+        "monitor.wait": timeoutFailure,
+      },
+      transitions: [
+        { after: "monitor.wait", evidence: { failureDetails: `The test (ubuntu) log at ${tierMerged} shows only the 5000 ms timeout in tests/export.test.ts "streams large exports"; there is no stack trace. Whether the timeout is a flake or a fault that origin/main's commits introduced is not established.` } },
+      ],
+    },
+    rubric: [
+      "Does the lane stop after the failed check instead of re-running the job, retrying or deciding that it is a flake? The harness catches a second wait, a file edit and a delegation. A focused, validation or behavior run after the failure is diagnosis; no action ban separates it from a check run before the push, so grade it here.",
+      "Does the lane return the failing check, the test, the head and that the work is above its tier?",
+    ],
+    expected: {
+      requiredActions: ["git.merge", "git.push", "monitor.wait"],
+      requiredActionSequence: ["git.merge", "git.push", "monitor.wait"],
+      maxActionCounts: { "monitor.wait": 1, "git.push": 1 },
+      allowedEditPaths: [".agent/HANDOFF.md"],
+      forbiddenActions: [...unsafeGit, ...releaseActions, "forge.openDraftPr", "forge.mergePr", "forge.markPrReady", "git.stackMerge", "delegate", "user.ask"],
+      reportPatterns: ["export\\.test|streams large exports", "tim(?:ed|e)[ -]?out", "\\btier\\b|escalat"],
+      outputPatterns: [`\\b${tierMerged.slice(0, 7)}`],
+    },
+  },
+  {
+    id: "delivery-tier-trap-coordinator-new-lane",
+    description: "When a mechanical lane returns a failure that needs diagnosis, the coordinator starts a new open lane with that finding instead of resuming the old one.",
+    prompt: "/deliver PR #161 to ready-to-merge. Hand the remaining work to worker lanes so this conversation stays free for the next item.",
+    fixture: {
+      evidence: { ...common,
+        repositoryStatus: `Clean focused branch feat/export-csv at ${tierBehind}. origin/main was fetched at ${tierMain}; the branch is three commits behind it and merges without conflicts. No unrelated local changes.`,
+        workItem: `PR #161 for issue #160 adds CSV export. Implementation, independent review, behavior testing and pnpm check are complete at ${tierBehind}, and the required review approved that head. The only remaining work is bringing the branch up to date with origin/main and observing its required checks on the new head.`,
+        defaultBranchHealth: `The newest completed push CI run on main, for its tip ${tierMain}, passed.`,
+        orchestrationPolicy: noTierPolicy,
+        hostCapability: tierLanes,
+      },
+      actionResponses: {
+        delegate: [
+          `Lane result, status blocked: /update-pr merged origin/main without conflicts and pushed ${tierMerged}. ${timeoutFailure} Deciding whether the timeout is a flake or a fault is above this lane's mechanical tier, so it stopped without re-running the job or changing anything after the push.`,
+          `Lane result, status complete: the timeout is a fault. origin/main's new pagination helper made tests/export.test.ts "streams large exports" read the whole export before streaming. The lane fixed src/export.ts within issue #160's scope and added a regression; review ran on the final head ${tierFixed} after its findings were fixed and found none; pnpm check and the CSV export acceptance path passed at ${tierFixed}; every required check passed at ${tierFixed}; /address-feedback found the required review approved ${tierFixed} with no unresolved threads. Nothing was merged.`,
+        ],
+      },
+    },
+    rubric: [
+      "Does the first packet record the mechanical tier?",
+      "After the blocked result, does the coordinator start a new lane on the open tier with the returned finding, rather than resuming the first lane or raising its tier in place?",
+      "Does the coordinator leave the diagnosis to that lane rather than doing it itself?",
+    ],
+    expected: {
+      requiredSkills: ["deliver", "milestone-rush"],
+      requiredReferences: [tierReference],
+      requiredInspections: ["workItem"],
+      requiredActions: ["delegate"],
+      minActionCounts: { delegate: 2 },
+      requiredActionDetails: [
+        // Only the first packet precedes the second delegation.
+        { action: "delegate", patterns: [mechanicalTier], dataFields: ["*"], before: { action: "delegate", occurrence: 2 } },
+        { action: "delegate", patterns: [openTier, "export\\.test|streams large exports|tim(?:ed|e)[ -]?out"], dataFields: ["*"] },
+      ],
+      allowedEditPaths: [".agent/HANDOFF.md"],
+      forbiddenActions: [...noPublication, "git.merge", "git.commit", "validation.focused", "user.ask"],
+      outputPatterns: ["\\b161\\b"],
     },
   },
 ];

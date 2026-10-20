@@ -100,7 +100,7 @@ test("bound fixture targets reach the native command through the portable guard"
   const gh = join(bin, "gh");
   await Bun.write(gh, `#!/bin/sh
 if [ "$1" = stack ] && [ "$2" = --version ]; then
-  printf '%s\\n' 'gh stack version 0.1.0'
+  printf '%s\\n' 'gh stack version 0.2.1'
   exit 0
 fi
 printf '%s\\n%s\\n' "$GH_HOST" "$GH_REPO" > "$KGR_HOST_EVIDENCE"

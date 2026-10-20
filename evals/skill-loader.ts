@@ -82,6 +82,10 @@ export function formatSkillCatalog(skills: Map<string, LoadedSkill>): string {
   return `<available_skills>\n${items.join("\n")}\n</available_skills>`;
 }
 
+export function stripAnchor(referencePath: string): string {
+  return referencePath.split("#")[0] ?? referencePath;
+}
+
 export async function readSkillReference(
   skill: LoadedSkill,
   referencePath: string,
@@ -90,7 +94,8 @@ export async function readSkillReference(
     throw new Error("Skill references must be relative");
   }
 
-  const normalizedPath = normalize(referencePath);
+  // A link may end in a heading anchor; the file is what is read.
+  const normalizedPath = normalize(stripAnchor(referencePath));
   const absolutePath = resolve(skill.directory, normalizedPath);
   const containedPath = relative(skill.directory, absolutePath);
   if (containedPath.startsWith("..") || isAbsolute(containedPath)) {
@@ -118,7 +123,7 @@ export async function validateSkillReferences(
         continue;
       }
       await readSkillReference(skill, referencePath);
-      checked.push(`${skill.name}/${referencePath}`);
+      checked.push(`${skill.name}/${stripAnchor(referencePath)}`);
     }
   }
 

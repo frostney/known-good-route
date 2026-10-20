@@ -81,7 +81,7 @@ def repo_parts(repo: str) -> tuple[str, str]:
     return pieces[0], pieces[1]
 
 
-def pr_snapshot(gh: Gh, repo: str, number: int) -> dict[str, Any]:
+def pr_snapshot(gh: Gh, repo: str, number: int, rest_page_size: int = 100) -> dict[str, Any]:
     owner, name = repo_parts(repo)
     try:
         data = gh.graphql(PR_QUERY, {"owner": owner, "name": name, "number": number})
@@ -114,10 +114,10 @@ def pr_snapshot(gh: Gh, repo: str, number: int) -> dict[str, Any]:
         gh.metrics.rate_limit_fallbacks += 1
         pull = gh.rest(f"repos/{repo}/pulls/{number}")
         run_pages = gh.rest_pages(
-            f"repos/{repo}/commits/{pull['head']['sha']}/check-runs?per_page=100"
+            f"repos/{repo}/commits/{pull['head']['sha']}/check-runs?per_page={rest_page_size}"
         )
         status_pages = gh.rest_pages(
-            f"repos/{repo}/commits/{pull['head']['sha']}/statuses?per_page=100"
+            f"repos/{repo}/commits/{pull['head']['sha']}/statuses?per_page={rest_page_size}"
         )
         runs = [run for page in run_pages for run in page.get("check_runs", [])]
         # A check run names only its suite; the workflow run of that suite
@@ -298,9 +298,9 @@ def rest_census(pages: list[Any], field: str, label: str) -> list[dict[str, Any]
     return sorted(items, key=lambda item: item["id"])
 
 
-def workflow_census(gh: Gh, repo: str, number: int, head: str, checks: bool) -> dict[str, Any]:
+def workflow_census(gh: Gh, repo: str, number: int, head: str, checks: bool, rest_page_size: int = 100) -> dict[str, Any]:
     """Every GitHub Actions run for the pull request's exact head, with its jobs."""
-    snapshot = pr_snapshot(gh, repo, number) if checks else {"head": pr_head(gh, repo, number)}
+    snapshot = pr_snapshot(gh, repo, number, rest_page_size) if checks else {"head": pr_head(gh, repo, number)}
     observed = snapshot.get("head")
     if not isinstance(observed, str) or not observed:
         raise WaitError(f"pull request {repo}#{number} has no verified head")
@@ -310,7 +310,7 @@ def workflow_census(gh: Gh, repo: str, number: int, head: str, checks: bool) -> 
     if observed != head:
         return observation
     runs = rest_census(
-        gh.rest_pages(f"repos/{repo}/actions/runs?head_sha={quote(head, safe='')}&per_page=100"),
+        gh.rest_pages(f"repos/{repo}/actions/runs?head_sha={quote(head, safe='')}&per_page={rest_page_size}"),
         "workflow_runs",
         "workflow run",
     )
@@ -319,7 +319,7 @@ def workflow_census(gh: Gh, repo: str, number: int, head: str, checks: bool) -> 
         if run.get("head_sha") != head:
             raise WaitError(f"workflow run {run['id']} is for head {run.get('head_sha')}, not {head}")
         jobs = rest_census(
-            gh.rest_pages(f"repos/{repo}/actions/runs/{run['id']}/jobs?filter=latest&per_page=100"),
+            gh.rest_pages(f"repos/{repo}/actions/runs/{run['id']}/jobs?filter=latest&per_page={rest_page_size}"),
             "jobs",
             f"workflow run {run['id']} job",
         )
@@ -515,6 +515,7 @@ def parser() -> argparse.ArgumentParser:
         sub.add_argument("--asset", action="append", default=[])
         sub.add_argument("--check", action="append", default=[])
         sub.add_argument("--all-workflows", action="store_true")
+        sub.add_argument("--rest-page-size", type=int, choices=range(1, 101), default=100, metavar="1..100")
         sub.add_argument("--json", action="store_true")
         if command == "wait":
             sub.add_argument("--deadline", required=True)
@@ -574,11 +575,11 @@ def main() -> int:
                         "checks-terminal requires --all-workflows or at least one --check context"
                     )
                 if args.all_workflows:
-                    observe = lambda: workflow_census(gh, args.repo, args.pr, args.head, bool(args.check))
+                    observe = lambda: workflow_census(gh, args.repo, args.pr, args.head, bool(args.check), args.rest_page_size)
                     gate = WorkflowCensusGate(args.head, set(args.check), args.command == "wait")
                     classify = gate
                 else:
-                    observe = lambda: pr_snapshot(gh, args.repo, args.pr)
+                    observe = lambda: pr_snapshot(gh, args.repo, args.pr, args.rest_page_size)
                     classify = lambda value: classify_pr(args.kind, args.head, set(args.check), value)
             elif args.kind == "workflow-terminal":
                 if not args.run_id or not args.head:
