@@ -188,7 +188,7 @@ class HeadingTests(unittest.TestCase):
                 "- type: textarea",
                 "  attributes:",
                 "    label: |2-",
-                "      # Hash",
+                "        # Hash",
                 "      line",
                 "# A comment between fields",
                 "- type: input",

@@ -32,7 +32,7 @@ COMMENT = re.compile(r"<!--.*?-->")
 # Only a comment that starts a line opens an HTML block that can span lines;
 # an unclosed `<!--` later in a line is literal text.
 COMMENT_BLOCK = re.compile(r" {0,3}<!--")
-BLOCK_SCALAR = re.compile(r"[|>](?:[+-][0-9]?|[0-9][+-]?)?(?:\s+#.*)?$")
+BLOCK_SCALAR = re.compile(r"[|>](?:[+-]([0-9])?|([0-9])[+-]?)?(?:\s+#.*)?$")
 # A renamed heading still resembles the template's wording this closely.
 RENAME_SIMILARITY = 0.6
 # GitHub looks for pull request templates in these directories, and for
@@ -199,8 +199,12 @@ def form_template(path: str, text: str) -> Template:
             label_indent = label_indent or indent
             if indent == label_indent and key == "label":
                 item["line"] = number
-                if BLOCK_SCALAR.match(value.strip()):
-                    block, block_indent = [], None
+                indicator = BLOCK_SCALAR.match(value.strip())
+                if indicator:
+                    # An explicit indentation indicator sets the block's indent;
+                    # otherwise its first line does.
+                    digit = indicator.group(1) or indicator.group(2)
+                    block, block_indent = [], indent + int(digit) if digit else None
                 else:
                     item["label"] = scalar(value)
     if block is not None:
