@@ -23,14 +23,18 @@ gates, relevant commits, PR metadata updates, one ordinary draft pull request or
 the confirmed native stack layers owned by the change, required review and
 behavior testing, in-scope fixes, and transitions to ready for review. This
 includes the project's existing PR preview path when required to test the
-change. Merge and integration delivery remain with an authorized parent such as
-`/deliver`; a standalone publication request does not add those endpoints or
+change. Merge and integration delivery belong to `/deliver`, which a direct
+request continues into under the
+[delivery settings](../deliver/SKILL.md#delivery-settings); the request does not add
 unrelated changes.
 
 A failed check, review or CI run routes to repair, not a stop. Stop only when
-there is nothing to publish, a material unresolved choice or new authority is
-needed, or an external blocker remains after safe alternatives are exhausted.
-A material choice found before publication stops before any push or draft PR.
+there is nothing to publish, a
+[material](../software-engineering-excellence/SKILL.md#blockers-and-decisions)
+unresolved choice or new authority is needed, or an external blocker remains
+after safe alternatives are exhausted.
+A material choice that publication depends on stops before any push or draft
+PR.
 Keep the PR draft while any required evidence or CI is missing, pending or
 failing.
 
@@ -120,13 +124,18 @@ readiness. Recording a walkthrough does not replace behavior testing.
    change; `git-workflow`'s squash merge makes that title the base-branch commit
    subject. Follow
    [../agent-writing/references/pr-descriptions.md](../agent-writing/references/pr-descriptions.md)
-   for the body, preserving explicit project-template requirements. Keep
-   every PR template heading verbatim and in order, and under a heading with
-   nothing to say write a one-line `None` or the reason; this is not
-   boilerplate to omit. Before writing the body, search open and closed issues
+   for the body's section order and character limits, preserving explicit
+   project-template requirements. Keep every PR template heading verbatim and
+   in order, and under a heading with nothing to say write a one-line `None`
+   or the reason; this is not boilerplate to omit. Leave the author's
+   verification out of the body's sections; the final handoff reports it, and
+   review results go only in the
+   [review note](../agent-writing/references/pr-descriptions.md#review-and-status-results)
+   at the end of the body. Before writing it, search open and closed issues
    and recent sibling sessions or adjacent branches when available for related
    findings and duplicates. Put each closing keyword on its own line as
-   `Closes #N`, and only on the layer that completes that issue. Run
+   `Closes #N` after the change summary, and only on the layer that completes
+   that issue. Run
    [`template-check`](../template-check/SKILL.md#running-a-check) on the draft
    with `--kind pr --body FILE` and fix every heading problem it reports
    before publishing.
@@ -174,8 +183,10 @@ readiness. Recording a walkthrough does not replace behavior testing.
     the change introduced is in scope.
 13. Once the PR is missing nothing required by the publication and PR-specific
     phases and all applicable CI is observed green for its exact head, mark it
-    ready for review. Return every affected URL, native stack order when
-    applicable, final states, metadata changes, supplied completion evidence,
-    what the publication guard rewrote, and observed readiness and CI evidence.
-    Include incomplete walkthrough requirements and actionable remedies, even
-    when the PR is ready.
+    ready for review. Return every affected URL and linked issue, native stack
+    order when applicable, final states, metadata changes, supplied completion
+    evidence, what the publication guard rewrote, and observed readiness and CI
+    evidence. Include incomplete walkthrough requirements and actionable
+    remedies, even when the PR is ready. Started directly, continue under the
+    [delivery settings](../deliver/SKILL.md#delivery-settings); with
+    `entry-points: deliver`, the ready PR goes on to `/address-feedback`.

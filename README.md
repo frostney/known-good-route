@@ -38,11 +38,24 @@ Use `/deliver` for one work item: a feature, bug, refactor, issue, or existing P
 It infers the target from context and resumes at its current state. No issue/idea
 or PR/stack selector is required, and filing an issue is optional.
 
-The default endpoint is **deployed and verified in the project's configured
-integration destination**. That may be production, staging, a nightly build, or
-another established target. Request **ready to merge** or **merged** for an
-earlier endpoint. Missing integration configuration is an unresolved decision,
-not permission to invent infrastructure or claim deployment succeeded.
+The frontmatter of the project's `ORCHESTRATION.md` sets the endpoint and
+whether entry points continue into `/deliver`. These values are also the
+defaults when the file or a key is missing:
+
+```yaml
+---
+endpoint: ready-to-merge # or merged, or deployed
+entry-points: deliver # or stop
+---
+```
+
+The file only sets the default: a request in the prompt decides that one run in
+either direction, so nothing is merged unless the project sets `merged` or
+`deployed` or the request asks for it. `deployed` means deployed
+and verified in the project's configured integration destination: production,
+staging, a nightly build, or another established target. Missing integration
+configuration is an unresolved decision, not permission to invent
+infrastructure or claim deployment succeeded.
 
 ```mermaid
 flowchart TD
@@ -81,10 +94,11 @@ against agreed references and affected states, not inferred from passing tests.
 Optional improvements do not expand the task. Current evidence is reused;
 changes invalidate only the checks they affect.
 
-Individual skills retain their endpoints. `/create-issue` files an issue;
-`/implement` completes development; `/create-pr` fills required review and
-behavior evidence, repairs in-scope failures and reaches a ready PR. These
-commands do not silently start merge or deployment. `/deliver` connects them.
+With `entry-points: deliver`, `/implement`, `/code-review`, `/test-against-spec`,
+`/create-pr`, `/update-pr`, `/address-feedback` and any other skill whose job
+edits the repository continue through `/deliver` from their own stage to the
+endpoint; with `stop`, each ends after its own step. Other skills, such as
+`/create-issue` or `/codebase-audit`, finish their own job.
 
 `milestone-rush` coordinates multiple `/deliver` work items and triggers
 `create-release` for the milestone. Integration delivery and release are distinct:
@@ -140,11 +154,10 @@ confirmation of the main operation does not establish its requested side effects
 
 `create-pr` and `update-pr` describe the complete final change against its base,
 following the [PR writing guidance](agent-writing/references/pr-descriptions.md).
-Keep ordinary descriptions concise, preserve explicit project templates and
-omit routine testing prose unless required. Material limitations stay visible;
-use diagrams, code examples and longer rationale when they help review.
-Show visible before/after media and benchmark tables, identifying the target
-branch baseline and PR candidate for performance comparisons.
+A body has a short What changed summary, a collapsed Details block, a Visual
+walkthrough and How to test steps that a human or agent reviewer can follow.
+The author's own verification goes in the final handoff, not the body.
+Explicit project templates take precedence.
 
 When meaningful UI, CLI or backend behavior benefits from a demonstration,
 prepare a short video with voice-over and synchronized subtitles using the

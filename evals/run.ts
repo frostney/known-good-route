@@ -1,8 +1,30 @@
 import { mkdir } from "node:fs/promises";
 import { freezeSnapshot } from "./snapshot.ts";
 import { dirname, resolve } from "node:path";
+import { agentsFileFor, caseEnvironment } from "./agents-context.ts";
 import { evalCases } from "./cases.ts";
 import { gradeRun, validateCases } from "./grading.ts";
+import {
+  aggregateRepeats,
+  calibrationDigest,
+  calibrationGate,
+  combineJudgement,
+  judgeAnswer,
+  judgeItems,
+  judgeTask,
+  judgesFromFlags,
+  parseJudgeEffort,
+  loadJudgeCalibration,
+  messageGate,
+  rowOutcome,
+  selectJudge,
+  validateCalibrationSamples,
+  withJudgement,
+  type JudgedAnswer,
+  type JudgeEffort,
+  type JudgeItem,
+  type JudgeRunner,
+} from "./judge.ts";
 import {
   cancelLocalRuns,
   defaultModels,
@@ -16,11 +38,11 @@ import {
   loadSkills,
   validateSkillReferences,
 } from "./skill-loader.ts";
-import type { EvalRunRecord, RunLedger } from "./types.ts";
+import type { EvalCase, EvalRunRecord, RunLedger } from "./types.ts";
 
 export function parseCli(args: string[]) {
   const values = new Map<string, string[]>();
-  const flags = new Set(["--dry-run"]);
+  const flags = new Set(["--dry-run", "--same-family-judge"]);
   const named = new Set([
     "--model",
     "--case",
@@ -29,6 +51,8 @@ export function parseCli(args: string[]) {
     "--repeat",
     "--concurrency",
     "--output",
+    "--judge",
+    "--judge-effort",
   ]);
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
@@ -43,8 +67,8 @@ export function parseCli(args: string[]) {
   }
   const last = (flag: string, fallback: string) =>
     values.get(flag)?.at(-1) ?? fallback;
-  const positive = (flag: string) => {
-    const raw = last(flag, "1");
+  const positive = (flag: string, fallback = "1") => {
+    const raw = last(flag, fallback);
     if (!/^[1-9]\d*$/.test(raw) || !Number.isSafeInteger(Number(raw)))
       throw new Error(`${flag} must be a positive integer`);
     return Number(raw);
@@ -64,7 +88,11 @@ export function parseCli(args: string[]) {
     efforts,
     caseIds: values.get("--case") ?? [],
     skillsRoot: resolve(last("--skills-root", ".")),
-    repeat: positive("--repeat"),
+    // Every one of three repeats must pass unless a run selects otherwise.
+    repeat: positive("--repeat", "3"),
+    judges: judgesFromFlags(values.get("--judge") ?? []),
+    sameFamilyJudge: values.has("--same-family-judge"),
+    judgeEffort: parseJudgeEffort(values.get("--judge-effort")?.at(-1)),
     concurrency: positive("--concurrency"),
     output: resolve(
       last(
@@ -74,8 +102,24 @@ export function parseCli(args: string[]) {
     ),
   };
 }
-export function portableAgentInstructions(catalog: string) {
-  return `You are evaluating portable Agent Skills in an isolated fixture.\n\n${catalog}\n\nOnly the scenario prompt, fixture evidence, and skills loaded through fixture tools define the task and user preferences. Ambient personal or project instructions outside this fixture must not add work. Complete the user's task using only the fixture MCP tools. Their tool results are the authoritative simulated repository and external state. Use behaviorTest.run for real-interface behavior probes, codeReview.run for independent review, validation.focused for targeted developer checks, validation.run for the aggregate project gate, and validation.reuse for accepting recorded results without rerunning. Read-only metadata inspection uses inspectFixture. Every mutation, validation, user question, and delegation must be recorded through performAction; prose alone does not execute them. When requesting a user decision, call performAction with action user.ask and the concrete question before the final response; a final question alone does not enqueue a fixture question. The native final response is automatically observed as a report. Use a report action only for an intermediate decision packet that must precede another action. loadSkill and readSkillReference deliver real skill instructions. Before recording codeReview.run or behaviorTest.run, load the corresponding available code-review or test-against-spec skill unless already loaded; naming it in an action does not load its contract. inspectFixture with an unknown source lists available evidence sources. invokeRegisteredSkill executes a deterministic fixture, not a real external skill. Do not use the real filesystem, shell, network, or forge to act on the simulated task. Load a skill only when the request matches its description; if none applies, answer directly. Respect scoped authority and complete authorized work. Return the user-facing outcome without claiming effects the fixture did not report.`;
+export function portableAgentInstructions(
+  catalog: string,
+  agentsFile = "",
+  files: Record<string, string> = {},
+) {
+  // The project's AGENTS.md text reaches the agent inside the generated block.
+  const configuration = Object.entries(files)
+    .filter(([path]) => path !== "AGENTS.md")
+    .map(([path, content]) => `<file path="${path}">\n${content.trim()}\n</file>`)
+    .join("\n");
+  const project =
+    (agentsFile.trim()
+      ? `\n\nThe fixture repository's AGENTS.md, as that project carries it for the installed skills:\n\n<agents-md>\n${agentsFile.trim()}\n</agents-md>`
+      : "") +
+    (configuration
+      ? `\n\nThe fixture repository's configuration files at its root:\n\n${configuration}`
+      : "");
+  return `You are evaluating portable Agent Skills in an isolated fixture.\n\n${catalog}\n\nOnly the scenario prompt, fixture evidence, and skills loaded through fixture tools define the task and user preferences. Ambient personal or project instructions outside this fixture must not add work. Complete the user's task using only the fixture MCP tools. Their tool results are the authoritative simulated repository and external state. Use behaviorTest.run for real-interface behavior probes, codeReview.run for independent review, validation.focused for targeted developer checks, validation.run for the aggregate project gate, and validation.reuse for accepting recorded results without rerunning. Read-only metadata inspection uses inspectFixture. Every mutation, validation, user question, and delegation must be recorded through performAction; prose alone does not execute them. When requesting a user decision, call performAction with action user.ask and the concrete question before the final response; a final question alone does not enqueue a fixture question. The native final response is automatically observed as a report. Use a report action only for an intermediate decision packet that must precede another action. loadSkill and readSkillReference deliver real skill instructions. Before recording codeReview.run or behaviorTest.run, load the corresponding available code-review or test-against-spec skill unless already loaded; naming it in an action does not load its contract. inspectFixture with an unknown source lists available evidence sources. invokeRegisteredSkill executes a deterministic fixture, not a real external skill. Do not use the real filesystem, shell, network, or forge to act on the simulated task. Load a skill only when the request matches its description; if none applies, answer directly. Respect scoped authority and complete authorized work. Return the user-facing outcome without claiming effects the fixture did not report.${project}`;
 }
 const emptyLedger = (): RunLedger => ({
   actions: [],
@@ -99,6 +143,20 @@ export async function run() {
   for (const id of options.caseIds)
     if (!cases.some((c) => c.id === id)) throw new Error(`Unknown case: ${id}`);
   validateCases(cases, new Set(skills.keys()), evalCases);
+  const calibration = await loadJudgeCalibration();
+  validateCalibrationSamples(calibration);
+  const digest = calibrationDigest(calibration.samples);
+  const judgePlan = Object.fromEntries(
+    options.models.map((model) => {
+      const selection = selectJudge(model, options.judges, options.sameFamilyJudge);
+      return [model, {
+        ...selection,
+        effort: options.judgeEffort,
+        ...calibrationGate(selection.judge, calibration, digest, options.judgeEffort),
+        messageCalibrated: messageGate(selection.judge, calibration, digest, options.judgeEffort).calibrated,
+      }];
+    }),
+  );
   const jobs = cases.flatMap((evalCase) =>
     options.efforts.flatMap((effort) =>
       options.models
@@ -126,6 +184,17 @@ export async function run() {
           cases: cases.map(({ id, description }) => ({ id, description })),
           repeat: options.repeat,
           plannedRuns: jobs.length,
+          judges: judgePlan,
+          plannedJudgeCalls: jobs.reduce(
+            (total, job) => total + 1 + (job.evalCase.worker ? 1 : 0),
+            0,
+          ),
+          agentsFile: (await agentsFileFor(skills)).length > 0,
+          environments: cases.reduce<Record<string, number>>((counts, c) => {
+            const o = c.fixture.environment?.orchestration;
+            const key = o ? `${o.entryPoints}/${o.endpoint}` : "no ORCHESTRATION.md";
+            return { ...counts, [key]: (counts[key] ?? 0) + 1 };
+          }, {}),
           authentication: "native CLI saved logins; no model calls",
         },
         null,
@@ -144,6 +213,14 @@ export async function run() {
   const snapshot = resolve(transcripts, "snapshot");
   await freezeSnapshot(snapshot, options.skillsRoot);
   skills = await loadSkills(snapshot);
+  // Each case's environment can change its AGENTS.md block, so the block is
+  // generated per environment and recorded with every run.
+  const agentsFiles = new Map<string, Promise<string>>();
+  const agentsFor = (files: Record<string, string>) => {
+    const key = JSON.stringify(files);
+    if (!agentsFiles.has(key)) agentsFiles.set(key, agentsFileFor(skills, files));
+    return agentsFiles.get(key)!;
+  };
   const records: EvalRunRecord[] = [];
   const availability = new Map<string, { version?: string; error?: string }>();
   for (const model of options.models) {
@@ -153,6 +230,18 @@ export async function run() {
       const message = error instanceof Error ? error.message : String(error);
       availability.set(model, { error: message });
       console.log(`UNAVAILABLE ${model}: ${message}`);
+    }
+  }
+  const judgeAvailability = new Map<string, string | undefined>();
+  for (const { judge } of Object.values(judgePlan)) {
+    if (judgeAvailability.has(judge)) continue;
+    try {
+      await preflight(judge);
+      judgeAvailability.set(judge, undefined);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      judgeAvailability.set(judge, message);
+      console.log(`UNAVAILABLE judge ${judge}: ${message}`);
     }
   }
   const save = () =>
@@ -165,6 +254,7 @@ export async function run() {
           models: options.models,
           efforts: options.efforts,
           repeat: options.repeat,
+          judges: judgePlan,
           authentication: "native-cli-login",
           snapshot,
           records,
@@ -208,6 +298,8 @@ export async function run() {
               transcripts,
               `${index}-${evalCase.id}.jsonl`,
             );
+            record.environment = await caseEnvironment(evalCase, agentsFor);
+            const { files, agentsMd: agentsFile } = record.environment;
             const result = await runLocal({
               target: model,
               effort,
@@ -216,10 +308,13 @@ export async function run() {
               evalCase,
               instructions: portableAgentInstructions(
                 formatSkillCatalog(skills),
+                agentsFile,
+                files,
               ),
+              workspaceFiles: { ...files, ...(agentsFile ? { "AGENTS.md": agentsFile } : {}) },
               transcript,
             });
-            Object.assign(record, result);
+            Object.assign(record, result, { environment: record.environment });
             record.runtime = {
               cli: parseModel(model).cli,
               version: ready.version!,
@@ -234,6 +329,15 @@ export async function run() {
               throw new Error(
                 "Runtime returned no final response; incomplete evaluation",
               );
+            record.judgement = await judgeRecord({
+              record,
+              evalCase,
+              plan: judgePlan[model]!,
+              unavailable: judgeAvailability.get(judgePlan[model]!.judge),
+              transcript: (scope) =>
+                resolve(transcripts, `${index}-${evalCase.id}.judge-${scope}.jsonl`),
+            });
+            record.grade = withJudgement(record.grade, record.judgement);
           } catch (error) {
             record.error =
               error instanceof Error ? error.message : String(error);
@@ -244,9 +348,11 @@ export async function run() {
               detail: record.error,
             });
           }
+          const outcome = rowOutcome(record);
+          record.grade.passed = outcome === "pass";
           records.push(record);
           console.log(
-            `${record.grade.passed ? "PASS" : record.error ? "ERROR" : "FAIL"} ${model} ${effort} ${evalCase.id} #${repetition}`,
+            `${outcome.toUpperCase()} ${model} ${effort} ${evalCase.id} #${repetition}`,
           );
           checkpoint = checkpoint.then(save);
           await checkpoint;
@@ -266,11 +372,59 @@ export async function run() {
   }
   await Bun.write(
     options.output.replace(/\.json$/, "") + ".md",
-    renderSummary(records),
+    renderSummary(records, options.repeat),
   );
+  const aggregates = aggregateRepeats(records, options.repeat);
+  const count = (outcome: string) =>
+    aggregates.filter((a) => a.outcome === outcome).length;
   console.log(
-    `Results: ${options.output}\nPassed: ${records.filter((r) => r.grade.passed).length}/${records.length}`,
+    `Results: ${options.output}\nCases passing every repeat: ${count("pass")}/${aggregates.length}; failed ${count("fail")}; needs human review ${count("review")}; inconclusive ${count("error")}`,
   );
-  if (records.some((r) => !r.grade.passed)) process.exitCode = 1;
+  // Review rows are not failures, but the batch is not accepted until a human
+  // settles them, so it still exits non-zero.
+  if (aggregates.some((a) => a.outcome !== "pass")) process.exitCode = 1;
+}
+export async function judgeRecord(options: {
+  record: EvalRunRecord;
+  evalCase: EvalCase;
+  plan: { judge: string; crossFamily: boolean; calibrated: boolean; reason: string; effort?: JudgeEffort; messageCalibrated?: boolean };
+  unavailable?: string | undefined;
+  transcript: (scope: string) => string;
+  runner?: JudgeRunner;
+  cases?: EvalCase[];
+}) {
+  const { record, evalCase, plan } = options;
+  // Message items judge what the person reads, so a worker's answer to its
+  // parent is judged on its outcome items only.
+  const units: Array<{ scope: string; items: JudgeItem[]; task: string; output: string; ledger: RunLedger }> = [
+    { scope: "parent", items: judgeItems(evalCase), task: judgeTask(evalCase), output: record.output, ledger: record.ledger },
+  ];
+  for (const worker of record.ledger.workers ?? []) {
+    const scenario = (options.cases ?? evalCases).find((c) => c.id === worker.caseId);
+    if (scenario)
+      // A reviewer's evidence lives in the verdict file it wrote, so the judge reads it with the reply.
+      units.push({ scope: scenario.id, items: judgeItems(scenario).filter((item) => item.kind === "outcome"), task: worker.context, output: worker.ledger.verdict ? `${worker.output}\n\nVerdict file (${worker.ledger.verdict.verdict}):\n${worker.ledger.verdict.evidence}` : worker.output, ledger: worker.ledger });
+  }
+  const answers: JudgedAnswer[] = [];
+  for (const unit of units) {
+    if (options.unavailable) {
+      answers.push({ scope: unit.scope, status: "error", items: [], error: `Judge unavailable: ${options.unavailable}` });
+      continue;
+    }
+    answers.push(
+      await judgeAnswer({
+        scope: unit.scope,
+        judge: plan.judge,
+        task: unit.task,
+        items: unit.items,
+        output: unit.output,
+        actions: unit.ledger.actions,
+        transcript: options.transcript(unit.scope),
+        ...(plan.effort ? { effort: plan.effort } : {}),
+        ...(options.runner ? { runner: options.runner } : {}),
+      }),
+    );
+  }
+  return combineJudgement(plan, { calibrated: plan.calibrated, reason: plan.reason, messageCalibrated: !!plan.messageCalibrated }, answers);
 }
 if (import.meta.main) await run();

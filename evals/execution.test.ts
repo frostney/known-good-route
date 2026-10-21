@@ -38,7 +38,7 @@ for (const c of executionCases)
         expect((await fixture.tools.runExecutionCheck.execute()).passed).toBe(
           true,
         );
-        expect(gradeRun(c, ledger, "Verified").passed).toBe(true);
+        expect(gradeRun(c, ledger, "Verified; authenticated requests are capped at 100 items.").passed).toBe(true);
         await fixture.tools.editExecutionFile.execute({
           path: "app.mjs",
           oldText: newText,

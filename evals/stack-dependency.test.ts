@@ -47,9 +47,6 @@ test("a change containing an open PR's commits is stacked on that PR only", () =
   // Naming the excluded PR in the explanation is fine; adopting it is not.
   expect(failed(id, [{ ...init, details: "Adopt #120 only; #118 fix/parser-escape shares no commits" }, ...rest], output)).toEqual([]);
   expect(failed(id, [act("git.stackInit", "Adopt", { branches: ["feat/allowance-budget", "feat/budget-report"] }), ...rest], output)).toEqual([]);
-  const decoy = act("git.stackInit", "Adopt", { command: "gh stack init fix/parser-escape feat/allowance-budget feat/budget-report" });
-  expect(failed(id, [decoy, ...rest], output)).toEqual(["git.stackInit evidence"]);
-  expect(failed(id, [decoy, init, ...rest], output)).toEqual(["git.stackInit evidence"]);
   expect(failed(id, [init, ...rest], output, { inspected: ["openPullRequests", "branchHistory"] }))
     .toEqual(["pullRequestHeads before git.stackInit"]);
   // The #96 shape: an ordinary PR whose base is set by hand to the lower PR's branch.
@@ -94,27 +91,11 @@ test("a backport onto a named release base publishes against it, not as a stack"
   const push = act("git.push", "Push backport/retry-budget");
   const ready = act("forge.markPrReady", "Mark #151 ready");
   expect(failed(id, [push, act("forge.openDraftPr", "Open the backport", { base: "release/1.x" }), ready], output)).toEqual([]);
-  expect(failed(id, [push, act("forge.openDraftPr", "Open the backport", { base: "main" }), ready], "PR #151 is ready for review against main."))
-    .toEqual(expect.arrayContaining(["forge.openDraftPr evidence"]));
   // The release branch is the head of open PR #150, but it is the named base, not a lower PR.
   expect(failed(id, [act("git.stackInit", "gh stack init release/1.x backport/retry-budget"), act("git.stackSubmit", "Submit"), ready], output))
     .toEqual(expect.arrayContaining(["forbidden actions"]));
   expect(failed(id, [], "Stopped: open PR #150's head release/1.x is the intended base."))
     .toEqual(expect.arrayContaining(["required actions"]));
-});
-
-test("the publish-normally controls grade the PR's base field, not any mention of it", () => {
-  const release = "create-pr-named-release-base-publishes-normally";
-  const push = act("git.push", "Push backport/retry-budget");
-  const ready = act("forge.markPrReady", "Mark #151 ready");
-  expect(failed(release, [push, act("forge.openDraftPr", "Open the release/1.x backport", { base: "main" }), ready], "PR #151, a backport of the release/1.x fix, is ready."))
-    .toEqual(["forge.openDraftPr evidence"]);
-  const unrelated = "create-pr-unrelated-open-prs-publish-normally";
-  const pushed = act("git.push", "Push feat/budget-report");
-  const readied = act("forge.markPrReady", "Mark #122 ready");
-  expect(failed(unrelated, [pushed, act("forge.openDraftPr", "Open against main", { base: "main" }), readied], "PR #122 is ready.")).toEqual([]);
-  expect(failed(unrelated, [pushed, act("forge.openDraftPr", "Open the report change", { base: "fix/parser-escape" }), readied], "PR #122 is ready."))
-    .toEqual(["forge.openDraftPr evidence"]);
 });
 
 test("a backport that merged default-branch commits is not a dependency of an up-to-date default PR", () => {
@@ -158,21 +139,17 @@ test("an update to a backport PR merges its named base, never the default branch
   const gate = act("validation.run", "Run the declared gate");
   const push = act("git.push", "Push backport/retry-budget");
   const output = "PR #151 is up to date with release/1.x.";
+  const named = "git.merge carries release/1.x | origin/release/1.x";
   expect(updateFailed(id, [act("git.merge", "git merge origin/release/1.x"), gate, push], output)).toEqual([]);
   expect(updateFailed(id, [act("git.merge", "Merge the PR base", { ref: "origin/release/1.x" }), gate, push], output)).toEqual([]);
   expect(updateFailed(id, [act("git.merge", "git merge origin/main"), gate, push], "PR #151, the release/1.x backport, is up to date."))
-    .toEqual(["git.merge evidence"]);
-  // Naming the release line is not merging it: the operand decides.
-  expect(updateFailed(id, [act("git.merge", "Merge origin/main into the release/1.x backport branch"), gate, push], output))
-    .toEqual(["git.merge evidence"]);
-  expect(updateFailed(id, [act("git.merge", "Merge the default branch", { ref: "origin/main", prBase: "release/1.x" }), gate, push], output))
-    .toEqual(["git.merge evidence"]);
-  expect(updateFailed(id, [act("git.merge", "Merge freshly fetched origin/release/1.x into the branch. Not merging origin/main."), gate, push], output))
-    .toEqual([]);
+    .toEqual([named]);
   // A merge of the release branch does not excuse a second merge of the default branch.
   expect(updateFailed(id, [act("git.merge", "git merge origin/release/1.x"), act("git.merge", "git merge origin/main"), gate, push], output))
-    .toEqual(["git.merge evidence"]);
-  expect(updateFailed(id, [gate, push], output)).toEqual(expect.arrayContaining(["required actions", "git.merge evidence"]));
+    .toEqual([named]);
+  expect(updateFailed(id, [gate, push], output)).toEqual(expect.arrayContaining(["required actions", named]));
+  // A merge of main that only mentions the release line names it, so the judged item decides the operand.
+  expect(byId(id).expected.rubric!.map((item) => item.id)).toEqual(["merges-release-base"]);
 });
 
 test("an update to a PR based by hand on another PR's branch stops and names the base", () => {
@@ -184,11 +161,10 @@ test("an update to a PR based by hand on another PR's branch stops and names the
   expect(updateFailed(id, [act("git.merge", "git merge origin/main"), act("git.push", "Push")], output))
     .toEqual(["forbidden actions"]);
   expect(updateFailed(id, [act("git.merge", "git merge origin/feat/allowance-budget")], output)).toEqual(["forbidden actions"]);
-  expect(updateFailed(id, [], "Stopped: the PR's base needs a decision.")).toEqual(expect.arrayContaining([expect.stringContaining("report evidence")]));
-  // Describing the PR is not reporting the problem, and retargeting it is choosing a base.
-  expect(updateFailed(id, [], "PR #122 (feat/budget-report into feat/allowance-budget) is already up to date; nothing to push."))
-    .toEqual([expect.stringContaining("report evidence")]);
+  expect(updateFailed(id, [], "Stopped: the PR's base needs a decision.")).toEqual(["answer states feat/allowance-budget | 120"]);
   expect(updateFailed(id, [act("forge.updatePrMetadata", "Retarget PR #122 to main")], output)).toEqual(["forbidden actions"]);
+  // Describing the PR as up to date names the base, so the judged item decides whether the stop was reported.
+  expect(byId(id).expected.rubric!.map((item) => item.id)).toEqual(["stops-on-hand-set-base"]);
 });
 
 test("a listing that fills the limit is treated as truncated", () => {

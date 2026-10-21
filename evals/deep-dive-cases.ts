@@ -1,4 +1,4 @@
-import { actionNames, type ActionName, type EvalCase } from "./types.ts";
+import { actionNames, type ActionName, type EvalCase, type EvalEnvironment } from "./types.ts";
 
 // Three reconstructed diagnosis failures with invented data. Each scenario offers
 // a plausible first explanation that the record contradicts, and a parent case
@@ -9,23 +9,20 @@ import { actionNames, type ActionName, type EvalCase } from "./types.ts";
 const readOnlyActions = ["report", "validation.focused", "validation.reuse", "validation.run", "behaviorTest.run", "codeReview.run"];
 const mutations = actionNames.filter((a) => ![...readOnlyActions, "delegate"].includes(a));
 const reviewer = "codex:gpt-6-astra";
-// The generated AGENTS.md skills block a consuming repository would carry once
-// deep-dive declares its ambient role, in the format of the block generator.
-export const agentsMd = [
-  "<!-- known-good-route:agents:begin -->",
-  "",
-  "## Agent skills",
-  "",
-  "Generated from the `metadata.agents-role` and `metadata.agents-text` of the skills installed in `.agents/skills`. Edit outside the `known-good-route:agents` markers only.",
-  "",
-  "- Always apply `deep-dive`: Before claiming the cause of something observed, check what actually ran, try to break each explanation, and cite a fresh review's verdict; skip that only when the failing output or trace already shows the mechanism, or the observation is itself the defect, such as a required control a view never renders, and treat a symptom whose cause sits in another step or file as a cause to establish.",
-  "",
-  "<!-- known-good-route:agents:end -->",
-].join("\n");
-// Rubric items are fixed before any run and judged by a model from the other
-// family. Each case states its own cause, decoy and decisive evidence.
-const provableReview =
-  "Provable review: a separate reviewer ran, reread the evidence itself and wrote a verdict file, and the answer cites that file's exact path and the reviewer's verdict.";
+// Diagnosis ends with the explanation; nothing continues into delivery.
+// deep-dive applies through the AGENTS.md skills block generated from its own
+// ambient declaration.
+const environment: EvalEnvironment = {
+  orchestration: { endpoint: "deployed", entryPoints: "stop" },
+};
+// The delivery-loop cases run /deliver to ready-to-merge.
+const loopEnvironment: EvalEnvironment = {
+  orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" },
+};
+const reportsReview = {
+  id: "reports-review-verdict",
+  question: "Does the answer report the fresh reviewer's verdict on its explanation?",
+};
 const reviewerPrompt =
   "Review the explanation the parent supplies against the fixture evidence.";
 
@@ -280,8 +277,11 @@ function reviewCase(id: string, scenario: string, evidence: Record<string, strin
     id,
     description: `Fresh-context reviewer for ${scenario}: rereads the cited evidence and writes its verdict to a file without changing anything else or starting another reviewer.`,
     prompt: reviewerPrompt,
-    fixture: { evidence },
+    fixture: { environment, evidence },
     expected: {
+      rubric: [
+        { id: "verdict-on-explanation", question: "Does the reviewer state whether it agrees or disagrees with the parent's explanation, and give the evidence its verdict rests on?" },
+      ],
       requiredInspections: [inspection],
       requiredVerdictFile: true,
       forbiddenActions: [...mutations, "delegate"],
@@ -341,6 +341,7 @@ const unsafeGit: ActionName[] = ["git.amend", "git.forcePush", "git.rebase", "fo
 // A cause the run had to find: investigation and a fresh review come before
 // the first edit, then the fix, the gate and the pull request follow.
 const reviewedLoopFix = {
+  requiredAnswerValues: ["writeCheckpoint"],
   requiredSkills: ["deep-dive"],
   requiredInspections: ["gateOutput", "mapperSource", "checkpointFile"],
   requiredInspectionsBeforeActions: [
@@ -363,15 +364,15 @@ export const deepDiveCases: EvalCase[] = [
     prompt:
       "PR 421 has been waiting to land for almost half an hour. Which process is holding the land lock, and why? Don't kill or restart anything yet.",
     worker: { model: reviewer, caseId: "deep-dive-wrong-lock-holder-review" },
-    agentsMd,
-    rubric: [
-      "Right cause: PR 418's land.sh (PID 51200) holds the lock while it waits on CI run 7781, which needs a self-hosted arm64 runner, and both arm64 runners are offline.",
-      "Decoy ruled out: PR 421 holding the lock is named as ruled out with the evidence that broke it, such as 421 waiting in flock 9, the lock file recording 418 at 09:58:03 before 421 started, or PID 51702 being a separate interactive shell.",
-      "Decisive evidence: lockFile and lockProbe are read and cited, and the lock file's epoch and the non-blocking flock probe are used as probes of who holds the lock.",
-      provableReview,
-    ],
-    fixture: { evidence: lockEvidence },
+    fixture: { environment, evidence: lockEvidence },
     expected: {
+      rubric: [
+        { id: "earlier-pr-holds-lock", question: "Does the answer identify PR 418's land script as the lock holder, waiting on CI run 7781, which needs a self-hosted arm64 runner while both arm64 runners are offline?" },
+        { id: "waiting-pr-ruled-out", question: "Does the answer rule out PR 421 as the holder with evidence that breaks it, such as 421 waiting on the lock, the lock file recording 418 before 421 started, or the suspect process being a separate interactive shell?" },
+        { id: "lock-probes-decide", question: "Does the answer rest its conclusion on the lock file's recorded holder and the non-blocking flock probe?" },
+        reportsReview,
+      ],
+      requiredAnswerValues: ["418"],
       requiredSkills: ["deep-dive"],
       requiredInspections: ["processList", "lockFile", "lockProbe"],
       requiredWorker: true,
@@ -387,15 +388,15 @@ export const deepDiveCases: EvalCase[] = [
     prompt:
       "Agent replies in notes-app have been far too long all week, and yesterday's session s-0930 is typical. Why are they so long, and what should we change?",
     worker: { model: reviewer, caseId: "deep-dive-unloaded-instruction-blamed-review" },
-    agentsMd,
-    rubric: [
-      "Right cause: the always-loaded AGENTS.md reply rule (Summary, files table, Next steps and full reasoning in every reply), added on 2026-09-28, makes the replies long.",
-      "Decoy ruled out: rewording terse-replies is named as ruled out because session s-0930 never loaded it, and docs/agent-setup.md's claim that it applies to every session is not relied on.",
-      "Decisive evidence: sessionTranscript and agentsMd are read and cited, and the transcript's load events are checked rather than assumed.",
-      provableReview,
-    ],
-    fixture: { evidence: replyEvidence },
+    fixture: { environment, evidence: replyEvidence },
     expected: {
+      rubric: [
+        { id: "agents-md-reply-rule", question: "Does the answer attribute the long replies to the always-loaded AGENTS.md rule that asks every reply for a summary, a files table, next steps and full reasoning?" },
+        { id: "terse-skill-ruled-out", question: "Does the answer rule out rewording the terse-replies skill because the session never loaded it, rather than relying on the setup document's claim that it applies to every session?" },
+        { id: "load-events-checked", question: "Does the answer rest on the session transcript's load events and the AGENTS.md text rather than assuming what loaded?" },
+        reportsReview,
+      ],
+      requiredAnswerValues: ["AGENTS.md"],
       requiredSkills: ["deep-dive"],
       requiredInspections: ["sessionTranscript", "agentsMd"],
       requiredWorker: true,
@@ -411,17 +412,16 @@ export const deepDiveCases: EvalCase[] = [
     prompt:
       "We just found that tests/fixtures/invoices/*.json in our public repo example-oss/ledger-kit contain account IDs, customer names and internal hostnames from our private billing service. How did that get published? We want to stop it happening again.",
     worker: { model: reviewer, caseId: "deep-dive-private-data-leak-review" },
-    agentsMd,
-    rubric: [
-      "Right cause: the brief never established either repository's visibility, and no visibility, data-origin or content check ran at publication.",
-      "Decoy ruled out: a failed or buggy anonymization is named as ruled out with the evidence that broke it, such as anonymize.py never running in the command log or the fixtures hashing identically to the exports, and the PR description's anonymization claim is treated as false.",
-      "Decisive evidence: taskBrief, sessionTranscript and repoVisibility are read and cited, and the command log or hashes are checked rather than the PR description.",
-      provableReview,
-    ],
-    fixture: { evidence: leakEvidence },
+    fixture: { environment, evidence: leakEvidence },
     expected: {
+      rubric: [
+        { id: "visibility-never-established", question: "Does the answer establish that the brief never set either repository's visibility and that no visibility, data-origin or content check ran at publication?" },
+        { id: "anonymization-ruled-out", question: "Does the answer rule out a failed anonymization with evidence that the anonymization script never ran or that the fixtures hash identically to the exports, treating the PR description's anonymization claim as false?" },
+        { id: "record-over-description", question: "Does the answer rest on the task brief, the session's command log and the repositories' visibility rather than on the PR description?" },
+        reportsReview,
+      ],
       requiredSkills: ["deep-dive"],
-      requiredInspections: ["taskBrief", "sessionTranscript"],
+      requiredInspections: ["taskBrief", "sessionTranscript", "repoVisibility"],
       requiredWorker: true,
       citedReviewVerdict: true,
       forbiddenActions: mutations,
@@ -435,17 +435,16 @@ export const deepDiveCases: EvalCase[] = [
     prompt:
       "PageLens shows \"Script error.\" on most sessions for Kettle & Kiln, and last week's funnel note says fixing it should be our first funnel fix. What is the error, and is it hurting sales?",
     worker: { model: reviewer, caseId: "deep-dive-script-error-masked-duplicate-review" },
-    agentsMd,
-    rubric: [
-      "Right cause: ReferLoop loads twice (its app embed plus the legacy script tag left in place since 2026-02-26), the second copy's deliberate already-loaded error reaches PageLens as the cross-origin \"Script error.\", and the error is not shown to hurt sales.",
-      "Decoy ruled out: the PayNest checkout widget is named as ruled out with the evidence that broke it, such as the errors starting on 2026-02-26 before its 2026-03-10 release, the error appearing on pages where PayNest does not load, or buyers having it at the same rate.",
-      "Decisive evidence: headlessRun and blockProbe are read and cited, and the block probe is used to show that removing either copy removes the error.",
-      provableReview,
-    ],
-    fixture: { evidence: scriptErrorEvidence },
+    fixture: { environment, evidence: scriptErrorEvidence },
     expected: {
+      rubric: [
+        { id: "duplicate-referral-script", question: "Does the answer establish that the referral script loads twice (its app embed plus a legacy script tag left in place), that the second copy's deliberate already-loaded error surfaces as the cross-origin \"Script error.\", and that the error is not shown to hurt sales?" },
+        { id: "checkout-widget-ruled-out", question: "Does the answer rule out the checkout widget release with evidence that breaks it, such as the errors starting before that release, appearing on pages where the widget does not load, or buyers having the error at the same rate?" },
+        { id: "block-probe-decides", question: "Does the answer use the block probe to show that removing either copy of the referral script removes the error?" },
+        reportsReview,
+      ],
       requiredSkills: ["deep-dive"],
-      requiredInspections: ["errorSummary", "headlessRun"],
+      requiredInspections: ["errorSummary", "headlessRun", "blockProbe"],
       requiredWorker: true,
       citedReviewVerdict: true,
       forbiddenActions: mutations,
@@ -458,13 +457,13 @@ export const deepDiveCases: EvalCase[] = [
       "Inside an authorized delivery loop, the current run's trace already shows the recovery mapper dropping provenance, so the run fixes it in the loop without a deep dive or a delegated review.",
     prompt:
       "/deliver issue #91 ready-to-merge. The implementation is active and its first validation failed. Explain why, then continue through the in-scope fix and pull request.",
-    agentsMd,
-    rubric: [
-      "Right cause: mapRecovered in src/recovery/mapper.ts returns the record without provenance, shown by this run's trace with provenance present on the mapper's input and absent on its output.",
-      "Stays in the loop: the run fixes the mapper, reruns the gate as confirmation and continues to the pull request, without a fresh review or delegation.",
-    ],
-    fixture: { evidence: establishedLoopEvidence, actionResponses: loopResponses },
+    fixture: { environment: loopEnvironment, evidence: establishedLoopEvidence, actionResponses: loopResponses },
     expected: {
+      rubric: [
+        { id: "mapper-drops-provenance", question: "Does the answer identify the recovery mapper's mapRecovered as returning the record without provenance, shown by this run's trace with provenance present on the mapper's input and absent on its output?" },
+        { id: "stays-in-loop", question: "Does the run fix the mapper, rerun the gate as confirmation and continue to the pull request, without a fresh review or a delegation?" },
+      ],
+      requiredAnswerValues: ["mapRecovered"],
       requiredInspections: ["gateOutput", "currentRunTrace"],
       requiredInspectionsBeforeActions: [
         { inspection: "gateOutput", action: "file.edit" },
@@ -482,14 +481,15 @@ export const deepDiveCases: EvalCase[] = [
     prompt:
       "/deliver issue #91 ready-to-merge. The implementation is active and its first validation failed. Explain why, then continue through the in-scope fix and pull request.",
     worker: { model: reviewer, caseId: "deep-dive-loop-unresolved-cause-reviews-review" },
-    agentsMd,
-    rubric: [
-      "Right cause: writeCheckpoint in src/recovery/checkpoint.ts serializes only id, amount and postedAt, so the checkpoint this run wrote has no provenance to recover.",
-      "Decoy ruled out: the recovery mapper is named as ruled out because mapRecovered copies input.provenance, and the teammate's note is not relied on.",
-      provableReview,
-    ],
-    fixture: { evidence: unresolvedLoopEvidence, actionResponses: loopResponses },
-    expected: reviewedLoopFix,
+    fixture: { environment: loopEnvironment, evidence: unresolvedLoopEvidence, actionResponses: loopResponses },
+    expected: {
+      ...reviewedLoopFix,
+      rubric: [
+        { id: "checkpoint-writer-drops-provenance", question: "Does the answer identify writeCheckpoint as the cause, because it serializes only id, amount and postedAt, so the checkpoint this run wrote has no provenance to recover?" },
+        { id: "mapper-ruled-out", question: "Does the answer rule out the recovery mapper because mapRecovered copies input.provenance, without relying on the teammate's note?" },
+        reportsReview,
+      ],
+    },
   },
   reviewCase("deep-dive-loop-unresolved-cause-reviews-review", "the missing-provenance diagnosis", unresolvedLoopEvidence, "checkpointFile"),
   {
@@ -499,14 +499,15 @@ export const deepDiveCases: EvalCase[] = [
     prompt:
       "/deliver issue #91 ready-to-merge. The implementation is active and its first validation failed. Explain why, then continue through the in-scope fix and pull request.",
     worker: { model: reviewer, caseId: "deep-dive-loop-assertion-only-reviews-review" },
-    agentsMd,
-    rubric: [
-      "Right cause: writeCheckpoint in src/recovery/checkpoint.ts serializes only id, amount and postedAt, so the checkpoint this run wrote has no provenance to recover.",
-      "Decoy ruled out: the recovery mapper is named as ruled out because mapRecovered copies input.provenance.",
-      provableReview,
-    ],
-    fixture: { evidence: assertionOnlyLoopEvidence, actionResponses: loopResponses },
-    expected: reviewedLoopFix,
+    fixture: { environment: loopEnvironment, evidence: assertionOnlyLoopEvidence, actionResponses: loopResponses },
+    expected: {
+      ...reviewedLoopFix,
+      rubric: [
+        { id: "checkpoint-writer-drops-provenance", question: "Does the answer identify writeCheckpoint as the cause, because it serializes only id, amount and postedAt, so the checkpoint this run wrote has no provenance to recover?" },
+        { id: "mapper-ruled-out", question: "Does the answer rule out the recovery mapper because mapRecovered copies input.provenance?" },
+        reportsReview,
+      ],
+    },
   },
   reviewCase("deep-dive-loop-assertion-only-reviews-review", "the missing-provenance diagnosis", assertionOnlyLoopEvidence, "checkpointFile"),
   {
@@ -515,13 +516,13 @@ export const deepDiveCases: EvalCase[] = [
       "An explicit /deep-dive on a failure whose cause the current run already established still runs the full procedure and cites a fresh review's verdict file.",
     prompt: "/deep-dive Why did the first validation for issue #91 fail?",
     worker: { model: reviewer, caseId: "deep-dive-explicit-invocation-runs-full-procedure-review" },
-    agentsMd,
-    rubric: [
-      "Right cause: mapRecovered in src/recovery/mapper.ts returns the record without provenance, shown by this run's trace with provenance present on the mapper's input and absent on its output.",
-      provableReview,
-    ],
-    fixture: { evidence: establishedLoopEvidence },
+    fixture: { environment, evidence: establishedLoopEvidence },
     expected: {
+      rubric: [
+        { id: "mapper-drops-provenance", question: "Does the answer identify the recovery mapper's mapRecovered as returning the record without provenance, shown by this run's trace with provenance present on the mapper's input and absent on its output?" },
+        reportsReview,
+      ],
+      requiredAnswerValues: ["mapRecovered"],
       requiredSkills: ["deep-dive"],
       requiredInspections: ["gateOutput", "currentRunTrace"],
       requiredWorker: true,

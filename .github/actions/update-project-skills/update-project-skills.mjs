@@ -24,6 +24,7 @@ import {
   verifyAgentsBlock,
   writeAgentsBlock,
 } from "./agents-block.mjs";
+import { readDeliverySettings } from "../../../deliver/scripts/delivery-settings.mjs";
 
 const LOCK_FILE = "skills-lock.json";
 const SKILLS_DIRECTORY = ".agents/skills";
@@ -438,7 +439,11 @@ async function requireGeneratedAgentsFile(repositoryRoot, skillsRoot, label) {
   const base = git(repositoryRoot, ["show", `HEAD:${agentsPath}`], { allowFailure: true });
   let expected;
   try {
-    expected = spliceRegion(base.status === 0 ? base.stdout : null, await collectSkillRoles(skillsRoot));
+    expected = spliceRegion(
+      base.status === 0 ? base.stdout : null,
+      await collectSkillRoles(skillsRoot),
+      await readDeliverySettings(skillsRoot),
+    );
   } catch (error) {
     throw new Error(`${label} AGENTS.md block cannot be generated: ${error.message}`);
   }

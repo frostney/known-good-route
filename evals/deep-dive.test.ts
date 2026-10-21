@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
-import { agentsMd, deepDiveCases } from "./deep-dive-cases.ts";
+import { resolve } from "node:path";
+import { agentsFileFor, environmentFiles } from "./agents-context.ts";
+import { deepDiveCases } from "./deep-dive-cases.ts";
+import { loadSkills } from "./skill-loader.ts";
 import { gradeRun } from "./grading.ts";
 import type { RunLedger } from "./types.ts";
 
@@ -72,14 +75,10 @@ test("a Codex reviewer's identity is configured-only, but a reported identity mu
 });
 
 test("every deep-dive case runs under the AGENTS.md block the generator writes from deep-dive's own declaration", async () => {
-  const generator: string = "../.github/actions/update-project-skills/agents-block.mjs";
-  const { readRoleDeclaration, renderRegion } = (await import(generator)) as {
-    readRoleDeclaration: (source: string, label: string) => unknown;
-    renderRegion: (declarations: unknown[]) => string;
-  };
-  const source = await Bun.file(new URL("../deep-dive/SKILL.md", import.meta.url)).text();
-  expect(agentsMd).toBe(renderRegion([readRoleDeclaration(source, "deep-dive/SKILL.md")]));
-  for (const scenario of deepDiveCases.filter((c) => !c.id.endsWith("-review"))) expect(scenario.agentsMd).toBe(agentsMd);
+  const skills = await loadSkills(resolve(import.meta.dir, ".."));
+  const text = /agents-text: (.+)/.exec(skills.get("deep-dive")!.body)![1];
+  for (const scenario of deepDiveCases)
+    expect(await agentsFileFor(skills, environmentFiles(scenario.fixture.environment)), scenario.id).toContain(`- Always apply \`deep-dive\`: ${text}`);
 });
 
 // A trajectory as the run's ledger records it: inspections and actions in order.
@@ -102,7 +101,7 @@ const loopCase = (id: string) => deepDiveCases.find((c) => c.id === id)!;
 
 test("an established cause stays in the loop: the trace is read before the fix, then the gate and the pull request follow", () => {
   const established = loopCase("deep-dive-loop-established-cause-continues");
-  const passes = (steps: Step[]) => gradeRun(established, trajectory(steps), "Fixed and published as PR #391.").passed;
+  const passes = (steps: Step[]) => gradeRun(established, trajectory(steps), "mapRecovered dropped provenance; fixed and published as PR #391.").passed;
   const read: Step[] = [{ inspect: "gateOutput" }, { inspect: "currentRunTrace" }];
   expect(passes([...read, ...deliver])).toBeTrue();
   expect(passes([...read, { act: "delegate" }, ...deliver])).toBeFalse();
@@ -123,7 +122,7 @@ test("a cause the run had to find is investigated and reviewed before the fix, c
     const passes = (steps: Step[], startedAtEvent: number | null) => {
       const ledger = trajectory(steps);
       if (startedAtEvent !== null) ledger.workers = [reviewer(startedAtEvent)];
-      return gradeRun(scenario, ledger, `The checkpoint writer drops provenance. Fresh review: agree (${verdictFile}). PR #391 is open.`).passed;
+      return gradeRun(scenario, ledger, `writeCheckpoint drops provenance. Fresh review: agree (${verdictFile}). PR #391 is open.`).passed;
     };
     const investigate: Step[] = [{ inspect: "gateOutput" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }];
     expect(passes([...investigate, ...deliver], 3), id).toBeTrue();

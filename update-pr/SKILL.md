@@ -19,8 +19,10 @@ metadata:
 
 Update the established PR through integration, relevant commits, a normal push
 and current metadata. The request includes resolving routine conflicts and
-running the declared PR gate; it does not authorize merging. Reuse the selected
-target and prior authorization. Ask only when the intended PR, a material
+running the declared PR gate; merging belongs to `/deliver` under the
+[delivery settings](../deliver/SKILL.md#delivery-settings). Reuse the selected target
+and prior authorization. Ask only when the intended PR, a
+[material](../software-engineering-excellence/SKILL.md#blockers-and-decisions)
 conflict-resolution choice or another material choice within this update
 remains unclear.
 
@@ -62,26 +64,32 @@ not block the update.
 6. When the branch has commits its remote lacks, push an ordinary branch
    normally, setting upstream when needed. Push a verified stack only through
    the guarded official stack workflow.
-7. Update the PR title and body to match the complete current diff, scope,
-   linked issues, and observed verification. A push always changes the head
-   that verification applies to, so after a push write the updated body even
-   when the summary still holds. Keep the title a Conventional Commit
+7. Reconcile the PR title and body with the complete current diff, scope and
+   linked issues. A push always changes the head, so after a push reconcile
+   the body again even when the summary still holds. Keep the title a Conventional Commit
    subject for the whole change; it becomes the squash-merge commit subject, so
    widened scope may also change its type. Follow
    [../agent-writing/references/pr-descriptions.md](../agent-writing/references/pr-descriptions.md),
    preserving explicit project-template requirements and replacing obsolete
-   summaries or intermediate development history. Keep every PR template
-   heading verbatim and in order, and under a heading with nothing to say write
-   a one-line `None` or the reason. Run
+   summaries, intermediate development history and author verification
+   sections. Keep the
+   [review note](../agent-writing/references/pr-descriptions.md#review-and-status-results)
+   at the end of the body. Keep every PR template heading verbatim and in order, and under a
+   heading with nothing to say write a one-line `None` or the reason. Run
    [`template-check`](../template-check/SKILL.md#running-a-check) on the draft
    with `--kind pr --body FILE` before writing it and on the live body with
    `--pr N` after, and fix every heading problem it reports.
 8. Report the updated PR, any new commit, metadata changes, what the
    publication guard rewrote and observed validation. Include stack position
    and rewritten branches when applicable.
-   Distinguish passed local checks from pending current-head CI. Return the
+   Distinguish passed local checks from pending current-head CI. A draft PR
+   stays draft until `delivery-wait` observes every required check green on the
+   pushed head; only then may it be marked ready for review. Return the
    exact current head and next transition to the active publication or delivery
-   caller; that caller continues through CI and feedback. Leave a draft PR in
-   draft: as in `create-pr`, it is marked ready only after all required CI and
-   evidence are observed green for that exact head. Report missing
-   walkthrough requirements with remedies.
+   caller; that caller continues through CI and feedback. Started directly,
+   continue under the [delivery settings](../deliver/SKILL.md#delivery-settings);
+   with `entry-points: deliver`, the pushed head goes on to `/deliver`, which
+   awaits its CI and review and takes the PR to the configured endpoint
+   (`ready-to-merge` when there is no `ORCHESTRATION.md`). With `stop`, end
+   with this report.
+   Report missing walkthrough requirements with remedies.

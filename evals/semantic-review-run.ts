@@ -49,7 +49,12 @@ const originalDependencies = await Bun.file(join(originalRoot, "dependencies-man
 if (JSON.stringify(await treeManifest(join(originalRoot, "node_modules"))) !== JSON.stringify(originalDependencies))
   throw new Error("Original snapshot dependency tree changed");
 const originalCases = (await import(pathToFileURL(join(originalRoot, "evals/cases.ts")).href)).evalCases as EvalCase[];
-const originalInstructions = (await import(pathToFileURL(join(originalRoot, "evals/run.ts")).href)).portableAgentInstructions as (catalog: string) => string;
+const originalInstructions = (await import(pathToFileURL(join(originalRoot, "evals/run.ts")).href)).portableAgentInstructions as (catalog: string, agentsFile?: string) => string;
+// Snapshots from before the generated AGENTS.md block carry no agents-context.ts.
+const originalAgentsContext = join(originalRoot, "evals/agents-context.ts");
+const originalAgentsFile = await Bun.file(originalAgentsContext).exists()
+  ? await (await import(pathToFileURL(originalAgentsContext).href)).agentsFileFor(await loadSkills(originalRoot)) as string
+  : "";
 const skills = await loadSkills(originalRoot);
 const selected = source.records.filter(record => caseIds.includes(record.caseId) &&
   (!values.has("--candidate-model") || values.get("--candidate-model")!.includes(record.model)));
@@ -60,7 +65,7 @@ const jobs: {
   role: SemanticNode["role"]; record: EvalRunRecord; packet: SemanticPacket;
   packetSha256: string; judge: string; sourceTranscript?: string;
 }[] = [];
-const harnessInstructions = originalInstructions(formatSkillCatalog(skills));
+const harnessInstructions = originalInstructions(formatSkillCatalog(skills), originalAgentsFile);
 for (const [sourceIndex, record] of selected.entries()) {
   const scenario = originalCases.find(item => item.id === record.caseId);
   if (!scenario) throw new Error("Case absent from its source snapshot");

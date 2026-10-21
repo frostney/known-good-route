@@ -1,5 +1,6 @@
 import { lstat, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { readDeliverySettings } from "../../../deliver/scripts/delivery-settings.mjs";
 
 export const AGENTS_FILE = "AGENTS.md";
 export const INSTALLED_SKILLS_DIRECTORY = ".agents/skills";
@@ -116,13 +117,23 @@ export async function collectSkillRoles(projectRoot) {
   );
 }
 
-export function renderRegion(declarations) {
+function deliveryLine(settings) {
+  const source = settings.file === null ? "defaults, no `ORCHESTRATION.md`" : "`ORCHESTRATION.md`";
+  const endpoint = `the \`${settings.endpoint}\` endpoint`;
+  return settings["entry-points"] === "stop"
+    ? `Delivery (${source}): entry points stop after their own step, and \`/deliver\` stops at ${endpoint}.`
+    : `Delivery (${source}): entry points that change, review or test code continue through \`/deliver\` to ${endpoint}.`;
+}
+
+export function renderRegion(declarations, settings) {
   const lines = [
     MARKER_BEGIN,
     "",
     "## Agent skills",
     "",
     `Generated from the \`metadata.${ROLE_KEY}\` and \`metadata.${TEXT_KEY}\` of the skills installed in \`${INSTALLED_SKILLS_DIRECTORY}\`. Edit outside the \`${MARKER_ID}\` markers only.`,
+    "",
+    deliveryLine(settings),
     "",
   ];
   if (declarations.length === 0) {
@@ -162,12 +173,12 @@ function endsWithBlankLine(text) {
 
 // The desired file content. Text outside the markers is kept byte for byte.
 // Without any declared role, a file that has no block stays as it is.
-export function spliceRegion(existing, declarations) {
+export function spliceRegion(existing, declarations, settings) {
   const begin = existing === null ? -1 : findMarkerLine(existing, MARKER_BEGIN);
   const end = existing === null ? -1 : findMarkerLine(existing, MARKER_END);
   if (begin === -1 && end === -1) {
     if (declarations.length === 0) return existing;
-    const region = renderRegion(declarations);
+    const region = renderRegion(declarations, settings);
     if (existing === null || existing === "") return `# Agent Instructions\n\n${region}\n`;
     const separator = endsWithBlankLine(existing) ? "" : existing.endsWith("\n") ? "\n" : "\n\n";
     return `${existing}${separator}${region}\n`;
@@ -177,7 +188,7 @@ export function spliceRegion(existing, declarations) {
       `${AGENTS_FILE} has a corrupt ${MARKER_ID} marker pair; restore "${MARKER_BEGIN}" on its own line before "${MARKER_END}", or remove both`,
     );
   }
-  return existing.slice(0, begin) + renderRegion(declarations) + existing.slice(end + MARKER_END.length);
+  return existing.slice(0, begin) + renderRegion(declarations, settings) + existing.slice(end + MARKER_END.length);
 }
 
 async function readExisting(path) {
@@ -192,7 +203,11 @@ async function readExisting(path) {
 async function desiredAgentsFile(projectRoot) {
   const path = join(projectRoot, AGENTS_FILE);
   const existing = await readExisting(path);
-  const desired = spliceRegion(existing, await collectSkillRoles(projectRoot));
+  const desired = spliceRegion(
+    existing,
+    await collectSkillRoles(projectRoot),
+    await readDeliverySettings(projectRoot),
+  );
   return { desired, existing, path };
 }
 
