@@ -53,7 +53,8 @@ state before classifying anything.
    or PR-less work.
 
 When one read interface is unavailable or permission-limited, try another
-configured authenticated read-only interface before declaring an evidence gap.
+configured authenticated read-only interface, and retry a failed read twice
+after any stated retry delay, before declaring an evidence gap.
 Current official Git hosting and reviewer semantics override enumerated status
 names when an API evolves; preserve the completion gates rather than guessing.
 

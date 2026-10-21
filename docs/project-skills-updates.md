@@ -73,6 +73,11 @@ source, and lists `Always apply` lines for ambient skills before
 without `agents-role` do not appear. A declaration with an unknown role, no
 text, or a multi-line value fails the run.
 
+One line above the skills states the project's delivery settings, read from the
+frontmatter of `ORCHESTRATION.md` beside `AGENTS.md` by
+`deliver/scripts/delivery-settings.mjs`, or the defaults when it is absent. An
+unknown setting fails the run, and a changed setting makes the block stale.
+
 The block sits between `<!-- known-good-route:agents:begin -->` and
 `<!-- known-good-route:agents:end -->`, each on its own line and at most once.
 Text outside the markers is kept byte for byte, and the output has no
