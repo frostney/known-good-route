@@ -35,9 +35,9 @@ belongs to.
   without `--root`, reads the templates from its default branch.
 - With several templates, pass the one the body follows with
   `--template-name`, matching its front matter `name` or its file name.
-  Without it the closest fit is used. Choose it from what the body is for,
-  such as the issue's or PR's labels or title, and ask only when nothing
-  settles it. `--template PATH` skips discovery.
+  Without it the closest fit is used, and a tie is an error. Choose it from
+  what the body is for, such as the issue's or PR's labels or title, and ask
+  only when nothing settles it. `--template PATH` skips discovery.
 - `--json` prints one JSON object with the same result.
 
 ## Reading the result

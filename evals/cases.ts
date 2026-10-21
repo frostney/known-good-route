@@ -6759,7 +6759,7 @@ export const evalCases: EvalCase[] = [
         "git.push",
       ],
       requiredActionValues: [
-        { action: "validation.focused", values: ["52", "--template-name", ["Bug fix", "bug-fix"]] },
+        { action: "validation.focused", values: ["52", "--template-name", ["Bug fix", "bug fix", "bug-fix"]] },
       ],
     },
   },

@@ -3462,8 +3462,8 @@
         "An operational error from the check is not a pass: when the body fits two templates equally, the check reruns with the template the bug-labelled PR follows named, and only the second result decides whether the live PR body follows the template. The first version expected a rerun with --repo, but the skill already passes --repo on the first run and the real script then works outside a checkout, so that error could not occur."
       ],
       "beforeSha256": null,
-      "afterSha256": "5e34a6d895160b1ec9faf83e1f850a30bb0248c1585a3eb6265c5a2d136e882f",
-      "frozenCaseSha256": "5e34a6d895160b1ec9faf83e1f850a30bb0248c1585a3eb6265c5a2d136e882f"
+      "afterSha256": "9c947c9f07b56a8e6e7d998b18beaac61b4460cad30dded12cb078eec481f799",
+      "frozenCaseSha256": "9c947c9f07b56a8e6e7d998b18beaac61b4460cad30dded12cb078eec481f799"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",
