@@ -154,6 +154,9 @@ A packet that includes publication or merge follows the delegation rule in
 While workers run, continue the coordinator's work that does not depend on
 their results. Check each returned result's evidence before accepting and
 integrating it. Worker completion closes its lane, not the parent objective.
+For long commands or pending worker results, apply the shared
+[long-command and lane rules](../delivery-wait/SKILL.md#long-commands-and-delegated-lanes):
+record the owner and resume action, then end the turn when only waits remain.
 Continue the parent's remaining authorized work.
 If isolated workers are unavailable, disclose the limitation and use an allowed
 local route; do not claim delegation occurred or invent unavailable telemetry.

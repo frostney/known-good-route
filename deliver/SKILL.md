@@ -85,7 +85,9 @@ publication or merge commands such as `gh pr create` or `gh pr merge`; those
 bypass the skill's gates, native stack detection and readiness checks. Each
 packet records the capability tier its lane runs on. Read
 [capability tiers](../milestone-rush/references/orchestration.md#capability-tiers)
-when you write a packet, run one, or receive a lane's escalation.
+when you write a packet, run one, or receive a lane's escalation. Include the
+[long-command and lane rules](../delivery-wait/SKILL.md#long-commands-and-delegated-lanes)
+and the owner that resumes pending work in every packet.
 
 Use required companion skills when available; when one is unavailable, follow
 its reachable documented contract directly or report the specific missing
@@ -119,9 +121,9 @@ When only external transitions remain, such as CI, review automation or a
 deployment, park the work item: arm one wait for each awaited transition under
 [`delivery-wait`'s running rules](../delivery-wait/SKILL.md#running-a-wait),
 record resumable state, and end the turn. Resume from each returned result,
-and arm the next wait before ending another turn. Never end a turn with a
-transition still expected and nothing armed to resume it. If the host cannot
-keep a wait armed, report the exact time or event to resume at.
+and arm the next wait before ending another turn while the host supports it.
+If it cannot notify or keep a wait armed, use the shared bounded-check fallback
+and report the exact time or event to resume at.
 
 When the session goes on to another work item, start it from the recorded
 result and handoff, not from this item's working context. Compact the context
