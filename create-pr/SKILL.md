@@ -144,8 +144,8 @@ readiness. Recording a walkthrough does not replace behavior testing.
 10. Run the PR-specific phase. Compare the actual PR diff, body, links, metadata,
     committed tests and documentation, supplied completion evidence, and facts
     that exist only after publication. Re-read the live body with
-    `check_template.py --pr N`; a reported heading problem is a metadata-only
-    gap. Correct metadata-only gaps without a commit.
+    `python3 "$SKILL_DIR/scripts/check_template.py" --pr N`; a reported
+    heading problem is a metadata-only gap. Correct metadata-only gaps without a commit.
 11. If the PR-specific phase or CI exposes an in-scope repository, behavior,
     fidelity, test, documentation or compatibility gap, repair it through the
     development loop. Revalidate affected requirements, then use `/update-pr`

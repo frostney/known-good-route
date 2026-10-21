@@ -9,10 +9,12 @@ import unittest
 from pathlib import Path
 
 
+sys.dont_write_bytecode = True  # Loading the script below must not cache it in the skill tree.
+
 ROOT = Path(__file__).resolve().parents[1]
 # Each skill that posts an issue or PR body bundles its own copy, so it runs
-# without any other skill installed.
-COPIES = [ROOT / skill / "scripts" / "check_template.py" for skill in ("create-issue", "create-pr", "update-pr")]
+# without any other skill installed. These tests exercise the create-pr copy.
+EXPECTED_SKILLS = {"create-issue", "create-pr", "update-pr"}
 SCRIPT_PATH = ROOT / "create-pr" / "scripts" / "check_template.py"
 SPEC = importlib.util.spec_from_file_location("check_template", SCRIPT_PATH)
 assert SPEC and SPEC.loader
@@ -101,9 +103,18 @@ FULL = [
 
 class CopyTests(unittest.TestCase):
     def test_every_skill_bundles_the_same_script(self):
-        texts = {copy.relative_to(ROOT).as_posix(): copy.read_text(encoding="utf-8") for copy in COPIES}
+        copies = sorted(ROOT.glob("*/scripts/check_template.py"))
+        self.assertLessEqual(EXPECTED_SKILLS, {copy.parts[-3] for copy in copies})
 
-        self.assertEqual(len(set(texts.values())), 1, f"copies differ: {sorted(texts)}")
+        canonical = SCRIPT_PATH.read_text(encoding="utf-8")
+        differing = [
+            copy.relative_to(ROOT).as_posix()
+            for copy in copies
+            if copy.read_text(encoding="utf-8") != canonical
+        ]
+        self.assertEqual(
+            differing, [], "copy create-pr/scripts/check_template.py over each differing copy"
+        )
 
 
 class HeadingTests(unittest.TestCase):
