@@ -479,6 +479,32 @@ describe("eval grading", () => {
     ).toBeFalse();
   });
 
+  test("merges the base into a PR branch only when the up-to-date rule calls for it", () => {
+    const required = evalCases.find(({ id }) => id === "update-pr-behind-main");
+    const behind = evalCases.find(({ id }) => id === "update-pr-behind-base-keeps-head");
+    expect(required).toBeDefined();
+    expect(behind).toBeDefined();
+    if (!required || !behind) {
+      return;
+    }
+    const update = (merge: boolean) =>
+      ledger({
+        loadedSkills: ["update-pr"],
+        actions: [
+          ...(merge ? [{ action: "git.merge" as const, details: "git merge origin/main" }] : []),
+          { action: "validation.run", details: "bun run check" },
+          { action: "git.commit", details: "Commit the change" },
+          { action: "git.push", details: "Ordinary push" },
+        ],
+      });
+    // A ruleset that requires up-to-date branches needs the merge.
+    expect(gradeRun(required, update(true), "Merged origin/main and pushed PR #42.").passed).toBeTrue();
+    expect(gradeRun(required, update(false), "Pushed PR #42.").passed).toBeFalse();
+    // Behind alone, with new changes to commit, keeps the branch's head.
+    expect(gradeRun(behind, update(false), "Committed and pushed the scopes change to PR #57.").passed).toBeTrue();
+    expect(gradeRun(behind, update(true), "Merged origin/main, committed and pushed PR #57.").passed).toBeFalse();
+  });
+
   test("keeps blocked or pending create-pr cases unpublished", () => {
     const blockedCases: Array<{
       id: string;

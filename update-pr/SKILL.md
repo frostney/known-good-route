@@ -33,13 +33,16 @@ not block the update.
 
 1. Apply `git-workflow`. Inspect the current PR and its base branch, the
    branch, relevant local changes, recent commits and the fetched remote base
-   as `git-workflow` defines it. Resolve a behind-base or conflicting branch
-   before deciding whether missing CI needs any action.
+   as `git-workflow` defines it. Resolve a branch that needs the base under
+   step 3 before deciding whether missing CI needs any action.
 2. Stop if on the base branch or no open PR exists; report the required next
    workflow. Stop likewise when `git-workflow` gives the PR no remote base.
-3. When an ordinary branch is behind the remote base, merge it into the branch.
-   Preserve both sides' required behavior in additive conflicts; regenerate
-   generated files using the project's tool. Continue through validation when
+3. Merge the remote base into an ordinary branch only when `git-workflow`'s
+   [up-to-date rule](../git-workflow/SKILL.md#update-commit-and-push) calls
+   for it. A branch that is behind keeps its head and its checks, including
+   when this update commits new changes. Preserve
+   both sides' required behavior in additive conflicts; regenerate generated
+   files using the project's tool. Continue through validation when
    the resolution is established. For a verified native stack, capture remote
    heads and use the guarded `gh stack sync` or narrower official stack
    operation; never use raw rebase or force-push commands.
@@ -58,8 +61,10 @@ not block the update.
 6. When the branch has commits its remote lacks, push an ordinary branch
    normally, setting upstream when needed. Push a verified stack only through
    the guarded official stack workflow.
-7. Reconcile the PR title and body with the complete current diff, scope, linked
-   issues, and observed verification. Keep the title a Conventional Commit
+7. Update the PR title and body to match the complete current diff, scope,
+   linked issues, and observed verification. A push always changes the head
+   that verification applies to, so after a push write the updated body even
+   when the summary still holds. Keep the title a Conventional Commit
    subject for the whole change; it becomes the squash-merge commit subject, so
    widened scope may also change its type. Follow
    [../agent-writing/references/pr-descriptions.md](../agent-writing/references/pr-descriptions.md),
@@ -70,5 +75,7 @@ not block the update.
    and rewritten branches when applicable.
    Distinguish passed local checks from pending current-head CI. Return the
    exact current head and next transition to the active publication or delivery
-   caller; that caller continues through CI and feedback. Report missing
+   caller; that caller continues through CI and feedback. Leave a draft PR in
+   draft: as in `create-pr`, it is marked ready only after all required CI and
+   evidence are observed green for that exact head. Report missing
    walkthrough requirements with remedies.
