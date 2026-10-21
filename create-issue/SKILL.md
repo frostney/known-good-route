@@ -7,10 +7,10 @@ description: >-
   issue, or when the user runs /create-issue.
 license: Unlicense OR MIT
 compatibility: >-
-  Requires Python 3.11 or newer and the GitHub CLI (gh) 2.99 or newer
+  Requires Python 3.11 or newer, the GitHub CLI (gh) 2.99 or newer
   authenticated to the target repository with permission to create issues
-  (triage access to apply labels, write access to create one), and network
-  access.
+  (triage access to apply labels, write access to create one), the internal
+  `template-check` skill, and network access.
 metadata:
   agents-role: entry-point
   agents-text: File a project-aligned GitHub issue from a short description.
@@ -83,13 +83,13 @@ to a full draft review.
    > [!NOTE]
    > Created on behalf of @username using ModelName.
 
-8. Check the draft with
-   `python3 "$SKILL_DIR/scripts/check_template.py" --kind issue --body FILE`,
-   where `SKILL_DIR` is this skill's directory, run from the target
-   repository's checkout or with `--repo OWNER/REPO`, and fix every heading
-   problem it reports. Pass `--template-name` when the repository has several templates.
+8. Run [`template-check`](../template-check/SKILL.md#running-a-check) on the
+   draft with `--kind issue --body FILE`, adding `--repo OWNER/REPO` outside
+   the target repository's checkout and `--template-name` when the
+   repository has several templates, and fix every heading problem it
+   reports.
    Create the issue with the available GitHub tooling, verify the returned
-   issue's repository and intended content, run the check again with
+   issue's repository and intended content, run `template-check` again with
    `--issue N` on the live body and edit the issue to fix any problem, and
    return its URL. If the write response is lost or interrupted, search for
    the issue before retrying. Report an unresolved write as uncertain; a

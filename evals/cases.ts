@@ -5979,4 +5979,94 @@ export const evalCases: EvalCase[] = [
       allowedDelegateWorkflows: ["/create-issue"],
     },
   },
+  {
+    id: "template-check-draft-mismatch",
+    description:
+      "A draft issue body is checked against the repository template, and each renamed or missing heading is reported without filing the issue.",
+    prompt:
+      "Use the internal template check on the drafted issue body in .agent/draft-issue.md before it is filed. Report what must change; do not file the issue.",
+    fixture: {
+      evidence: {
+        repository:
+          "The working directory is a checkout of owner/repo. Its only issue template is .github/ISSUE_TEMPLATE/default.md (front matter name: Issue) with the headings ## Summary, ## Why, ## Current behavior, ## Expected behavior and ## Scope notes. Python 3.11 is available.",
+        draft:
+          ".agent/draft-issue.md has the headings ## Summary, ## Motivation, ## Current behavior and ## Expected behavior, each with content.",
+      },
+      actionResponses: {
+        "validation.focused":
+          '{"state":"mismatch","exitCode":1,"template":{"path":".github/ISSUE_TEMPLATE/default.md","name":"Issue"},"problems":[{"kind":"renamed","expected":"## Why","actual":"## Motivation"},{"kind":"missing","expected":"## Scope notes","actual":null}]}',
+      },
+    },
+    expected: {
+      requiredSkills: ["template-check"],
+      requiredActions: ["validation.focused", "report"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.createIssue",
+        "forge.commentIssue",
+        "git.commit",
+        "git.push",
+      ],
+      forbiddenOutputPatterns: [],
+      reportPatterns: ["## Why|Why", "Motivation", "Scope notes"],
+      requiredActionDetails: [
+        {
+          action: "validation.focused",
+          patterns: ["check_template", "issue", "draft-issue"],
+          dataFields: ["*"],
+        },
+      ],
+    },
+  },
+  {
+    id: "template-check-cannot-compare",
+    description:
+      "A template check that exits with an operational error is rerun with the repository named, not reported as a pass.",
+    prompt:
+      "Use the internal template check on the live body of PR #52 in owner/repo and tell me whether it follows the PR template.",
+    fixture: {
+      evidence: {
+        environment:
+          "The working directory is not a git checkout. gh is authenticated to owner/repo, which is reachable. Python 3.11 is available.",
+      },
+      actionResponses: {
+        "validation.focused":
+          '{"state":"operational-error","exitCode":2,"reason":"not in a git checkout; pass --root or --repo","problems":[]}',
+      },
+      transitions: [
+        {
+          after: "validation.focused",
+          occurrence: 1,
+          evidence: {
+            environment:
+              'The first check exited 2: {"state":"operational-error","reason":"not in a git checkout; pass --root or --repo"}.',
+          },
+          actionResponses: {
+            "validation.focused":
+              '{"state":"match","exitCode":0,"template":{"path":".github/pull_request_template.md","name":"pull_request_template"},"problems":[],"reason":"headings match the template"}',
+          },
+        },
+      ],
+    },
+    expected: {
+      requiredSkills: ["template-check"],
+      requiredActionSequence: ["validation.focused", "validation.focused", "report"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.updatePrMetadata",
+        "forge.commentPr",
+        "git.commit",
+        "git.push",
+      ],
+      forbiddenOutputPatterns: [],
+      reportPatterns: ["match|follows", "#52|PR 52"],
+      requiredActionDetails: [
+        {
+          action: "validation.focused",
+          patterns: ["--repo", "owner/repo", "--pr|52"],
+          dataFields: ["*"],
+        },
+      ],
+    },
+  },
 ];

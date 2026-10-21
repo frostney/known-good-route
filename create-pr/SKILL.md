@@ -9,7 +9,7 @@ license: Unlicense OR MIT
 compatibility: >-
   Requires git, Python 3.11 or newer, the GitHub CLI (gh) 2.99 or newer
   authenticated to the target repository with push access, the internal
-  `delivery-wait` skill, and network access.
+  `delivery-wait` and `template-check` skills, and network access.
 metadata:
   agents-role: entry-point
   agents-text: Publish the current change as a pull request and bring it to ready for review.
@@ -126,11 +126,10 @@ readiness. Recording a walkthrough does not replace behavior testing.
    boilerplate to omit. Before writing the body, search open and closed issues
    and recent sibling sessions or adjacent branches when available for related
    findings and duplicates. Put each closing keyword on its own line as
-   `Closes #N`, and only on the layer that completes that issue. From the
-   repository checkout, run
-   `python3 "$SKILL_DIR/scripts/check_template.py" --kind pr --body FILE`
-   on the draft, where `SKILL_DIR` is this skill's directory, and fix every
-   heading problem it reports before publishing.
+   `Closes #N`, and only on the layer that completes that issue. Run
+   [`template-check`](../template-check/SKILL.md#running-a-check) on the draft
+   with `--kind pr --body FILE` and fix every heading problem it reports
+   before publishing.
 9. After the publication checks pass, or under the preview-only draft rule
    above, push an ordinary branch normally and set its upstream when needed,
    then open one draft PR against the remote default or the named base.
@@ -143,9 +142,9 @@ readiness. Recording a walkthrough does not replace behavior testing.
    topology and keep each layer draft.
 10. Run the PR-specific phase. Compare the actual PR diff, body, links, metadata,
     committed tests and documentation, supplied completion evidence, and facts
-    that exist only after publication. Re-read the live body with
-    `python3 "$SKILL_DIR/scripts/check_template.py" --pr N`; a reported
-    heading problem is a metadata-only gap. Correct metadata-only gaps without a commit.
+    that exist only after publication. Run `template-check` on the live body
+    with `--pr N`; a reported heading problem is a metadata-only gap. Correct
+    metadata-only gaps without a commit.
 11. If the PR-specific phase or CI exposes an in-scope repository, behavior,
     fidelity, test, documentation or compatibility gap, repair it through the
     development loop. Revalidate affected requirements, then use `/update-pr`

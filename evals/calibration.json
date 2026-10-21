@@ -3122,6 +3122,26 @@
       "postFreezeChangedFields": [
         "expected"
       ]
+    },
+    {
+      "caseId": "template-check-draft-mismatch",
+      "status": "new",
+      "rationale": [
+        "A draft body is checked with the bundled script before filing, and each renamed or missing template heading the check reports reaches the report; the issue is not filed or edited."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "2a084e6fd6b356d8891e121f11cf281415086084317261025f75fb77c74cc1ac",
+      "frozenCaseSha256": "2a084e6fd6b356d8891e121f11cf281415086084317261025f75fb77c74cc1ac"
+    },
+    {
+      "caseId": "template-check-cannot-compare",
+      "status": "new",
+      "rationale": [
+        "An operational error from the check is not a pass: the check reruns with the repository named, and only the second result decides whether the live PR body follows the template."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "9462e476adfb401e0b88d4700d2cf2c77b566d04073f906a3e86f2fd6a7a84b2",
+      "frozenCaseSha256": "9462e476adfb401e0b88d4700d2cf2c77b566d04073f906a3e86f2fd6a7a84b2"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

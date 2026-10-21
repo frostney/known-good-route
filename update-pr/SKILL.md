@@ -7,8 +7,9 @@ description: >-
   /update-pr.
 license: Unlicense OR MIT
 compatibility: >-
-  Requires git, Python 3.11 or newer, and the GitHub CLI (gh) authenticated to
-  the target repository, plus network access.
+  Requires git, Python 3.11 or newer, the GitHub CLI (gh) authenticated to
+  the target repository, the internal `template-check` skill, and network
+  access.
 metadata:
   agents-role: entry-point
   agents-text: Push new changes to an existing pull request and refresh its metadata.
@@ -71,11 +72,10 @@ not block the update.
    preserving explicit project-template requirements and replacing obsolete
    summaries or intermediate development history. Keep every PR template
    heading verbatim and in order, and under a heading with nothing to say write
-   a one-line `None` or the reason. From the repository checkout, run
-   `python3 "$SKILL_DIR/scripts/check_template.py" --kind pr --body FILE`
-   on the draft before writing it, where `SKILL_DIR` is this skill's
-   directory, then `--pr N` on the live body after, and fix every heading
-   problem it reports.
+   a one-line `None` or the reason. Run
+   [`template-check`](../template-check/SKILL.md#running-a-check) on the draft
+   with `--kind pr --body FILE` before writing it and on the live body with
+   `--pr N` after, and fix every heading problem it reports.
 8. Report the updated PR, any new commit, metadata changes, what the
    publication guard rewrote and observed validation. Include stack position
    and rewritten branches when applicable.
