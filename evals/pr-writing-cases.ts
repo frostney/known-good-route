@@ -5,6 +5,7 @@ const createEvidence = {
   projectDefinitions: "The repository requires a passed independent code review, observed behavior evidence and project gate on current content, followed by exact-head CI. No extra media gate or approval requirement. The supplied evidence satisfies the implementation requirements.",
   completionEvidence: "Independent code review, actual browser behavior checks and the declared local gate passed on head 1111111111111111111111111111111111111111 in the current environment. No changes followed. These are observed fixture results, not pending requests.",
   relatedWork: "Open/closed issue search and available sibling-session/adjacent-branch inspection are complete: no duplicate or linked issue exists. The final diff is the claim source.",
+  publicationGuard: "Observed result of every git-workflow publication guard run for this change (staged, outgoing and pr): the repository is public, exit 0, nothing to rewrite, no warnings. These are observed fixture results; no rerun is needed.",
 };
 const createResponses = {
   "git.fetch": "Fetched origin/main; branch and base unchanged.",
@@ -89,6 +90,7 @@ export const prWritingCases: EvalCase[] = [
       projectGate: "Independent review, exact-content CLI behavior checks and the declared full local gate passed on the current unchanged candidate in the same environment. No rerun is needed. Current-head remote CI remains pending.",
       template: "No required headings or routine testing section. Record the complete replacement body in data.body and title in data.title when updating metadata.",
       mediaCapabilities: "This internal lookup optimization has no additional meaningful visual or CLI workflow demonstration beyond the benchmark. No video is required by project policy.",
+      publicationGuard: "Observed result of every git-workflow publication guard run for this update (outgoing and pr): the repository is public, exit 0, nothing to rewrite, no warnings. These are observed fixture results; no rerun is needed.",
     }, actionResponses: {
       "git.fetch": "Fetched remote default; unchanged.",
       "git.push": "Remote already has the candidate; no new commit.",
@@ -100,16 +102,52 @@ export const prWritingCases: EvalCase[] = [
         { id: "benchmark-conditions", question: "Does the recorded PR body state the measurement conditions that make the comparison meaningful, including the fixed name corpus and the number of alternating warm runs per revision (other conditions such as the Apple M3 host, Node 24.18.0 and release build may also appear)?" },
         { id: "final-aggregate-change", question: "Does the recorded PR body describe the final change (reusing the existing interned-name index for repeated identifier lookup, observable results unchanged) instead of recounting development history such as the temporary wrapper, the 480-line removal, the reverted cache prototype or the five test reruns?" },
         { id: "ci-pending-open", question: "Does the final response report that PR #72's metadata was updated while current-head CI is still pending and the PR remains open and unmerged, rather than claiming CI passed, the PR is ready, or it was merged?" },
+        { id: "body-structure", question: "Is the recorded PR body laid out in this order: a short What changed summary, a collapsed <details> block, a Visual walkthrough section holding the benchmark table, and a How to test section of bullets that each give a step and its expected result?" },
+        { id: "body-no-author-verification", question: "Does the recorded PR body leave out the author's own verification, with no section, collapsed block or sentence reporting that the review, the CLI behavior checks or the project gate passed, while counting benchmark results and conditions (including that parse output matched across benchmark runs) as part of the claim rather than as verification?" },
       ],
       requiredAnswerValues: [
         "72",
       ],
       requiredActionValues: [
-        { action: "forge.updatePrMetadata", values: [["100","100ms"], ["70","70ms"], ["10,000","10000","10k"], "15"] },
+        { action: "forge.updatePrMetadata", values: [["100","100ms"], ["70","70ms"], ["10,000","10000","10k"], "15", "## What changed", "<details>", "## Visual walkthrough", "## How to test"] },
       ],
       requiredSkills: ["update-pr"], requiredReferences: ["agent-writing/references/pr-descriptions.md"],
       requiredInspections: ["finalDiff", "benchmark", "projectGate", "template"],
       requiredActions: ["forge.updatePrMetadata"], forbiddenActions: [...forbiddenPublicationExtras, "file.edit", "forge.markPrReady"],
+    },
+  },
+  {
+    id: "pr-writing-structured-body",
+    description: "A CLI change gets the What changed, Details, Visual walkthrough and How to test structure without the author's verification.",
+    prompt: "/create-pr for the completed report-export change.",
+    fixture: { environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } }, evidence: { ...createEvidence,
+      relatedWork: "Open/closed issue search and available sibling-session/adjacent-branch inspection are complete. Issue #40 asks for a date filter on report export; this change completes it. No duplicate exists. The final diff is the claim source.",
+      finalDiff: "The `report export` CLI now accepts `--since YYYY-MM-DD` and exports only rows dated on or after that day. Previously it always exported every row. An invalid date exits with status 2 and names the flag. The filter runs before formatting, so CSV and JSON output both honor it. This is the complete aggregate change; no benchmark claim.",
+      completionEvidence: "Independent code review passed. `bun test` passed with 412 tests and exit 0. Eight revert probes each removed one rule and the tests caught all eight. CLI behavior checks against the fixture database passed. All on head 1111111111111111111111111111111111111111 in the current environment; no changes followed.",
+      template: "No mandatory PR template. Write the body in the forge action's data.body and title in data.title so the fixture records the actual proposed text.",
+      mediaCapabilities: "No screen recorder or attachment upload is available. This is a terminal-only change; a plain-text CLI session is the clearest demonstration. `report export --db PATH` selects a database and `--format csv|json` selects the output format (default csv). The sample database `examples/sales.db` ships in the repository and has rows from 2026-01-01 to 2026-03-31.",
+      pullRequest: "No PR yet. After creation, metadata and diff match the submitted change.",
+    }, actionResponses: createResponses },
+    expected: {
+      rubric: [
+        { id: "body-order", question: "Is the body of the recorded forge.openDraftPr action laid out in this order: a What changed section, then a Closes line for issue 40, then a collapsed <details> block, then a Visual walkthrough section, then a How to test section?" },
+        { id: "summary-short", question: "Is the What changed section a brief summary of the problem and the new --since behavior (a few sentences, roughly 80 words or fewer), with design rationale and limits left to the <details> block?" },
+        { id: "walkthrough-cli-session", question: "Does the Visual walkthrough section show a CLI session or example that runs report export with --since against examples/sales.db and shows or describes what it outputs?" },
+        { id: "how-to-test-runnable", question: "Is How to test a list of bullets that a person or agent could follow from the PR branch, each giving an exact command or input and its expected result, including a report export --since run against examples/sales.db?" },
+        { id: "body-no-author-verification", question: "Does the PR body leave out the author's own verification, with no section, collapsed block or sentence reporting the review result, the 412 tests, the revert probes or the behavior checks that were run?" },
+        { id: "handoff-validation", question: "Does the final response report the supplied validation (the independent review, the test run and the behavior checks) and that the PR was published and marked ready for review, without claiming it was merged?" },
+      ],
+      requiredAnswerValues: [
+        "71",
+      ],
+      requiredActionValues: [
+        { action: "forge.openDraftPr", values: ["## What changed", "Closes #40", "<details>", "## Visual walkthrough", "## How to test"] },
+        { action: "monitor.wait", values: ["1111111111111111111111111111111111111111"] },
+      ],
+      requiredSkills: ["create-pr"], requiredReferences: ["agent-writing/references/pr-descriptions.md"],
+      requiredInspections: ["finalDiff", "template", "completionEvidence", "relatedWork", "mediaCapabilities"],
+      requiredActions: ["forge.openDraftPr", "monitor.wait", "forge.markPrReady"],
+      forbiddenActions: [...forbiddenPublicationExtras, "file.edit", "behaviorTest.run"],
     },
   },
   {

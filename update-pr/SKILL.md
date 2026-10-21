@@ -63,15 +63,15 @@ not block the update.
 6. When the branch has commits its remote lacks, push an ordinary branch
    normally, setting upstream when needed. Push a verified stack only through
    the guarded official stack workflow.
-7. Update the PR title and body to match the complete current diff, scope,
-   linked issues, and observed verification. A push always changes the head
-   that verification applies to, so after a push write the updated body even
-   when the summary still holds. Keep the title a Conventional Commit
+7. Reconcile the PR title and body with the complete current diff, scope and
+   linked issues. A push always changes the head, so after a push reconcile
+   the body again even when the summary still holds. Keep the title a Conventional Commit
    subject for the whole change; it becomes the squash-merge commit subject, so
    widened scope may also change its type. Follow
    [../agent-writing/references/pr-descriptions.md](../agent-writing/references/pr-descriptions.md),
    preserving explicit project-template requirements and replacing obsolete
-   summaries or intermediate development history.
+   summaries, intermediate development history and author verification
+   sections.
 8. Report the updated PR, any new commit, metadata changes, what the
    publication guard rewrote and observed validation. Include stack position
    and rewritten branches when applicable.
