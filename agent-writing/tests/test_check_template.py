@@ -185,13 +185,18 @@ class HeadingTests(unittest.TestCase):
                 "- type: textarea",
                 "  attributes:",
                 "    label: Logs # plain, with a comment",
+                "- type: textarea",
+                "  attributes:",
+                "    label: |2-",
+                "      # Hash",
+                "      line",
             ]),
         )
 
         self.assertEqual(template.name, "It's a form")
         self.assertEqual(
             [str(heading) for heading in template.headings],
-            ['### Version: "exact"', "### Steps to reproduce", "### Logs"],
+            ['### Version: "exact"', "### Steps to reproduce", "### Logs", "### # Hash line"],
         )
 
     def test_issue_form_whose_labels_cannot_be_read_is_an_error(self):
@@ -308,6 +313,8 @@ class CommandTests(unittest.TestCase):
             **os.environ,
             "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
             "FAKE_GH_SCENARIO": str(self.scenario),
+            # Keep git from finding a checkout above a temporary directory.
+            "GIT_CEILING_DIRECTORIES": str(self.root.parent),
         }
         self.checkout = self.root / "checkout"
         self.checkout.mkdir()

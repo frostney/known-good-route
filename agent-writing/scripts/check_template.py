@@ -32,7 +32,7 @@ COMMENT = re.compile(r"<!--.*?-->")
 # Only a comment that starts a line opens an HTML block that can span lines;
 # an unclosed `<!--` later in a line is literal text.
 COMMENT_BLOCK = re.compile(r" {0,3}<!--")
-BLOCK_SCALAR = re.compile(r"[|>][+-]?[0-9]?(?:\s+#.*)?$")
+BLOCK_SCALAR = re.compile(r"[|>](?:[+-][0-9]?|[0-9][+-]?)?(?:\s+#.*)?$")
 # A renamed heading still resembles the template's wording this closely.
 RENAME_SIMILARITY = 0.6
 # GitHub looks for pull request templates in these directories, and for
@@ -155,7 +155,7 @@ def form_template(path: str, text: str) -> Template:
             found.append(Heading(3, " ".join(item["label"].split()), item["line"]))
 
     for number, raw in enumerate(text.replace("\r\n", "\n").split("\n"), start=1):
-        if not raw.strip() or raw.lstrip().startswith("#"):
+        if not raw.strip() or (block is None and raw.lstrip().startswith("#")):
             continue
         indent = len(raw) - len(raw.lstrip(" "))
         content = raw.strip()
@@ -201,7 +201,7 @@ def form_template(path: str, text: str) -> Template:
         item["label"] = " ".join(block)
     finish()
     if not found and re.search(r"\blabel\s*:", text):
-        raise CheckError(f"{path}: cannot read the issue form's field labels")
+        raise CheckError(f"{path}: cannot read the issue form's field labels; pass --template PATH")
     return Template(path, name, found)
 
 
@@ -539,6 +539,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
 def main() -> int:
     args = parser().parse_args()
+    sys.stdout.reconfigure(errors="replace")  # A label the terminal cannot encode.
     try:
         result = run(args)
     # A check that could not run must not read as a mismatch to fix.
