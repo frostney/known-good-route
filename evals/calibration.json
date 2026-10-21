@@ -3127,11 +3127,11 @@
       "caseId": "template-check-draft-mismatch",
       "status": "new",
       "rationale": [
-        "A draft body is checked with the bundled script before filing, and each renamed or missing template heading the check reports reaches the report; the issue is not filed or edited."
+        "A draft body is checked with the template-check script before filing, and each renamed or missing template heading the check reports reaches the report; the issue is not filed or edited."
       ],
       "beforeSha256": null,
-      "afterSha256": "2a084e6fd6b356d8891e121f11cf281415086084317261025f75fb77c74cc1ac",
-      "frozenCaseSha256": "2a084e6fd6b356d8891e121f11cf281415086084317261025f75fb77c74cc1ac"
+      "afterSha256": "aa9939bb1820955cdd42910308e122ab62eaae4ae5c5ecd24b132c79ede040cc",
+      "frozenCaseSha256": "aa9939bb1820955cdd42910308e122ab62eaae4ae5c5ecd24b132c79ede040cc"
     },
     {
       "caseId": "template-check-cannot-compare",
@@ -3140,8 +3140,8 @@
         "An operational error from the check is not a pass: the check reruns with the repository named, and only the second result decides whether the live PR body follows the template."
       ],
       "beforeSha256": null,
-      "afterSha256": "9462e476adfb401e0b88d4700d2cf2c77b566d04073f906a3e86f2fd6a7a84b2",
-      "frozenCaseSha256": "9462e476adfb401e0b88d4700d2cf2c77b566d04073f906a3e86f2fd6a7a84b2"
+      "afterSha256": "f90dc2a0857d904b3c38540fa3ca9730c9591ada9b067b694ecd27e96a720684",
+      "frozenCaseSha256": "f90dc2a0857d904b3c38540fa3ca9730c9591ada9b067b694ecd27e96a720684"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

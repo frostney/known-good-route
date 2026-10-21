@@ -6008,7 +6008,7 @@ export const evalCases: EvalCase[] = [
         "git.push",
       ],
       forbiddenOutputPatterns: [],
-      reportPatterns: ["## Why|Why", "Motivation", "Scope notes"],
+      reportPatterns: ["Why", "Motivation", "Scope notes"],
       requiredActionDetails: [
         {
           action: "validation.focused",
@@ -6031,7 +6031,7 @@ export const evalCases: EvalCase[] = [
       },
       actionResponses: {
         "validation.focused":
-          '{"state":"operational-error","exitCode":2,"reason":"not in a git checkout; pass --root or --repo","problems":[]}',
+          '{"state":"operational-error","exitCode":2,"reason":"failed to run git: fatal: not a git repository (or any of the parent directories): .git","problems":[]}',
       },
       transitions: [
         {
@@ -6039,7 +6039,7 @@ export const evalCases: EvalCase[] = [
           occurrence: 1,
           evidence: {
             environment:
-              'The first check exited 2: {"state":"operational-error","reason":"not in a git checkout; pass --root or --repo"}.',
+              'The first check exited 2: {"state":"operational-error","reason":"failed to run git: fatal: not a git repository (or any of the parent directories): .git"}.',
           },
           actionResponses: {
             "validation.focused":
@@ -6058,7 +6058,7 @@ export const evalCases: EvalCase[] = [
         "git.commit",
         "git.push",
       ],
-      forbiddenOutputPatterns: [],
+      forbiddenOutputPatterns: ["does not (match|follow)|doesn't (match|follow)"],
       reportPatterns: ["match|follows", "#52|PR 52"],
       requiredActionDetails: [
         {

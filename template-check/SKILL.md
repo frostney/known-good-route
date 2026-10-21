@@ -27,11 +27,12 @@ belongs to.
 - Check a draft with `--body FILE`, or `--body -` for standard input, plus
   `--kind issue` or `--kind pr`. Check a posted body with `--pr N` or
   `--issue N`.
-- The template is discovered where GitHub looks for it: PR templates in the
-  root, `docs/` and `.github/`, including a `PULL_REQUEST_TEMPLATE/` folder,
-  and issue templates and issue forms in `.github/ISSUE_TEMPLATE/`. `--root`
-  names another checkout; `--repo OWNER/REPO` without `--root` reads the
-  templates from that repository's default branch.
+- The template is discovered where GitHub looks for it, in the root, `docs/`
+  and `.github/`: `pull_request_template.md` or a `PULL_REQUEST_TEMPLATE/`
+  folder for PRs, and `issue_template.md` or an `ISSUE_TEMPLATE/` folder of
+  templates and issue forms for issues. `--root` names another checkout.
+  `--repo OWNER/REPO` names the repository for `--pr` and `--issue` and,
+  without `--root`, reads the templates from its default branch.
 - With several templates, pass the one the body follows with
   `--template-name`, matching its front matter `name` or its file name.
   Otherwise the closest fit is used. `--template PATH` skips discovery.
@@ -46,9 +47,10 @@ belongs to.
 - Exit 1 with `mismatch`: fix each reported heading in the body and run the
   check again.
 - Exit 2 with `operational-error`: the check could not compare, for example
-  outside a git checkout, for an unreachable repository, or for an issue form
-  it cannot read. Fix the cause it names or pass `--template PATH`; never
-  treat it as a pass.
+  outside a git checkout, for an unreachable repository, for an issue form it
+  cannot read, or for a body that fits several templates equally. Fix the
+  cause it names, pass `--repo`, `--template-name` or `--template PATH` as it
+  says, and never treat it as a pass.
 
 It reads Markdown headings in ATX form (`## Title`). Setext headings and
 headings inside list items are not recognized.
