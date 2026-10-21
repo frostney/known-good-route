@@ -127,10 +127,10 @@ readiness. Recording a walkthrough does not replace behavior testing.
    and recent sibling sessions or adjacent branches when available for related
    findings and duplicates. Put each closing keyword on its own line as
    `Closes #N`, and only on the layer that completes that issue. From the
-   checkout, run
-   `python3 ../agent-writing/scripts/check_template.py --kind pr --body FILE`
-   (path relative to this skill directory) on the draft and fix every heading
-   problem it reports before publishing.
+   repository checkout, run
+   `python3 "$SKILL_DIR/../agent-writing/scripts/check_template.py" --kind pr --body FILE`
+   on the draft, where `SKILL_DIR` is this skill's directory, and fix every
+   heading problem it reports before publishing.
 9. After the publication checks pass, or under the preview-only draft rule
    above, push an ordinary branch normally and set its upstream when needed,
    then open one draft PR against the remote default or the named base.

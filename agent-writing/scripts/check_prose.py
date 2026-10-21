@@ -76,22 +76,34 @@ def markdown_paths(root: Path) -> list[Path]:
     return paths
 
 
+def code_fence(fence: str, stripped: str) -> tuple[str, bool]:
+    """Follow a fenced code block across one line.
+
+    Takes the open block's run of backticks or tildes ("" outside a block) and
+    the line without leading whitespace. Returns the run after the line and
+    whether the line belongs to a code block, its fences included.
+    """
+    fence_match = FENCE.match(stripped)
+    marker, rest = fence_match.groups() if fence_match else ("", "")
+    if fence:
+        # CommonMark closes a block only on the character that opened it,
+        # in a run at least as long, with nothing after it.
+        if marker[:1] == fence[0] and len(marker) >= len(fence) and not rest.strip():
+            return "", True
+        return fence, True
+    # A backtick fence cannot carry a backtick in its info string.
+    if marker and not (marker[0] == "`" and "`" in rest):
+        return marker, True
+    return "", False
+
+
 def check_lines(path: Path, lines: Iterable[str]) -> list[str]:
     findings: list[str] = []
     fence = ""  # The open code block's run of backticks or tildes.
     for line_number, line in enumerate(lines, start=1):
         stripped = line.lstrip()
-        fence_match = FENCE.match(stripped)
-        marker, rest = fence_match.groups() if fence_match else ("", "")
-        if fence:
-            # CommonMark closes a block only on the character that opened it,
-            # in a run at least as long, with nothing after it.
-            if marker[:1] == fence[0] and len(marker) >= len(fence) and not rest.strip():
-                fence = ""
-            continue
-        # A backtick fence cannot carry a backtick in its info string.
-        if marker and not (marker[0] == "`" and "`" in rest):
-            fence = marker
+        fence, in_code = code_fence(fence, stripped)
+        if in_code:
             continue
         if stripped.startswith(">"):
             continue

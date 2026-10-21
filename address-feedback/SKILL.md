@@ -62,13 +62,13 @@ If `automatic-merge` is requested for a stack, explain that the caller owns its
 atomic merge; perform only the authorized feedback work and return readiness.
 
 An explicit read-only request disables every mutation in either mode, including
-checkout, review triggers, edits, commits, pushes, replies, thread resolution,
-and PR-state changes. It overrides `automatic-merge`.
+checkout, review triggers, edits, commits, pushes, replies, results comments,
+PR body edits, thread resolution, and PR-state changes. It overrides `automatic-merge`.
 
 Before a substantive inline reply or results comment, resolve the
 authenticated GitHub username and exact model name from observed metadata. If
-either is unavailable, report the blocked reply and leave its thread
-unresolved; placeholders and assumed
+either is unavailable, report the blocked reply or comment and leave any
+thread unresolved; placeholders and assumed
 helper substitution do not satisfy this prerequisite. End the concise, complete
 disposition and evidence with:
 

@@ -4,6 +4,9 @@
 Reports template headings that are missing, renamed, out of order or left
 empty. Exits 0 when the headings match or no template exists, 1 on a
 mismatch and 2 on an operational error.
+
+Markdown headings are read in ATX form (`## Title`). Setext headings and
+headings inside list items are not recognized.
 """
 
 from __future__ import annotations
@@ -20,11 +23,16 @@ from typing import Any, Callable
 
 sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__.
 
+from check_prose import code_fence
 
-FENCE = re.compile(r"(`{3,}|~{3,})(.*)")
+
 ATX = re.compile(r" {0,3}(#{1,6})(?:[ \t]+(.*))?$")
 CLOSING_HASHES = re.compile(r"(?:^|[ \t]+)#+[ \t]*$")
 COMMENT = re.compile(r"<!--.*?-->")
+# Only a comment that starts a line opens an HTML block that can span lines;
+# an unclosed `<!--` later in a line is literal text.
+COMMENT_BLOCK = re.compile(r" {0,3}<!--")
+BLOCK_SCALAR = re.compile(r"[|>][+-]?[0-9]?(?:\s+#.*)?$")
 # A renamed heading still resembles the template's wording this closely.
 RENAME_SIMILARITY = 0.6
 # GitHub looks for pull request templates in these directories, and for
@@ -65,31 +73,20 @@ def headings(text: str) -> list[Heading]:
     fence = ""  # The open code block's run of backticks or tildes.
     in_comment = False
     for number, line in enumerate(text.replace("\r\n", "\n").split("\n"), start=1):
-        if fence:
-            marker, rest = fence_parts(line.lstrip())
-            # CommonMark closes a block only on the character that opened it,
-            # in a run at least as long, with nothing after it.
-            if marker[:1] == fence[0] and len(marker) >= len(fence) and not rest.strip():
-                fence = ""
-            for section in open_sections:
-                section.has_content = True
-            continue
-        if in_comment:
-            if "-->" not in line:
+        if not fence:
+            if in_comment:
+                if "-->" not in line:
+                    continue
+                line = line.split("-->", 1)[1]
+                in_comment = False
+            line = COMMENT.sub("", line)
+            if COMMENT_BLOCK.match(line):
+                line, in_comment = "", True
+            if not line.strip():
                 continue
-            line = line.split("-->", 1)[1]
-            in_comment = False
-        line = COMMENT.sub("", line)
-        if "<!--" in line:
-            line, in_comment = line.split("<!--", 1)[0], True
-        if not line.strip():
-            continue
-        marker, rest = fence_parts(line.lstrip())
-        # A backtick fence cannot carry a backtick in its info string.
-        if marker and not (marker[0] == "`" and "`" in rest):
-            fence = marker
-        match = ATX.match(line)
-        if match and not fence:
+        fence, in_code = code_fence(fence, line.lstrip())
+        match = None if in_code else ATX.match(line)
+        if match:
             level = len(match.group(1))
             title = " ".join(CLOSING_HASHES.sub("", match.group(2) or "").split())
             while open_sections and open_sections[-1].level >= level:
@@ -103,11 +100,6 @@ def headings(text: str) -> list[Heading]:
         for section in open_sections:
             section.has_content = True
     return found
-
-
-def fence_parts(stripped: str) -> tuple[str, str]:
-    match = FENCE.match(stripped)
-    return match.groups() if match else ("", "")
 
 
 def front_matter(text: str) -> tuple[dict[str, str], str]:
@@ -127,18 +119,27 @@ def front_matter(text: str) -> tuple[dict[str, str], str]:
 
 
 def scalar(value: str) -> str:
+    """A plain or quoted single-line YAML scalar without a trailing comment."""
     value = value.strip()
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
-        return value[1:-1]
-    return value
+    double = re.match(r'"(?:[^"\\]|\\.)*"', value)
+    if double:
+        try:
+            return str(json.loads(double.group(0)))
+        except ValueError:
+            return double.group(0)[1:-1]
+    single = re.match(r"'(?:[^']|'')*'", value)
+    if single:
+        return single.group(0)[1:-1].replace("''", "'")
+    return re.sub(r"(?:^|\s+)#.*$", "", value)
 
 
 def form_template(path: str, text: str) -> Template:
     """Headings of a GitHub issue form: one `###` per non-Markdown field label.
 
     GitHub renders each answered or empty field as `### <label>` followed by
-    the answer or `_No response_`. This reads the plain block layout issue
-    forms use; flow-style YAML is not supported.
+    the answer or `_No response_`. This reads the block layout issue forms
+    use, including folded and literal labels; flow-style YAML is not
+    supported, and a form whose labels cannot be read is an error.
     """
     name = Path(path).stem
     found: list[Heading] = []
@@ -147,6 +148,7 @@ def form_template(path: str, text: str) -> Template:
     item: dict[str, Any] = {}
     attributes_indent: int | None = None
     label_indent: int | None = None
+    block: list[str] | None = None  # Lines of a folded or literal label.
 
     def finish() -> None:
         if item.get("label") and item.get("type") != "markdown":
@@ -157,7 +159,13 @@ def form_template(path: str, text: str) -> Template:
             continue
         indent = len(raw) - len(raw.lstrip(" "))
         content = raw.strip()
-        if indent == 0:
+        if block is not None:
+            if label_indent is not None and indent > label_indent:
+                block.append(content)
+                continue
+            item["label"], block = " ".join(block), None
+        # A list item under `body:` may start at the same indent as the key.
+        if indent == 0 and not (in_body and content.startswith("- ")):
             key, _, value = content.partition(":")
             if key == "name":
                 name = scalar(value) or name
@@ -184,8 +192,16 @@ def form_template(path: str, text: str) -> Template:
         elif attributes_indent is not None and indent > attributes_indent:
             label_indent = label_indent or indent
             if indent == label_indent and key == "label":
-                item["label"], item["line"] = scalar(value), number
+                item["line"] = number
+                if BLOCK_SCALAR.match(value.strip()):
+                    block = []
+                else:
+                    item["label"] = scalar(value)
+    if block is not None:
+        item["label"] = " ".join(block)
     finish()
+    if not found and re.search(r"\blabel\s*:", text):
+        raise CheckError(f"{path}: cannot read the issue form's field labels")
     return Template(path, name, found)
 
 
@@ -195,6 +211,7 @@ def markdown_template(path: str, text: str) -> Template:
 
 
 def parse_template(path: str, text: str) -> Template:
+    text = text.removeprefix("\ufeff")
     if path.lower().endswith((".yml", ".yaml")):
         return form_template(path, text)
     return markdown_template(path, text)
@@ -223,6 +240,8 @@ class Source:
         assert self.run is not None
         endpoint = f"repos/{self.repo}/contents" + (f"/{directory}" if directory else "")
         output = self.run(["api", endpoint])
+        if output is None and not directory:
+            raise CheckError(f"repository {self.repo} was not found or is not accessible")
         if output is None:
             return []
         listing = json.loads(output)
@@ -312,6 +331,7 @@ def compare(expected: list[Heading], actual: list[Heading]) -> list[dict[str, An
         })
 
     placed: dict[int, Heading] = {}
+    anchors = dict(pairs)  # Template index to body position, kept in order.
 
     def rename(index: int, position: int) -> None:
         used.add(position)
@@ -343,7 +363,6 @@ def compare(expected: list[Heading], actual: list[Heading]) -> list[dict[str, An
     # A renamed heading keeps its place between the headings the body kept in
     # order. Pair the most similar wording first, then a different heading at
     # the same level that stands in the template heading's place.
-    anchors = dict(pairs)
 
     def gap(index: int) -> range:
         before = max((j for i, j in anchors.items() if i < index), default=-1)
@@ -402,7 +421,9 @@ def select(
     for template in templates:
         problems = compare(template.headings, body)
         kept = len(in_order_pairs(template.headings, body))
-        scored.append(((len(problems), -kept), template, problems))
+        # Most template headings kept first, so a body missing a heading from
+        # the template it follows does not match a smaller template instead.
+        scored.append(((-kept, len(problems)), template, problems))
     scored.sort(key=lambda entry: entry[0])
     best_score, best, problems = scored[0]
     tied = [
@@ -451,7 +472,9 @@ def checkout_root() -> Path:
     completed = subprocess.run(
         ["git", "rev-parse", "--show-toplevel"], text=True, capture_output=True, check=False
     )
-    return Path(completed.stdout.strip()) if completed.returncode == 0 else Path.cwd()
+    if completed.returncode != 0:
+        raise CheckError("not in a git checkout; pass --root or --repo")
+    return Path(completed.stdout.strip())
 
 
 def parser() -> argparse.ArgumentParser:
@@ -480,15 +503,16 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         source_label = args.body
         try:
             text = Path(args.body).read_text(encoding="utf-8")
-        except OSError as error:
+        except (OSError, ValueError) as error:
             raise CheckError(f"cannot read body: {error}") from error
-    body = headings(text)
+    body = headings(text.removeprefix("\ufeff"))
 
     if args.template:
         try:
             templates = [parse_template(str(args.template), args.template.read_text(encoding="utf-8"))]
-        except OSError as error:
+        except (OSError, ValueError) as error:
             raise CheckError(f"cannot read template: {error}") from error
+        absent = f"{args.template} has no headings"
     else:
         kind = "pr" if args.pr is not None else "issue" if args.issue is not None else args.kind
         if not kind:
@@ -497,9 +521,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             source = Source(root=args.root or checkout_root())
         else:
             source = Source(repo=args.repo, run=gh_runner)
-        templates = [template for template in discover(source, kind) if template.headings]
-        if not templates:
-            return {"state": "no-template", "body": source_label, "problems": [], "reason": f"no {kind} template with headings found"}
+        templates = discover(source, kind)
+        absent = f"no {kind} template with headings found"
+    templates = [template for template in templates if template.headings]
+    if not templates:
+        return {"state": "no-template", "body": source_label, "problems": [], "reason": absent}
 
     template, problems = select(templates, body, args.template_name)
     return {
@@ -515,7 +541,8 @@ def main() -> int:
     args = parser().parse_args()
     try:
         result = run(args)
-    except CheckError as error:
+    # A check that could not run must not read as a mismatch to fix.
+    except (CheckError, OSError, ValueError, KeyError, TypeError) as error:
         result = {"state": "operational-error", "problems": [], "reason": str(error)}
     if args.json:
         print(json.dumps(result, sort_keys=True, separators=(",", ":")))

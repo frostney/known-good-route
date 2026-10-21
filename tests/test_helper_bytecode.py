@@ -18,6 +18,7 @@ SIBLING_IMPORTERS = {
     "address-feedback/scripts/coderabbit_adapter.py",
     "address-feedback/scripts/review_wait.py",
     "address-feedback/scripts/stack_state.py",
+    "agent-writing/scripts/check_template.py",
     "delivery-wait/scripts/delivery_wait.py",
 }
 

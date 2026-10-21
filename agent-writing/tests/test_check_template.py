@@ -10,6 +10,7 @@ from pathlib import Path
 
 
 SCRIPT_PATH = Path(__file__).parents[1] / "scripts" / "check_template.py"
+sys.path.insert(0, str(SCRIPT_PATH.parent))  # The script imports check_prose beside it.
 SPEC = importlib.util.spec_from_file_location("check_template", SCRIPT_PATH)
 assert SPEC and SPEC.loader
 CHECK_TEMPLATE = importlib.util.module_from_spec(SPEC)
@@ -161,6 +162,49 @@ class HeadingTests(unittest.TestCase):
             ["### Version", "### Steps to reproduce", "### Checks"],
         )
 
+    def test_unclosed_comment_inside_a_line_is_literal_text(self):
+        found = CHECK_TEMPLATE.headings("## A\nUse `<!--` to open a comment.\n## B\nText.\n")
+
+        self.assertEqual([str(heading) for heading in found], ["## A", "## B"])
+
+    def test_issue_form_layouts_and_label_styles(self):
+        template = CHECK_TEMPLATE.parse_template(
+            "bug.yaml",
+            "\n".join([
+                "name: 'It''s a form'",
+                "body:",
+                "- type: input",
+                "  attributes:",
+                "    label: \"Version: \\\"exact\\\"\" # quoted, with a comment",
+                "- type: textarea",
+                "  attributes:",
+                "    label: >-",
+                "      Steps to",
+                "      reproduce",
+                "    description: Folded label above",
+                "- type: textarea",
+                "  attributes:",
+                "    label: Logs # plain, with a comment",
+            ]),
+        )
+
+        self.assertEqual(template.name, "It's a form")
+        self.assertEqual(
+            [str(heading) for heading in template.headings],
+            ['### Version: "exact"', "### Steps to reproduce", "### Logs"],
+        )
+
+    def test_issue_form_whose_labels_cannot_be_read_is_an_error(self):
+        with self.assertRaises(CHECK_TEMPLATE.CheckError):
+            CHECK_TEMPLATE.parse_template(
+                "flow.yml", "body: [{type: input, attributes: {label: Version}}]\n"
+            )
+
+    def test_byte_order_mark_does_not_hide_the_first_heading(self):
+        template = CHECK_TEMPLATE.parse_template("bom.md", "\ufeff## Summary\n")
+
+        self.assertEqual([str(heading) for heading in template.headings], ["## Summary"])
+
     def test_markdown_template_front_matter_names_it(self):
         template = CHECK_TEMPLATE.parse_template("default.md", ISSUE_TEMPLATE)
 
@@ -237,6 +281,18 @@ class CompareTests(unittest.TestCase):
         )
 
 
+class SelectTests(unittest.TestCase):
+    def test_body_missing_a_heading_still_selects_the_template_it_follows(self):
+        smaller = CHECK_TEMPLATE.parse_template("small.md", "## Summary\n\n## Testing\n")
+        larger = CHECK_TEMPLATE.parse_template("large.md", "## Summary\n\n## Why\n\n## Testing\n\n## Notes\n")
+        found = CHECK_TEMPLATE.headings(body(("## Summary", "A."), ("## Why", "B."), ("## Testing", "C.")))
+
+        template, problems = CHECK_TEMPLATE.select([smaller, larger], found, None)
+
+        self.assertEqual(template.path, "large.md")
+        self.assertEqual([(problem["kind"], problem["expected"]) for problem in problems], [("missing", "## Notes")])
+
+
 class CommandTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
@@ -308,8 +364,24 @@ class CommandTests(unittest.TestCase):
 
     def test_checkout_without_a_template_has_nothing_to_compare(self):
         code, result = self.run_check("--root", str(self.checkout), "--kind", "pr", "--body", "-", stdin="Prose.\n")
-
         self.assertEqual((code, result["state"]), (0, "no-template"))
+
+        prose = self.write("prose.md", "A template without headings.\n")
+        code, result = self.run_check("--template", str(prose), "--body", "-", stdin="Prose.\n")
+        self.assertEqual((code, result["state"]), (0, "no-template"))
+
+    def test_a_check_that_cannot_run_is_an_operational_error(self):
+        undecodable = self.root / "latin1.md"
+        undecodable.write_bytes("## Caf\xe9\n".encode("latin-1"))
+        template = self.write("template.md", ISSUE_TEMPLATE)
+        for name, args in (
+            ("undecodable body", ("--template", str(template), "--body", str(undecodable))),
+            ("outside a git checkout", ("--kind", "pr", "--body", "-")),
+            ("unreachable repository", ("--repo", "owner/absent", "--kind", "pr", "--body", "-")),
+        ):
+            with self.subTest(name):
+                code, result = self.run_check(*args, stdin="## Summary\n")
+                self.assertEqual((code, result["state"]), (2, "operational-error"))
 
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "owner/project"

@@ -84,10 +84,10 @@ to a full draft review.
    > Created on behalf of @username using ModelName.
 
 8. Check the draft with
-   `python3 ../agent-writing/scripts/check_template.py --kind issue --body FILE`
-   (path relative to this skill directory), run from the target repository's
-   checkout or with `--repo OWNER/REPO`, and fix every heading problem it
-   reports. Pass `--template-name` when the repository has several templates.
+   `python3 "$SKILL_DIR/../agent-writing/scripts/check_template.py" --kind issue --body FILE`,
+   where `SKILL_DIR` is this skill's directory, run from the target
+   repository's checkout or with `--repo OWNER/REPO`, and fix every heading
+   problem it reports. Pass `--template-name` when the repository has several templates.
    Create the issue with the available GitHub tooling, verify the returned
    issue's repository and intended content, run the check again with
    `--issue N` on the live body and edit the issue to fix any problem, and
