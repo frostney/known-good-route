@@ -54,9 +54,9 @@ run only `status`, with every exact `PR=SHA`.
 4. Review every initial member once for its exact head. Serialize triggers when
    the active provider has account-wide, repository-wide, or other shared
    limits. For CodeRabbit, read `status` for every member, then `run` one
-   member at a time, bottom-up. During waits, use foreground transition
-   commands and passively await them. Do not wake the model merely to report
-   unchanged state.
+   member at a time, bottom-up. During waits, run transition commands under
+   [`delivery-wait`'s running rules](../../delivery-wait/SKILL.md#running-a-wait).
+   Do not wake the model merely to report unchanged state.
 5. Inspect every inline thread, exact-head review body, and top-level
    finding surface. Record each finding's impact, gain, and if-not-done facts
    and apply the repository's finding policy as the [PR workflow](pr.md)
@@ -141,4 +141,8 @@ Return:
 - blocker or next required transition.
 
 Never report a partial prefix as ready when any required fix exists only in a
-higher layer. A `ready` result never means merged.
+higher layer. A `ready` result never means merged. Started directly, continue
+under the [delivery settings](../../deliver/SKILL.md#delivery-settings); with
+`entry-points: deliver`, the stack goes on to `/deliver`, which takes it to the
+configured endpoint (`ready-to-merge` when there is no `ORCHESTRATION.md`).
+With `stop`, end with this result.

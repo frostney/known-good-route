@@ -16,8 +16,7 @@ compatibility: >-
 Resolve current review findings against their authorized claim and report
 readiness for the exact PR head or complete native stack. When `/deliver` is
 active, return the result and next transition to that caller, which owns the
-selected delivery endpoint. Started directly, continue under the
-[delivery settings](../deliver/SKILL.md#delivery-settings).
+selected delivery endpoint.
 
 Reuse authorization and settled decisions within their scope across turns.
 Before a required pause, complete independent authorized work, then link the

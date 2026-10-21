@@ -26,6 +26,7 @@ export const actionNames = [
   "git.stackMerge",
   "git.stackSubmit",
   "git.stackSync",
+  "ci.dispatchRun",
   "monitor.wait",
   "report",
   "behaviorTest.run",
@@ -110,6 +111,9 @@ export interface EvalExpectations {
     values: ExactValue[];
     fields?: string[];
     every?: boolean;
+    // Only actions recorded before this occurrence (default 1) of the named
+    // action count; the check fails when that occurrence is absent.
+    before?: { action: ActionName; occurrence?: number };
   }>;
 
   requiredWorker?: boolean;
@@ -136,6 +140,8 @@ export interface EvalExpectations {
     before: ActionName;
     after: ActionName;
   }>;
+  // The native worker must have started before the first of each action.
+  requiredWorkerBeforeActions?: ActionName[];
   requiredActionSequence?: ActionName[];
   requiredActions?: ActionName[];
   requiredAnyActions?: ActionName[];
@@ -192,6 +198,9 @@ export interface RunLedger {
     context: string;
     transcript: string;
     verdictFile?: string;
+    // Parent ledger event count when the worker started, so its order against
+    // the parent's actions can be checked.
+    startedAtEvent?: number;
     ledger: RunLedger;
     grade: GradeResult;
     output: string;

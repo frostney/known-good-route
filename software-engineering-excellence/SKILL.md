@@ -8,7 +8,7 @@ description: >-
 license: Unlicense OR MIT
 metadata:
   agents-role: ambient
-  agents-text: Keep the agreed scope, ground claims in current evidence, re-run checks that return nothing, and stop only for a secret, a paid or account action, or the person's decision.
+  agents-text: Base each material claim about current project state or a completed action on a file, command result or page read this session, or on what the person said, and keep what was observed apart from what was inferred; keep the agreed scope, re-run checks that return nothing, finish verified work, and stop only for a secret, a paid or account action, or the person's decision.
 ---
 
 # Software engineering excellence
@@ -49,6 +49,9 @@ Implementation authority persists across questions, corrections, diagnoses,
 worker returns and compaction. Update the affected decision or requirement while
 retaining the parent objective. A question calls for an answer; it does not
 silently cancel the remaining work. Follow an explicit change of direction.
+Before acting on a request, restate its literal ask in one line. When offering
+options, include the direction the person named; never swap in a different
+approach without saying so.
 
 When a check fails, diagnose it and fix an established in-scope cause. Use the
 registered `diagnosing-bugs` skill when available and relevant. After a
@@ -116,8 +119,12 @@ Reuse results only when content, command, environment and covered requirements
 match. Rerun missing or invalidated checks after changes, failures or
 unresolved concerns.
 Keep independent review judgment. Never weaken coverage or hide a failure to
-obtain a pass. Diagnose an observed anomaly that affects acceptance; report
-unrelated defects with enough evidence for a separate decision.
+obtain a pass. Diagnose an observed anomaly that affects acceptance. Fix every
+instance of the defect the change addresses in this change or a stacked layer;
+never defer in-scope work to an issue. Record a different defect, even one
+nearby, as a follow-up in the handoff, or in the harness's task mechanism where
+one exists, without asking; open an external issue only when the work's
+authority or repository policy covers it.
 
 Write regression tests for observable behavior or consequential invariants,
 with expectations derived from independent requirements, never from the
@@ -159,10 +166,10 @@ implementation.
 
 For substantial work with independent parts, the coordinator owns confirmed
 decisions, dependencies, integration and user communication. Delegate each
-sizeable independent part to a bounded worker by default when the host supports
-delegation; keep small or tightly coupled work local. `no-subagents` or an
-equivalent user instruction keeps all of the work local. An applicable
-orchestrator owns its more specific coordination contract.
+sizeable independent part to a context-isolated worker by default when the
+host supports delegation; keep small or tightly coupled work local.
+`no-subagents` or an equivalent user instruction keeps all of the work local.
+An applicable orchestrator owns its more specific coordination contract.
 
 Give each worker the selected decisions, repository and work-item identity,
 starting state, owned scope, dependencies, required behavior and gates. Prefer

@@ -100,12 +100,23 @@ test("the runner writes the environment into the workspace before the CLI starts
 test("a project's own AGENTS.md text stays beside the generated skills block and is not listed twice", async () => {
   const { loadSkills } = await import("./skill-loader.ts");
   const { resolve } = await import("node:path");
-  const project = "# Agent Instructions\n\n- Always apply `deep-dive`: check what actually ran.\n";
+  const project = "# Agent Instructions\n\n- Run `pnpm test` before committing.\n";
   const files = environmentFiles({ orchestration: { endpoint: "deployed", entryPoints: "stop" }, files: { "AGENTS.md": project } });
   const agents = await agentsFileFor(await loadSkills(resolve(import.meta.dir, "..")), files);
   expect(agents).toStartWith(project);
   expect(agents).toContain("<!-- known-good-route:agents:begin -->");
   const instructions = portableAgentInstructions("<catalog/>", agents, files);
   expect(instructions).not.toContain('<file path="AGENTS.md">');
-  expect(instructions.split("Always apply `deep-dive`").length).toBe(2);
+  expect(instructions.split("Run `pnpm test` before committing.").length).toBe(2);
+});
+
+test("every delivery-chain entry skill has a default case that delivers to ready-to-merge without ORCHESTRATION.md", () => {
+  for (const skill of ["create-pr", "implement", "update-pr", "address-feedback", "code-review", "test-against-spec"]) {
+    const c = evalCases.find((x) => x.id === `${skill}-default-continues-to-ready-to-merge`);
+    expect(c, skill).toBeDefined();
+    expect(c!.prompt.startsWith(`/${skill}`)).toBeTrue();
+    expect(c!.fixture.environment?.orchestration).toBeNull();
+    expect(c!.expected.rubric!.map((item) => item.id)).toEqual(expect.arrayContaining(["delivered-to-ready-to-merge", "stops-only-for-blockers"]));
+    expect(c!.expected.forbiddenActions).toContain("forge.mergePr");
+  }
 });

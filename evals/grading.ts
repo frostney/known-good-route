@@ -308,11 +308,17 @@ export function gradeRun(
       detail: "Exact value must not appear in the final response or communication actions.",
     });
   for (const requirement of expected.requiredActionValues ?? []) {
-    const records = ledger.actions.filter((a) => a.action === requirement.action);
+    const limit = requirement.before;
+    const end = limit
+      ? (ledger.actions
+          .map((a, index) => (a.action === limit.action ? index : -1))
+          .filter((index) => index >= 0)[(limit.occurrence ?? 1) - 1] ?? 0)
+      : ledger.actions.length;
+    const records = ledger.actions.slice(0, end).filter((a) => a.action === requirement.action);
     const carriesAll = (record: RunLedger["actions"][number]) =>
       requirement.values.every((value) => actionCarries(record, value, requirement.fields));
     checks.push({
-      name: `${requirement.action} carries ${requirement.values.map(describe).join(", ")}`,
+      name: `${requirement.action} carries ${requirement.values.map(describe).join(", ")}${limit ? ` before ${limit.action}` : ""}`,
       passed:
         records.length > 0 &&
         (requirement.every ? records.every(carriesAll) : records.some(carriesAll)),
@@ -408,6 +414,18 @@ export function gradeRun(
       name: `${order.skill} before ${order.action}`,
       passed: skillIndex >= 0 && actionIndex >= 0 && skillIndex < actionIndex,
       detail: `skillIndex=${skillIndex} actionIndex=${actionIndex}`,
+    });
+  }
+
+  for (const action of expected.requiredWorkerBeforeActions ?? []) {
+    const started = ledger.workers?.[0]?.startedAtEvent;
+    const actionIndex = ledger.events.findIndex(
+      (event) => event.kind === "action" && event.name === action,
+    );
+    checks.push({
+      name: `worker before ${action}`,
+      passed: started !== undefined && actionIndex >= 0 && started <= actionIndex,
+      detail: `workerStartedAtEvent=${started ?? "none"} actionIndex=${actionIndex}`,
     });
   }
 
