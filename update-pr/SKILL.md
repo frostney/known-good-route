@@ -72,7 +72,7 @@ not block the update.
    summaries or intermediate development history. Keep every PR template
    heading verbatim and in order, and under a heading with nothing to say write
    a one-line `None` or the reason. From the repository checkout, run
-   `python3 "$SKILL_DIR/../agent-writing/scripts/check_template.py" --kind pr --body FILE`
+   `python3 "$SKILL_DIR/scripts/check_template.py" --kind pr --body FILE`
    on the draft before writing it, where `SKILL_DIR` is this skill's
    directory, then `--pr N` on the live body after, and fix every heading
    problem it reports.

@@ -9,8 +9,11 @@ import unittest
 from pathlib import Path
 
 
-SCRIPT_PATH = Path(__file__).parents[1] / "scripts" / "check_template.py"
-sys.path.insert(0, str(SCRIPT_PATH.parent))  # The script imports check_prose beside it.
+ROOT = Path(__file__).resolve().parents[1]
+# Each skill that posts an issue or PR body bundles its own copy, so it runs
+# without any other skill installed.
+COPIES = [ROOT / skill / "scripts" / "check_template.py" for skill in ("create-issue", "create-pr", "update-pr")]
+SCRIPT_PATH = ROOT / "create-pr" / "scripts" / "check_template.py"
 SPEC = importlib.util.spec_from_file_location("check_template", SCRIPT_PATH)
 assert SPEC and SPEC.loader
 CHECK_TEMPLATE = importlib.util.module_from_spec(SPEC)
@@ -94,6 +97,13 @@ FULL = [
     ("## Expected behavior", "A flag."),
     ("## Scope notes", "None."),
 ]
+
+
+class CopyTests(unittest.TestCase):
+    def test_every_skill_bundles_the_same_script(self):
+        texts = {copy.relative_to(ROOT).as_posix(): copy.read_text(encoding="utf-8") for copy in COPIES}
+
+        self.assertEqual(len(set(texts.values())), 1, f"copies differ: {sorted(texts)}")
 
 
 class HeadingTests(unittest.TestCase):

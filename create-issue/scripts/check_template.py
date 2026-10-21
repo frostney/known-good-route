@@ -23,9 +23,8 @@ from typing import Any, Callable
 
 sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__.
 
-from check_prose import code_fence
 
-
+FENCE = re.compile(r"(`{3,}|~{3,})(.*)")
 ATX = re.compile(r" {0,3}(#{1,6})(?:[ \t]+(.*))?$")
 CLOSING_HASHES = re.compile(r"(?:^|[ \t]+)#+[ \t]*$")
 COMMENT = re.compile(r"<!--.*?-->")
@@ -100,6 +99,27 @@ def headings(text: str) -> list[Heading]:
         for section in open_sections:
             section.has_content = True
     return found
+
+
+def code_fence(fence: str, stripped: str) -> tuple[str, bool]:
+    """Follow a fenced code block across one line.
+
+    Takes the open block's run of backticks or tildes ("" outside a block) and
+    the line without leading whitespace. Returns the run after the line and
+    whether the line belongs to a code block, its fences included.
+    """
+    fence_match = FENCE.match(stripped)
+    marker, rest = fence_match.groups() if fence_match else ("", "")
+    if fence:
+        # CommonMark closes a block only on the character that opened it,
+        # in a run at least as long, with nothing after it.
+        if marker[:1] == fence[0] and len(marker) >= len(fence) and not rest.strip():
+            return "", True
+        return fence, True
+    # A backtick fence cannot carry a backtick in its info string.
+    if marker and not (marker[0] == "`" and "`" in rest):
+        return marker, True
+    return "", False
 
 
 def front_matter(text: str) -> tuple[dict[str, str], str]:

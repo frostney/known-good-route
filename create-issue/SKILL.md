@@ -84,7 +84,7 @@ to a full draft review.
    > Created on behalf of @username using ModelName.
 
 8. Check the draft with
-   `python3 "$SKILL_DIR/../agent-writing/scripts/check_template.py" --kind issue --body FILE`,
+   `python3 "$SKILL_DIR/scripts/check_template.py" --kind issue --body FILE`,
    where `SKILL_DIR` is this skill's directory, run from the target
    repository's checkout or with `--repo OWNER/REPO`, and fix every heading
    problem it reports. Pass `--template-name` when the repository has several templates.

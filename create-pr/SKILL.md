@@ -128,7 +128,7 @@ readiness. Recording a walkthrough does not replace behavior testing.
    findings and duplicates. Put each closing keyword on its own line as
    `Closes #N`, and only on the layer that completes that issue. From the
    repository checkout, run
-   `python3 "$SKILL_DIR/../agent-writing/scripts/check_template.py" --kind pr --body FILE`
+   `python3 "$SKILL_DIR/scripts/check_template.py" --kind pr --body FILE`
    on the draft, where `SKILL_DIR` is this skill's directory, and fix every
    heading problem it reports before publishing.
 9. After the publication checks pass, or under the preview-only draft rule
