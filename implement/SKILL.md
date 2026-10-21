@@ -66,7 +66,10 @@ This loop covers development only: `/deliver` owns end-to-end delivery and
 2. Implement the smallest complete change, then run and inspect the real result.
    For UI/UX work, compare affected states with the requested appearance,
    interactions and fidelity; include relevant accessibility and viewports.
-   Run focused developer checks while fixing observed gaps.
+   Run focused developer checks while fixing observed gaps. Run long builds and
+   tests under the shared
+   [long-command and lane rules](../delivery-wait/SKILL.md#long-commands-and-delegated-lanes);
+   ending a turn with a tracked pending command does not finish implementation.
 3. Apply `/code-review fix-all` and `/test-against-spec fix`. Review the actual
    change against the agreed requirements; test observable behavior against
    explicit specification sources. Use their direct documented equivalents if
