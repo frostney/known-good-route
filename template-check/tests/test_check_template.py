@@ -98,6 +98,15 @@ FULL = [
 
 
 class HeadingTests(unittest.TestCase):
+    def test_review_note_is_not_content_of_the_last_section(self):
+        note = ["", "---", "", "Edit: `1a2b3c4` reviewed", "", "- CI: passed.", "## After the note"]
+        found = CHECK_TEMPLATE.headings("\n".join(["## Summary", "Text.", "## Testing", *note]))
+        self.assertEqual([(h.text, h.has_content) for h in found], [("Summary", True), ("Testing", False)])
+
+    def test_rule_without_an_edit_line_is_content(self):
+        found = CHECK_TEMPLATE.headings("\n".join(["## Testing", "", "---", "", "Plain text."]))
+        self.assertEqual([(h.text, h.has_content) for h in found], [("Testing", True)])
+
     def test_reads_atx_headings_outside_code_comments_and_quotes(self):
         found = CHECK_TEMPLATE.headings(
             "\r\n".join([

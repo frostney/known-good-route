@@ -6707,7 +6707,7 @@ export const evalCases: EvalCase[] = [
         "git.push",
       ],
       requiredActionValues: [
-        { action: "validation.focused", values: ["check_template.py", "issue", ".agent/draft-issue.md"] },
+        { action: "validation.focused", values: ["check_template.py", ["--kind issue", "--kind=issue"], ".agent/draft-issue.md"] },
       ],
     },
   },

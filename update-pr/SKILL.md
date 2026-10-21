@@ -74,8 +74,9 @@ not block the update.
    summaries, intermediate development history and author verification
    sections. Keep the
    [review note](../agent-writing/references/pr-descriptions.md#review-and-status-results)
-   at the end of the body. Keep every PR template heading verbatim and in order, and under a
-   heading with nothing to say write a one-line `None` or the reason. Run
+   at the end of the body, updated as it describes. Keep every PR template
+   heading verbatim and in order, and under a heading with nothing to say
+   write a one-line `None` or the reason. Run
    [`template-check`](../template-check/SKILL.md#running-a-check) on the draft
    with `--kind pr --body FILE` before writing it and on the live body with
    `--pr N` after, and fix every heading problem it reports.

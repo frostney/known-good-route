@@ -3452,8 +3452,8 @@
         "A draft body is checked with the template-check script before filing, and each renamed or missing template heading the check reports reaches the report; the issue is not filed or edited."
       ],
       "beforeSha256": null,
-      "afterSha256": "c431925884a334f4b00fdf4884cbaf306dd963f2006385d6151f16f6f6ccd92a",
-      "frozenCaseSha256": "c431925884a334f4b00fdf4884cbaf306dd963f2006385d6151f16f6f6ccd92a"
+      "afterSha256": "0308c9ec7339d0e07c0bdc74f8916ac9641d173d7f39ea368380e19cf901eee5",
+      "frozenCaseSha256": "0308c9ec7339d0e07c0bdc74f8916ac9641d173d7f39ea368380e19cf901eee5"
     },
     {
       "caseId": "template-check-cannot-compare",

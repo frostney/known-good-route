@@ -53,4 +53,6 @@ belongs to.
   says, and never treat it as a pass.
 
 It reads Markdown headings in ATX form (`## Title`). Setext headings and
-headings inside list items are not recognized.
+headings inside list items are not recognized. Reading stops at a pull
+request's review note, a `---` rule after a blank line followed by an `Edit:`
+line, so the note is not content of the last template section.

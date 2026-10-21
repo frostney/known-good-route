@@ -31,6 +31,10 @@ COMMENT = re.compile(r"<!--.*?-->")
 # Only a comment that starts a line opens an HTML block that can span lines;
 # an unclosed `<!--` later in a line is literal text.
 COMMENT_BLOCK = re.compile(r" {0,3}<!--")
+# A PR's review note follows the body after a `---` rule and opens with an
+# `Edit:` line; it belongs to no template section.
+NOTE_RULE = re.compile(r" {0,3}-{3,}[ \t]*$")
+NOTE_OPENING = re.compile(r" {0,3}Edit:")
 BLOCK_SCALAR = re.compile(r"[|>](?:[+-]([0-9])?|([0-9])[+-]?)?(?:\s+#.*)?$")
 # A renamed heading still resembles the template's wording this closely.
 RENAME_SIMILARITY = 0.6
@@ -65,13 +69,17 @@ def headings(text: str) -> list[Heading]:
     """ATX headings outside code blocks, HTML comments and block quotes.
 
     Each heading records whether its section, up to the next heading of the
-    same or a higher level, holds anything a reader sees.
+    same or a higher level, holds anything a reader sees. Reading stops at a
+    review note: a `---` rule after a blank line whose next line opens with
+    `Edit:`.
     """
     found: list[Heading] = []
     open_sections: list[Heading] = []
     fence = ""  # The open code block's run of backticks or tildes.
     in_comment = False
-    for number, line in enumerate(text.replace("\r\n", "\n").split("\n"), start=1):
+    lines = text.replace("\r\n", "\n").split("\n")
+    after_blank = True
+    for number, line in enumerate(lines, start=1):
         if not fence:
             if in_comment:
                 if "-->" not in line:
@@ -82,7 +90,13 @@ def headings(text: str) -> list[Heading]:
             if COMMENT_BLOCK.match(line):
                 line, in_comment = "", True
             if not line.strip():
+                after_blank = True
                 continue
+            if after_blank and NOTE_RULE.match(line):
+                following = next((rest for rest in lines[number:] if rest.strip()), "")
+                if NOTE_OPENING.match(following):
+                    break
+        after_blank = False
         fence, in_code = code_fence(fence, line.lstrip())
         match = None if in_code else ATX.match(line)
         if match:

@@ -90,7 +90,7 @@ PR's author with the authenticated GitHub user first.
 
 - On a pull request the authenticated user opened, keep them in one review
   note at the very end of the body, after every other section and a `---`
-  rule. Open it with a plain line, not a heading, naming the head it covers,
+  rule with a blank line before and after it. Open it with a plain line, not a heading, naming the head it covers,
   such as ``Edit: `1a2b3c4` reviewed``, and follow it with the review
   details. After a later review or status change, update that note in place
   for the new head.
