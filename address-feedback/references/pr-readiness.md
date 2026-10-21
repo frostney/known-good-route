@@ -23,6 +23,7 @@ Record the repository, PR number or URL, and final head object ID. A PR is
   up-to-date branches;
 - every intentionally active review automation has a terminal completed verdict
   explicitly tied to that head, with no newer incomplete or follow-up review;
+  CodeRabbit alone is exempt when its adapter reports `bot-skip` below;
 - no actionable current-head finding remains;
 - GitHub reports zero unresolved review threads;
 - every inline automation thread has a maintainer-workflow reply in that thread;
@@ -80,7 +81,8 @@ as new verdicts; explicit approval and reviews containing original inline
 comments retain their configured meaning. The policy's nonterminal markers
 apply to a check's own text as well as to review bodies: a successful check or
 status whose description or title reports a skipped, paused, or rate-limited
-review is not a completed verdict.
+review is not a completed verdict. CodeRabbit's adapter decides its `bot-skip`
+exemption; the generic helper's incomplete-verdict result does not override it.
 
 Replies use a durable caller-owned `--state` checkpoint. Their operation ID is
 bound to the repository, PR, expected head, comment/thread root, authenticated
@@ -138,11 +140,19 @@ CodeRabbit command or work out a CodeRabbit wait yourself.
 reports its head's state. A pending head state from `run` means its deadline
 came first.
 
+`bot-skip` means CodeRabbit reported "Review skipped: bot user not eligible
+for review" and GitHub identifies the PR author as a bot. No CodeRabbit review
+is expected, so this state satisfies its review gate without a trigger or
+human intervention. The same status on a human-authored PR and every other
+skip reason keep their existing treatment. Findings, threads, other active
+automation and required checks still need to pass their gates.
+
 | State | Reported by | Workflow |
 | --- | --- | --- |
 | `review-complete` | `run`, `status` | Classify every finding of the head's CodeRabbit review. |
 | `clean-complete` | `run`, `status` | CodeRabbit is complete for the head with no findings. |
-| `satisfied` | `status` | Every head is complete. |
+| `bot-skip` | `run`, `status` | No CodeRabbit review applies to this bot-authored PR. Continue the remaining gates. |
+| `satisfied` | `status` | Every head is complete or has a `bot-skip` exemption. |
 | `trigger-incremental`, `trigger-full` | `run`, `status` | Pending: `run`, which posts it. |
 | `awaiting-automatic`, `triggered`, `in-progress`, `waiting` | `run`, `status` | Pending: `run` waits; after its deadline, `run` again. |
 | `rate-limited-unknown-wait` | `run`, `status` | Pending: `run` again later; never trigger by hand. |
