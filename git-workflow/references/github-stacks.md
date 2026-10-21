@@ -30,7 +30,7 @@ transition for a native stack.
   - When the lower PR must stay frozen, for example because it is approved,
     run `gh stack link LOWER-PR BRANCH --remote REMOTE`, giving the lower PR's
     number, through the protected publication helper instead. In
-    [gh-stack 0.1.0](https://github.com/github/gh-stack/blob/v0.1.0/cmd/link.go),
+    [gh-stack 0.2.1](https://github.com/github/gh-stack/blob/v0.2.1/cmd/link.go),
     that pushes only `BRANCH`, opens its draft PR on the lower PR's branch and
     creates the stack.
 
@@ -72,14 +72,19 @@ push with force-with-lease. They are allowed only when all of these are true:
   flaked two surfaces. Prefer a new top layer for fixes; after a sync, rerun
   flaked surfaces one at a time.
 
+A stack, like any PR branch, need not be up to date with its trunk: sync it
+onto a moved trunk only under `git-workflow`'s
+[up-to-date rule](../SKILL.md#update-commit-and-push). A squash-merged lower
+layer leaves the layers above it conflicting with the base, so they sync.
+
 Run the narrowest official command that satisfies the need. Stop on a rebase
 conflict, unexpected divergence, changed topology, lease rejection, partial
 push, or remote head that cannot be explained. Use `gh stack rebase --abort`
 when the extension offers restoration; never resolve ambiguity by invoking raw
 rebase or force-push commands.
 
-Ordinary branches never inherit this exception. Update them by merging the
-freshly fetched remote base and pushing normally.
+Ordinary branches never inherit this exception. When that rule calls for an
+update, merge the freshly fetched remote base and push normally.
 
 ## Submit, validate, and merge
 
@@ -94,7 +99,7 @@ freshly fetched remote base and pushing normally.
   See [GitHub CLI environment settings](https://cli.github.com/manual/gh_help_environment).
 - Preserve approved heads at the actual push boundary. A prior remote read or
   the presence of `--force-with-lease` alone is insufficient: `gh stack submit`
-  in [gh-stack 0.1.0](https://github.com/github/gh-stack/blob/v0.1.0/cmd/submit.go)
+  in [gh-stack 0.2.1](https://github.com/github/gh-stack/blob/v0.2.1/cmd/submit.go)
   refreshes tracking refs before constructing its leases. For frozen layers,
   require both the queued source and advertised remote head to match the
   approved commit; require remote absence for a new branch. An enforced
@@ -130,23 +135,37 @@ freshly fetched remote base and pushing normally.
   finding with a later top fix layer. A covered lower layer is not independently
   merge-ready: the required overlay and every layer beneath it form one
   indivisible ready stack.
-- Before merging, re-read native topology and exact remote heads. Use
-  `gh stack merge --squash` for a selected atomic prefix only after every PR in
-  that prefix independently satisfies its current-head checks, review, and
-  readiness gates. When `/address-feedback` supplied whole-stack readiness, select
-  the complete reported stack only after its final membership audit still
-  matches; never merge a prefix beneath its top overlays. Never select
+- Before merging, re-read native topology and exact remote heads. Merge every
+  ready layer in one go with `gh stack merge NUMBER --squash --yes`: NUMBER is
+  the stack number when the whole stack is ready, otherwise the highest PR of
+  the ready prefix. GitHub merges every layer up to it in one all-or-nothing
+  operation, or adds them to the base's merge queue when it has one. gh-stack
+  reads a bare number as a stack number first, so pass a PR number only after
+  `gh api repos/OWNER/REPO/stacks/NUMBER` answers 404, showing that no stack
+  has that number. Never merge ready layers one at a
+  time, and never wait for the base branch's push CI between layers. A prefix
+  is ready only when every PR in it independently satisfies its current-head
+  checks, review, and readiness gates. When `/address-feedback` supplied whole-stack readiness,
+  select the complete reported stack only after its final membership audit
+  still matches; never merge a prefix beneath its top overlays. Never select
   rebase-merge merely because stack maintenance used rebases.
+- Fall back to layers only when `gh stack merge` is unavailable, the prefix's
+  top PR number also names a stack, or GitHub refuses the stack merge for a
+  reason other than a readiness gate. Then squash-merge the bottom ready
+  layer, move the layers above it onto the updated base with the guarded
+  `gh stack sync`, and merge the next layer as soon as its new head is ready;
+  repeat up the prefix. Report the reason for the fallback.
 - After merge, use the official stack cleanup/sync path, remove only clean local
   branches owned by the run, and verify the integrated remote default.
 
 ## Protected publication helper
 
 Use [scripts/stack_push_guard.py](../scripts/stack_push_guard.py) from this
-installed skill. It requires Python 3.11+, Git, a POSIX shell, and the tested
-official gh-stack 0.1.0 or 0.1.1 command. It has no third-party Python or
-eval-harness dependency. Existing authorization and native-topology checks
-still apply.
+installed skill. It requires Python 3.11+, Git, a POSIX shell, and the official
+gh-stack extension. It checks that `gh stack --version` identifies gh-stack, not
+which version; this page describes the latest release, checked at 0.2.1. It has
+no third-party Python or eval-harness dependency. Existing authorization and
+native-topology checks still apply.
 
 After validating the local commits and reading the exact remote heads, write
 an admission JSON file outside the worktree's tracked/untracked files. It has
@@ -173,6 +192,18 @@ separate creation and append procedure below for recovery. The wrapper retains
 support for native link commands, but its Git hook does not prevent their PR-base
 changes. This helper guards Git updates; it
 does not deduplicate GitHub requests or authorize retrying an uncertain command.
+
+It accepts `gh stack link NUMBER BRANCH-OR-PR... --remote REMOTE`: a stack or PR
+number, then one or more PR numbers or admitted branches, each listed once. A
+branch argument may not start with `-` or read as a number, because link would
+take it for a flag or try it as a PR number first. A first number that names a
+stack and is not also a local branch name appends the rest to the stack's top.
+Otherwise list every PR the stack already holds, bottom to top, or link refuses
+to drop them. Link pushes only the arguments that name local branches and opens
+a draft PR for each branch without one. It then moves each existing PR's base
+onto the PR below it, and the bottom one onto the default branch, or onto the
+stack's top when appending; a refused base change only warns. Check every PR's
+base and the stack again afterwards.
 
 Each invocation freezes the helper, records its Python runtime and admission,
 and keeps hook receipts under the checkout's Git directory in `kgr-push-guards`.
@@ -205,10 +236,10 @@ no visible PR does not establish that creation would be safe.
 
 When recovery has an existing PR at the approved head and base, use GitHub's
 [native stack append endpoint](https://docs.github.com/en/rest/pulls/stacks#add-pull-requests-to-a-pull-request-stack).
-In gh-stack 0.1.0, `gh stack link` can retarget that PR's base before appending;
-a concurrent new top could therefore change the approved dependency. The direct
-endpoint requires the candidate's base ref to match the current native top's
-head ref and does not first change the candidate's base.
+`gh stack link` can retarget that PR's base before appending; a concurrent new
+top could therefore change the approved dependency. The direct endpoint requires
+the candidate's base ref to match the current native top's head ref and does not
+first change the candidate's base.
 
 First verify the repository, native stack identity and order, exact branch heads,
 candidate PR number/head/base branch/base commit, and intended draft/open/unmerged

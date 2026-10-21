@@ -933,14 +933,15 @@ export const evalCases: EvalCase[] = [
   },
   {
     id: "update-pr-behind-main",
-    description: "Updating a PR merges the remote base and pushes normally.",
+    description: "Updating a PR whose repository requires up-to-date branches merges the remote base and pushes normally.",
     prompt: "Update the current pull request.",
     fixture: {
       environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         repositoryStatus:
           "Branch feature/auth is clean and one commit behind origin/main.",
-        pullRequest: "PR #42 is open from feature/auth into main.",
+        pullRequest:
+          "PR #42 is open from feature/auth into main. The repository's ruleset requires branches to be up to date before merging, and GitHub reports the PR's mergeStateStatus as BEHIND.",
         projectGate: "The project gate must run after the merge.",
       },
       actionResponses: {
@@ -961,10 +962,44 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "update-pr-behind-base-keeps-head",
+    description: "Updating a PR that is only behind its base commits and pushes the new change without merging the base: no conflict, no up-to-date requirement, no repair and no request call for it.",
+    prompt: "Update the current pull request.",
+    fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      evidence: {
+        repositoryStatus:
+          "Branch feature/auth-scopes has one uncommitted, relevant change to src/auth/scopes.ts that completes PR #57's stated scope; nothing else is modified. The branch is three commits behind freshly fetched origin/main.",
+        pullRequest:
+          "PR #57 is open from feature/auth-scopes into main. GitHub reports it mergeable without conflict and its mergeStateStatus as CLEAN. No ruleset or branch protection setting requires branches to be up to date. The three newer main commits touch no file of this PR, and the default branch is green.",
+        projectGate:
+          "bun run check is the declared gate; code review and behavior testing of the scopes change are already recorded as passing on the working tree.",
+      },
+      actionResponses: {
+        "validation.run":
+          "bun run check passed on the working tree, including the scopes change.",
+        "git.commit": "Committed the scopes change as 5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f.",
+        "git.push": "Ordinary push succeeded; PR #57's checks started for 5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f.",
+        "forge.updatePrMetadata": "PR #57's body now describes the scopes change and the local validation.",
+        "git.merge": "Merged origin/main into feature/auth-scopes without conflicts.",
+      },
+    },
+    expected: {
+      rubric: [
+        { id: "pushed-without-base-merge", question: "Does the answer report the scopes change committed and pushed to the PR without merging origin/main into the branch, because nothing calls for that merge?" },
+      ],
+      requiredAnswerValues: ["57"],
+      requiredSkills: ["update-pr"],
+      requiredActions: ["validation.run", "git.commit", "git.push"],
+      // Being behind alone is no reason to merge the base; it restarts every check.
+      forbiddenActions: ["git.merge", "git.amend", "git.forcePush", "git.rebase", "forge.mergePr"],
+    },
+  },
+  {
     id: "update-pr-native-github-stack",
     description:
       "Updating a verified native stack uses the guarded official synchronization path.",
-    prompt: "Update the current PR and its native GitHub stack.",
+    prompt: "Update the current PR and its native GitHub stack onto current origin/main.",
     fixture: {
       environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
@@ -4302,7 +4337,7 @@ export const evalCases: EvalCase[] = [
         options:
           "All options come from the same repository and web evidence. The predeclared rubric compares compatibility, schema stability, duplication, testability, and delivery cost. Each viable option was checked against the same CLI fixtures and schema requirements. Reusing InspectionResult and the sibling renderer scores highest.",
         repositoryStatus:
-          "The selected focused branch is clean. origin/main is the remote default branch; fetching it succeeds, and merging its fresh tip is conflict-free.",
+          "The selected focused branch is clean and has no pull request yet. origin/main is the remote default branch; fetching it succeeds, and the branch does not conflict with its fresh tip.",
         projectGate:
           "After the focused CLI cases pass, the full declared gate passes on the implemented diff.",
         review:
@@ -4330,7 +4365,6 @@ export const evalCases: EvalCase[] = [
       requiredSkills: ["implement"],
       requiredActions: [
         "git.fetch",
-        "git.merge",
         "file.edit",
         "validation.run",
         "codeReview.run",
@@ -4751,7 +4785,7 @@ export const evalCases: EvalCase[] = [
         reviewDelegation:
           "Each PR records its review-axis-to-lane map and completed evidence-only workers. PR #341 already records its /code-review fix-all review-axis-to-lane map with every lane complete. PR #343 cannot obtain one engineering-quality worker after bounded retry, so its implementation worker completes that lane directly and reports the single-agent fallback.",
         rollingIntegration:
-          "None of #341 to #344 is merged yet. After each squash merge, each remaining branch must merge the updated remote default, and its affected gates pass when rerun. The refreshed milestone contains no new out-of-scope work.",
+          "None of #341 to #344 is merged yet. After each squash merge, the refreshed milestone contains no new out-of-scope work. No ruleset or branch protection setting requires up-to-date branches. Once #343 merges, PR #341's branch conflicts with the updated remote default in src/config.ts; merging the default into it resolves the conflict and its affected gates pass. The other remaining branches do not conflict.",
         monitoring:
           "The host supports non-LLM GitHub watchers and exact timestamp wake-ups. Workers receive compact packets with no inherited conversation history and only applicable decision IDs.",
         telemetry:
@@ -5113,6 +5147,38 @@ export const evalCases: EvalCase[] = [
       requiredActionValues: [
         { action: "file.edit", values: ["CLAUDE.md", "AGENTS.md"] },
       ],
+      requiredSkills: ["project-structure"],
+      requiredActions: ["file.edit", "validation.run"],
+      forbiddenActions: ["delegate", "git.commit", "git.push", "user.ask"],
+    },
+  },
+  {
+    id: "project-structure-claude-md-symlink",
+    description:
+      "Project structure repair replaces a CLAUDE.md symlink with an @AGENTS.md import.",
+    prompt:
+      "/project-structure check the agent instruction files and fix them if needed.",
+    fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      evidence: {
+        repositoryLayout:
+          "The repository has canonical AGENTS.md instructions. CLAUDE.md is a committed symlink to AGENTS.md (git mode 120000). Contributors and CI use Windows as well as Linux and macOS. No Claude-specific additions are needed.",
+        projectContracts:
+          "Global and repository policy require AGENTS.md to be canonical and CLAUDE.md to contain only @AGENTS.md plus genuine Claude-specific additions.",
+        tooling:
+          "scripts/check-docs.ts treats AGENTS.md and CLAUDE.md as one document behind a symlink in a comment and a deduplication branch; the repository gate runs it.",
+      },
+    },
+    expected: {
+      rubric: [
+        { id: "claude-md-import", question: "Does the answer show the CLAUDE.md symlink replaced by a regular file that imports AGENTS.md, with the docs check no longer treating the two files as one document behind a symlink?" },
+        { id: "symlink-reason", question: "Does the answer explain why the symlink goes, such as Windows checkouts without symlink support (core.symlinks)?" },
+      ],
+      requiredActionValues: [
+        { action: "file.edit", values: ["CLAUDE.md"], fields: ["path"] },
+        { action: "file.edit", values: ["scripts/check-docs.ts"], fields: ["path"] },
+      ],
+      requiredAnswerValues: ["@AGENTS.md"],
       requiredSkills: ["project-structure"],
       requiredActions: ["file.edit", "validation.run"],
       forbiddenActions: ["delegate", "git.commit", "git.push", "user.ask"],
@@ -5618,6 +5684,68 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "delivery-wait-host-command-limit",
+    description:
+      "A wait longer than the host's limit for one command resumes the same state in bounded invocations instead of detaching.",
+    prompt:
+      "Use the internal delivery wait for main's push CI run 9001 at head abc90 until it finishes.",
+    fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      evidence: {
+        deliveryState:
+          "owner/repo push CI run 9001 for main at head abc90 is in progress. These runs take up to three hours. The host runs one command for at most two hours, in the background, and resumes the session when it exits. Use state path .agent/waits/run-9001.json.",
+      },
+      actionResponses: {
+        "monitor.wait":
+          '{"state":"timed-out","kind":"workflow-terminal","runId":9001,"head":"abc90","reason":"deadline reached; run in progress"}',
+      },
+      transitions: [
+        {
+          after: "monitor.wait",
+          occurrence: 1,
+          evidence: {
+            deliveryState:
+              '{"state":"timed-out","kind":"workflow-terminal","runId":9001,"head":"abc90","reason":"deadline reached; run in progress"}',
+          },
+          actionResponses: {
+            "monitor.wait":
+              '{"state":"satisfied","kind":"workflow-terminal","runId":9001,"head":"abc90","reason":"workflow is terminal-success"}',
+          },
+        },
+        {
+          after: "monitor.wait",
+          occurrence: 2,
+          evidence: {
+            deliveryState:
+              '{"state":"satisfied","kind":"workflow-terminal","runId":9001,"head":"abc90","reason":"workflow is terminal-success"}',
+          },
+        },
+      ],
+    },
+    expected: {
+      requiredSkills: ["delivery-wait"],
+      requiredActionSequence: ["monitor.wait", "monitor.wait", "report"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.mergePr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+      maxActionCounts: {
+        "monitor.wait": 2,
+      },
+      rubric: [
+        { id: "resumed-to-success", question: "Does the answer report that the CI run finished successfully, reached by running the same wait again from its saved state after the first bounded wait timed out, rather than detaching it?" },
+      ],
+      requiredAnswerValues: [["abc90", "9001"]],
+      forbiddenAnswerValues: ["setsid", "nohup"],
+      requiredActionValues: [
+        { action: "monitor.wait", values: ["workflow-terminal", "9001", "run-9001"], every: true },
+      ],
+    },
+  },
+  {
     id: "delivery-wait-release-assets",
     description:
       "Release delivery waits retain tag identity and required asset evidence.",
@@ -5918,7 +6046,7 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "foreground-wait", question: "Does the answer account for the host limitation by using a deterministic foreground wait instead of a scheduled model wake?" },
+        { id: "foreground-wait", question: "Does the answer account for the host limitation by using a deterministic blocking or foreground wait instead of a scheduled model wake?" },
         { id: "continues-to-verified-handoff", question: "Does the answer report that the required build and test checks finished successfully and that the work went on to completion, rather than stopping or asking the user to resume?" },
       ],
       requiredAnswerValues: [

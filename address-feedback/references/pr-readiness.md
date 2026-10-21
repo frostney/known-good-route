@@ -16,6 +16,11 @@ Record the repository, PR number or URL, and final head object ID. A PR is
   review or the project gate;
 - the repository's declared gate passed for that same final content;
 - every required check is terminal and successful;
+- when the repository's declared full-CI rule requires a full or extended CI
+  run for this change, that run succeeded for this head;
+- GitHub reports the PR mergeable without conflict, and its `mergeStateStatus`
+  is not `BEHIND`, which it reports only when the repository requires
+  up-to-date branches;
 - every intentionally active review automation has a terminal completed verdict
   explicitly tied to that head, with no newer incomplete or follow-up review;
 - no actionable current-head finding remains;
@@ -90,9 +95,11 @@ reply or resolution happened. GitHub does not make these multi-request
 operations atomic; retain any returned receipt and refresh the affected evidence.
 
 The helper is a transition source for this workflow loop, not another
-orchestrator. Its foreground wait stays silent while unchanged and returns only
+orchestrator. Its wait stays silent while unchanged and returns only
 when review becomes ready, evidence changes materially, the expected head is
 invalidated, the deadline arrives, or an operational failure needs attention.
+Run it, and the CodeRabbit adapter's `run`, under
+[`delivery-wait`'s running rules](../../delivery-wait/SKILL.md#running-a-wait).
 
 ## Provider-neutral retry time
 
