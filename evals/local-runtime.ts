@@ -344,16 +344,20 @@ export async function runLocal(options: {
   onExit?: () => Promise<void>;
   isolateProcessGroup?: boolean;
   server?: false | { path: string; args: string[]; approvedTools?: string[] };
+  // Repository files the case declares, written into the workspace before the
+  // run starts.
+  workspaceFiles?: Record<string, string>;
 }) {
   if (options.server === false && options.evalCase.worker)
     throw new Error("A tool-free evaluation cannot start a worker");
   const { cli, model } = parseModel(options.target);
   const work = await mkdtemp(join(tmpdir(), "kgr-eval-"));
   const ledgerPath = join(work, "ledger.json");
-  const instructions = options.evalCase.agentsMd
-    ? `${options.instructions}\n\nThis repository's AGENTS.md, loaded into every session:\n\n${options.evalCase.agentsMd}`
-    : options.instructions;
-  await Bun.write(join(work, "instructions.md"), instructions);
+  await Bun.write(join(work, "instructions.md"), options.instructions);
+  if (options.workspaceFiles) {
+    const { writeFiles } = await import("./agents-context.ts");
+    await writeFiles(work, options.workspaceFiles);
+  }
   const serverArgs = options.server
     ? [options.server.path, ...options.server.args, ledgerPath]
     : [
@@ -387,7 +391,7 @@ export async function runLocal(options: {
     options.effort,
     work,
     cli === "codex" ? codexConfig : configPath,
-    instructions,
+    options.instructions,
   );
   if (options.responseSchema) {
     if (cli === "codex") {

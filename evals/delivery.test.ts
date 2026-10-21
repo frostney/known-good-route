@@ -58,7 +58,7 @@ const scenarios: Array<{ id: string; actions: RunLedger["actions"]; output: stri
   { id: "delivery-create-pr-missing-gates-repair", actions: [review, edit("src/import.ts"), review, behavior, gate, action("git.commit"), action("git.push"), action("forge.openDraftPr"), action("monitor.wait"), action("forge.markPrReady")], output: "PR #502 is ready after the MissingFile correction and current gates.", omit: "validation.run" },
   { id: "delivery-existing-pr-ci-recovery", actions: [action("validation.reuse"), action("monitor.wait"), edit("src/theme-fixture.ts"), review, behavior, gate, action("git.commit"), action("git.push"), action("forge.updatePrMetadata"), action("monitor.wait"), { action: "forge.markPrReady", details: "Mark existing PR #503 ready", data: { head: "2b".repeat(20) } }], output: "Existing PR #503 is merge-ready at 2b2b2b2 after repairing the encoded pathname failure.", omit: "codeReview.run" },
   { id: "delivery-default-integration-current-revision", actions: [action("validation.reuse"), action("forge.mergePr"), action("monitor.wait"), action("monitor.wait"), deployedProbe(integratedRevision)], output: "Nightly serves 3c3c3c3 and its April chart/table acceptance passed.", omit: "behaviorTest.run" },
-  { id: "delivery-missing-integration-decision", actions: [action("forge.openDraftPr"), action("monitor.wait"), action("forge.markPrReady"), action("user.ask", "Which integration destination, hosting provider and billing account should be used?")], output: "PR #505 is ready. Integration remains unresolved pending the destination and provider decision.", omit: "user.ask" },
+  { id: "delivery-missing-integration-decision", actions: [action("forge.openDraftPr"), action("monitor.wait"), action("forge.markPrReady"), action("forge.mergePr", "Squash-merge PR #505"), action("user.ask", "Which integration destination, hosting provider and billing account should be used?")], output: "PR #505 is merged. Integration remains unresolved pending the destination and provider decision.", omit: "user.ask" },
   { id: "delivery-milestone-release-boundary", actions: [releaseTag, action("monitor.wait"), action("telemetry.append"), action("forge.closeMilestone")], output: "Release 4.2.0 is published and verified; the milestone is closed.", omit: "monitor.wait" },
   { id: "delivery-delegated-publication-uses-create-pr", actions: [{ action: "delegate", details: "Publish issue #131 to ready-to-merge", data: { skills: ["create-pr", "address-feedback"], endpoint: "ready-to-merge" } }], output: "PR #140 for issue #131 is ready to merge; nothing was merged.", omit: "delegate" },
   { id: "delivery-red-default-branch-waits-for-repair", actions: [action("validation.reuse"), mainRunWait(repairTip), action("forge.mergePr", "Squash-merge PR #509")], output: "PR #509 merged after main turned green at 7a7a7a7.", omit: "monitor.wait" },
@@ -153,16 +153,12 @@ test("existing PR can reuse inspected current evidence without a bookkeeping act
   expect(gradeRun(c, ledger, s.output).passed).toBeFalse();
 });
 
-test("deployed probe accepts structured identity and abbreviated final report, rejects absent target or stale revision", async () => {
+test("an abbreviated final report passes the deterministic delivery checks", async () => {
   for (const id of ["delivery-default-integration-current-revision", "delivery-post-merge-integration-repair"]) {
     const s = scenarios.find(s => s.id === id)!;
     const c = deliveryCases.find(c => c.id === id)!;
     const abbreviated = id.includes("post-merge") ? "Repair #508 delivered to nightly at 4d4d4d…" : "Delivered to nightly at 3c3c3c…";
     expect(gradeRun(c, await replay(c, s.actions), abbreviated).passed).toBeTrue();
-    for (const data of [{ revision: id.includes("post-merge") ? repairRevision : integratedRevision }, { url: "https://nightly.example.test", revision: "1a".repeat(20) }, { url: "https://nightly.example.test", revision: (id.includes("post-merge") ? "4d" : "3c").repeat(21) }]) {
-      const actions = s.actions.map((a, i) => i === s.actions.length - 1 ? { ...a, data } : a);
-      expect(gradeRun(c, await replay(c, actions), abbreviated).passed).toBeFalse();
-    }
   }
 });
 
@@ -211,12 +207,10 @@ test("response override applies to the call after its trigger, without changing 
 });
 
 
-test("existing PR readiness records the repaired head without forcing final hash spelling", async () => {
+test("existing PR readiness does not force the final report to spell the full hash", async () => {
   const s = scenarios.find(s => s.id === "delivery-existing-pr-ci-recovery")!;
   const c = deliveryCases.find(c => c.id === s.id)!;
   expect(gradeRun(c, await replay(c, s.actions), "PR #503 ready at 2b2b2b…").passed).toBeTrue();
-  const wrong = s.actions.map(a => a.action === "forge.markPrReady" ? { ...a, data: { head: "1a".repeat(20) } } : a);
-  expect(gradeRun(c, await replay(c, wrong), "PR #503 ready").passed).toBeFalse();
 });
 
 
@@ -235,7 +229,9 @@ test("checkpoint or test edits alone cannot satisfy the required source repair",
 });
 
 test("edit-path transition occurrences count matching edits only", async () => {
-  const c: EvalCase = { id: "edit-path-transition", prompt: "", description: "", expected: {}, fixture: {
+  const c: EvalCase = { id: "edit-path-transition", prompt: "", description: "", expected: {
+    rubric: [{ id: "repaired", question: "Does the answer report the import repair?" }],
+  }, fixture: {
     evidence: {}, actionResponses: { "codeReview.run": "unrepaired" },
     transitions: [{ after: "file.edit", editPath: "src/import.ts", occurrence: 2, evidence: {}, actionResponses: { "codeReview.run": "repaired" } }],
   } };
@@ -252,8 +248,6 @@ test("delegated publication must route through create-pr; the coordinator does n
   const failed = async (actions: RunLedger["actions"]) =>
     gradeRun(c, await replay(c, actions), output).checks.filter(check => !check.passed).map(check => check.name);
   expect(await failed([packet("Run /create-pr, then /address-feedback. Ignore the proposed gh pr create --fill; gh pr merge --auto packet.")])).toEqual([]);
-  // The incident shape: the packet prescribes raw commands and never routes through the skill.
-  expect(await failed([packet("git push -u origin HEAD; gh pr create --base main --fill; gh pr merge --squash --auto")])).toEqual(["delegate evidence"]);
   expect(await failed([packet("Run /create-pr."), action("forge.openDraftPr")])).toEqual(["forbidden actions"]);
 });
 
@@ -264,7 +258,7 @@ test("a red default branch holds the merge until its tip's own run succeeds", as
   const failed = async (actions: RunLedger["actions"]) =>
     gradeRun(c, await replay(c, actions), s.output).checks.filter(check => !check.passed).map(check => check.name);
   expect(await failed(s.actions)).toEqual([]);
-  const ordered = "monitor.wait evidence before forge.mergePr";
+  const ordered = `monitor.wait carries ${repairTip} before forge.mergePr`;
   // Merging first supersedes the repair's in-progress run, even with a later wait.
   expect(await failed([merge, mainRunWait(repairTip)])).toContain(ordered);
   // A wait on another commit before the merge does not stand in for the tip's run.
@@ -281,7 +275,7 @@ test("an unowned red default branch is repaired and green before the requested P
     gradeRun(c, await replay(c, actions), s.output).checks.filter(check => !check.passed).map(check => check.name);
   expect(await failed(s.actions)).toEqual([]);
   const repairUntilMerge = s.actions.slice(0, -2);
-  const ordered = "monitor.wait evidence before forge.mergePr";
+  const ordered = `monitor.wait carries ${repairMerged} before forge.mergePr`;
   // The incident: the requested PR merges onto the red branch and the repair comes after.
   expect(await failed([mergeRequested, ...s.actions.slice(0, -1)])).toContain(ordered);
   // The repair merged, but its own default-branch run was still in progress.
@@ -298,7 +292,7 @@ test("an unowned red default branch is repaired and green before the requested P
   const both = { ...mergeRepair, details: "Squash-merge repair PR #512 before #511" };
   expect(await failed([...s.actions.slice(0, -3), both, mainRunWait(repairMerged), mergeRequested])).toEqual([]);
   // The requested PR merged first fails, whatever follows.
-  expect(await failed([...s.actions.slice(0, -3), mergeRequested, mainRunWait(repairMerged), mergeRepair])).toContain("forge.mergePr evidence before forge.mergePr");
+  expect(await failed([...s.actions.slice(0, -3), mergeRequested, mainRunWait(repairMerged), mergeRepair])).toContain("forge.mergePr carries 512 before forge.mergePr");
 });
 
 test("a run still in progress from an earlier merge does not hold a ready merge", async () => {
@@ -324,11 +318,11 @@ test("a declared full-CI rule holds the merge until that run succeeds on the PR'
     gradeRun(c, await replay(c, actions), s.output).checks.filter(check => !check.passed).map(check => check.name);
   expect(await failed(s.actions)).toEqual([]);
   // Merging on the required checks alone skips the full run.
-  expect(await failed([merge])).toEqual(expect.arrayContaining(["required action sequence", "forge.updatePrMetadata evidence before forge.mergePr"]));
+  expect(await failed([merge])).toEqual(expect.arrayContaining(["required action sequence", "forge.updatePrMetadata carries full-ci before forge.mergePr"]));
   // Starting the full run but merging before it finishes.
-  expect(await failed([fullCiLabel, merge, fullCiWait])).toEqual(["monitor.wait evidence before forge.mergePr", "required action sequence"]);
+  expect(await failed([fullCiLabel, merge, fullCiWait])).toEqual([`monitor.wait carries ${candidateHead} before forge.mergePr`, "required action sequence"]);
   // Waiting for main's in-progress run as well is the serialisation the rule removes.
-  expect(await failed([fullCiLabel, fullCiWait, mainRunWait(parallelTip), merge])).toEqual(["monitor.wait evidence before forge.mergePr"]);
+  expect(await failed([fullCiLabel, fullCiWait, mainRunWait(parallelTip), merge])).toEqual([`monitor.wait carries ${candidateHead} before forge.mergePr`]);
   // A wait after the merge, such as on the integrated revision, is not a wait before it.
   expect(await failed([...s.actions, mainRunWait("3c".repeat(20))])).toEqual([]);
 });
@@ -353,9 +347,9 @@ test("past the uncovered-commit bound, one run on the tip completes before the n
     gradeRun(c, await replay(c, actions), s.output).checks.filter(check => !check.passed).map(check => check.name);
   expect(await failed(s.actions)).toEqual([]);
   // Merging cancels the tip's run again and leaves the gap growing.
-  expect(await failed([merge, mainRunWait(parallelTip)])).toEqual(["monitor.wait evidence before forge.mergePr", "required action sequence"]);
+  expect(await failed([merge, mainRunWait(parallelTip)])).toEqual([`monitor.wait carries ${parallelTip} before forge.mergePr`, "required action sequence"]);
   // A wait on the old deciding commit does not cover the tip.
-  expect(await failed([mainRunWait("e1".repeat(20)), merge])).toEqual(["monitor.wait evidence before forge.mergePr"]);
+  expect(await failed([mainRunWait("e1".repeat(20)), merge])).toEqual([`monitor.wait carries ${parallelTip} before forge.mergePr`]);
   // While merging pauses nothing cancels the tip's run, so a second run on that tip is waste.
   expect(await failed([dispatchSampler(parallelTip), ...s.actions])).toEqual(["forbidden actions"]);
 });
@@ -402,7 +396,7 @@ test("a workflow that allows no run outside its cancelling group is reported as 
   expect(await failed([dispatchSampler(parallelTip), merge])).toEqual(["forbidden actions"]);
   expect(await failed([mainRunWait(parallelTip), merge])).toEqual(["forbidden actions"]);
   // Merging silently, without the gap, fails.
-  expect(await failed(s.actions, "PR #519 merged as 3c3c3c3.")).toEqual(expect.arrayContaining(["output matches /concurrency|cancell?ing group/i"]));
+  expect(await failed(s.actions, "PR #519 merged as 3c3c3c3.")).toEqual(expect.arrayContaining(["answer states concurrency | cancelling group | canceling group"]));
 });
 
 test("a coordinator records the tier a lane's work needs, and a new open lane carries the finding", async () => {
@@ -412,27 +406,27 @@ test("a coordinator records the tier a lane's work needs, and a new open lane ca
   };
   const merge = "delivery-tier-mechanical-coordinator";
   const ready = "PR #145 is ready to merge; nothing was merged.";
-  expect(await failed(merge, [tierPacket("Capability tier: open. Run /update-pr to merge origin/main.")], ready)).toEqual(["delegate evidence"]);
-  expect(await failed(merge, [tierPacket("Run /update-pr to merge origin/main.")], ready)).toEqual(["delegate evidence"]);
+  expect(await failed(merge, [tierPacket("Capability tier: open. Run /update-pr to merge origin/main.")], ready)).toEqual(["delegate carries mechanical"]);
+  expect(await failed(merge, [tierPacket("Run /update-pr to merge origin/main.")], ready)).toEqual(["delegate carries mechanical"]);
   // The packet template writes the tier as Markdown; every ordinary way of recording it counts.
   for (const recorded of ["- **Capability tier:** mechanical", "Capability tier \u2014 `mechanical`", "Tier: **mechanical**", "the mechanical capability tier", "Capability tier:\n  mechanical"]) {
     expect(await failed(merge, [tierPacket(`${recorded}\nRun /update-pr to merge origin/main.`)], ready)).toEqual([]);
   }
   // Arguments passed as data fields record the tier too.
   expect(await failed(merge, [{ action: "delegate", details: "Hand the base-branch update to a lane", data: { capabilityTier: "mechanical", task: "Run /update-pr to merge origin/main." } }], ready)).toEqual([]);
-  expect(await failed(merge, [{ action: "delegate", details: "Hand the base-branch update to a lane", data: { capability_tier: "open", task: "Run /update-pr to merge origin/main." } }], ready)).toEqual(["delegate evidence"]);
-  // A different tier, or one that is only mentioned elsewhere in the packet, is not the recorded tier.
-  expect(await failed(merge, [tierPacket("Capability tier: open, not mechanical\nRun /update-pr to merge origin/main.")], ready)).toEqual(["delegate evidence"]);
-  expect(await failed(merge, [tierPacket("- **Capability tier:** open\nRun /update-pr to merge origin/main.")], ready)).toEqual(["delegate evidence"]);
+  expect(await failed(merge, [{ action: "delegate", details: "Hand the base-branch update to a lane", data: { capability_tier: "open", task: "Run /update-pr to merge origin/main." } }], ready)).toEqual(["delegate carries mechanical"]);
+  // A different tier is not the recorded tier. A tier only mentioned elsewhere in the packet is judged by the rubric.
+  expect(await failed(merge, [tierPacket("- **Capability tier:** open\nRun /update-pr to merge origin/main.")], ready)).toEqual(["delegate carries mechanical"]);
   const trap = "delivery-tier-trap-coordinator-new-lane";
   const done = "PR #161 is ready to merge; nothing was merged.";
   const first = tierPacket("Capability tier: mechanical. Run /update-pr to merge origin/main; push; await required checks.");
   expect(await failed(trap, [first, openLane], done)).toEqual([]);
   // The first packet already on the open tier misroutes mechanical work.
-  expect(await failed(trap, [tierPacket("Capability tier: open. Merge origin/main."), openLane], done)).toEqual(["delegate evidence before delegate"]);
+  expect(await failed(trap, [tierPacket("Capability tier: open. Merge origin/main."), openLane], done)).toEqual(["delegate carries mechanical before delegate"]);
   // A second lane on the old tier, or one without the returned finding, is not the escalation.
-  expect(await failed(trap, [first, tierPacket("Capability tier: mechanical. Re-run the failed job.")], done)).toEqual(["delegate evidence"]);
-  expect(await failed(trap, [first, tierPacket("Capability tier: open. Bring PR #161 to ready-to-merge.")], done)).toEqual(["delegate evidence"]);
+  const escalation = "delegate carries open, tests/export.test.ts | streams large exports";
+  expect(await failed(trap, [first, tierPacket("Capability tier: mechanical. Re-run the failed job.")], done)).toEqual([escalation]);
+  expect(await failed(trap, [first, tierPacket("Capability tier: open. Bring PR #161 to ready-to-merge.")], done)).toEqual([escalation]);
   // The coordinator does not diagnose the failure itself.
   expect(await failed(trap, [first, action("validation.focused", "Run tests/export.test.ts locally"), openLane], done)).toEqual(["forbidden actions"]);
   // Readiness needs the gate on the exact head, so a coordinator that runs it before claiming ready is not penalized.
@@ -459,7 +453,7 @@ test("a lane finishes work on its tier, reruns review after fixing a finding, an
   expect(gates?.detail).toContain("missing=codeReview.run");
   // Reviewing twice without fixing the finding leaves it unreviewed on the final head.
   expect(await failed(bounded, [edit("src/report.ts"), review, review, gate, action("git.push")], boundedOutput)).toEqual(
-    expect.arrayContaining(["current gates before git.push", "file.edit evidence"]));
+    expect.arrayContaining(["current gates before git.push", "file.edit carries src/table-header.ts"]));
   const trap = "delivery-tier-trap-lane-stops";
   const merged = tierMerge.filter(a => a.action !== "file.edit");
   expect(await failed(trap, [...merged, action("monitor.wait", "Re-run the failed job and wait")], stoppedLane)).toEqual(["maximum monitor.wait"]);

@@ -22,9 +22,12 @@ as substitutes for the behavior they describe. Equivalent prose and correct
 refactors should remain valid.
 
 Keep candidate prompts separate from grading expectations. Supply the request,
-requirements and initial environment; let tool results expose consequences. Use
-manual review to assess requirement coverage, qualitative fidelity and unsupported
-claims beyond the deterministic grader. A simulated deployment remains simulated
+requirements and initial environment; let tool results expose consequences.
+Deterministic checks grade the recorded actions, skills, inspections, gates,
+worker, edit paths and ordering. A cross-family judge grades the answer against
+each case's rubric (see [Judged answers](README.md#judged-answers)). Use manual
+review to settle answers the judge leaves for human review and to assess
+qualitative fidelity beyond the rubric. A simulated deployment remains simulated
 even when every action is recorded correctly.
 
 ## Fixed case set
@@ -47,10 +50,14 @@ answer to the model as instructions.
 1. Validate skill structure/references and run tests for changed helpers.
 2. Run the selected cases through the existing native-login runner, explicitly
    selecting the target models the change affects and the affected cases.
-   Avoid implicit full-matrix runs. Keep original outputs when a grader needs correction.
+   Each case runs three times per model by default, and it passes only when
+   every repeat passes. The repeats apply to the affected cases only; avoid
+   implicit full-matrix runs. Keep original outputs when a grader needs correction.
 3. Review the complete result and recorded actions against the manual criteria.
-   Grade executable claims from returned evidence. An acknowledgment establishes
-   a request, not successful execution. Exact wording is unnecessary.
+   Settle every row reported as needs human review: the judge failed its rubric
+   while uncalibrated or same-family. Grade executable claims from returned
+   evidence. An acknowledgment establishes a request, not successful execution.
+   Exact wording is unnecessary.
 4. For delegation changes, include the existing
    `prompting-claude-native-agent-blocked` case to exercise an actual Fable parent
    and Opus worker. Runtime identity limitations remain explicit.
@@ -73,7 +80,8 @@ publication suites remain available for targeted investigation.
 
 ## Decide and stop
 
-For each case, record complete, correctly blocked, incomplete, or wrong outcome.
+For each case, record complete, correctly blocked, incomplete, or wrong outcome
+across all its repeats.
 Separate skill, repository-policy, tool/harness, evaluator and unknown failures.
 Record unnecessary questions, repeated work, elapsed time and usage where
 available. Distinguish requested approvals and additional scope from corrective
@@ -81,7 +89,8 @@ steering; separate external waits from agent work when the data supports it.
 Do not infer human time savings from a fixture's wall time.
 
 A batch concludes when its predeclared behavior criteria, affected deterministic
-checks and applicable live smoke pass. Unresolved unauthorized actions, loss of
+checks, every repeat's rubric verdict and applicable live smoke pass, and a human
+has settled any row left for review. Unresolved unauthorized actions, loss of
 user work or false completion prevent acceptance. Provider and evaluator errors
 are inconclusive, not passes. Make at most one targeted correction/retry for a
 batch defect; a persistent failure becomes an explicit deferred decision, not an

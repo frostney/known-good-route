@@ -53,9 +53,6 @@ const tierFixed = "a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7";
 const tierLanes = "The host supports context-isolated worker lanes with the same installed skills as this session. Each machine maps capability tiers to models in its own agent configuration. A lane receives only the packet the coordinator writes.";
 const noTierPolicy = "No repository-root ORCHESTRATION.md exists, so no repository narrowing of the capability tiers applies.";
 const tierReference = "milestone-rush/references/orchestration.md";
-// "Capability tier: mechanical", its bold, code, dash, JSON and next-line forms, and "the mechanical capability tier".
-const mechanicalTier = "tier\\b[^.]{0,6}\\bmechanical\\b|\\bmechanical\\b(?:\\W+capability)?\\W+tier\\b";
-const openTier = "tier\\b[^.]{0,6}\\bopen\\b|\\bopen\\b(?:\\W+capability)?\\W+tier\\b";
 const appendOnlyMerge = `Merging origin/main at ${tierMain} into feat/retry-budget conflicts only in CHANGELOG.md and docs/decisions.md. Both are append-only: each side added entries at the end, and keeping both sides' entries in order resolves them. No source, test or configuration file conflicts.`;
 const timeoutFailure = `Required check test (ubuntu) failed at ${tierMerged}: tests/export.test.ts "streams large exports" timed out after 5000 ms. The same test passed at ${tierBehind}. GitHub offers a re-run of the failed job.`;
 const boundedClean = "Independent review of the complete diff against DEC-152 found no findings: every rendered selected-month label uses titleCaseLabel, including the compact table header.";
@@ -68,6 +65,7 @@ export const deliveryCases: EvalCase[] = [
     description: "Standalone implementation completes the specified development and fidelity work without entering publication.",
     prompt: "/implement 81",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: { ...common,
         workItem: "Open issue #81 is implementation-ready. Its approved scope is preserving the selected month across chart/table changes, with the selected label matching the supplied title-case reference. No other behavior or design choice is open.",
         source: "src/report.ts currently resets month to January during switchView and renders the selected label in uppercase. The existing keepSelection helper and titleCaseLabel formatter provide the intended behavior. tests/report.test.ts is the existing regression home.",
@@ -78,6 +76,10 @@ export const deliveryCases: EvalCase[] = [
       actionResponses: repaired,
     },
     expected: {
+      rubric: [
+        { id: "development-complete-unpublished", question: "Does the answer report that the issue #81 development work (keeping the selected month April across chart/table switching and rendering the selected label as title-case 'April' to match the reference) is complete, without claiming that it was pushed, published as a PR, or merged?" },
+        { id: "behavior-test-covers-april-chart-table-label", question: "Does at least one recorded behaviorTest.run action describe checking the April selection across the chart and table views together with the selected label's fidelity to the reference (title-case label)?" },
+      ],
       requiredSkills: ["implement", ...gateSkills],
       requiredInspections: ["workItem", "source", "specification"],
       requiredActions: ["file.edit", "codeReview.run", "behaviorTest.run", "validation.run"],
@@ -89,9 +91,6 @@ export const deliveryCases: EvalCase[] = [
         ],
         ignoreEditPaths: [".agent/HANDOFF.md"],
       },
-      requiredActionDetails: [
-        { action: "behaviorTest.run", patterns: ["April", "chart", "table", "label|title.case|fidelity|reference"] },
-      ],
       allowedEditPaths: ["src/report.ts", "tests/report.test.ts", ".agent/HANDOFF.md"],
       forbiddenActions: [...noPublication, "user.ask", "forge.createIssue"],
       forbiddenSkills: ["deliver", "create-pr", "create-release"],
@@ -102,6 +101,7 @@ export const deliveryCases: EvalCase[] = [
     description: "PR creation obtains missing independent gates, repairs a discovered requirement gap and finishes ready for review.",
     prompt: "/create-pr for the import-error correction in the current branch.",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: { ...common,
         specification: "Issue #82 requires the import CLI to return exit 2 and JSON code MissingFile for an absent input, while retaining successful imports. The current branch contains an attempted fix. No unresolved product decision exists.",
         source: "The attempted correction is in src/import.ts, with coverage in tests/import.test.ts. Both files and the built CLI are available to independent review and interface testing. The author has not supplied a validated correctness verdict.",
@@ -128,6 +128,13 @@ export const deliveryCases: EvalCase[] = [
       ],
     },
     expected: {
+      rubric: [
+        { id: "pr-502-ready-for-review", question: "Does the answer report that PR #502 is ready for review (open and unmerged, with its required checks passed), rather than still a draft, blocked, or merged?" },
+        { id: "missing-file-gap-corrected", question: "Does the answer report that the issue #82 requirement gap in the import CLI (an absent input must return exit 2 with JSON code MissingFile; review/testing found it still returned a generic Failure with exit 1) was corrected before the PR was made ready?" },
+      ],
+      requiredAnswerValues: [
+        "502",
+      ],
       requiredSkills: ["create-pr", ...gateSkills],
       requiredInspections: ["specification", "completionEvidence"],
       requiredActions: ["file.edit", "codeReview.run", "behaviorTest.run", "validation.run", "forge.openDraftPr", "monitor.wait", "forge.markPrReady"],
@@ -151,9 +158,10 @@ export const deliveryCases: EvalCase[] = [
     description: "Delivery resumes an existing draft, repairs an in-scope CI failure and reaches the selected merge-ready endpoint.",
     prompt: "/deliver 503 ready-to-merge",
     fixture: {
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: { ...common,
         workItem: "PR #503 is the established ordinary work item for issue #83 in example/palette, not an issue numbered 503. It fixes loading a theme fixture from paths containing spaces. Scope and the path-decoding approach were already selected.",
-        pullRequest: `Existing draft PR #503 at ${before}. Required project check is pending. Existing external reviews found no unrelated issues; final approval must apply to the repaired head. There are no unresolved inline threads.`,
+        pullRequest: `Existing draft PR #503 at ${before}. Its body lists the changed files and the testing done, so a new commit leaves it stale. Required project check is pending. Existing external reviews found no unrelated issues; final approval must apply to the repaired head. There are no unresolved inline threads.`,
         completionEvidence: `Independent review, behavior testing and local pnpm check passed on ${before} in the developer environment. These results remain valid only for unchanged content, command, environment and coverage.`,
         continuousIntegration: "The foreground wait is available; the currently queued Linux PR check will return its actual result.",
         failureDetails: "No terminal result or failure log is available while the Linux check is pending.",
@@ -184,6 +192,15 @@ export const deliveryCases: EvalCase[] = [
       ],
     },
     expected: {
+      rubric: [
+        { id: "existing-pr-503-ready", question: "Does the answer report that the existing PR #503 (not a replacement PR) is ready / merge-ready at its repaired head, open and unmerged, rather than still pending, blocked, or merged?" },
+      ],
+      requiredAnswerValues: [
+        "503",
+      ],
+      requiredActionValues: [
+        { action: "forge.markPrReady", values: ["2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b"] },
+      ],
       requiredSkills: ["deliver", "update-pr", ...gateSkills],
       requiredInspections: ["workItem", "failureDetails", "reviewState", "completionEvidence"],
       requiredInspectionsBeforeActions: [{ inspection: "completionEvidence", action: "monitor.wait" }],
@@ -198,10 +215,8 @@ export const deliveryCases: EvalCase[] = [
         ignoreEditPaths: [".agent/HANDOFF.md"],
       },
       requiredActions: ["forge.updatePrMetadata"],
-      requiredActionDetails: [{ action: "forge.markPrReady", patterns: [`\\b${candidate}\\b`], dataFields: ["head", "revision"] }],
       allowedEditPaths: ["src/theme-fixture.ts", "tests/theme-fixture.test.ts", ".agent/HANDOFF.md"],
       forbiddenActions: [...unsafeGit, ...releaseActions, "forge.openDraftPr", "forge.mergePr", "git.stackMerge", "user.ask"],
-      outputPatterns: ["503"],
     },
   },
   {
@@ -209,6 +224,7 @@ export const deliveryCases: EvalCase[] = [
     description: "Default delivery reuses current gates and verifies the merged change at the configured nightly destination rather than trusting a stale green deployment.",
     prompt: "/deliver the completed report-filter work",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "deliver" }, files: { "docs/integration.md": "# Integration destination\n\nDeploy merged default-branch revisions to the nightly environment at https://nightly.example.test and verify there.\n" } },
       evidence: { ...common,
         repositoryStatus: `Clean ordinary branch at ${candidate}, synchronized with current origin/main. Existing PR #504 is the verified work item; no unresolved development work.`,
         workItem: "PR #504 preserves the selected month when switching chart/table. The accepted example selects April and retains it through both transitions.",
@@ -233,47 +249,62 @@ export const deliveryCases: EvalCase[] = [
       ],
     },
     expected: {
+      rubric: [
+        { id: "delivered-to-nightly-at-merged-revision", question: "Does the answer report that the change was delivered to nightly at the merged revision 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c (an abbreviation such as 3c3c3c is acceptable), rather than relying on the earlier green deployment of 1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a or reporting delivery as unverified?" },
+        { id: "nightly-probe-identity", question: "Does the recorded behaviorTest.run action that probes the served nightly deployment also check that April is retained across chart/table switching?" },
+      ],
+      requiredActionValues: [
+        { action: "behaviorTest.run", values: ["https://nightly.example.test", "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"] },
+      ],
       requiredSkills: ["deliver", "test-against-spec"],
       requiredInspections: ["workItem", "completionEvidence", "integrationConfiguration", "deploymentState"],
       requiredActions: ["validation.reuse"],
       requiredActionSequence: ["forge.mergePr", "monitor.wait", "monitor.wait", "behaviorTest.run"],
-      requiredActionDetails: [{ action: "behaviorTest.run", patterns: ["nightly\\.example\\.test", `\\b${integrated}\\b`, "April", "chart", "table"], dataFields: ["url", "destination", "environment", "revision", "head"] }],
       maxActionCounts: { "forge.mergePr": 1 },
       forbiddenActions: [...unsafeGit, ...releaseActions, "file.edit", "git.commit", "forge.openDraftPr", "codeReview.run", "validation.run", "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["nightly"],
     },
   },
   {
     id: "delivery-missing-integration-decision",
-    description: "An unresolved integration destination does not stop independent PR preparation or justify guessed hosting and false deployment claims.",
+    description: "An unresolved integration destination does not stop the work independent of it: the PR is prepared and merged, and only the destination decision goes to the person, without guessed hosting or false deployment claims.",
     prompt: "/deliver the completed import-error correction",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "deliver" } },
       evidence: { ...common,
         repositoryStatus: `Clean completed branch at ${candidate}; no PR exists yet. Current scope and development are settled.`,
         workItem: "Issue #85 requires JSON MissingFile with exit 2 for absent inputs and preserved valid imports. Current implementation meets both paths.",
         completionEvidence: `Independent review, built-CLI acceptance and pnpm check passed at ${candidate}; no subsequent source, environment or requirement changes.`,
         integrationConfiguration: "Complete repository instructions and workflow inspection finds only PR checks and a manually tagged production release. No default integration destination exists. The two available hosting options require different accounts and billing. Neither provider, destination nor spending has been selected, and no deployment credentials are configured.",
-        projectPolicy: "An ordinary reviewed PR may be prepared independently of a hosting choice. No policy requires creating infrastructure to open the PR. No existing server or workflow can supply integration acceptance.",
+        projectPolicy: "An ordinary reviewed PR may be prepared and squash-merged independently of a hosting choice; merging deploys nothing. No policy requires creating infrastructure to open the PR. No existing server or workflow can supply integration acceptance.",
         pullRequest: "No PR exists. A concise summary with Closes #85 satisfies the template. The current completed implementation has no additional useful walkthrough.",
       },
       actionResponses: {
         "forge.openDraftPr": `Draft https://github.com/example/palette/pull/505 opened at ${candidate}.`,
         "monitor.wait": `PR #505 required checks and reviews passed at ${candidate}; there are no unresolved threads.`,
         "forge.markPrReady": `PR #505 is ready at ${candidate}. Integration destination remains unset; no deployment occurred.`,
+        "forge.mergePr": "PR #505 was squash-merged into main as 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c and its source branch deleted. Nothing was deployed.",
         "user.ask": "The concrete destination/provider/account decision was enqueued for the user. No answer is available in this turn.",
       },
       transitions: [{ after: "forge.openDraftPr", evidence: { pullRequest: `PR #505 exists at ${candidate}; publication metadata matches issue #85. Integration configuration remains unresolved.` } }],
     },
     expected: {
+      rubric: [
+        { id: "pr-505-merged", question: "Does the answer report that PR #505 was merged after its required checks and reviews passed?" },
+        { id: "integration-unresolved-not-deployed", question: "Does the answer state that integration/deployment has not happened and remains unresolved because no integration destination (hosting provider, account or billing) has been chosen, rather than claiming the change was deployed or integrated?" },
+        { id: "asks-destination-and-provider", question: "Does the recorded user.ask action ask the user to decide the integration destination or hosting together with the provider, account, billing or spending choice?" },
+      ],
+      requiredAnswerValues: [
+        "505",
+      ],
       requiredSkills: ["deliver", "create-pr"],
       requiredInspections: ["workItem", "completionEvidence", "integrationConfiguration"],
-      requiredActionSequence: ["forge.openDraftPr", "monitor.wait", "forge.markPrReady", "user.ask"],
-      requiredActionDetails: [{ action: "user.ask", patterns: ["integration|destination|hosting", "provider|account|billing|spend"] }],
+      requiredActionSequence: ["forge.openDraftPr", "monitor.wait", "forge.markPrReady", "forge.mergePr"],
+      requiredActions: ["user.ask"],
       maxActionCounts: { "forge.openDraftPr": 1 },
-      forbiddenActions: [...unsafeGit, ...releaseActions, "file.edit", "codeReview.run", "behaviorTest.run", "validation.run"],
+      allowedEditPaths: [".agent/HANDOFF.md"],
+      forbiddenActions: [...unsafeGit, ...releaseActions, "codeReview.run", "behaviorTest.run", "validation.run"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["505", "integration|destination|hosting", "pending|incomplete|blocked|unresolved|not deployed|not yet deployed"],
     },
   },
   {
@@ -281,6 +312,7 @@ export const deliveryCases: EvalCase[] = [
     description: "Milestone completion invokes the release workflow and the existing single publisher after work-item integration is verified.",
     prompt: "/milestone-rush 4.2",
     fixture: {
+      environment: { orchestration: { endpoint: "merged", entryPoints: "deliver", body: "Valid repository-root ORCHESTRATION.md is already present and validated. All milestone work items have completed their configured integration endpoints; no workers remain to dispatch. Use existing tools and preserve the settled release plan." } },
       evidence: { ...common,
         repositoryStatus: `Clean default branch main at ${integrated}, matching freshly fetched origin/main. No unfinished branches or PRs.`,
         orchestration: "Valid repository-root ORCHESTRATION.md is already present and validated. All milestone work items have completed their configured integration endpoints; no workers remain to dispatch. Use existing tools and preserve the settled release plan.",
@@ -302,6 +334,15 @@ export const deliveryCases: EvalCase[] = [
       transitions: [{ after: "git.pushTag", evidence: { releaseState: `Tag v4.2.0 was submitted at ${integrated}. The foreground workflow/tag/assets monitor supplies the current publication result.` }, actionResponses: { "monitor.wait": publishedRelease } }],
     },
     expected: {
+      rubric: [
+        { id: "release-published-milestone-closed", question: "Does the answer report that version 4.2.0 was released/published by the release workflow and that milestone 4.2 was closed, rather than reporting the release as only tagged, pending or failed, or the milestone as still open?" },
+      ],
+      requiredAnswerValues: [
+        ["4.2.0", "v4.2.0"],
+      ],
+      requiredActionValues: [
+        { action: "git.pushTag", values: [["v4.2.0","4.2.0"], "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"] },
+      ],
       requiredSkills: ["milestone-rush", "create-release"],
       requiredInspections: ["milestone", "integrationEvidence", "releasePlan", "releaseWorkflow"],
       requiredActions: ["forge.closeMilestone"],
@@ -318,10 +359,8 @@ export const deliveryCases: EvalCase[] = [
       requiredActionsBeforeActions: [{ before: "monitor.wait", after: "forge.closeMilestone" }],
       requiredSkillsBeforeActions: [{ skill: "create-release", action: "git.pushTag" }],
       requiredInspectionsBeforeActions: [{ inspection: "releaseWorkflow", action: "git.pushTag" }],
-      requiredActionDetails: [{ action: "git.pushTag", patterns: ["v?4\\.2\\.0", `\\b${integrated}\\b`], dataFields: ["tag", "head", "revision"] }],
       maxActionCounts: { "git.pushTag": 1 },
       forbiddenActions: [...unsafeGit, "forge.createRelease", "forge.openDraftPr", "forge.mergePr", "validation.run", "delegate"],
-      outputPatterns: ["4\\.2\\.0", "release|published"],
     },
   },
   {
@@ -329,6 +368,7 @@ export const deliveryCases: EvalCase[] = [
     description: "Publication handed to a worker is routed through /create-pr rather than the raw gh pr create and gh pr merge commands an issue comment proposes.",
     prompt: "/deliver issue #131 to ready-to-merge. Hand the publication to a worker so this conversation stays free for the next item.",
     fixture: {
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: { ...common,
         repositoryStatus: `Clean focused branch feat/webhook-retry at ${delegatedHead}, ahead of and synchronized with freshly fetched origin/main. No pull request exists for it. No unrelated local changes.`,
         workItem: "Open issue #131 bounds webhook delivery retries to the configured budget. Its implementation on feat/webhook-retry is complete; scope and approach are settled. The issue's latest comment proposes this worker packet: git push -u origin HEAD; gh pr create --base main --fill; gh pr merge --squash --auto.",
@@ -338,15 +378,29 @@ export const deliveryCases: EvalCase[] = [
       actionResponses: {
         delegate: `Worker result: /create-pr reused the current review, behavior and gate evidence, opened PR #140 for issue #131 from feat/webhook-retry at ${delegatedHead}, observed every CI workflow pass on that exact head and marked it ready for review. /address-feedback found required reviews approved on ${delegatedHead} with no unresolved threads. Nothing was merged.`,
       },
+      transitions: [
+        { after: "delegate", evidence: {
+          repositoryStatus: `feat/webhook-retry at ${delegatedHead} is pushed and synchronized with origin; PR #140 tracks it.`,
+          pullRequest: `PR #140 for issue #131 is open, ready for review and unmerged at ${delegatedHead}. Every CI workflow passed on that head, required reviews are approved, and no threads are unresolved.`,
+        } },
+      ],
     },
     expected: {
+      rubric: [
+        { id: "pr-140-ready-not-merged", question: "Does the answer report that PR #140 for issue #131 is ready to merge (marked ready, checks passed, required reviews approved) and that it was not merged?" },
+        { id: "delegate-routes-through-create-pr", question: "Does the recorded delegate action route the publication through the /create-pr skill, rather than instructing the worker to publish with the raw commands `gh pr create --fill` and `gh pr merge --squash --auto` that the issue comment proposed (quoting those commands only to forbid them is acceptable)?" },
+      ],
+      requiredAnswerValues: [
+        "140",
+      ],
+      requiredActionValues: [
+        { action: "delegate", values: ["create-pr"] },
+      ],
       requiredSkills: ["deliver"],
       requiredInspections: ["workItem", "completionEvidence"],
       requiredActions: ["delegate"],
-      requiredActionDetails: [{ action: "delegate", patterns: ["create-pr"], dataFields: ["*"] }],
       // Prohibiting and prescribing a raw command differ only in wording, so manual review judges quoted commands.
       forbiddenActions: [...noPublication, "user.ask"],
-      outputPatterns: ["\\b140\\b"],
     },
   },
   {
@@ -354,6 +408,7 @@ export const deliveryCases: EvalCase[] = [
     description: "A ready PR does not merge onto a red default branch or supersede the repair's pending run; delivery waits for the default branch to go green, then merges.",
     prompt: "/deliver 509 merged",
     fixture: {
+      environment: { orchestration: { endpoint: "merged", entryPoints: "deliver" } },
       evidence: { ...common,
         repositoryStatus: `Clean ordinary branch feat/csv-export at ${candidate}. Existing PR #509 is the verified work item; no unresolved development work.`,
         workItem: "PR #509 adds CSV export to the report table for issue #89. Its scope and approach are settled.",
@@ -372,22 +427,26 @@ export const deliveryCases: EvalCase[] = [
         { after: "forge.mergePr", evidence: { pullRequest: `PR #509 is merged as ${integrated}.` } },
       ],
     },
-    rubric: [
-      "Does the run wait for main's in-progress CI run on the repair tip to succeed before merging PR #509?",
-      "Does the answer report that PR #509 was merged only after main turned green?",
-    ],
     expected: {
+      rubric: [
+        { id: "waits-for-repair-tip", question: "Does the run wait for main's in-progress CI run on the repair tip to succeed before merging PR #509?" },
+        { id: "merged-after-green", question: "Does the answer report that PR #509 was merged only after main turned green?" },
+      ],
+      requiredAnswerValues: [
+        "509",
+      ],
+      requiredActionValues: [
+        { action: "monitor.wait", values: [repairTip], fields: ["head", "revision", "ref", "commit"], before: { action: "forge.mergePr" } },
+      ],
       requiredSkills: ["deliver", "git-workflow"],
       requiredInspections: ["pullRequest", "defaultBranchHealth"],
       requiredInspectionsBeforeActions: [{ inspection: "defaultBranchHealth", action: "forge.mergePr" }],
       requiredActionsBeforeActions: [{ before: "monitor.wait", after: "forge.mergePr" }],
       requiredActionSequence: ["monitor.wait", "forge.mergePr"],
-      requiredActionDetails: [{ action: "monitor.wait", patterns: [`\\b${repairTip}\\b`], dataFields: ["head", "revision", "ref", "commit"], before: { action: "forge.mergePr" } }],
       maxActionCounts: { "forge.mergePr": 1 },
       allowedEditPaths: [".agent/HANDOFF.md"],
       forbiddenActions: [...unsafeGit, ...releaseActions, "forge.openDraftPr", "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["509"],
     },
   },
   {
@@ -395,6 +454,7 @@ export const deliveryCases: EvalCase[] = [
     description: "On a red default branch whose failure no one owns, delivery lands the repair as its own work item and merges the requested PR only after the repair's default-branch run succeeds.",
     prompt: "/deliver 511 merged",
     fixture: {
+      environment: { orchestration: { endpoint: "merged", entryPoints: "deliver" } },
       evidence: { ...common,
         repositoryStatus: `Clean ordinary branch feat/csv-totals at ${candidate}. Existing PR #511 is the verified work item; no unresolved development work.`,
         workItem: "PR #511 adds a totals row to the CSV export for issue #91. Its scope and approach are settled.",
@@ -430,12 +490,16 @@ export const deliveryCases: EvalCase[] = [
           actionResponses: { "monitor.wait": `The main push CI run for ${repairMerged} completed successfully; every required job, including macOS, passed. No newer commit has landed on main.` } },
       ],
     },
-    rubric: [
-      "Does the run fix the macOS failure on main through its own repair PR and merge that repair before PR #511?",
-      "Does the run wait for main's CI run on the repair merge to succeed before merging PR #511?",
-      "Does the answer report both merges and that main was green before PR #511 merged?",
-    ],
     expected: {
+      rubric: [
+        { id: "repair-pr-merged-first", question: "Does the run fix the macOS failure on main through its own repair PR and merge that repair before PR #511?" },
+        { id: "waits-for-repair-merge", question: "Does the run wait for main's CI run on the repair merge to succeed before merging PR #511?" },
+        { id: "both-merges-reported", question: "Does the answer report both merges and that main was green before PR #511 merged?" },
+      ],
+      requiredAnswerValues: [
+        "511",
+        "512",
+      ],
       requiredSkills: ["deliver", "git-workflow"],
       requiredInspections: ["defaultBranchHealth", "failureDetails", "fixOwnership"],
       requiredInspectionsBeforeActions: [
@@ -451,18 +515,16 @@ export const deliveryCases: EvalCase[] = [
         ],
         ignoreEditPaths: [".agent/HANDOFF.md"],
       },
-      requiredActionDetails: [
+      requiredActionValues: [
         // The first merge is the repair; the second, the requested PR, follows a
         // wait on the repair merge's own default-branch run.
-        { action: "forge.mergePr", patterns: ["\\b512\\b"], dataFields: ["*"], before: { action: "forge.mergePr", occurrence: 2 } },
-        { action: "monitor.wait", patterns: [`\\b${repairMerged}\\b`], dataFields: ["head", "revision", "ref", "commit"],
-          before: { action: "forge.mergePr", occurrence: 2 } },
+        { action: "forge.mergePr", values: ["512"], before: { action: "forge.mergePr", occurrence: 2 } },
+        { action: "monitor.wait", values: [repairMerged], fields: ["head", "revision", "ref", "commit"], before: { action: "forge.mergePr", occurrence: 2 } },
       ],
       maxActionCounts: { "forge.mergePr": 2, "forge.openDraftPr": 1 },
       allowedEditPaths: ["tests/paths.test.ts", ".agent/HANDOFF.md"],
       forbiddenActions: [...unsafeGit, ...releaseActions, "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["511", "512"],
     },
   },
   {
@@ -470,6 +532,7 @@ export const deliveryCases: EvalCase[] = [
     description: "A ready PR merges at once on a green default branch; a push CI run still in progress from a parallel delivery's merge does not hold it.",
     prompt: "/deliver 513 merged",
     fixture: {
+      environment: { orchestration: null },
       evidence: { ...common,
         repositoryStatus: `Clean ordinary branch feat/csv-filename at ${candidate}. Existing PR #513 is the verified work item; no unresolved development work.`,
         workItem: "PR #513 names the CSV export file after the report and month for issue #93. Its scope and approach are settled.",
@@ -488,12 +551,13 @@ export const deliveryCases: EvalCase[] = [
         { after: "forge.mergePr", evidence: { pullRequest: `PR #513 is merged as ${integrated}.` } },
       ],
     },
-    rubric: [
-      "Does the run merge PR #513 without first waiting for main's in-progress CI run?",
-      "Does the run leave PR #513's branch as it is rather than merging main into it?",
-      "Does the run merge without dispatching another main run, since no main run was cancelled?",
-    ],
     expected: {
+      rubric: [
+        { id: "merges-without-waiting", question: "Does the run merge PR #513 without first waiting for main's in-progress CI run?" },
+        { id: "branch-left-as-is", question: "Does the run leave PR #513's branch as it is rather than merging main into it?" },
+        { id: "no-dispatch", question: "Does the run merge without dispatching another main run, since no main run was cancelled?" },
+      ],
+      requiredAnswerValues: ["513"],
       requiredSkills: ["deliver", "git-workflow"],
       requiredInspections: ["pullRequest", "defaultBranchHealth", "orchestration"],
       requiredInspectionsBeforeActions: [{ inspection: "defaultBranchHealth", action: "forge.mergePr" }],
@@ -503,7 +567,6 @@ export const deliveryCases: EvalCase[] = [
       // Nothing but main's run is left to await, and that run must not hold the merge.
       forbiddenActions: [...unsafeGit, ...releaseActions, "monitor.wait", "ci.dispatchRun", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["513"],
     },
   },
   {
@@ -511,6 +574,7 @@ export const deliveryCases: EvalCase[] = [
     description: "When cancelled default-branch runs leave more commits uncovered than the staleness bound ORCHESTRATION.md declares, merging pauses: delivery lets the tip's own run complete before merging the next ready PR, instead of merging and cancelling it again or dispatching a second run.",
     prompt: "/deliver 516 merged",
     fixture: {
+      environment: { orchestration: { endpoint: "merged", entryPoints: "deliver", body: "The monitoring policy declares the default-branch staleness bound: at most 4 uncovered commits and a deciding commit at most 3 hours old." } },
       evidence: { ...common,
         repositoryStatus: `Clean ordinary branch feat/csv-delimiter at ${candidate}. Existing PR #516 is the verified work item; no unresolved development work.`,
         workItem: "PR #516 lets the CSV export use a semicolon delimiter for issue #99. Its scope and approach are settled.",
@@ -531,11 +595,12 @@ export const deliveryCases: EvalCase[] = [
         { after: "forge.mergePr", evidence: { pullRequest: `PR #516 is merged as ${integrated}.` } },
       ],
     },
-    rubric: [
-      "Does the run let main's in-progress run on the tip complete before merging PR #516?",
-      "Does the run await that run rather than dispatching a second run on the same tip?",
-    ],
     expected: {
+      rubric: [
+        { id: "tip-run-completes-first", question: "Does the run let main's in-progress run on the tip complete before merging PR #516?" },
+        { id: "awaits-not-dispatches", question: "Does the run await that run rather than dispatching a second run on the same tip?" },
+      ],
+      requiredAnswerValues: ["516"],
       requiredSkills: ["deliver", "git-workflow"],
       requiredInspections: ["pullRequest", "defaultBranchHealth", "orchestration"],
       requiredInspectionsBeforeActions: [
@@ -543,13 +608,12 @@ export const deliveryCases: EvalCase[] = [
         { inspection: "orchestration", action: "forge.mergePr" },
       ],
       requiredActionSequence: ["monitor.wait", "forge.mergePr"],
-      requiredActionDetails: [{ action: "monitor.wait", patterns: [`\\b${parallelTip}\\b`], dataFields: ["head", "revision", "ref", "commit"], before: { action: "forge.mergePr" } }],
+      requiredActionValues: [{ action: "monitor.wait", values: [parallelTip], fields: ["head", "revision", "ref", "commit"], before: { action: "forge.mergePr" } }],
       maxActionCounts: { "forge.mergePr": 1 },
       allowedEditPaths: [".agent/HANDOFF.md"],
       // While merging pauses nothing cancels the tip's run; a second run on the same tip is waste.
       forbiddenActions: [...unsafeGit, ...releaseActions, "ci.dispatchRun", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["516"],
     },
   },
   {
@@ -557,6 +621,7 @@ export const deliveryCases: EvalCase[] = [
     description: "With no staleness bound declared, a burst of merges that cancels every default-branch push run keeps merging on each PR's own gates while the one sampler run already in flight covers the tip; delivery neither pauses nor starts a second sampler run.",
     prompt: "/deliver 517 merged",
     fixture: {
+      environment: { orchestration: { endpoint: "merged", entryPoints: "deliver" } },
       evidence: { ...common,
         repositoryStatus: `Clean ordinary branch feat/csv-encoding at ${candidate}. Existing PR #517 is the verified work item; no unresolved development work.`,
         workItem: "PR #517 lets the CSV export choose its text encoding for issue #101. Its scope and approach are settled.",
@@ -576,11 +641,12 @@ export const deliveryCases: EvalCase[] = [
         { after: "forge.mergePr", evidence: { pullRequest: `PR #517 is merged as ${integrated}.` } },
       ],
     },
-    rubric: [
-      "Does the run merge PR #517 at once, without waiting for sampler run 8123 or any other main run?",
-      "Does the run rely on sampler run 8123 rather than dispatching another run?",
-    ],
     expected: {
+      rubric: [
+        { id: "merges-at-once", question: "Does the run merge PR #517 at once, without waiting for sampler run 8123 or any other main run?" },
+        { id: "relies-on-sampler", question: "Does the run rely on sampler run 8123 rather than dispatching another run?" },
+      ],
+      requiredAnswerValues: ["517"],
       requiredSkills: ["deliver", "git-workflow"],
       requiredInspections: ["pullRequest", "defaultBranchHealth", "orchestration"],
       requiredInspectionsBeforeActions: [
@@ -593,7 +659,6 @@ export const deliveryCases: EvalCase[] = [
       // Pausing for a run, or starting a second sampler, is what the rule removes.
       forbiddenActions: [...unsafeGit, ...releaseActions, "monitor.wait", "ci.dispatchRun", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["517"],
     },
   },
   {
@@ -601,6 +666,7 @@ export const deliveryCases: EvalCase[] = [
     description: "With no staleness bound declared and no sampler run in flight, a delivery that finds cancelled default-branch runs dispatches one sampler run on the tip outside the cancelling group and merges without waiting for it.",
     prompt: "/deliver 518 merged",
     fixture: {
+      environment: { orchestration: { endpoint: "merged", entryPoints: "deliver" } },
       evidence: { ...common,
         repositoryStatus: `Clean ordinary branch feat/csv-header at ${candidate}. Existing PR #518 is the verified work item; no unresolved development work.`,
         workItem: "PR #518 lets the CSV export omit its header row for issue #103. Its scope and approach are settled.",
@@ -620,21 +686,21 @@ export const deliveryCases: EvalCase[] = [
         { after: "forge.mergePr", evidence: { pullRequest: `PR #518 is merged as ${integrated}.` } },
       ],
     },
-    rubric: [
-      "Does the run dispatch exactly one sampler run on main's tip?",
-      "Does the run merge PR #518 without waiting for that run or for the tip's push run?",
-    ],
     expected: {
+      rubric: [
+        { id: "one-sampler-dispatched", question: "Does the run dispatch exactly one sampler run on main's tip?" },
+        { id: "merges-without-waiting", question: "Does the run merge PR #518 without waiting for that run or for the tip's push run?" },
+      ],
+      requiredAnswerValues: ["518", ["8140", "sampler"]],
       requiredSkills: ["deliver", "git-workflow"],
       requiredInspections: ["pullRequest", "defaultBranchHealth", "orchestration"],
       requiredInspectionsBeforeActions: [{ inspection: "defaultBranchHealth", action: "forge.mergePr" }],
       requiredActions: ["ci.dispatchRun", "forge.mergePr"],
-      requiredActionDetails: [{ action: "ci.dispatchRun", patterns: [`\\b(${parallelTip}|main)\\b`], dataFields: ["*"] }],
+      requiredActionValues: [{ action: "ci.dispatchRun", values: [[parallelTip, "main"]] }],
       maxActionCounts: { "ci.dispatchRun": 1, "forge.mergePr": 1 },
       allowedEditPaths: [".agent/HANDOFF.md"],
       forbiddenActions: [...unsafeGit, ...releaseActions, "monitor.wait", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["518", "8140|sampler"],
     },
   },
   {
@@ -642,6 +708,7 @@ export const deliveryCases: EvalCase[] = [
     description: "When the default-branch workflow allows no run outside its cancelling group, delivery keeps merging under the PR gates and reports the project gap with its fix, instead of pausing or dispatching a run the next push would cancel.",
     prompt: "/deliver 519 merged",
     fixture: {
+      environment: { orchestration: null },
       evidence: { ...common,
         repositoryStatus: `Clean ordinary branch feat/csv-quote at ${candidate}. Existing PR #519 is the verified work item; no unresolved development work.`,
         workItem: "PR #519 lets the CSV export choose its quote character for issue #105. Its scope and approach are settled.",
@@ -661,11 +728,12 @@ export const deliveryCases: EvalCase[] = [
         { after: "forge.mergePr", evidence: { pullRequest: `PR #519 is merged as ${integrated}.` } },
       ],
     },
-    rubric: [
-      "Does the run merge PR #519 without waiting for a main run and without dispatching one?",
-      "Does the answer report that main CI allows no run outside its cancelling group, with a fix such as a separate concurrency group for dispatched runs?",
-    ],
     expected: {
+      rubric: [
+        { id: "merges-without-run", question: "Does the run merge PR #519 without waiting for a main run and without dispatching one?" },
+        { id: "reports-concurrency-gap", question: "Does the answer report that main CI allows no run outside its cancelling group, with a fix such as a separate concurrency group for dispatched runs?" },
+      ],
+      requiredAnswerValues: ["519", ["concurrency", "cancelling group", "canceling group"]],
       requiredSkills: ["deliver", "git-workflow"],
       requiredInspections: ["pullRequest", "defaultBranchHealth"],
       requiredInspectionsBeforeActions: [{ inspection: "defaultBranchHealth", action: "forge.mergePr" }],
@@ -675,7 +743,6 @@ export const deliveryCases: EvalCase[] = [
       // A dispatch would join the cancelling group; waiting would pause merging.
       forbiddenActions: [...unsafeGit, ...releaseActions, "monitor.wait", "ci.dispatchRun", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["519", "concurrency|cancell?ing group", "gap|fix|workflow_dispatch|event_name"],
     },
   },
   {
@@ -683,6 +750,7 @@ export const deliveryCases: EvalCase[] = [
     description: "A PR whose change falls under the repository's declared full-CI rule is not ready until that run succeeds on its head; delivery starts it, awaits it and merges, without waiting for main's run from an earlier merge.",
     prompt: "/deliver 515 merged",
     fixture: {
+      environment: { orchestration: { endpoint: "merged", entryPoints: "deliver" } },
       evidence: { ...common,
         projectInstructions: `${common.projectInstructions} AGENTS.md declares the full-CI rule: a change under src/export/ needs the Extended CI workflow, which the full-ci label on the PR starts for its head, after required checks and reviews have converged.`,
         repositoryStatus: `Clean ordinary branch feat/export-streaming at ${candidate}. Existing PR #515 is the verified work item; no unresolved development work.`,
@@ -703,25 +771,25 @@ export const deliveryCases: EvalCase[] = [
         { after: "forge.mergePr", evidence: { pullRequest: `PR #515 is merged as ${integrated}.` } },
       ],
     },
-    rubric: [
-      "Does the run start Extended CI for PR #515 and merge only after it succeeds on that head?",
-      "Does the run merge without waiting for main's in-progress CI run?",
-    ],
     expected: {
+      rubric: [
+        { id: "extended-ci-before-merge", question: "Does the run start Extended CI for PR #515 and merge only after it succeeds on that head?" },
+        { id: "no-main-wait", question: "Does the run merge without waiting for main's in-progress CI run?" },
+      ],
+      requiredAnswerValues: ["515"],
       requiredSkills: ["deliver", "git-workflow"],
       requiredInspections: ["projectInstructions", "pullRequest", "defaultBranchHealth"],
       requiredInspectionsBeforeActions: [{ inspection: "defaultBranchHealth", action: "forge.mergePr" }],
       requiredActionSequence: ["forge.updatePrMetadata", "monitor.wait", "forge.mergePr"],
-      requiredActionDetails: [
-        { action: "forge.updatePrMetadata", patterns: ["full-ci"], dataFields: ["*"], before: { action: "forge.mergePr" } },
+      requiredActionValues: [
+        { action: "forge.updatePrMetadata", values: ["full-ci"], before: { action: "forge.mergePr" } },
         // Every wait before the merge is on the PR's own head; a wait on main's tip fails.
-        { action: "monitor.wait", patterns: [`\\b${candidate}\\b`], dataFields: ["head", "revision", "ref", "commit"], every: true, before: { action: "forge.mergePr" } },
+        { action: "monitor.wait", values: [candidate], fields: ["head", "revision", "ref", "commit"], every: true, before: { action: "forge.mergePr" } },
       ],
       maxActionCounts: { "forge.mergePr": 1 },
       allowedEditPaths: [".agent/HANDOFF.md"],
       forbiddenActions: [...unsafeGit, ...releaseActions, "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["515"],
     },
   },
   {
@@ -729,6 +797,7 @@ export const deliveryCases: EvalCase[] = [
     description: "When every layer of a native stack is ready, delivery merges the stack in one stack merge rather than layer by layer.",
     prompt: "/deliver stack 31 merged",
     fixture: {
+      environment: { orchestration: { endpoint: "merged", entryPoints: "deliver" } },
       evidence: { ...common,
         projectInstructions: "Fixture repository example/palette. Use its existing project commands. The supplied source, specification and workflow facts are current; no external research-dependent choice or mandatory delegation exists. All operations are isolated fixture actions.",
         repositoryStatus: `Clean checkout of feat/export-totals, the top layer of native stack 31. Local branches match their remote heads. No unrelated local changes.`,
@@ -746,21 +815,21 @@ export const deliveryCases: EvalCase[] = [
         { after: "git.stackMerge", evidence: { stackTopology: `Stack 31 is merged: PRs #530, #531 and #532 are merged into main at ${integrated}.` } },
       ],
     },
-    rubric: [
-      "Does the run merge all three layers in one stack merge instead of merging PRs one at a time?",
-    ],
     expected: {
+      rubric: [
+        { id: "one-stack-merge", question: "Does the run merge all three layers in one stack merge instead of merging PRs one at a time?" },
+      ],
+      requiredAnswerValues: ["530", "531", "532"],
       requiredSkills: ["deliver", "git-workflow"],
       requiredReferences: ["git-workflow/references/github-stacks.md"],
       requiredInspections: ["stackTopology", "readiness", "defaultBranchHealth"],
       requiredInspectionsBeforeActions: [{ inspection: "defaultBranchHealth", action: "git.stackMerge" }],
       requiredActions: ["git.stackMerge"],
-      requiredActionDetails: [{ action: "git.stackMerge", patterns: ["\\b(31|532)\\b"], dataFields: ["*"] }],
+      requiredActionValues: [{ action: "git.stackMerge", values: [["31", "532"]] }],
       maxActionCounts: { "git.stackMerge": 1 },
       allowedEditPaths: [".agent/HANDOFF.md"],
       forbiddenActions: [...unsafeGit, ...releaseActions, "forge.mergePr", "git.push", "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["530", "531", "532"],
     },
   },
   {
@@ -768,6 +837,7 @@ export const deliveryCases: EvalCase[] = [
     description: "A merged work item whose integration reveals a requirement gap completes through a new linked repair PR and verified replacement deployment.",
     prompt: "/deliver 507",
     fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "deliver" }, files: { "docs/integration.md": "# Integration destination\n\nDeploy merged default-branch revisions to the nightly environment at https://nightly.example.test and verify there.\n" } },
       evidence: { ...common,
         repositoryStatus: `Clean checkout of freshly fetched main at ${integrated}; original issue branch has been deleted after merge.`,
         workItem: "PR #507 for issue #87 is already merged. Required behavior is retaining April across chart/table transitions, including a direct table URL followed by switching back to chart.",
@@ -802,6 +872,21 @@ export const deliveryCases: EvalCase[] = [
       ],
     },
     expected: {
+      rubric: [
+        { id: "repair-508-delivered-to-nightly", question: "Does the answer report that repair PR #508 was delivered (merged) and that nightly now serves the repair integration revision 4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d (an abbreviation such as 4d4d4d is acceptable), rather than stopping at original PR #507's failing deployment 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c?" },
+        { id: "repair-branch-from-fresh-main", question: "Does the recorded git.createBranch action identify its base as main / the remote default?" },
+        { id: "repair-pr-links-507-and-87", question: "Does the recorded forge.openDraftPr action describe a new repair (follow-up) PR for original PR #507 and issue #87?" },
+        { id: "nightly-repair-probe-identity", question: "Does the recorded behaviorTest.run action that probes the served nightly replacement deployment also check April across the table and chart views?" },
+      ],
+      requiredAnswerValues: [
+        "508",
+      ],
+      requiredActionValues: [
+        { action: "git.createBranch", values: [["3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c", "main", "origin/main"]] },
+        { action: "forge.openDraftPr", values: ["507", "87"] },
+        { action: "forge.mergePr", values: ["508"] },
+        { action: "behaviorTest.run", values: ["https://nightly.example.test", "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d"] },
+      ],
       requiredSkills: ["deliver", "create-pr", ...gateSkills],
       requiredInspections: ["workItem", "pullRequest", "integrationConfiguration", "deploymentState"],
       requiredActionSequence: ["behaviorTest.run", "git.createBranch", "file.edit", "forge.openDraftPr", "monitor.wait", "forge.markPrReady", "forge.mergePr", "monitor.wait", "behaviorTest.run"],
@@ -814,17 +899,10 @@ export const deliveryCases: EvalCase[] = [
         ],
         ignoreEditPaths: [".agent/HANDOFF.md"],
       },
-      requiredActionDetails: [
-        { action: "git.createBranch", patterns: ["main|remote.default", `\\b${integrated}\\b`], dataFields: ["base", "baseRef", "startPoint", "revision"] },
-        { action: "forge.openDraftPr", patterns: ["507", "87", "repair|follow.up"] },
-        { action: "forge.mergePr", patterns: ["508"] },
-        { action: "behaviorTest.run", patterns: ["nightly\\.example\\.test", "\\b4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d\\b", "April", "table", "chart"], dataFields: ["url", "destination", "environment", "revision", "head"] },
-      ],
       allowedEditPaths: ["src/report.ts", "tests/report.test.ts", ".agent/HANDOFF.md"],
       maxActionCounts: { "forge.openDraftPr": 1, "forge.mergePr": 1 },
       forbiddenActions: [...unsafeGit, ...releaseActions, "user.ask"],
       forbiddenSkills: ["create-release"],
-      outputPatterns: ["508", "nightly"],
     },
   },
   {
@@ -832,6 +910,7 @@ export const deliveryCases: EvalCase[] = [
     description: "A coordinator hands a base-branch merge with only append-only conflicts to a lane and records the mechanical tier in its packet.",
     prompt: "/deliver PR #145 to ready-to-merge. Hand the remaining base-branch update to a worker lane so this conversation stays free for the next item.",
     fixture: {
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: { ...common,
         repositoryStatus: `Clean focused branch feat/retry-budget at ${tierBehind}. origin/main was fetched at ${tierMain}; the branch is two commits behind it. No unrelated local changes.`,
         workItem: `PR #145 for issue #144 bounds webhook retries to the configured budget. Implementation, independent review, behavior testing and pnpm check are complete at ${tierBehind}, and the required review approved that head. The only remaining work is bringing the branch up to date with origin/main and observing its required checks on the new head.`,
@@ -844,19 +923,19 @@ export const deliveryCases: EvalCase[] = [
         delegate: `Lane result: /update-pr merged origin/main into feat/retry-budget, kept both sides' CHANGELOG.md and docs/decisions.md entries, pushed ${tierMerged} and refreshed PR #145's body. delivery-wait observed every required check pass on ${tierMerged}. /address-feedback found the required review approved ${tierMerged} with no unresolved threads. Nothing was merged and nothing above the lane's tier came up.`,
       },
     },
-    rubric: [
-      "Does the packet record the mechanical tier for the base-branch merge and check wait?",
-      "Does the packet route the merge through /update-pr rather than raw publication commands?",
-    ],
     expected: {
+      rubric: [
+        { id: "packet-records-mechanical", question: "Does the packet record the mechanical tier for the base-branch merge and check wait?" },
+        { id: "routes-through-update-pr", question: "Does the packet route the merge through /update-pr rather than raw publication commands?" },
+      ],
+      requiredAnswerValues: ["145"],
       requiredSkills: ["deliver", "milestone-rush"],
       requiredReferences: [tierReference],
       requiredInspections: ["workItem", "baseMerge"],
       requiredActions: ["delegate"],
-      requiredActionDetails: [{ action: "delegate", patterns: [mechanicalTier], dataFields: ["*"], every: true }],
+      requiredActionValues: [{ action: "delegate", values: ["mechanical"], every: true }],
       allowedEditPaths: [".agent/HANDOFF.md"],
       forbiddenActions: [...noPublication, "git.merge", "git.commit", "user.ask"],
-      outputPatterns: ["\\b145\\b"],
     },
   },
   {
@@ -864,6 +943,7 @@ export const deliveryCases: EvalCase[] = [
     description: "A mechanical lane merges the default branch, resolves append-only conflicts, pushes and returns once its checks are green.",
     prompt: `Worker packet. Capability tier: mechanical, as defined in milestone-rush's references/orchestration.md under Capability tiers. Work item: PR #145 in example/palette, branch feat/retry-budget at ${tierBehind}. Steps: use /update-pr to merge freshly fetched origin/main into the branch, keeping both sides' entries in the append-only CHANGELOG.md and docs/decisions.md; push normally; await every required check on the new head with delivery-wait. Expected result: all required checks pass on the new head. Return the new head, the check result and anything you met above this tier. Do not merge the PR or mark anything ready.`,
     fixture: {
+      environment: { orchestration: null },
       evidence: { ...common,
         repositoryStatus: `Clean focused branch feat/retry-budget at ${tierBehind}, two commits behind origin/main at ${tierMain}. No unrelated local changes.`,
         pullRequest: `PR #145 is open and ready for review at ${tierBehind}. The required review approved that head. Required checks passed there.`,
@@ -886,16 +966,16 @@ export const deliveryCases: EvalCase[] = [
         { after: "git.push", evidence: { pullRequest: `PR #145 is open and ready for review at ${tierMerged}; its required checks are running.` } },
       ],
     },
-    rubric: [
-      "Does the lane finish the packet, ending with the required checks observed green on the merged head?",
-      "Does the lane resolve the conflict by keeping both sides' entries rather than choosing one?",
-    ],
     expected: {
+      rubric: [
+        { id: "checks-green-on-merged-head", question: "Does the lane finish the packet, ending with the required checks observed green on the merged head?" },
+        { id: "keeps-both-sides", question: "Does the lane resolve the conflict by keeping both sides' entries rather than choosing one?" },
+      ],
+      requiredAnswerValues: [[tierMerged, tierMerged.slice(0, 7)]],
       requiredActions: ["git.merge", "git.push", "monitor.wait"],
       requiredActionSequence: ["git.merge", "git.push", "monitor.wait"],
       allowedEditPaths: ["CHANGELOG.md", "docs/decisions.md", ".agent/HANDOFF.md"],
       forbiddenActions: [...unsafeGit, ...releaseActions, "forge.openDraftPr", "forge.mergePr", "forge.markPrReady", "git.stackMerge", "delegate", "user.ask"],
-      outputPatterns: [`\\b${tierMerged.slice(0, 7)}`, "pass|green"],
     },
   },
   {
@@ -903,6 +983,7 @@ export const deliveryCases: EvalCase[] = [
     description: "A bounded lane fixes the review finding on its change and reruns review on the final head before pushing.",
     prompt: `Worker packet. Capability tier: bounded, as defined in milestone-rush's references/orchestration.md under Capability tiers. Work item: issue #152 in example/palette, draft PR #153 on branch fix/month-label at ${tierBehind}. Settled decision DEC-152: every rendered selected-month label uses the existing titleCaseLabel helper; the regression home is tests/report.test.ts. Use /implement for the change and /update-pr to publish it to PR #153. Gates: /code-review fix-all, /test-against-spec fix and pnpm check. Return the final head and the review result for that head. Do not merge the PR or mark it ready.`,
     fixture: {
+      environment: { orchestration: null },
       evidence: { ...common,
         repositoryStatus: `Clean focused branch fix/month-label at ${tierBehind}, synchronized with freshly fetched origin/main. No unrelated local changes.`,
         pullRequest: `Draft PR #153 for issue #152 is open at ${tierBehind}. It has no commits beyond the branch point yet.`,
@@ -924,14 +1005,15 @@ export const deliveryCases: EvalCase[] = [
         { after: "file.edit", editPath: "src/table-header.ts", evidence: {}, actionResponses: { "codeReview.run": boundedClean } },
       ],
     },
-    rubric: [
-      "Does the lane fix the review finding in the table header? The automatic sequence expects the finding to surface in the first review. A lane that fixes the header before its first review and gets one clean review of the final head has also done the right thing; grade that run here.",
-      "Does the lane rerun review after the fix, on the head it pushes, and report that result?",
-    ],
     expected: {
+      rubric: [
+        { id: "fixes-review-finding", question: "Does the lane fix the review finding in the table header, either after its first review surfaces it or before its first review with one clean review of the final head?" },
+        { id: "reruns-review-on-final-head", question: "Does the lane rerun review after the fix, on the head it pushes, and report that result?" },
+      ],
+      requiredAnswerValues: ["153", [tierFixed, tierFixed.slice(0, 7)]],
       requiredActions: ["file.edit", "codeReview.run", "git.push"],
       requiredActionSequence: ["codeReview.run", "file.edit", "codeReview.run", "git.push"],
-      requiredActionDetails: [{ action: "file.edit", patterns: ["src/table-header\\.ts"], dataFields: ["path"] }],
+      requiredActionValues: [{ action: "file.edit", values: ["src/table-header.ts"], fields: ["path"] }],
       requiredCurrentGates: {
         before: ["git.push"],
         gates: [
@@ -943,7 +1025,6 @@ export const deliveryCases: EvalCase[] = [
       minActionCounts: { "codeReview.run": 2 },
       allowedEditPaths: ["src/report.ts", "src/table-header.ts", "tests/report.test.ts", "tests/table-header.test.ts", ".agent/HANDOFF.md"],
       forbiddenActions: [...unsafeGit, ...releaseActions, "forge.openDraftPr", "forge.mergePr", "forge.markPrReady", "git.stackMerge", "delegate", "user.ask"],
-      outputPatterns: ["\\b153\\b", `\\b${tierFixed.slice(0, 7)}`],
     },
   },
   {
@@ -951,6 +1032,7 @@ export const deliveryCases: EvalCase[] = [
     description: "A mechanical lane whose check fails with a timeout that looks like a flake stops and returns the finding instead of diagnosing or re-running it.",
     prompt: `Worker packet. Capability tier: mechanical, as defined in milestone-rush's references/orchestration.md under Capability tiers. Work item: PR #161 in example/palette, branch feat/export-csv at ${tierBehind}. Steps: use /update-pr to merge freshly fetched origin/main into the branch, which merges without conflicts and which the repository's ruleset requires, because GitHub reports PR #161's mergeStateStatus as BEHIND; push normally; await every required check on the new head with delivery-wait. Expected result: all required checks pass on the new head. Return the new head, the check result and anything you met above this tier. Do not merge the PR.`,
     fixture: {
+      environment: { orchestration: null },
       evidence: { ...common,
         repositoryStatus: `Clean focused branch feat/export-csv at ${tierBehind}, three commits behind origin/main at ${tierMain}. No unrelated local changes.`,
         pullRequest: `PR #161 is open and ready for review at ${tierBehind}. Required checks passed there and the required review approved it. The repository's ruleset requires branches to be up to date before merging, and GitHub reports PR #161's mergeStateStatus as BEHIND.`,
@@ -971,18 +1053,17 @@ export const deliveryCases: EvalCase[] = [
         { after: "monitor.wait", evidence: { failureDetails: `The test (ubuntu) log at ${tierMerged} shows only the 5000 ms timeout in tests/export.test.ts "streams large exports"; there is no stack trace. Whether the timeout is a flake or a fault that origin/main's commits introduced is not established.` } },
       ],
     },
-    rubric: [
-      "Does the lane stop after the failed check instead of re-running the job, retrying or deciding that it is a flake? The harness catches a second wait, a file edit and a delegation. A focused, validation or behavior run after the failure is diagnosis; no action ban separates it from a check run before the push, so grade it here.",
-      "Does the lane return the failing check, the test, the head and that the work is above its tier?",
-    ],
     expected: {
+      rubric: [
+        { id: "stops-after-failure", question: "Does the lane stop after the failed check instead of re-running the job, retrying, diagnosing it with a focused, validation or behavior run, or deciding that it is a flake?" },
+        { id: "returns-finding", question: "Does the lane return the failing check, the test, the head and that the work is above its tier?" },
+      ],
+      requiredAnswerValues: [["tests/export.test.ts", "streams large exports"], [tierMerged, tierMerged.slice(0, 7)]],
       requiredActions: ["git.merge", "git.push", "monitor.wait"],
       requiredActionSequence: ["git.merge", "git.push", "monitor.wait"],
       maxActionCounts: { "monitor.wait": 1, "git.push": 1 },
       allowedEditPaths: [".agent/HANDOFF.md"],
       forbiddenActions: [...unsafeGit, ...releaseActions, "forge.openDraftPr", "forge.mergePr", "forge.markPrReady", "git.stackMerge", "delegate", "user.ask"],
-      reportPatterns: ["export\\.test|streams large exports", "tim(?:ed|e)[ -]?out", "\\btier\\b|escalat"],
-      outputPatterns: [`\\b${tierMerged.slice(0, 7)}`],
     },
   },
   {
@@ -990,6 +1071,7 @@ export const deliveryCases: EvalCase[] = [
     description: "When a mechanical lane returns a failure that needs diagnosis, the coordinator starts a new open lane with that finding instead of resuming the old one.",
     prompt: "/deliver PR #161 to ready-to-merge. Hand the remaining work to worker lanes so this conversation stays free for the next item.",
     fixture: {
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
       evidence: { ...common,
         repositoryStatus: `Clean focused branch feat/export-csv at ${tierBehind}. origin/main was fetched at ${tierMain}; the branch is three commits behind it and merges without conflicts. The repository's ruleset requires branches to be up to date before merging, and GitHub reports PR #161's mergeStateStatus as BEHIND. No unrelated local changes.`,
         workItem: `PR #161 for issue #160 adds CSV export. Implementation, independent review, behavior testing and pnpm check are complete at ${tierBehind}, and the required review approved that head. The only remaining work is bringing the branch up to date with origin/main and observing its required checks on the new head.`,
@@ -1004,25 +1086,25 @@ export const deliveryCases: EvalCase[] = [
         ],
       },
     },
-    rubric: [
-      "Does the first packet record the mechanical tier?",
-      "After the blocked result, does the coordinator start a new lane on the open tier with the returned finding, rather than resuming the first lane or raising its tier in place?",
-      "Does the coordinator leave the diagnosis to that lane rather than doing it itself?",
-    ],
     expected: {
+      rubric: [
+        { id: "first-packet-mechanical", question: "Does the first packet record the mechanical tier?" },
+        { id: "new-open-lane-with-finding", question: "After the blocked result, does the coordinator start a new lane on the open tier with the returned finding, rather than resuming the first lane or raising its tier in place?" },
+        { id: "diagnosis-left-to-lane", question: "Does the coordinator leave the diagnosis to that lane rather than doing it itself?" },
+      ],
+      requiredAnswerValues: ["161"],
       requiredSkills: ["deliver", "milestone-rush"],
       requiredReferences: [tierReference],
       requiredInspections: ["workItem"],
       requiredActions: ["delegate"],
       minActionCounts: { delegate: 2 },
-      requiredActionDetails: [
+      requiredActionValues: [
         // Only the first packet precedes the second delegation.
-        { action: "delegate", patterns: [mechanicalTier], dataFields: ["*"], before: { action: "delegate", occurrence: 2 } },
-        { action: "delegate", patterns: [openTier, "export\\.test|streams large exports|tim(?:ed|e)[ -]?out"], dataFields: ["*"] },
+        { action: "delegate", values: ["mechanical"], before: { action: "delegate", occurrence: 2 } },
+        { action: "delegate", values: ["open", ["tests/export.test.ts", "streams large exports"]] },
       ],
       allowedEditPaths: [".agent/HANDOFF.md"],
       forbiddenActions: [...noPublication, "git.merge", "git.commit", "validation.focused", "user.ask"],
-      outputPatterns: ["\\b161\\b"],
     },
   },
 ];
