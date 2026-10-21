@@ -63,12 +63,14 @@ Do not move overflow into another section.
   reviewer may lack. Repository-relative paths are fine; do not use the
   author's absolute paths, private fixtures or results from the author's runs.
 
-Leave the author's verification out of the body. Do not include sections,
-collapsed blocks or log lines reporting the author's checks, review results,
-project gates, CI status, revert probes, replays or command output. Expected
-behavior, such as a command's exit status, still belongs in the walkthrough
-and test steps. Run every required check anyway; the final user handoff reports
-observed validation.
+Leave the author's verification out of these sections. Do not include
+sections, collapsed blocks or log lines reporting the author's checks, review
+results, project gates, CI status, revert probes, replays or command output.
+Expected behavior, such as a command's exit status, still belongs in the
+walkthrough and test steps. Run every required check anyway; the final user
+handoff reports observed validation. Review and status results go only in the
+review note at the end of the body, as
+[Review and status results](#review-and-status-results) describes.
 
 ## Templates
 
@@ -80,3 +82,33 @@ template demands, including validation results it explicitly requires.
 
 Keep linked issues accurate for the whole change; a closing keyword belongs
 only on the PR or stack layer that completes the issue.
+
+## Review and status results
+
+Record review and status results where the PR's author reads them. Compare the
+PR's author with the authenticated GitHub user first.
+
+- On a pull request the authenticated user opened, keep them in one review
+  note at the very end of the body, after every other section and a `---`
+  rule with a blank line before and after it. Open it with a plain line, not a heading, naming the head it covers,
+  such as ``Edit: `1a2b3c4` reviewed``, and follow it with the review
+  details. After a later review or status change, update that note in place
+  for the new head.
+  Do not post review rounds, checkpoints or status updates as comments.
+- On a pull request someone else opened, post them as a comment from the
+  authenticated user. Post a new comment when a head brings findings that
+  change what the author must do, because edits do not notify. When a re-check
+  only confirms fixes, edit the latest such comment instead.
+
+Record what the author acts on: each review's open findings or that none are
+open, and the checks' result on that head. Routine test narration and command
+logs stay out. Replies to a review thread stay in that thread.
+
+```markdown
+---
+
+Edit: `1a2b3c4` reviewed
+
+- Code review: two findings fixed, none open.
+- CI: every workflow run passed on `1a2b3c4`.
+```

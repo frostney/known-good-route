@@ -11,10 +11,15 @@ Apply the parent SKILL.md shared authority, attribution, and evidence rules.
 - Reply only in the originating review thread. Every inline automation thread
   requires a maintainer-workflow reply stating its evidence-backed disposition
   before readiness or merge, including invalid, obsolete, duplicate, and
-  out-of-scope findings. Do not post top-level PR summaries or issue comments.
-  In normal and `automatic-merge` modes, the only allowed top-level comment is
-  an intentionally active automation's documented retrigger command, posted
-  only when all of these hold:
+  out-of-scope findings. Record review and status results where
+  [PR descriptions](../../agent-writing/references/pr-descriptions.md#review-and-status-results)
+  directs: in the review note at the end of the body of a PR the
+  authenticated user opened, or in a results
+  comment with the parent skill's attribution Note on a PR someone else
+  opened. Post no other top-level PR summaries or issue comments. Beyond that
+  results comment, in normal and `automatic-merge` modes the only allowed
+  top-level comment is an intentionally active automation's documented
+  retrigger command, posted only when all of these hold:
   - the automation has no completed verdict for the exact current head because
     its attempt was rate-limited, skipped, or missing;
   - any availability the provider stated has passed under the `retry_at` rules

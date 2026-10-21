@@ -6673,6 +6673,96 @@ export const evalCases: EvalCase[] = [
       allowedDelegateWorkflows: ["/create-issue"],
     },
   },
+  {
+    id: "template-check-draft-mismatch",
+    description:
+      "A draft issue body is checked against the repository template, and each renamed or missing heading is reported without filing the issue.",
+    prompt:
+      "Use the internal template check on the drafted issue body in .agent/draft-issue.md before it is filed. Report what must change; do not file the issue.",
+    fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      evidence: {
+        repository:
+          "The working directory is a checkout of owner/repo. Python 3.11 is available.",
+        draft: ".agent/draft-issue.md holds the drafted issue body.",
+      },
+      actionResponses: {
+        "validation.focused":
+          '{"state":"mismatch","exitCode":1,"template":{"path":".github/ISSUE_TEMPLATE/default.md","name":"Issue"},"problems":[{"kind":"renamed","expected":"## Why","actual":"## Motivation"},{"kind":"missing","expected":"## Scope notes","actual":null}]}',
+      },
+    },
+    expected: {
+      rubric: [
+        { id: "reports-heading-fixes", question: "Does the answer report that the draft's Motivation heading must be renamed back to the template's Why heading and that the missing Scope notes section must be added, without claiming the draft matches the template?" },
+      ],
+      requiredAnswerValues: ["Why", "Motivation", "Scope notes"],
+      requiredSkills: ["template-check"],
+      requiredActions: ["validation.focused", "report"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.createIssue",
+        "forge.commentIssue",
+        "git.commit",
+        "git.push",
+      ],
+      requiredActionValues: [
+        { action: "validation.focused", values: ["check_template.py", ["--kind issue", "--kind=issue"], ".agent/draft-issue.md"] },
+      ],
+    },
+  },
+  {
+    id: "template-check-cannot-compare",
+    description:
+      "A template check that cannot choose between two templates is rerun with the template the PR follows named, not reported as a pass or a mismatch.",
+    prompt:
+      "Use the internal template check on the live body of PR #52 in owner/repo and tell me whether it follows the PR template.",
+    fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      evidence: {
+        repository:
+          "The working directory is a checkout of owner/repo. gh is authenticated to owner/repo, which is reachable. Python 3.11 is available.",
+        pullRequest:
+          "PR #52 is titled \"fix: keep the cursor position on reload\" and is labelled bug.",
+      },
+      actionResponses: {
+        "validation.focused":
+          '{"state":"operational-error","exitCode":2,"reason":"the body fits several templates equally (Bug fix, Feature); pass --template-name","problems":[]}',
+      },
+      transitions: [
+        {
+          after: "validation.focused",
+          occurrence: 1,
+          evidence: {
+            check:
+              'The first check exited 2: {"state":"operational-error","reason":"the body fits several templates equally (Bug fix, Feature); pass --template-name"}.',
+          },
+          actionResponses: {
+            "validation.focused":
+              '{"state":"match","exitCode":0,"template":{"path":".github/PULL_REQUEST_TEMPLATE/bug-fix.md","name":"Bug fix"},"problems":[],"reason":"headings match the template"}',
+          },
+        },
+      ],
+    },
+    expected: {
+      rubric: [
+        { id: "error-is-not-a-result", question: "Does the run treat the first check's operational error as no result, rerun the check naming the Bug fix template that the bug-labelled PR follows, and answer from the second check that the PR body follows the template?" },
+      ],
+      requiredAnswerValues: ["52"],
+      forbiddenAnswerValues: ["does not match", "doesn't match", "does not follow", "doesn't follow"],
+      requiredSkills: ["template-check"],
+      requiredActionSequence: ["validation.focused", "validation.focused", "report"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.updatePrMetadata",
+        "forge.commentPr",
+        "git.commit",
+        "git.push",
+      ],
+      requiredActionValues: [
+        { action: "validation.focused", values: ["52", "--template-name", ["Bug fix", "bug fix", "bug-fix"]] },
+      ],
+    },
+  },
 ];
 
 evalCases.push(...defaultEntryCases(evalCases));

@@ -3444,6 +3444,26 @@
       "beforeSha256": null,
       "afterSha256": "a0f9019ac772f16261a6106f87427c8fd0688741bbea5cae5944802974e781b7",
       "frozenCaseSha256": "a0f9019ac772f16261a6106f87427c8fd0688741bbea5cae5944802974e781b7"
+    },
+    {
+      "caseId": "template-check-draft-mismatch",
+      "status": "new",
+      "rationale": [
+        "A draft body is checked with the template-check script before filing, and each renamed or missing template heading the check reports reaches the report; the issue is not filed or edited. The evidence does not list the headings, so only the check can supply them: with the lists given, one run compared them by hand instead of running the check."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "5f2e08b3c1c83a7372e38cca027e0a0434583ee7f0d85797447b5ad3e5bf80af",
+      "frozenCaseSha256": "5f2e08b3c1c83a7372e38cca027e0a0434583ee7f0d85797447b5ad3e5bf80af"
+    },
+    {
+      "caseId": "template-check-cannot-compare",
+      "status": "new",
+      "rationale": [
+        "An operational error from the check is not a pass: when the body fits two templates equally, the check reruns with the template the bug-labelled PR follows named, and only the second result decides whether the live PR body follows the template. The first version expected a rerun with --repo, but the skill already passes --repo on the first run and the real script then works outside a checkout, so that error could not occur."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "9c947c9f07b56a8e6e7d998b18beaac61b4460cad30dded12cb078eec481f799",
+      "frozenCaseSha256": "9c947c9f07b56a8e6e7d998b18beaac61b4460cad30dded12cb078eec481f799"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",
