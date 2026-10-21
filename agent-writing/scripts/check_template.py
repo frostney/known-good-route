@@ -149,21 +149,27 @@ def form_template(path: str, text: str) -> Template:
     attributes_indent: int | None = None
     label_indent: int | None = None
     block: list[str] | None = None  # Lines of a folded or literal label.
+    block_indent: int | None = None  # Set by the block's first line.
 
     def finish() -> None:
         if item.get("label") and item.get("type") != "markdown":
             found.append(Heading(3, " ".join(item["label"].split()), item["line"]))
 
     for number, raw in enumerate(text.replace("\r\n", "\n").split("\n"), start=1):
-        if not raw.strip() or (block is None and raw.lstrip().startswith("#")):
+        if not raw.strip():
             continue
         indent = len(raw) - len(raw.lstrip(" "))
         content = raw.strip()
         if block is not None:
-            if label_indent is not None and indent > label_indent:
+            if block_indent is None and label_indent is not None and indent > label_indent:
+                block_indent = indent
+            # Inside the block a `#` line is text; a less indented line ends it.
+            if block_indent is not None and indent >= block_indent:
                 block.append(content)
                 continue
             item["label"], block = " ".join(block), None
+        if content.startswith("#"):
+            continue
         # A list item under `body:` may start at the same indent as the key.
         if indent == 0 and not (in_body and content.startswith("- ")):
             key, _, value = content.partition(":")
@@ -194,7 +200,7 @@ def form_template(path: str, text: str) -> Template:
             if indent == label_indent and key == "label":
                 item["line"] = number
                 if BLOCK_SCALAR.match(value.strip()):
-                    block = []
+                    block, block_indent = [], None
                 else:
                     item["label"] = scalar(value)
     if block is not None:
@@ -539,7 +545,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
 def main() -> int:
     args = parser().parse_args()
-    sys.stdout.reconfigure(errors="replace")  # A label the terminal cannot encode.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="replace")  # A label the terminal cannot encode.
     try:
         result = run(args)
     # A check that could not run must not read as a mismatch to fix.

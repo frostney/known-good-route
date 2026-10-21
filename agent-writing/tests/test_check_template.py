@@ -190,13 +190,17 @@ class HeadingTests(unittest.TestCase):
                 "    label: |2-",
                 "      # Hash",
                 "      line",
+                "# A comment between fields",
+                "- type: input",
+                "  attributes:",
+                "    label: After the comment",
             ]),
         )
 
         self.assertEqual(template.name, "It's a form")
         self.assertEqual(
             [str(heading) for heading in template.headings],
-            ['### Version: "exact"', "### Steps to reproduce", "### Logs", "### # Hash line"],
+            ['### Version: "exact"', "### Steps to reproduce", "### Logs", "### # Hash line", "### After the comment"],
         )
 
     def test_issue_form_whose_labels_cannot_be_read_is_an_error(self):
