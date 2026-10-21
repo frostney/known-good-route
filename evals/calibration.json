@@ -3449,21 +3449,21 @@
       "caseId": "template-check-draft-mismatch",
       "status": "new",
       "rationale": [
-        "A draft body is checked with the template-check script before filing, and each renamed or missing template heading the check reports reaches the report; the issue is not filed or edited."
+        "A draft body is checked with the template-check script before filing, and each renamed or missing template heading the check reports reaches the report; the issue is not filed or edited. The evidence does not list the headings, so only the check can supply them: with the lists given, one run compared them by hand instead of running the check."
       ],
       "beforeSha256": null,
-      "afterSha256": "0308c9ec7339d0e07c0bdc74f8916ac9641d173d7f39ea368380e19cf901eee5",
-      "frozenCaseSha256": "0308c9ec7339d0e07c0bdc74f8916ac9641d173d7f39ea368380e19cf901eee5"
+      "afterSha256": "5f2e08b3c1c83a7372e38cca027e0a0434583ee7f0d85797447b5ad3e5bf80af",
+      "frozenCaseSha256": "5f2e08b3c1c83a7372e38cca027e0a0434583ee7f0d85797447b5ad3e5bf80af"
     },
     {
       "caseId": "template-check-cannot-compare",
       "status": "new",
       "rationale": [
-        "An operational error from the check is not a pass: the check reruns with the repository named, and only the second result decides whether the live PR body follows the template."
+        "An operational error from the check is not a pass: when the body fits two templates equally, the check reruns with the template the bug-labelled PR follows named, and only the second result decides whether the live PR body follows the template. The first version expected a rerun with --repo, but the skill already passes --repo on the first run and the real script then works outside a checkout, so that error could not occur."
       ],
       "beforeSha256": null,
-      "afterSha256": "ce17f4fcd34d0e2a38eca96f4a88075c727366bb2eba3b448743b14058878ca0",
-      "frozenCaseSha256": "ce17f4fcd34d0e2a38eca96f4a88075c727366bb2eba3b448743b14058878ca0"
+      "afterSha256": "5e34a6d895160b1ec9faf83e1f850a30bb0248c1585a3eb6265c5a2d136e882f",
+      "frozenCaseSha256": "5e34a6d895160b1ec9faf83e1f850a30bb0248c1585a3eb6265c5a2d136e882f"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

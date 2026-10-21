@@ -6683,9 +6683,8 @@ export const evalCases: EvalCase[] = [
       environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         repository:
-          "The working directory is a checkout of owner/repo. Its only issue template is .github/ISSUE_TEMPLATE/default.md (front matter name: Issue) with the headings ## Summary, ## Why, ## Current behavior, ## Expected behavior and ## Scope notes. Python 3.11 is available.",
-        draft:
-          ".agent/draft-issue.md has the headings ## Summary, ## Motivation, ## Current behavior and ## Expected behavior, each with content.",
+          "The working directory is a checkout of owner/repo. Python 3.11 is available.",
+        draft: ".agent/draft-issue.md holds the drafted issue body.",
       },
       actionResponses: {
         "validation.focused":
@@ -6714,37 +6713,39 @@ export const evalCases: EvalCase[] = [
   {
     id: "template-check-cannot-compare",
     description:
-      "A template check that exits with an operational error is rerun with the repository named, not reported as a pass.",
+      "A template check that cannot choose between two templates is rerun with the template the PR follows named, not reported as a pass or a mismatch.",
     prompt:
       "Use the internal template check on the live body of PR #52 in owner/repo and tell me whether it follows the PR template.",
     fixture: {
       environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
-        environment:
-          "The working directory is not a git checkout. gh is authenticated to owner/repo, which is reachable. Python 3.11 is available.",
+        repository:
+          "The working directory is a checkout of owner/repo. gh is authenticated to owner/repo, which is reachable. Python 3.11 is available.",
+        pullRequest:
+          "PR #52 is titled \"fix: keep the cursor position on reload\" and is labelled bug.",
       },
       actionResponses: {
         "validation.focused":
-          '{"state":"operational-error","exitCode":2,"reason":"failed to run git: fatal: not a git repository (or any of the parent directories): .git","problems":[]}',
+          '{"state":"operational-error","exitCode":2,"reason":"the body fits several templates equally (Bug fix, Feature); pass --template-name","problems":[]}',
       },
       transitions: [
         {
           after: "validation.focused",
           occurrence: 1,
           evidence: {
-            environment:
-              'The first check exited 2: {"state":"operational-error","reason":"failed to run git: fatal: not a git repository (or any of the parent directories): .git"}.',
+            check:
+              'The first check exited 2: {"state":"operational-error","reason":"the body fits several templates equally (Bug fix, Feature); pass --template-name"}.',
           },
           actionResponses: {
             "validation.focused":
-              '{"state":"match","exitCode":0,"template":{"path":".github/pull_request_template.md","name":"pull_request_template"},"problems":[],"reason":"headings match the template"}',
+              '{"state":"match","exitCode":0,"template":{"path":".github/PULL_REQUEST_TEMPLATE/bug-fix.md","name":"Bug fix"},"problems":[],"reason":"headings match the template"}',
           },
         },
       ],
     },
     expected: {
       rubric: [
-        { id: "error-is-not-a-result", question: "Does the run treat the first check's operational error as no result, rerun the check with the repository named, and answer from the second check that the PR body follows the template?" },
+        { id: "error-is-not-a-result", question: "Does the run treat the first check's operational error as no result, rerun the check naming the Bug fix template that the bug-labelled PR follows, and answer from the second check that the PR body follows the template?" },
       ],
       requiredAnswerValues: ["52"],
       forbiddenAnswerValues: ["does not match", "doesn't match", "does not follow", "doesn't follow"],
@@ -6758,7 +6759,7 @@ export const evalCases: EvalCase[] = [
         "git.push",
       ],
       requiredActionValues: [
-        { action: "validation.focused", values: ["--repo", "owner/repo", "52"] },
+        { action: "validation.focused", values: ["52", "--template-name", ["Bug fix", "bug-fix"]] },
       ],
     },
   },
