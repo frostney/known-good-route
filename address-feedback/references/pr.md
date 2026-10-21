@@ -51,6 +51,8 @@ An active review automation is a gate when repository policy or the current PR
 shows it was intentionally invoked. Inspect inline threads plus top-level
 reviews, summaries, suggestions, and nitpicks. A rate-limited, incomplete,
 errored, missing, or head-ambiguous verdict is pending rather than passed.
+CodeRabbit's [`bot-skip` state](pr-readiness.md#coderabbit) exempts a bot-authored
+PR from its review gate; continue handling findings and the remaining gates.
 
 ## Workflow
 
