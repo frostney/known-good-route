@@ -69,7 +69,13 @@ not block the update.
    widened scope may also change its type. Follow
    [../agent-writing/references/pr-descriptions.md](../agent-writing/references/pr-descriptions.md),
    preserving explicit project-template requirements and replacing obsolete
-   summaries or intermediate development history.
+   summaries or intermediate development history. Keep every PR template
+   heading verbatim and in order, and under a heading with nothing to say write
+   a one-line `None` or the reason. Run
+   `python3 ../agent-writing/scripts/check_template.py --kind pr --body FILE`
+   (path relative to this skill directory) from the checkout on the draft
+   before writing it, then `--pr N` on the live body after, and fix every
+   heading problem it reports.
 8. Report the updated PR, any new commit, metadata changes, what the
    publication guard rewrote and observed validation. Include stack position
    and rewritten branches when applicable.

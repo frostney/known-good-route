@@ -120,11 +120,17 @@ readiness. Recording a walkthrough does not replace behavior testing.
    change; `git-workflow`'s squash merge makes that title the base-branch commit
    subject. Follow
    [../agent-writing/references/pr-descriptions.md](../agent-writing/references/pr-descriptions.md)
-   for the body, preserving explicit project-template requirements. Before
-   writing it, search open and closed issues and recent sibling sessions or
-   adjacent branches when available for related findings and duplicates. Put
-   each closing keyword on its own line as `Closes #N`, and only on the layer
-   that completes that issue.
+   for the body, preserving explicit project-template requirements. Keep
+   every PR template heading verbatim and in order, and under a heading with
+   nothing to say write a one-line `None` or the reason; this is not
+   boilerplate to omit. Before writing the body, search open and closed issues
+   and recent sibling sessions or adjacent branches when available for related
+   findings and duplicates. Put each closing keyword on its own line as
+   `Closes #N`, and only on the layer that completes that issue. From the
+   checkout, run
+   `python3 ../agent-writing/scripts/check_template.py --kind pr --body FILE`
+   (path relative to this skill directory) on the draft and fix every heading
+   problem it reports before publishing.
 9. After the publication checks pass, or under the preview-only draft rule
    above, push an ordinary branch normally and set its upstream when needed,
    then open one draft PR against the remote default or the named base.
@@ -137,8 +143,9 @@ readiness. Recording a walkthrough does not replace behavior testing.
    topology and keep each layer draft.
 10. Run the PR-specific phase. Compare the actual PR diff, body, links, metadata,
     committed tests and documentation, supplied completion evidence, and facts
-    that exist only after publication. Correct metadata-only gaps without a
-    commit.
+    that exist only after publication. Re-read the live body with
+    `check_template.py --pr N`; a reported heading problem is a metadata-only
+    gap. Correct metadata-only gaps without a commit.
 11. If the PR-specific phase or CI exposes an in-scope repository, behavior,
     fidelity, test, documentation or compatibility gap, repair it through the
     development loop. Revalidate affected requirements, then use `/update-pr`

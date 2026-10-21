@@ -32,3 +32,20 @@ table inside collapsed logs or claim an improvement from incomparable runs.
 
 Keep linked issues accurate for the whole change; a closing keyword belongs
 only on the PR or stack layer that completes the issue.
+
+## Review and status results
+
+Record review, verification and status results where the PR's author reads
+them. Compare the PR's author with the authenticated GitHub user first.
+
+- On a pull request the authenticated user opened, update the matching section
+  of the body in place, adding a short one when the body has none. Do not post
+  review rounds, checkpoints or status updates as comments.
+- On a pull request someone else opened, post them as a comment from the
+  authenticated user. Post a new comment when a head brings findings that
+  change what the author must do, because edits do not notify. When a re-check
+  only confirms fixes, edit the latest such comment instead.
+
+Record what the author acts on, such as open findings and the head they apply
+to; routine test narration and command logs stay out as above. Replies to a
+review thread stay in that thread.

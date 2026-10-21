@@ -157,6 +157,9 @@ the response; a short factual answer does not need a separate checklist pass.
 When editing this suite's Markdown, run `python3 scripts/check_prose.py`; the
 script path is relative to this skill directory. In a project install it checks
 only the skills that `skills-lock.json` records from this suite's source.
+`scripts/check_template.py` compares an issue or PR body's headings with the
+repository's template; run `python3 scripts/check_template.py --help` for its
+inputs.
 
 Source guidance: [Google developer documentation style
 guide](https://developers.google.com/style) and [Cursor Unslop
