@@ -29,8 +29,10 @@ completes, pauses or skips it, in the order of time and status id; on a head
 other open pull requests share, a skip may answer one of them, so the
 pending status stays current. Every
 state that waits on CodeRabbit ends after a fixed bound: the wait for its
-own review becomes a trigger, and an unanswered trigger, a stalled review,
-an unexplained refusal and a second lock loss each become a blocked state.
+own review and a back-off after a refusal without a readable wait each
+become a trigger, and an unanswered trigger, a stalled review, a fourth
+refusal in one review cycle whose wait cannot be read and a second lock
+loss each become a blocked state.
 A refusal whose newest paired notice is CodeRabbit's line saying waiting
 won't change it is blocked at once. A GitHub read that
 fails is an operational error, never missing evidence. Triggers are
@@ -138,8 +140,13 @@ AUTOMATIC_REVIEW_SECONDS = 120
 TRIGGER_ANSWER_SECONDS = 10 * 60
 # The longest recorded pending status lasted 1,805 s.
 IN_PROGRESS_SECONDS = 60 * 60
-# How long a refusal without a paired stated wait holds the head's trigger.
+# A refusal without a paired stated wait holds the head's trigger for a back-off
+# that doubles with each refusal of the head since its review cycle began: 15,
+# 30, then 60 minutes, after which one trigger is permitted. CodeRabbit's limit
+# is time-based and every recorded stated wait was under 60 minutes, so a
+# fourth refusal without a readable wait blocks for a person.
 UNKNOWN_WAIT_SECONDS = 15 * 60
+UNKNOWN_WAIT_RETRIES = 3
 EDIT_HISTORY_PAGES = 10
 
 COMMENT_EDITS_QUERY = """query($id: ID!, $cursor: String) {
@@ -785,14 +792,30 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
         """Hold the trigger while the head's own refusal still applies."""
         refusal = evidence["rateLimit"] if kind == "rate-limited" else None
         if refusal and not refusal["wait"]:
-            return bounded(
-                "rate-limited-unknown-wait",
-                "blocked-unknown-wait",
-                status_at,
-                UNKNOWN_WAIT_SECONDS,
-                f"CodeRabbit rate-limited the head at {refusal['statusAt']} and {refusal['missing']}",
-                mode,
+            # A refusal from before the cycle began still holds the trigger as the first.
+            refusals = max(1, sum(1 for when, seen, _description in history if seen == "rate-limited" and when >= start))
+            why = (
+                f"CodeRabbit rate-limited the head at {refusal['statusAt']} and {refusal['missing']}; "
+                f"refusal {refusals} since {automatic['source']} at {automatic['from']}"
             )
+            if refusals > UNKNOWN_WAIT_RETRIES:
+                return result(
+                    "blocked-unknown-wait",
+                    f"{why}, after {UNKNOWN_WAIT_RETRIES} triggers after a back-off",
+                    since=format_timestamp(status_at),
+                    refusals=refusals,
+                )
+            retry = status_at + UNKNOWN_WAIT_SECONDS * 2 ** (refusals - 1)
+            if now < retry:
+                return result(
+                    "rate-limited-unknown-wait",
+                    f"{why}; one {mode} review trigger is permitted from {format_timestamp(retry)}",
+                    mode,
+                    since=format_timestamp(status_at),
+                    retryAt=format_timestamp(retry),
+                    refusals=refusals,
+                )
+            return result(f"trigger-{mode}", f"{why}; its back-off ended at {format_timestamp(retry)}", mode)
         if refusal and refusal["wait"]["noCapacity"]:
             return result(
                 "blocked-no-capacity",

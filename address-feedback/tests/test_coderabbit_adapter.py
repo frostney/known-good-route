@@ -1352,16 +1352,18 @@ class BoundTest(unittest.TestCase):
         blocked = state("GocciaScript#1172", "2026-08-17T14:33:10Z")
         self.assertEqual((blocked["state"], blocked["since"]), ("blocked-stalled", "2026-08-17T13:33:10Z"))
 
-    def test_a_refusal_without_a_paired_wait_blocks_after_fifteen_minutes(self) -> None:
+    def test_a_refusal_without_a_paired_wait_triggers_after_fifteen_minutes(self) -> None:
         # pascal-mcp-sdk#48: the notice for 7b39784a was edited in at 10:21:04, 64 s before the
         # refusal at 10:22:08, so no stated wait pairs with it.
         unknown = state("pascal-mcp-sdk#48", "2026-08-10T10:37:07Z")
         self.assertEqual(unknown["status"]["description"], "Review rate limited")
         self.assertIsNone(unknown["rateLimit"]["wait"])
-        self.assertEqual((unknown["state"], unknown["boundAt"]), ("rate-limited-unknown-wait", "2026-08-10T10:37:08Z"))
-        blocked = state("pascal-mcp-sdk#48", "2026-08-10T10:37:08Z")
-        self.assertEqual((blocked["state"], blocked["since"]), ("blocked-unknown-wait", "2026-08-10T10:22:08Z"))
-        self.assertEqual((blocked["retryAt"], blocked["nextMode"]), (None, None))
+        self.assertEqual(
+            (unknown["state"], unknown["since"], unknown["retryAt"], unknown["refusals"]),
+            ("rate-limited-unknown-wait", "2026-08-10T10:22:08Z", "2026-08-10T10:37:08Z", 1),
+        )
+        permitted = state("pascal-mcp-sdk#48", "2026-08-10T10:37:08Z")
+        self.assertEqual((permitted["state"], permitted["nextMode"]), ("trigger-incremental", "incremental"))
 
 
 class StatedWaitTest(unittest.TestCase):
@@ -1637,12 +1639,29 @@ class RunTest(unittest.TestCase):
         self.assertEqual((final, gh.posts), ("clean-complete", []))
         self.assertGreaterEqual(gh.now, at("2026-09-25T19:47:10Z"))
 
-    def test_an_unknown_wait_is_polled_then_blocks_and_never_triggers(self) -> None:
-        gh = Replay("GocciaScript#1162", now="2026-08-15T16:50:00Z")
-        gh.move_version("GocciaScript#1162", gh.summary("GocciaScript#1162")["id"], "2026-08-15T16:49:30Z", "2026-08-15T16:47:30Z")
-        final, _reason, _value = run(gh, "GocciaScript#1162", "2026-08-15T17:40:00Z")
-        self.assertEqual((final, gh.posts), ("blocked-unknown-wait", []))
-        self.assertEqual(iso(gh.now), "2026-08-15T17:04:32Z")
+    def test_an_unknown_wait_backs_off_then_triggers_once_per_refusal_then_blocks(self) -> None:
+        # GocciaScript#1162, refused at 16:49:32. Synthetic: the notice moved 62 s before the
+        # refusal, so no wait pairs with it, and CodeRabbit refuses every trigger 5 s after it
+        # without stating a wait.
+        ref = "GocciaScript#1162"
+        gh = Replay(ref, now="2026-08-15T16:50:00Z")
+        gh.truncate(ref, "2026-08-15T16:50:00Z")
+        gh.move_version(ref, gh.summary(ref)["id"], "2026-08-15T16:49:30Z", "2026-08-15T16:48:30Z")
+
+        def refuse(posted: float) -> None:
+            gh.add_status(ref, "Review rate limited", iso(posted + 5))
+
+        answering(gh, ref, refuse, refuse, refuse, refuse)
+        final, reason, value = run(gh, ref, "2026-08-15T20:00:00Z")
+        self.assertEqual(
+            [when for _body, when in posts(gh)],
+            ["2026-08-15T17:04:32Z", "2026-08-15T17:34:37Z", "2026-08-15T18:34:42Z"],
+        )
+        self.assertEqual(final, "blocked-unknown-wait")
+        self.assertIn("refusal 4 since", reason)
+        self.assertEqual(value["pullRequests"][0]["since"], "2026-08-15T18:34:47Z")
+        # The run observes the fourth refusal at its next poll, 60 s after its last trigger.
+        self.assertEqual(iso(gh.now), "2026-08-15T18:35:42Z")
 
     def test_a_trigger_posted_as_the_deadline_passes_is_reported(self) -> None:
         # GocciaScript#1162 at 17:47:29. Synthetic: the POST takes 2 s, past the deadline.

@@ -121,7 +121,8 @@ If no exact absolute time or duration exists, set no `retry_at` and remain
 unambiguously, or do not clearly describe availability. A missing `retry_at`
 rules out a timed retrigger, not the helper's `wait` for the verdict. Never
 infer a provider, account quota, hourly window, blind delay, or retry count.
-CodeRabbit's retry times come only from its adapter; see [CodeRabbit](#coderabbit).
+CodeRabbit's retry times, including its back-off after a refusal whose wait
+cannot be read, come only from its adapter; see [CodeRabbit](#coderabbit).
 
 ## CodeRabbit
 
@@ -156,7 +157,7 @@ automation and required checks still need to pass their gates.
 | `satisfied` | `status` | Every head is complete or has a `bot-skip` exemption. |
 | `trigger-incremental`, `trigger-full` | `run`, `status` | Pending: `run`, which posts it. |
 | `awaiting-automatic`, `triggered`, `in-progress`, `waiting` | `run`, `status` | Pending: `run` waits; after its deadline, `run` again. |
-| `rate-limited-unknown-wait` | `run`, `status` | Pending: `run` again later; never trigger by hand. |
+| `rate-limited-unknown-wait` | `run`, `status` | Pending: CodeRabbit refused the head without a wait the adapter can read. `run` waits until `retryAt`, 15, 30 or 60 minutes after the head's first, second or third refusal since its latest push, open or ready event, then posts one trigger. Never trigger by hand. |
 | `pending` | `run`, `status` | A head is pending, or GitHub was unreachable until the deadline: `run` again. |
 | `lock-held` | `run` | Pending: another `run` holds the trigger lock; `run` again later. |
 | `draft` | `run`, `status` | Mark the PR ready when the workflow permits, then `run`. |
@@ -165,7 +166,7 @@ automation and required checks still need to pass their gates.
 | `paused` | `run`, `status` | Blocked: CodeRabbit paused its reviews of the PR. A person resumes them or triggers a review. |
 | `blocked-unanswered` | `run`, `status` | Blocked: CodeRabbit did not answer the trigger. A person checks CodeRabbit on the PR, then triggers again or pushes. |
 | `blocked-stalled` | `run`, `status` | Blocked: CodeRabbit's review never finished. A person checks CodeRabbit on the PR, then triggers again or pushes. |
-| `blocked-unknown-wait` | `run`, `status` | Blocked: CodeRabbit refused the head without a stated wait. A person reads its notice on the PR and triggers when it allows. |
+| `blocked-unknown-wait` | `run`, `status` | Blocked: CodeRabbit refused the head a fourth time since its latest push, open or ready event, the last time without a wait the adapter can read. A person reads its notice on the PR and triggers when it allows. |
 | `blocked-no-capacity` | `run`, `status` | Blocked: a person checks CodeRabbit seats or plan. |
 | `blocked-lock-loss` | `run`, `status` | Blocked: CodeRabbit stopped the head's review after lock loss again after one retry. A person checks CodeRabbit on the PR, then triggers again or pushes. |
 | `blocked-unconfirmed`, `unrecognized-status` | `run`, `status` | Blocked: escalate to a person. |
