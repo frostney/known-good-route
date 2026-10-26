@@ -108,9 +108,12 @@ REVIEW_FINDINGS = re.compile(
     r"(?:Outside diff range|Nitpick|Duplicate) comments \(\d+\)", re.IGNORECASE
 )
 
-# The first line of every version of CodeRabbit's summary comment. Its replies
-# to commands start "<!-- This is an auto-generated reply by CodeRabbit -->".
+# The HTML comment that marks every version of CodeRabbit's summary comment, among
+# the HTML comments it opens with. Until about 2026-10-20 it was the first line;
+# since then "<!-- coderabbit-ai-generated:v1 -->" and a blank line come first.
+# Its replies to commands open "<!-- This is an auto-generated reply by CodeRabbit -->".
 SUMMARY_MARKER = "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->"
+LEADING_COMMENT = re.compile(r"\s*(<!--.*?-->)", re.DOTALL)
 
 # The summary comment marks the commit its latest review covered:
 # <!-- final_review_risk_coverage:{"sourceCommitId":..,"coveredCommitId":..,"kind":"reviewed"} -->
@@ -382,8 +385,22 @@ def comment_versions(gh: Gh, item: dict[str, Any], since: float) -> list[tuple[f
     raise WaitError(f"{unreadable} within {EDIT_HISTORY_PAGES} pages")
 
 
+def leading_comments(body: str) -> list[str]:
+    """The HTML comments a body opens with, before its first other content."""
+    found: list[str] = []
+    position = 0
+    while match := LEADING_COMMENT.match(body, position):
+        found.append(match.group(1))
+        position = match.end()
+    return found
+
+
 def is_summary(item: dict[str, Any]) -> bool:
-    return is_bot(item) and str(item.get("body") or "").lstrip().startswith(SUMMARY_MARKER)
+    """Whether a comment is CodeRabbit's summary: its marker is among the HTML comments it opens with.
+
+    A marker CodeRabbit quotes after other content, as a reply might, does not count.
+    """
+    return is_bot(item) and SUMMARY_MARKER in leading_comments(str(item.get("body") or ""))
 
 
 def correlated_wait(

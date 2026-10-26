@@ -26,7 +26,9 @@ the recorded history:
   starts within 120 s;
 - `unbounded`: every decision is final, a trigger, or a wait with a bound or
   retry time;
-- `expired-bound`: a wait's bound or retry time is still ahead; and
+- `expired-bound`: a wait's bound or retry time is still ahead;
+- `unread-wait`: no unknown wait while a CodeRabbit comment version set
+  within 60 s before the head's latest refusal states one; and
 - `error`: the adapter never fails on recorded data.
 
 Exits 1 when it finds a violation that `fixtures/coderabbit_replay_pinned.json`
@@ -60,6 +62,7 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 CORPUS = FIXTURES / "coderabbit_recorded.json"
 PINNED = FIXTURES / "coderabbit_replay_pinned.json"
 TRIGGER_STATES = {"trigger-incremental", "trigger-full"}
+UNKNOWN_WAIT_STATES = {"rate-limited-unknown-wait", "blocked-unknown-wait"}
 REVIEW_COMMANDS = {"@coderabbitai review", "@coderabbitai full review"}
 
 
@@ -435,11 +438,15 @@ class History:
                 found.append("unbounded")
             elif at(bound) <= now:
                 found.append("expired-bound")
-        if state not in TRIGGER_STATES:
-            return found
         statuses = self.statuses(pull["repo"], sha)
         before = [status for status in statuses if at(status["created_at"]) <= now]
         after = [status for status in statuses if at(status["created_at"]) > now]
+        refusals = [status for status in before if ADAPTER.status_kind(status) == "rate-limited"]
+        sharing = [other for other in self.by_repo[pull["repo"]] if sha in other["heads"]]
+        if state in UNKNOWN_WAIT_STATES and refusals and stated_wait(sharing, refusals[-1], now):
+            found.append("unread-wait")
+        if state not in TRIGGER_STATES:
+            return found
         triggers = self.triggers(pull)
         # A recorded trigger at that point that CodeRabbit started reviewing.
         accepted = any(
@@ -448,8 +455,6 @@ class History:
             == "in-progress"
             for trigger in triggers
         )
-        refusals = [status for status in before if ADAPTER.status_kind(status) == "rate-limited"]
-        sharing = [other for other in self.by_repo[pull["repo"]] if sha in other["heads"]]
         own = stated_wait(sharing, refusals[-1], now) if refusals else None
         if own and now < own[1] and not accepted:
             found.append("refused-trigger")

@@ -57,7 +57,7 @@ class Replay(REPLAY.RecordedGitHub):
     def summary(self, ref: str) -> dict[str, Any]:
         return next(
             item for item in self.case(ref)["comments"]
-            if item["versions"][0][1].startswith(ADAPTER.SUMMARY_MARKER)
+            if ADAPTER.is_summary({"user": item["user"], "body": item["versions"][0][1]})
         )
 
     def add_status(self, ref: str, description: str, when: str, state: str = "success") -> None:
@@ -1432,6 +1432,102 @@ class StatedWaitTest(unittest.TestCase):
         self.assertEqual((other["state"], other["retryAt"]), ("waiting", "2026-08-09T12:59:31Z"))
         result = state("duetto#27", "2026-08-09T12:29:52Z")
         self.assertEqual((result["state"], result["retryAt"]), ("trigger-incremental", None))
+
+
+class SummaryMarkerTest(unittest.TestCase):
+    """CodeRabbit's summary is found by its marker among the HTML comments it opens with.
+
+    Since about 2026-10-20 every version of the summary opens with
+    "<!-- coderabbit-ai-generated:v1 -->" and a blank line before the marker.
+    GocciaScript#1910: CodeRabbit refused d5d3aaa2 at 08:02:00. The summary's
+    edit at 08:01:04 says "Next included review available in 54 minutes." and
+    its edit at 08:02:16 removed the notice.
+    """
+
+    REF = "GocciaScript#1910"
+    SUMMARY = 6404508436
+    NEW_OPENING = "<!-- coderabbit-ai-generated:v1 -->"
+
+    def test_every_version_of_the_new_summary_is_the_summary(self) -> None:
+        summary = Replay(self.REF, now="2026-10-26T12:00:00Z").comment(self.REF, self.SUMMARY)
+        self.assertEqual(len(summary["versions"]), 8)
+        for edited, body in summary["versions"]:
+            with self.subTest(edited=edited):
+                self.assertTrue(body.startswith(f"{self.NEW_OPENING}\n\n{ADAPTER.SUMMARY_MARKER}\n"))
+                self.assertTrue(ADAPTER.is_summary({"user": summary["user"], "body": body}))
+
+    def test_the_old_opening_is_still_the_summary(self) -> None:
+        old = Replay("GocciaScript#1162", now="2026-08-15T17:00:00Z").summary("GocciaScript#1162")
+        self.assertTrue(old["versions"][0][1].startswith(ADAPTER.SUMMARY_MARKER))
+
+    def test_only_a_bot_comment_opening_with_the_marker_is_the_summary(self) -> None:
+        bot = {"login": "coderabbitai[bot]"}
+        cases = {
+            f"{ADAPTER.SUMMARY_MARKER}\nbody": True,
+            f"  \n{self.NEW_OPENING}\n\n{ADAPTER.SUMMARY_MARKER}\nbody": True,
+            f"<!-- a -->\n<!-- b\nspanning lines -->\n{ADAPTER.SUMMARY_MARKER}": True,
+            f"<!-- This is an auto-generated reply by CodeRabbit -->\nQuoted:\n{ADAPTER.SUMMARY_MARKER}": False,
+            f"Prose first.\n{ADAPTER.SUMMARY_MARKER}": False,
+            f"{self.NEW_OPENING}\n<!-- This is an auto-generated reply by CodeRabbit -->": False,
+            "": False,
+        }
+        for body, expected in cases.items():
+            with self.subTest(body=body):
+                self.assertEqual(ADAPTER.is_summary({"user": bot, "body": body}), expected)
+        self.assertFalse(ADAPTER.is_summary({"user": {"login": "maintainer"}, "body": f"{ADAPTER.SUMMARY_MARKER}"}))
+
+    def test_the_stated_wait_pairs_with_the_refusal(self) -> None:
+        result = state(self.REF, "2026-10-26T08:02:00Z")
+        self.assertEqual(result["status"]["description"], "Review rate limited")
+        wait = result["rateLimit"]["wait"]
+        self.assertEqual(
+            (wait["commentId"], wait["editedAt"], wait["statedSeconds"], wait["noCapacity"]),
+            (self.SUMMARY, "2026-10-26T08:01:04Z", 54 * 60, False),
+        )
+        self.assertEqual((result["state"], result["retryAt"]), ("waiting", "2026-10-26T08:56:04Z"))
+
+    def test_a_wait_stated_only_in_the_edit_history_is_read(self) -> None:
+        # From 08:02:16 the current body has no notice; only the 08:01:04 version in the edit
+        # history states the wait. The adapter reported blocked-unknown-wait here.
+        gh = Replay(self.REF, now="2026-10-26T08:17:00Z")
+        current = gh.comment_view(*gh.refs[self.REF], gh.comment(self.REF, self.SUMMARY))
+        self.assertEqual(current["updated_at"], "2026-10-26T08:02:16Z")
+        self.assertIsNone(ADAPTER.stated_seconds(current["body"]))
+        result = observe(gh, self.REF)
+        self.assertEqual(result["rateLimit"]["wait"]["editedAt"], "2026-10-26T08:01:04Z")
+        self.assertEqual((result["state"], result["retryAt"]), ("waiting", "2026-10-26T08:56:04Z"))
+        self.assertEqual(state(self.REF, "2026-10-26T08:56:03Z")["state"], "waiting")
+        self.assertEqual(state(self.REF, "2026-10-26T08:56:04Z")["state"], "trigger-incremental")
+
+    def test_a_run_triggers_once_when_the_stated_wait_ends(self) -> None:
+        gh = Replay(self.REF, now="2026-10-26T08:05:00Z")
+        gh.truncate(self.REF, "2026-10-26T08:05:00Z")
+        answering(gh, self.REF, lambda posted: gh.add_status(self.REF, "Review in progress", iso(posted + 5), state="pending"))
+        final, _reason, _value = run(gh, self.REF, "2026-10-26T09:10:00Z")
+        self.assertEqual(posts(gh), [("@coderabbitai review", "2026-10-26T08:56:04Z")])
+        self.assertEqual(final, "in-progress")
+
+    def test_the_replay_flags_an_unknown_wait_beside_a_stated_one(self) -> None:
+        pull = Replay(self.REF, now="2026-10-26T08:17:00Z").case(self.REF)
+        sha = head(pull, "d5d3aaa2")
+        history, now = REPLAY.History([pull]), at("2026-10-26T08:17:00Z")
+        for decision in ({"state": "blocked-unknown-wait", "boundAt": "2026-10-26T08:17:00Z"},
+                         {"state": "rate-limited-unknown-wait", "boundAt": "2026-10-26T08:30:00Z"}):
+            with self.subTest(state=decision["state"]):
+                self.assertEqual(history.violations(pull, sha, now, decision), ["unread-wait"])
+        waiting = {"state": "waiting", "retryAt": "2026-10-26T08:56:04Z"}
+        self.assertEqual(history.violations(pull, sha, now, waiting), [])
+
+    def test_an_earlier_review_is_read_from_the_new_summary(self) -> None:
+        # 6d268e55's review: the summary carried the reviewing block from 23:28:45 to 23:35:36.
+        gh = Replay(self.REF, now="2026-10-25T23:40:00Z")
+        view = gh.comment_view(*gh.refs[self.REF], gh.comment(self.REF, self.SUMMARY))
+        found = ADAPTER.earlier_review(gh, [view], at("2026-10-25T23:30:00Z"))
+        self.assertEqual(found, {"commentId": self.SUMMARY, "endedAt": "2026-10-25T23:35:36Z"})
+
+
+def head(pull: dict[str, Any], prefix: str) -> str:
+    return next(sha for sha in pull["heads"] if sha.startswith(prefix))
 
 
 class HeadScopeTest(unittest.TestCase):
