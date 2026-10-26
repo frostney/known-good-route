@@ -156,8 +156,8 @@ automation and required checks still need to pass their gates.
 | `bot-skip` | `run`, `status` | No CodeRabbit review applies to this bot-authored PR. Continue the remaining gates. |
 | `satisfied` | `status` | Every head is complete or has a `bot-skip` exemption. |
 | `trigger-incremental`, `trigger-full` | `run`, `status` | Pending: `run`, which posts it. |
-| `awaiting-automatic`, `triggered`, `in-progress`, `waiting` | `run`, `status` | Pending: `run` waits; after its deadline, `run` again. |
-| `rate-limited-unknown-wait` | `run`, `status` | Pending: CodeRabbit refused the head without a wait the adapter can read. `run` waits until `retryAt`, 15, 30 or 60 minutes after the head's first, second or third refusal since its latest push, open or ready event, then posts one trigger. Never trigger by hand. |
+| `awaiting-automatic`, `triggered`, `in-progress`, `waiting` | `run`, `status` | Pending: `run` waits; after its deadline, `run` again. `triggered` also covers a trigger on another open PR of the same head, for up to 10 minutes. |
+| `rate-limited-unknown-wait` | `run`, `status` | Pending: CodeRabbit refused the head without a wait the adapter can read. `run` waits until `retryAt`, 15, 30 or 60 minutes after the head's first, second or third refusal since its latest push, open or ready event, then posts one trigger. A refusal counts once for each such event or trigger on any open PR of the head. Never trigger by hand. |
 | `pending` | `run`, `status` | A head is pending, or GitHub was unreachable until the deadline: `run` again. |
 | `lock-held` | `run` | Pending: another `run` holds the trigger lock; `run` again later. |
 | `draft` | `run`, `status` | Mark the PR ready when the workflow permits, then `run`. |

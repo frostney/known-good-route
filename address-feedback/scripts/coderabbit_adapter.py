@@ -705,9 +705,12 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
     numbers = [pr, *sharing_pulls(gh, repo, pr, head)]
     own = rest_items(gh, f"repos/{repo}/issues/{pr}/comments?per_page=100")
     comments: list[dict[str, Any]] = []
+    others: list[dict[str, Any]] = []
     reviews: list[dict[str, Any]] = []
     for number in numbers:
-        comments += own if number == pr else rest_items(gh, f"repos/{repo}/issues/{number}/comments?per_page=100")
+        listed = own if number == pr else rest_items(gh, f"repos/{repo}/issues/{number}/comments?per_page=100")
+        comments += listed
+        others += [] if number == pr else listed
         reviews += rest_items(gh, f"repos/{repo}/pulls/{number}/reviews?per_page=100")
     timeline = pull_timeline(gh, repo, pr)
     arrival = head_arrival(gh, repo, pull, head, statuses, pr)
@@ -741,6 +744,10 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
         "cleanReview": clean_review(bot_comments, covered),
         "triggers": sorted(
             head_triggers(own, arrival[0]), key=lambda trigger: (trigger["at"], int(trigger["id"] or 0))
+        ),
+        # Triggers on the other open pull requests of the head: CodeRabbit answers them on the commit.
+        "sharedTriggers": sorted(
+            head_triggers(others, arrival[0]), key=lambda trigger: (trigger["at"], int(trigger["id"] or 0))
         ),
         "statusHistory": [
             {"createdAt": status["created_at"], "kind": status_kind(status, author), "description": status.get("description")}
@@ -789,11 +796,39 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
         return result(blocked, f"{why} and nothing changed for {seconds // 60} minutes", **timing)
 
     def gate(mode: str) -> dict[str, Any]:
-        """Hold the trigger while the head's own refusal still applies."""
+        """Hold the trigger while the head's own refusal or another pull request's trigger still applies."""
+        held = refused(mode)
+        if held is not None:
+            return held
+        # A trigger on another open pull request of the head is answered on the commit: wait for it.
+        answered_since = status_at if status_at is not None else start
+        shared = [trigger for trigger in evidence.get("sharedTriggers", []) if trigger["at"] >= answered_since]
+        if shared and now < shared[-1]["at"] + TRIGGER_ANSWER_SECONDS:
+            bound = shared[-1]["at"] + TRIGGER_ANSWER_SECONDS
+            return result(
+                "triggered",
+                f"the {shared[-1]['mode']} trigger posted at {shared[-1]['createdAt']} on another open pull "
+                f"request of the head awaits a CodeRabbit status; a trigger is permitted from "
+                f"{format_timestamp(bound)}",
+                since=format_timestamp(shared[-1]["at"]),
+                boundAt=format_timestamp(bound),
+            )
+        return result(f"trigger-{mode}", f"a {mode} review trigger is permitted", mode)
+
+    def refused(mode: str) -> dict[str, Any] | None:
+        """The state while the head's own refusal holds the trigger, or None."""
         refusal = evidence["rateLimit"] if kind == "rate-limited" else None
         if refusal and not refusal["wait"]:
+            # One refusal per attempt: CodeRabbit may post two refusal statuses for one push or
+            # trigger, so the cycle's refusals count once per cycle start or trigger before them.
             # A refusal from before the cycle began still holds the trigger as the first.
-            refusals = max(1, sum(1 for when, seen, _description in history if seen == "rate-limited" and when >= start))
+            asks = [trigger["at"] for trigger in evidence["triggers"] + evidence.get("sharedTriggers", [])]
+            attempts = {
+                max([start, *(asked for asked in asks if asked < when)])
+                for when, seen, _description in history
+                if seen == "rate-limited" and when >= start
+            }
+            refusals = max(1, len(attempts))
             why = (
                 f"CodeRabbit rate-limited the head at {refusal['statusAt']} and {refusal['missing']}; "
                 f"refusal {refusals} since {automatic['source']} at {automatic['from']}"
@@ -815,7 +850,7 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
                     retryAt=format_timestamp(retry),
                     refusals=refusals,
                 )
-            return result(f"trigger-{mode}", f"{why}; its back-off ended at {format_timestamp(retry)}", mode)
+            return None
         if refusal and refusal["wait"]["noCapacity"]:
             return result(
                 "blocked-no-capacity",
@@ -829,7 +864,7 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
                 mode,
                 retryAt=refusal["wait"]["retryAt"],
             )
-        return result(f"trigger-{mode}", f"a {mode} review trigger is permitted", mode)
+        return None
 
     def awaiting(since: float, until: float, after: str) -> dict[str, Any]:
         return result(
@@ -978,9 +1013,10 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
 def public(evidence: dict[str, Any]) -> dict[str, Any]:
     """Evidence without internal epoch fields."""
     value = dict(evidence)
-    value["triggers"] = [
-        {key: item[key] for key in ("id", "mode", "createdAt")} for item in evidence["triggers"]
-    ]
+    for key in ("triggers", "sharedTriggers"):
+        value[key] = [
+            {field: item[field] for field in ("id", "mode", "createdAt")} for item in evidence.get(key, [])
+        ]
     if evidence["rateLimit"] and evidence["rateLimit"]["wait"]:
         wait = evidence["rateLimit"]["wait"]
         value["rateLimit"] = evidence["rateLimit"] | {

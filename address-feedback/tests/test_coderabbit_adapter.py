@@ -1366,6 +1366,82 @@ class BoundTest(unittest.TestCase):
         self.assertEqual((permitted["state"], permitted["nextMode"]), ("trigger-incremental", "incremental"))
 
 
+def trigger_comment(identifier: int, seconds: int, body: str = "@coderabbitai review") -> dict[str, Any]:
+    return {"id": identifier, "user": {"login": "maintainer"}, "created_at": offset(seconds),
+            "versions": [[offset(seconds), body]]}
+
+
+class UnknownWaitBackoffTest(unittest.TestCase):
+    """A refusal without a readable wait backs off 15, 30 then 60 minutes per refusal of the cycle.
+
+    Synthetic pull requests: the summary carries no stated wait, so no refusal has one.
+    """
+
+    HEAD = "6a7b8c9d" * 5
+    BRANCH = "ledger-rounding"
+    LIMITED = "Review rate limited"
+
+    def pull(self, number: int, statuses: list[tuple[int, str, str]], comments: list[dict[str, Any]] = (),
+             events: list[dict[str, Any]] = ()) -> dict[str, Any]:
+        commit = invented_commit(*statuses, branch=self.BRANCH)
+        summary = summary_comment(9100 + number, (12, f"{ADAPTER.SUMMARY_MARKER}\n<!-- walkthrough_start -->"))
+        return invented_pull(number, 0, self.HEAD, self.BRANCH, commit=commit, events=list(events),
+                             comments=[summary, *comments])
+
+    def test_two_statuses_for_one_refusal_count_once(self) -> None:
+        # CodeRabbit posted two refusal statuses about 3 s apart for one event in lwpt#140, lwpt#149,
+        # lwpt#155 and pascal-mcp-sdk#39.
+        statuses = [(10, "pending", "Review in progress"), (60, "success", self.LIMITED),
+                    (61, "pending", "Review in progress"), (63, "success", self.LIMITED)]
+        gh = Invented({"A": self.pull(1, statuses)}, now=offset(100))
+        first = observe(gh, "A")
+        self.assertEqual((first["state"], first["refusals"], first["retryAt"]),
+                         ("rate-limited-unknown-wait", 1, offset(63 + 15 * 60)))
+        statuses += [(1000, "success", self.LIMITED), (1003, "success", self.LIMITED)]
+        gh = Invented({"A": self.pull(1, statuses, [trigger_comment(5001, 980)])}, now=offset(1100))
+        second = observe(gh, "A")
+        self.assertEqual((second["state"], second["refusals"], second["retryAt"]),
+                         ("rate-limited-unknown-wait", 2, offset(1003 + 30 * 60)))
+
+    def test_refusals_before_the_cycle_start_do_not_count(self) -> None:
+        # Three refusals, one per attempt, then the pull request is marked ready and refused again.
+        statuses = [(60, "success", self.LIMITED), (1005, "success", self.LIMITED),
+                    (3005, "success", self.LIMITED), (4010, "success", self.LIMITED)]
+        comments = [trigger_comment(5001, 1000), trigger_comment(5002, 3000)]
+        pull = self.pull(1, statuses, comments, [{"type": "ready", "at": offset(4000)}])
+        result = observe(Invented({"A": pull}, now=offset(4200)), "A")
+        self.assertEqual((result["state"], result["refusals"], result["retryAt"]),
+                         ("rate-limited-unknown-wait", 1, offset(4010 + 15 * 60)))
+
+    def test_a_refusal_from_before_the_cycle_start_holds_as_the_first(self) -> None:
+        # Refused at +60, then marked ready at +200 with no review since.
+        pull = self.pull(1, [(60, "success", self.LIMITED)], events=[{"type": "ready", "at": offset(200)}])
+        gh = Invented({"A": pull}, now=offset(330))
+        result = observe(gh, "A")
+        self.assertEqual((result["state"], result["refusals"], result["retryAt"]),
+                         ("rate-limited-unknown-wait", 1, offset(60 + 15 * 60)))
+        self.assertEqual(observed_at(gh, "A", offset(60 + 15 * 60))["state"], "trigger-incremental")
+
+    def test_a_trigger_on_another_pull_request_of_the_head_holds_this_one(self) -> None:
+        # Two open pull requests on one head, refused at +60; B triggered when its back-off ended.
+        statuses = [(60, "success", self.LIMITED)]
+        a = self.pull(1, statuses)
+        b = self.pull(2, statuses, [trigger_comment(5002, 960)])
+        gh = Invented({"A": a, "B": b}, now=offset(990))
+        held = observe(gh, "A")
+        self.assertEqual((held["state"], held["boundAt"], held["nextMode"]),
+                         ("triggered", offset(960 + 10 * 60), None))
+        self.assertEqual([item["id"] for item in held["sharedTriggers"]], [5002])
+        self.assertEqual(observed_at(gh, "A", offset(960 + 10 * 60))["state"], "trigger-incremental")
+        # A refusal answering B's trigger is the second refusal for both.
+        gh.case("A")["heads"][self.HEAD]["statuses"].append(
+            {"id": 7999, "state": "success", "description": self.LIMITED, "context": "CodeRabbit",
+             "created_at": offset(965), "creator": {"login": "coderabbitai[bot]"}})
+        answered = observed_at(gh, "A", offset(990))
+        self.assertEqual((answered["state"], answered["refusals"], answered["retryAt"]),
+                         ("rate-limited-unknown-wait", 2, offset(965 + 30 * 60)))
+
+
 class StatedWaitTest(unittest.TestCase):
     """A rate limit waits only on the wait CodeRabbit edited into its summary just before it."""
 
