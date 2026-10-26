@@ -73,6 +73,10 @@ from kgr_github import (  # noqa: E402
     stable_digest,
 )
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from review_wait import validate_policy  # noqa: E402
+
 
 BOT_LOGINS = {"coderabbitai", "coderabbitai[bot]"}
 TRIGGERS = {
@@ -174,19 +178,24 @@ FORCE_PUSH_QUERY = """query($owner: String!, $name: String!, $number: Int!, $cur
 }"""
 FORCE_PUSH_PAGES = 20
 # Whether the repository uses CodeRabbit, read only when the pull request shows no CodeRabbit
-# activity: its review policy, a CodeRabbit configuration file at its root, and CodeRabbit's
-# comments and reviews on its latest closed pull requests, all from the default branch.
+# activity: a CodeRabbit configuration file at its root and its review policy, both on the
+# default branch, and CodeRabbit's statuses, comments and reviews on its latest closed pull
+# requests. An organization's central configuration repository is not read: it says how
+# CodeRabbit reviews where it is installed, not whether it is installed on this repository.
 POLICY_PATH = ".github/delivery/review-automations.json"
+CLOSED_PULLS = 10
 PRESENCE_QUERY = """query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
     policy: object(expression: "HEAD:.github/delivery/review-automations.json") { ... on Blob { text } }
     root: object(expression: "HEAD:") { ... on Tree { entries { name } } }
-    pullRequests(last: 10, states: [MERGED, CLOSED]) { nodes {
-      comments(last: 20) { nodes { author { login } } }
-      reviews(last: 10) { nodes { author { login } } }
+    pullRequests(last: %d, states: [MERGED, CLOSED]) { nodes {
+      first: comments(first: 10) { nodes { author { login } } }
+      last: comments(last: 10) { nodes { author { login } } }
+      reviews(first: 10) { nodes { author { login } } }
+      commits(last: 1) { nodes { commit { status { contexts { context creator { login } } } } } }
     } }
   }
-}"""
+}""" % CLOSED_PULLS
 
 # Every state a command reports, and the commands that report it. `status`
 # reports one state per head and one for the whole set; `run` reports its
@@ -694,10 +703,12 @@ def presence(
     """Whether CodeRabbit is in use on the repository, and the evidence that says so.
 
     CodeRabbit is a review gate only when the repository or the pull request
-    shows it is used: its activity on the pull request, the repository's review
-    policy naming it, a CodeRabbit configuration file, or its comments or
-    reviews on the repository's latest closed pull requests. A trigger
-    someone posted is no such evidence: CodeRabbit may never answer it.
+    shows it is used: its activity on the pull request, a CodeRabbit
+    configuration file, its activity on the repository's latest closed pull
+    requests, or the repository's review policy naming it. A trigger someone
+    posted is no such evidence: CodeRabbit may never answer it. A review
+    policy that cannot be read is an operational error only when nothing else
+    shows CodeRabbit is used.
     """
     if statuses or bot_comments or any(is_bot(review) for review in reviews):
         return {"active": True, "source": "pull-request"}
@@ -706,27 +717,40 @@ def presence(
     repository = (data or {}).get("repository")
     if not isinstance(repository, dict):
         raise WaitError(f"repository {repo} response is invalid")
-    text = (repository.get("policy") or {}).get("text")
-    if isinstance(text, str):
-        try:
-            policy = json.loads(text)
-        except json.JSONDecodeError as error:
-            raise WaitError(f"{POLICY_PATH} is not valid JSON: {error}") from None
-        automations = policy.get("automations") if isinstance(policy, dict) else None
-        if not isinstance(automations, list):
-            raise WaitError(f"{POLICY_PATH} has no automations list")
-        for automation in automations:
-            actors = {str(actor).lower() for actor in (automation or {}).get("actors") or []}
-            if (automation or {}).get("id") == "coderabbit" or actors & BOT_LOGINS:
-                return {"active": True, "source": "policy"}
     entries = ((repository.get("root") or {}).get("entries")) or []
-    names = sorted(str(entry.get("name")) for entry in entries if str((entry or {}).get("name") or "").startswith(".coderabbit"))
+    names = sorted(
+        str(entry.get("name")) for entry in entries
+        if isinstance(entry, dict) and str(entry.get("name") or "").startswith(".coderabbit")
+    )
     if names:
         return {"active": True, "source": f"config {names[0]}"}
     for pull in ((repository.get("pullRequests") or {}).get("nodes")) or []:
-        items = [*(((pull or {}).get("comments") or {}).get("nodes") or []), *(((pull or {}).get("reviews") or {}).get("nodes") or [])]
-        if any(is_bot(item or {}, "author") for item in items):
+        pull = pull or {}
+        authors = [
+            item or {}
+            for key in ("first", "last", "reviews")
+            for item in ((pull.get(key) or {}).get("nodes") or [])
+        ]
+        contexts = [
+            context or {}
+            for commit in ((pull.get("commits") or {}).get("nodes") or [])
+            for context in ((((commit or {}).get("commit") or {}).get("status") or {}).get("contexts") or [])
+        ]
+        if any(is_bot(item, "author") for item in authors) or any(
+            "coderabbit" in str(context.get("context") or "").lower() and is_bot(context, "creator")
+            for context in contexts
+        ):
             return {"active": True, "source": "closed-pull-requests"}
+    text = (repository.get("policy") or {}).get("text")
+    if isinstance(text, str):
+        try:
+            policy = validate_policy(json.loads(text), POLICY_PATH)
+        except json.JSONDecodeError as error:
+            raise WaitError(f"cannot read review policy {POLICY_PATH}: {error}") from None
+        for automation in policy["automations"]:
+            actors = {actor.lower() for actor in automation.get("actors", [])}
+            if automation["id"].lower() == "coderabbit" or actors & BOT_LOGINS:
+                return {"active": True, "source": "policy"}
     return {"active": False, "source": None}
 
 
@@ -1012,9 +1036,9 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
         return result(
             "not-active",
             "nothing shows CodeRabbit is used here: no CodeRabbit status, comment or review on the pull "
-            f"request since {automatic['source']} at {automatic['from']} or on the repository's latest "
-            f"closed pull requests, no CodeRabbit entry in {POLICY_PATH} and no .coderabbit* "
-            "configuration file",
+            f"request {AUTOMATIC_REVIEW_SECONDS} s after {automatic['source']} at {automatic['from']} or on "
+            f"the repository's {CLOSED_PULLS} latest closed pull requests, no .coderabbit* configuration "
+            f"file and no automation naming CodeRabbit in {POLICY_PATH}",
         )
     if kind == "bot-skip":
         return result("bot-skip", "CodeRabbit does not review a bot-authored pull request")

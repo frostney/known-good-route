@@ -1421,6 +1421,14 @@ class UnknownWaitBackoffTest(unittest.TestCase):
         self.assertEqual((result["state"], result["refusals"], result["retryAt"]),
                          ("rate-limited-unknown-wait", 1, offset(60 + 15 * 60)))
         self.assertEqual(observed_at(gh, "A", offset(60 + 15 * 60))["state"], "trigger-incremental")
+        # The trigger's refusal is the cycle's first: the refusal before the cycle start is not counted.
+        gh.case("A")["comments"].append(trigger_comment(5003, 960))
+        gh.case("A")["heads"][self.HEAD]["statuses"].append(
+            {"id": 7998, "state": "success", "description": self.LIMITED, "context": "CodeRabbit",
+             "created_at": offset(965), "creator": {"login": "coderabbitai[bot]"}})
+        refused = observed_at(gh, "A", offset(1000))
+        self.assertEqual((refused["state"], refused["refusals"], refused["retryAt"]),
+                         ("rate-limited-unknown-wait", 1, offset(965 + 15 * 60)))
 
     def test_a_trigger_on_another_pull_request_of_the_head_holds_this_one(self) -> None:
         # Two open pull requests on one head, refused at +60; B triggered when its back-off ended.
@@ -1493,38 +1501,82 @@ class NotActiveTest(unittest.TestCase):
         self.assertEqual(result["state"], "not-active")
 
     def test_any_repository_evidence_makes_coderabbit_a_gate(self) -> None:
-        policy = json.dumps({"automations": [{"id": "coderabbit", "actors": ["coderabbitai[bot]"]}]})
-        other = json.dumps({"automations": [{"id": "copilot", "actors": ["copilot-pull-request-reviewer"]}]})
-        closed = {"nodes": [{"comments": {"nodes": [{"author": {"login": "coderabbitai"}}]}, "reviews": {"nodes": []}}]}
+        def policy(**automation: Any) -> dict[str, Any]:
+            entry = {"id": "reviewer", "terminal_review_states": ["COMMENTED"]} | automation
+            return {"text": json.dumps({"automations": [entry]})}
+
+        def closed(*, comments: list[str] = (), late: list[str] = (), reviews: list[str] = (),
+                   statuses: list[tuple[str, str]] = ()) -> dict[str, Any]:
+            def nodes(logins: list[str]) -> dict[str, Any]:
+                return {"nodes": [{"author": {"login": login}} for login in logins]}
+
+            contexts = [{"context": context, "creator": {"login": login}} for context, login in statuses]
+            return {"nodes": [{"first": nodes(["vercel", *comments]), "last": nodes(late), "reviews": nodes(reviews),
+                               "commits": {"nodes": [{"commit": {"status": {"contexts": contexts}}}]}}]}
+
         cases = (
-            ({"policy": {"text": policy}}, "policy", "trigger-incremental"),
-            ({"root": {"entries": [{"name": ".coderabbit.yml"}]}}, "config .coderabbit.yml", "trigger-incremental"),
-            ({"pullRequests": closed}, "closed-pull-requests", "trigger-incremental"),
-            ({"policy": {"text": other}}, None, "not-active"),
+            ({"root": {"entries": [{"name": ".coderabbit.yml"}]}}, "config .coderabbit.yml"),
+            ({"pullRequests": closed(comments=["coderabbitai"])}, "closed-pull-requests"),
+            ({"pullRequests": closed(late=["coderabbitai"])}, "closed-pull-requests"),
+            ({"pullRequests": closed(reviews=["coderabbitai"])}, "closed-pull-requests"),
+            ({"pullRequests": closed(statuses=[("CodeRabbit", "coderabbitai")])}, "closed-pull-requests"),
+            ({"policy": policy(id="CodeRabbit")}, "policy"),
+            ({"policy": policy(actors=["coderabbitai[bot]"])}, "policy"),
+            # A broken policy waits for nothing when other evidence shows CodeRabbit.
+            ({"policy": {"text": "{not json"}, "root": {"entries": [{"name": ".coderabbit.yaml"}]}}, "config .coderabbit.yaml"),
+            ({"policy": policy(actors=["copilot-pull-request-reviewer"])}, None),
+            ({"pullRequests": closed(comments=["github-actions"], statuses=[("CodeRabbit", "someone")])}, None),
         )
-        for fields, source, expected in cases:
-            with self.subTest(source=source):
+        for fields, source in cases:
+            with self.subTest(fields=fields):
                 gh = self.quiet()
                 self.repository(gh, **fields)
                 result = observed_at(gh, "Q", offset(120))
+                expected = "trigger-incremental" if source else "not-active"
                 self.assertEqual((result["state"], result["presence"]["source"]), (expected, source))
 
     def test_activity_on_the_pull_request_needs_no_repository_read(self) -> None:
-        gh = self.quiet([summary_comment(9281, (20, SKIP_SUMMARY))])
-        read = gh.graphql
+        def status(gh: Invented) -> None:
+            gh.case("Q")["heads"][self.HEAD]["statuses"].append(
+                {"id": 7281, "state": "success", "description": "Review skipped: draft pull request",
+                 "context": "CodeRabbit", "created_at": offset(20), "creator": {"login": "coderabbitai[bot]"}})
 
-        def graphql(query: str, variables: dict[str, Any]) -> dict[str, Any]:
-            self.assertNotIn("review-automations.json", query)
-            return read(query, variables)
+        def review(gh: Invented) -> None:
+            gh.case("Q")["reviews"].append({"id": 8281, "user": {"login": "coderabbitai[bot]"}, "commit_id": "0" * 40,
+                                           "submitted_at": offset(20), "body": ""})
 
-        gh.graphql = graphql  # type: ignore[method-assign]
-        self.assertEqual(observed_at(gh, "Q", offset(120))["presence"], {"active": True, "source": "pull-request"})
+        def comment(gh: Invented) -> None:
+            gh.case("Q")["comments"].append(summary_comment(9281, (20, SKIP_SUMMARY)))
 
-    def test_an_unreadable_policy_is_an_operational_error(self) -> None:
-        gh = self.quiet()
-        self.repository(gh, policy={"text": "{not json"})
-        with self.assertRaisesRegex(ADAPTER.WaitError, "review-automations.json is not valid JSON"):
-            observed_at(gh, "Q", offset(120))
+        for add in (status, review, comment):
+            with self.subTest(activity=add.__name__):
+                gh = self.quiet()
+                add(gh)
+                read = gh.graphql
+
+                def graphql(query: str, variables: dict[str, Any], read: Any = read) -> dict[str, Any]:
+                    self.assertNotIn("review-automations.json", query)
+                    return read(query, variables)
+
+                gh.graphql = graphql  # type: ignore[method-assign]
+                result = observed_at(gh, "Q", offset(120))
+                self.assertEqual(result["presence"], {"active": True, "source": "pull-request"})
+
+    def test_an_unreadable_policy_is_an_operational_error_when_nothing_else_shows_coderabbit(self) -> None:
+        for text, error in (
+            ("{not json", "cannot read review policy"),
+            ('{"automations": ["coderabbit"]}', "has an invalid automation"),
+            ('{"automations": [{"id": "x", "actors": 5, "terminal_review_states": ["COMMENTED"]}]}', "has an invalid actors"),
+            ('{"automations": [{"id": "x", "actors": "coderabbitai", "terminal_review_states": ["COMMENTED"]}]}', "has an invalid actors"),
+        ):
+            with self.subTest(text=text):
+                gh = self.quiet()
+                self.repository(gh, policy={"text": text})
+                with self.assertRaisesRegex(ADAPTER.WaitError, error):
+                    observed_at(gh, "Q", offset(120))
+                head = gh.head("Q")
+                code, output = main(gh, "status", "--repo", INVENTED_REPO, "--pr", "281", "--head", f"281={head}", "--json")
+                self.assertEqual((code, output["state"]), (2, "operational-error"))
 
 
 class StatedWaitTest(unittest.TestCase):

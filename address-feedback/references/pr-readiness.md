@@ -23,7 +23,8 @@ Record the repository, PR number or URL, and final head object ID. A PR is
   up-to-date branches;
 - every intentionally active review automation has a terminal completed verdict
   explicitly tied to that head, with no newer incomplete or follow-up review;
-  CodeRabbit alone is exempt when its adapter reports `bot-skip` below;
+  CodeRabbit alone is exempt when its adapter reports `bot-skip` or
+  `not-active` below;
 - no actionable current-head finding remains;
 - GitHub reports zero unresolved review threads;
 - every inline automation thread has a maintainer-workflow reply in that thread;
@@ -144,12 +145,18 @@ came first.
 
 `not-active` means nothing shows the repository uses CodeRabbit: the PR has
 no CodeRabbit status, comment or review once CodeRabbit's own review would
-have started; `.github/delivery/review-automations.json` names no CodeRabbit
-automation; no `.coderabbit*` configuration file sits at the repository root;
-and CodeRabbit left no comment or review on the 10 latest closed PRs. The
-adapter then posts no trigger: a trigger is not evidence that CodeRabbit is
-in use, and it may never answer one. To make CodeRabbit a gate on such a
-repository, add it to that policy file.
+have started; no `.coderabbit*` configuration file sits at the repository
+root; the 10 latest closed PRs carry no CodeRabbit status on their last commit
+and no CodeRabbit review or comment among their first 10 reviews and their
+first and last 10 comments; and `.github/delivery/review-automations.json`
+names no CodeRabbit automation. The adapter then posts no trigger: a trigger
+is not evidence that CodeRabbit is in use, and it may never answer one. An
+organization's central CodeRabbit configuration does not count, because it
+applies only where CodeRabbit is installed. A new repository whose CodeRabbit
+setup lives only in such central or web settings has no such evidence until
+its first PRs close, so name CodeRabbit in its policy file. A policy file
+that cannot be read is an operational error only when nothing else shows
+CodeRabbit.
 
 `bot-skip` means CodeRabbit reported "Review skipped: bot user not eligible
 for review" and GitHub identifies the PR author as a bot. No CodeRabbit review
