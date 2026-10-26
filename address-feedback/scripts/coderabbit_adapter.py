@@ -173,6 +173,20 @@ FORCE_PUSH_QUERY = """query($owner: String!, $name: String!, $number: Int!, $cur
   } }
 }"""
 FORCE_PUSH_PAGES = 20
+# Whether the repository uses CodeRabbit, read only when the pull request shows no CodeRabbit
+# activity: its review policy, a CodeRabbit configuration file at its root, and CodeRabbit's
+# comments and reviews on its latest closed pull requests, all from the default branch.
+POLICY_PATH = ".github/delivery/review-automations.json"
+PRESENCE_QUERY = """query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    policy: object(expression: "HEAD:.github/delivery/review-automations.json") { ... on Blob { text } }
+    root: object(expression: "HEAD:") { ... on Tree { entries { name } } }
+    pullRequests(last: 10, states: [MERGED, CLOSED]) { nodes {
+      comments(last: 20) { nodes { author { login } } }
+      reviews(last: 10) { nodes { author { login } } }
+    } }
+  }
+}"""
 
 # Every state a command reports, and the commands that report it. `status`
 # reports one state per head and one for the whole set; `run` reports its
@@ -190,6 +204,7 @@ HEAD_STATES = frozenset(
         "rate-limited-unknown-wait",
         "draft",
         "bot-skip",
+        "not-active",
         "skipped",
         "paused",
         "blocked-unanswered",
@@ -228,7 +243,10 @@ BLOCKED_STATES = frozenset(
         "closed",
     }
 )
-FINAL_STATES = COMPLETE_STATES | BLOCKED_STATES | {"draft", "bot-skip", "invalidated"}
+# States that need no CodeRabbit review: a bot-authored pull request, and a repository where
+# nothing shows CodeRabbit is used.
+EXEMPT_STATES = frozenset({"bot-skip", "not-active"})
+FINAL_STATES = COMPLETE_STATES | BLOCKED_STATES | EXEMPT_STATES | {"draft", "invalidated"}
 
 
 def repo_parts(repo: str) -> tuple[str, str]:
@@ -667,6 +685,51 @@ def head_triggers(comments: list[dict[str, Any]], arrival: float) -> list[dict[s
     return found
 
 
+# --- Presence -------------------------------------------------------------------
+
+
+def presence(
+    gh: Gh, repo: str, statuses: list[dict[str, Any]], bot_comments: list[dict[str, Any]], reviews: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Whether CodeRabbit is in use on the repository, and the evidence that says so.
+
+    CodeRabbit is a review gate only when the repository or the pull request
+    shows it is used: its activity on the pull request, the repository's review
+    policy naming it, a CodeRabbit configuration file, or its comments or
+    reviews on the repository's latest closed pull requests. A trigger
+    someone posted is no such evidence: CodeRabbit may never answer it.
+    """
+    if statuses or bot_comments or any(is_bot(review) for review in reviews):
+        return {"active": True, "source": "pull-request"}
+    owner, name = repo_parts(repo)
+    data = gh.graphql(PRESENCE_QUERY, {"owner": owner, "name": name})
+    repository = (data or {}).get("repository")
+    if not isinstance(repository, dict):
+        raise WaitError(f"repository {repo} response is invalid")
+    text = (repository.get("policy") or {}).get("text")
+    if isinstance(text, str):
+        try:
+            policy = json.loads(text)
+        except json.JSONDecodeError as error:
+            raise WaitError(f"{POLICY_PATH} is not valid JSON: {error}") from None
+        automations = policy.get("automations") if isinstance(policy, dict) else None
+        if not isinstance(automations, list):
+            raise WaitError(f"{POLICY_PATH} has no automations list")
+        for automation in automations:
+            actors = {str(actor).lower() for actor in (automation or {}).get("actors") or []}
+            if (automation or {}).get("id") == "coderabbit" or actors & BOT_LOGINS:
+                return {"active": True, "source": "policy"}
+    entries = ((repository.get("root") or {}).get("entries")) or []
+    names = sorted(str(entry.get("name")) for entry in entries if str((entry or {}).get("name") or "").startswith(".coderabbit"))
+    if names:
+        return {"active": True, "source": f"config {names[0]}"}
+    for pull in ((repository.get("pullRequests") or {}).get("nodes")) or []:
+        items = [*(((pull or {}).get("comments") or {}).get("nodes") or []), *(((pull or {}).get("reviews") or {}).get("nodes") or [])]
+        if any(is_bot(item or {}, "author") for item in items):
+            return {"active": True, "source": "closed-pull-requests"}
+    return {"active": False, "source": None}
+
+
 # --- Evidence and decision ------------------------------------------------------
 
 
@@ -718,6 +781,7 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
         pull, timeline, (arrival[0], f"head-{arrival[1]}")
     )
     bot_comments = [item for item in comments if is_bot(item)]
+    used = presence(gh, repo, statuses, bot_comments, reviews)
     earlier = None
     if status_kind(newest, author) == "none" or parse_timestamp(newest["created_at"], "status created_at") < automatic:
         earlier = earlier_review(gh, [item for item in own if is_bot(item)], automatic)
@@ -754,6 +818,7 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
             for status in statuses
         ],
         "rateLimit": rate_limit,
+        "presence": used,
     }
 
 
@@ -942,6 +1007,15 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
             f"CodeRabbit's summary marks {evidence['cleanReview']['coveredCommitId']} covered "
             "with no actionable comments",
         )
+    used = evidence.get("presence") or {"active": True}
+    if not used["active"] and now >= start + AUTOMATIC_REVIEW_SECONDS:
+        return result(
+            "not-active",
+            "nothing shows CodeRabbit is used here: no CodeRabbit status, comment or review on the pull "
+            f"request since {automatic['source']} at {automatic['from']} or on the repository's latest "
+            f"closed pull requests, no CodeRabbit entry in {POLICY_PATH} and no .coderabbit* "
+            "configuration file",
+        )
     if kind == "bot-skip":
         return result("bot-skip", "CodeRabbit does not review a bot-authored pull request")
     unreviewed = kind in {"none", "draft-skip"}
@@ -1071,8 +1145,11 @@ def aggregate_status(value: dict[str, Any]) -> tuple[str, str]:
     states = [item["state"] for item in value["pullRequests"]]
     if "invalidated" in states:
         return "invalidated", "at least one requested PR head changed"
-    if all(state in COMPLETE_STATES | {"bot-skip"} for state in states):
-        return "satisfied", "every requested head has a confirmed CodeRabbit review or a bot-author exemption"
+    if all(state in COMPLETE_STATES | EXEMPT_STATES for state in states):
+        return "satisfied", (
+            "every requested head has a confirmed CodeRabbit review, a bot-author exemption, or no "
+            "CodeRabbit in use"
+        )
     if any(state in BLOCKED_STATES for state in states):
         return "blocked", "at least one requested head cannot get a CodeRabbit review without a person"
     return "pending", "at least one requested head still awaits a CodeRabbit transition"

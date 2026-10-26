@@ -92,6 +92,9 @@ class RecordedGitHub:
         self.posts: list[tuple[str, dict[str, str], float]] = []
         self.on_post: Any = None
         self.unreadable_histories: set[int] = set()
+        # Every recorded repository uses CodeRabbit; a configuration file stands in for how it is set up.
+        # A repository listed here has no review policy, no configuration and no closed pull requests.
+        self.unconfigured: set[str] = set()
         self.next_id = 9_000_000_000
         self.timelines = {key: head_timeline(pull) for key, pull in self.pulls.items()}
 
@@ -237,6 +240,10 @@ class RecordedGitHub:
             begin = max(0, end - limit)
             info = {"hasPreviousPage": begin > 0, "startCursor": str(begin)}
             return {"repository": {"pullRequest": {"timelineItems": {"pageInfo": info, "nodes": pushes[begin:end]}}}}
+        if "review-automations.json" in query:
+            repo = f"{variables['owner']}/{variables['name']}"
+            entries = [] if repo in self.unconfigured else [{"name": ".coderabbit.yaml"}]
+            return {"repository": {"policy": None, "root": {"entries": entries}, "pullRequests": {"nodes": []}}}
         if "userContentEdits" in query:
             identifier = int(variables["id"].removeprefix("IC_"))
             if identifier in self.unreadable_histories:

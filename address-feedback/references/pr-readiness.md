@@ -142,6 +142,15 @@ CodeRabbit command or work out a CodeRabbit wait yourself.
 reports its head's state. A pending head state from `run` means its deadline
 came first.
 
+`not-active` means nothing shows the repository uses CodeRabbit: the PR has
+no CodeRabbit status, comment or review once CodeRabbit's own review would
+have started; `.github/delivery/review-automations.json` names no CodeRabbit
+automation; no `.coderabbit*` configuration file sits at the repository root;
+and CodeRabbit left no comment or review on the 10 latest closed PRs. The
+adapter then posts no trigger: a trigger is not evidence that CodeRabbit is
+in use, and it may never answer one. To make CodeRabbit a gate on such a
+repository, add it to that policy file.
+
 `bot-skip` means CodeRabbit reported "Review skipped: bot user not eligible
 for review" and GitHub identifies the PR author as a bot. No CodeRabbit review
 is expected, so this state satisfies its review gate without a trigger or
@@ -154,7 +163,8 @@ automation and required checks still need to pass their gates.
 | `review-complete` | `run`, `status` | Classify every finding of the head's CodeRabbit review. |
 | `clean-complete` | `run`, `status` | CodeRabbit is complete for the head with no findings. |
 | `bot-skip` | `run`, `status` | No CodeRabbit review applies to this bot-authored PR. Continue the remaining gates. |
-| `satisfied` | `status` | Every head is complete or has a `bot-skip` exemption. |
+| `not-active` | `run`, `status` | CodeRabbit is not in use on this repository, so no CodeRabbit review applies and nothing was triggered. Continue the remaining gates. |
+| `satisfied` | `status` | Every head is complete or has a `bot-skip` or `not-active` exemption. |
 | `trigger-incremental`, `trigger-full` | `run`, `status` | Pending: `run`, which posts it. |
 | `awaiting-automatic`, `triggered`, `in-progress`, `waiting` | `run`, `status` | Pending: `run` waits; after its deadline, `run` again. `triggered` also covers a trigger on another open PR of the same head, for up to 10 minutes. |
 | `rate-limited-unknown-wait` | `run`, `status` | Pending: CodeRabbit refused the head without a wait the adapter can read. `run` waits until `retryAt`, 15, 30 or 60 minutes after the head's first, second or third refusal since its latest push, open or ready event, then posts one trigger. A refusal counts once for each such event or trigger on any open PR of the head. Never trigger by hand. |

@@ -1442,6 +1442,91 @@ class UnknownWaitBackoffTest(unittest.TestCase):
                          ("rate-limited-unknown-wait", 2, offset(965 + 30 * 60)))
 
 
+class NotActiveTest(unittest.TestCase):
+    """CodeRabbit is not triggered on a repository where nothing shows it is used.
+
+    Mirrors a private repository's pull request on 2026-10-26: no review policy, no CodeRabbit
+    configuration and no CodeRabbit comment or review on its latest merged pull requests. A run posted
+    `@coderabbitai review` two minutes after the pull request opened, got no answer and blocked
+    as blocked-unanswered.
+    """
+
+    HEAD = "7c8d9e0f" * 5
+    BRANCH = "ops-key-rotation"
+
+    def quiet(self, comments: list[dict[str, Any]] = ()) -> Invented:
+        commit = invented_commit(branch=self.BRANCH)
+        pull = invented_pull(281, 0, self.HEAD, self.BRANCH, commit=commit, comments=list(comments))
+        gh = Invented({"Q": pull}, now=offset(60))
+        gh.unconfigured.add(INVENTED_REPO)
+        return gh
+
+    def repository(self, gh: Invented, **fields: Any) -> None:
+        """The repository's presence answer with `fields` replacing an unconfigured repository's."""
+        read = gh.graphql
+
+        def graphql(query: str, variables: dict[str, Any]) -> dict[str, Any]:
+            value = read(query, variables)
+            if "review-automations.json" in query:
+                value["repository"] |= fields
+            return value
+
+        gh.graphql = graphql  # type: ignore[method-assign]
+
+    def test_nothing_shows_coderabbit_so_it_is_not_active_and_never_triggered(self) -> None:
+        gh = self.quiet()
+        self.assertEqual(observe(gh, "Q")["state"], "awaiting-automatic")
+        result = observed_at(gh, "Q", offset(120))
+        self.assertEqual((result["state"], result["nextMode"]), ("not-active", None))
+        self.assertEqual(result["presence"], {"active": False, "source": None})
+        self.assertEqual(ADAPTER.aggregate_status({"pullRequests": [result]})[0], "satisfied")
+        self.assertIn("not-active", ADAPTER.FINAL_STATES - ADAPTER.BLOCKED_STATES)
+        gh.now = PUSHED + 30
+        final, _reason, _value = run(gh, "Q", offset(3600))
+        self.assertEqual((final, gh.posts), ("not-active", []))
+        # The run wakes when CodeRabbit's own review would have started.
+        self.assertEqual(iso(gh.now), offset(120))
+
+    def test_a_trigger_nobody_answered_is_no_evidence(self) -> None:
+        gh = self.quiet([trigger_comment(5281, 121)])
+        result = observed_at(gh, "Q", offset(200))
+        self.assertEqual(result["state"], "not-active")
+
+    def test_any_repository_evidence_makes_coderabbit_a_gate(self) -> None:
+        policy = json.dumps({"automations": [{"id": "coderabbit", "actors": ["coderabbitai[bot]"]}]})
+        other = json.dumps({"automations": [{"id": "copilot", "actors": ["copilot-pull-request-reviewer"]}]})
+        closed = {"nodes": [{"comments": {"nodes": [{"author": {"login": "coderabbitai"}}]}, "reviews": {"nodes": []}}]}
+        cases = (
+            ({"policy": {"text": policy}}, "policy", "trigger-incremental"),
+            ({"root": {"entries": [{"name": ".coderabbit.yml"}]}}, "config .coderabbit.yml", "trigger-incremental"),
+            ({"pullRequests": closed}, "closed-pull-requests", "trigger-incremental"),
+            ({"policy": {"text": other}}, None, "not-active"),
+        )
+        for fields, source, expected in cases:
+            with self.subTest(source=source):
+                gh = self.quiet()
+                self.repository(gh, **fields)
+                result = observed_at(gh, "Q", offset(120))
+                self.assertEqual((result["state"], result["presence"]["source"]), (expected, source))
+
+    def test_activity_on_the_pull_request_needs_no_repository_read(self) -> None:
+        gh = self.quiet([summary_comment(9281, (20, SKIP_SUMMARY))])
+        read = gh.graphql
+
+        def graphql(query: str, variables: dict[str, Any]) -> dict[str, Any]:
+            self.assertNotIn("review-automations.json", query)
+            return read(query, variables)
+
+        gh.graphql = graphql  # type: ignore[method-assign]
+        self.assertEqual(observed_at(gh, "Q", offset(120))["presence"], {"active": True, "source": "pull-request"})
+
+    def test_an_unreadable_policy_is_an_operational_error(self) -> None:
+        gh = self.quiet()
+        self.repository(gh, policy={"text": "{not json"})
+        with self.assertRaisesRegex(ADAPTER.WaitError, "review-automations.json is not valid JSON"):
+            observed_at(gh, "Q", offset(120))
+
+
 class StatedWaitTest(unittest.TestCase):
     """A rate limit waits only on the wait CodeRabbit edited into its summary just before it."""
 
