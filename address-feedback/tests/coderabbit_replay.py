@@ -37,7 +37,9 @@ Exits 1 when it finds a violation that `fixtures/coderabbit_replay_pinned.json`
 does not pin. Every recorded repository uses CodeRabbit, and by default the
 replay answers each with a CodeRabbit configuration file;
 `--no-repository-evidence` answers each with none, so only a pull request's
-own activity shows CodeRabbit is used.
+own activity shows CodeRabbit is used. That mode ignores the pins and is
+diagnostic: on the recorded corpus it reports the late first activity of
+GocciaScript#1225 and #1237 and exits 1.
 """
 
 from __future__ import annotations

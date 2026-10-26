@@ -152,9 +152,11 @@ first and last 10 comments; and `.github/delivery/review-automations.json`
 names no CodeRabbit automation. The adapter then posts no trigger: a trigger
 is not evidence that CodeRabbit is in use, and it may never answer one. An
 organization's central CodeRabbit configuration does not count, because it
-applies only where CodeRabbit is installed. A new repository whose CodeRabbit
-setup lives only in such central or web settings has no such evidence until
-its first PRs close, so name CodeRabbit in its policy file. A policy file
+applies only where CodeRabbit is installed. A repository where CodeRabbit was
+newly installed, with its setup only in central or web settings, has no such
+evidence until its first reviewed PRs close; if CodeRabbit's first status on a
+PR comes more than 120 s after the push, open or ready event, the adapter
+reports `not-active`, so name CodeRabbit in its policy file. A policy file
 that cannot be read is an operational error only when nothing else shows
 CodeRabbit.
 
