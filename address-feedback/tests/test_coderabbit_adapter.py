@@ -1544,10 +1544,11 @@ class CheckRunTest(unittest.TestCase):
                 "started_at": offset(15), "completed_at": offset(15),
                 "output": {"title": "Review skipped", "summary": "Result: Skipped - Review skipped"}}
 
-        def observed(user: dict[str, Any], summary: str) -> tuple[Invented, dict[str, Any]]:
+        def observed(user: dict[str, Any], summary: str, edited: int = 14) -> tuple[Invented, dict[str, Any]]:
             commit = invented_commit(branch="deps") | {"checkRuns": [run_]}
+            versions = [(edited, summary)] if edited <= 14 else [(14, plain), (edited, summary)]
             pull = invented_pull(7, 5, "8e9f0a1b" * 5, "deps", user=user, commit=commit,
-                                 comments=[summary_comment(9707, (14, summary))])
+                                 comments=[summary_comment(9707, *versions)])
             gh = Invented({"B": pull}, now=offset(20))
             return gh, observe(gh, "B")
 
@@ -1558,9 +1559,12 @@ class CheckRunTest(unittest.TestCase):
         self.assertEqual((result["state"], result["status"]["shown"]), ("bot-skip", "Review skipped"))
         self.assertEqual(ADAPTER.aggregate_status({"pullRequests": [result]})[0], "satisfied")
         self.assertEqual((run(gh, "B", offset(300))[0], gh.posts), ("bot-skip", []))
-        for user, summary in ((bot, plain), ({"login": "frostney", "type": "User"}, notice)):
-            with self.subTest(user=user["login"], notice=summary == notice):
-                self.assertEqual(observed(user, summary)[1]["state"], "skipped")
+        self.assertEqual(observed(bot, notice, 15 - 60)[1]["state"], "bot-skip")
+        # A notice from more than 60 s before the skip, or set after it, explains another skip.
+        for user, summary, edited in ((bot, plain, 14), ({"login": "frostney", "type": "User"}, notice, 14),
+                                      (bot, notice, 15 - 61), (bot, notice, 16)):
+            with self.subTest(user=user["login"], notice=summary == notice, edited=edited):
+                self.assertEqual(observed(user, summary, edited)[1]["state"], "skipped")
 
     def test_a_check_run_reports_its_own_id_and_source(self) -> None:
         result = state("GocciaScript#1911", "2026-10-27T01:21:59Z")
