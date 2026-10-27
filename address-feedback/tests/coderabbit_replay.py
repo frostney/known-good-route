@@ -55,7 +55,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Iterable
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 sys.dont_write_bytecode = True
 
@@ -232,7 +232,17 @@ class RecordedGitHub:
             return [self.statuses(*match.groups())]
         match = re.fullmatch(r"repos/([^/]+/[^/]+)/commits/([0-9a-f]+)/check-runs", path)
         if match:
-            return [{"check_runs": self.check_runs(*match.groups())}]
+            # GitHub's defaults: every check name, and only the latest run of each.
+            query = parse_qs(urlparse(endpoint).query)
+            runs = self.check_runs(*match.groups())
+            if "check_name" in query:
+                runs = [run for run in runs if run["name"] == query["check_name"][0]]
+            if query.get("filter", ["latest"])[0] != "all":
+                latest: dict[str, dict[str, Any]] = {}
+                for run in sorted(runs, key=lambda item: (item["started_at"], item["id"])):
+                    latest[run["name"]] = run
+                runs = list(latest.values())
+            return [{"check_runs": runs}]
         match = re.fullmatch(r"repos/([^/]+/[^/]+)/commits/([0-9a-f]+)/check-suites", path)
         if match:
             return [{"check_suites": self.suites(*match.groups())}]

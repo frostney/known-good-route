@@ -64,6 +64,8 @@ ABOUT = (
 )
 COMMAND = re.compile(r"@coderabbitai\s+[a-z][a-z ]*", re.IGNORECASE)
 # Kept whatever wording the adapter reads, so a changed notice stays replayable.
+# The two lines of CodeRabbit's notice that it skipped a bot author.
+BOT_SKIP_LINE = re.compile(r"^>\s*(?:## Review skipped|Bot user detected\.)\s*$")
 WAIT_SENTENCE = re.compile(r"(?:available in|please wait)\D{0,20}\d", re.IGNORECASE)
 
 PULL_QUERY = """query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
@@ -172,6 +174,7 @@ def keeps(line: str) -> bool:
         or ADAPTER.COVERAGE_MARKER.search(line)
         or WAIT_SENTENCE.search(line)
         or ADAPTER.NO_CAPACITY.search(line)
+        or BOT_SKIP_LINE.match(line)
         or ADAPTER.NO_ACTIONABLE in line
         or ADAPTER.ACTIONABLE.search(line)
         or ADAPTER.REVIEW_FINDINGS.search(line)

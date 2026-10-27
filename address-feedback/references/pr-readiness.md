@@ -153,7 +153,7 @@ draft is the draft skip.
 `not-active` means nothing shows the repository uses CodeRabbit: the PR has
 no CodeRabbit status, check run, comment or review once CodeRabbit's own review would
 have started; no `.coderabbit*` configuration file sits at the repository
-root; the 10 latest closed PRs carry no CodeRabbit status or check suite on their last commit
+root; the 10 latest closed PRs carry no CodeRabbit status or check run on their last commit
 and no CodeRabbit review or comment among their first 10 reviews and their
 first and last 10 comments; and `.github/delivery/review-automations.json`
 names no CodeRabbit automation. The adapter then posts no trigger: a trigger

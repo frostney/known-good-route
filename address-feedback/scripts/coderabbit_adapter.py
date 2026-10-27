@@ -81,6 +81,8 @@ from review_wait import validate_policy  # noqa: E402
 
 
 BOT_LOGINS = {"coderabbitai", "coderabbitai[bot]"}
+# The GitHub App slug CodeRabbit's check suites and check runs belong to.
+CODERABBIT_APP = "coderabbitai"
 TRIGGERS = {
     "incremental": "@coderabbitai review",
     "full": "@coderabbitai full review",
@@ -108,6 +110,12 @@ STATED_WAIT = re.compile(
 NO_CAPACITY = re.compile(
     r"^> This review ran on the free tier\b[^\n]*\. Waiting won['\u2019]t change this\b", re.MULTILINE
 )
+# The summary's notice when CodeRabbit skips a bot author, the reason a check run's bare
+# "Review skipped" leaves out:
+# > ## Review skipped
+# >
+# > Bot user detected.
+BOT_SKIP_NOTICE = re.compile(r"^>\s*## Review skipped\s*\n(?:>\s*\n)?>\s*Bot user detected\.", re.MULTILINE)
 INCLUDED_WAIT = re.compile(r"Next included review available in \d+ minutes", re.IGNORECASE)
 
 # A findings review names its findings in its body.
@@ -196,7 +204,7 @@ PRESENCE_QUERY = """query($owner: String!, $name: String!) {
       reviews(first: 10) { nodes { author { login } } }
       commits(last: 1) { nodes { commit {
         status { contexts { context creator { login } } }
-        checkSuites(first: 20) { nodes { app { slug } } }
+        checkSuites(first: 20) { nodes { app { slug } checkRuns(first: 1) { totalCount } } }
       } } }
     } }
   }
@@ -328,9 +336,9 @@ def coderabbit_statuses(
 ) -> list[dict[str, Any]]:
     """CodeRabbit's statuses on one commit, and its check runs as statuses, oldest first.
 
-    `drafted_until` is when the pull request was last marked ready and `draft`
-    whether it is a draft now: a check run's bare "Review skipped" names no
-    reason, and from a draft it is the draft skip.
+    A check run's bare "Review skipped" names no reason. `drafted_until` is
+    when the pull request was last marked ready and `draft` whether it is a
+    draft now: from a draft the skip is the draft skip.
     """
     statuses = [
         status
@@ -355,7 +363,7 @@ def coderabbit_statuses(
 
 def is_coderabbit_run(run: dict[str, Any]) -> bool:
     app = str((run.get("app") or {}).get("slug") or "").lower()
-    return "coderabbit" in str(run.get("name") or "").lower() and app in {"coderabbitai", "coderabbit-ai"}
+    return "coderabbit" in str(run.get("name") or "").lower() and app == CODERABBIT_APP
 
 
 # A check run's summary opens "Result: <outcome> - <description>", the description
@@ -377,7 +385,8 @@ def check_run_statuses(run: dict[str, Any], drafted_until: float | None, draft: 
     title = str(output.get("title") or "").strip()
     found = CHECK_RESULT.search(str(output.get("summary") or ""))
     description = found.group(1).strip() if found else title
-    base = {"context": str(run.get("name") or "CodeRabbit"), "creator": {"login": "coderabbitai[bot]"}, "source": "check-run"}
+    base = {"context": str(run.get("name") or "CodeRabbit"), "creator": {"login": "coderabbitai[bot]"},
+            "source": "check-run", "checkRunId": identifier}
     started = run.get("started_at")
     completed = run.get("completed_at") if str(run.get("status") or "").lower() == "completed" else None
     statuses = []
@@ -392,8 +401,16 @@ def check_run_statuses(run: dict[str, Any], drafted_until: float | None, draft: 
             if draft or (drafted_until is not None and at < drafted_until):
                 description = "Review skipped: draft pull request"
         statuses.append(base | {"id": identifier * 2 + 1, "state": "failure" if conclusion in CHECK_FAILED else "success",
-                                "description": description, "created_at": completed})
+                                "description": description, "shown": found.group(1).strip() if found else title,
+                                "created_at": completed})
     return statuses
+
+
+def bot_authored(author: dict[str, Any] | None) -> bool:
+    """Whether GitHub identifies a pull request's author as a bot."""
+    author = author or {}
+    login = str(author.get("login") or "").lower()
+    return author.get("type") == "Bot" or login.startswith("app/") or login.endswith("[bot]")
 
 
 def status_kind(status: dict[str, Any] | None, author: dict[str, Any] | None = None) -> str:
@@ -412,11 +429,8 @@ def status_kind(status: dict[str, Any] | None, author: dict[str, Any] | None = N
             return "completed"
         if STATUS_DRAFT_SKIP.search(description):
             return "draft-skip"
-        if STATUS_BOT_SKIP.search(description):
-            author = author or {}
-            login = str(author.get("login") or "").lower()
-            if author.get("type") == "Bot" or login.startswith("app/") or login.endswith("[bot]"):
-                return "bot-skip"
+        if STATUS_BOT_SKIP.search(description) and bot_authored(author):
+            return "bot-skip"
         if STATUS_SKIPPED.search(description):
             return "skipped"
         if STATUS_PAUSED.search(description):
@@ -433,7 +447,15 @@ def status_summary(status: dict[str, Any] | None, author: dict[str, Any] | None 
         "description": status.get("description"),
         "createdAt": status.get("created_at"),
         "kind": status_kind(status, author),
-    }
+    } | origin(status)
+
+
+def origin(status: dict[str, Any]) -> dict[str, Any]:
+    """Where a status came from: a commit status, or the check run it stands for."""
+    if status.get("source") == "check-run":
+        return {"source": "check-run", "checkRunId": status.get("checkRunId"),
+                "shown": status.get("shown", status.get("description"))}
+    return {"source": "status"}
 
 
 # --- Stated waits ------------------------------------------------------------
@@ -552,6 +574,30 @@ def correlated_wait(
         },
         None,
     )
+
+
+def bot_skip_notice(gh: Gh, comments: list[dict[str, Any]], skipped_at: float) -> bool:
+    """Whether a summary version set within CORRELATION_SECONDS before `skipped_at` says it skipped a bot."""
+    start = skipped_at - CORRELATION_SECONDS
+    for item in comments:
+        if not is_summary(item) or parse_timestamp(item.get("updated_at"), "comment updated_at") < start:
+            continue
+        for at, body in comment_versions(gh, item, start):
+            if start <= at <= skipped_at and BOT_SKIP_NOTICE.search(body):
+                return True
+    return False
+
+
+def name_bot_skips(gh: Gh, statuses: list[dict[str, Any]], comments: list[dict[str, Any]], author: Any) -> None:
+    """Give a check run's bare skip on a bot's pull request the bot reason its summary states."""
+    if not bot_authored(author):
+        return
+    for status in statuses:
+        bare = str(status.get("description") or "").strip().lower() == "review skipped"
+        if status.get("source") == "check-run" and bare and bot_skip_notice(
+            gh, comments, parse_timestamp(status.get("created_at"), "status created_at")
+        ):
+            status["description"] = "Review skipped: bot user not eligible for review"
 
 
 # --- Completion ----------------------------------------------------------------
@@ -684,7 +730,7 @@ def first_arrival(
     if created:
         return min(created), "check-suite"
     if statuses:
-        return parse_timestamp(statuses[0].get("created_at"), "status created_at"), "status"
+        return parse_timestamp(statuses[0].get("created_at"), "status created_at"), str(statuses[0].get("source") or "status")
     commit = gh.rest(f"repos/{repo}/commits/{head}")
     committed = (((commit or {}).get("commit") or {}).get("committer") or {}).get("date")
     return parse_timestamp(committed, "head commit time"), "commit"
@@ -806,7 +852,11 @@ def presence(
         if any(is_bot(item, "author") for item in authors) or any(
             "coderabbit" in str(context.get("context") or "").lower() and is_bot(context, "creator")
             for context in contexts
-        ) or any(str((suite.get("app") or {}).get("slug") or "").lower() == "coderabbitai" for suite in suites):
+        ) or any(
+            str((suite.get("app") or {}).get("slug") or "").lower() == CODERABBIT_APP
+            and int(((suite.get("checkRuns") or {}).get("totalCount")) or 0) > 0
+            for suite in suites
+        ):
             return {"active": True, "source": "closed-pull-requests"}
     text = (repository.get("policy") or {}).get("text")
     if isinstance(text, str):
@@ -877,6 +927,7 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
         pull, timeline, (arrival[0], f"head-{arrival[1]}")
     )
     bot_comments = [item for item in comments if is_bot(item)]
+    name_bot_skips(gh, statuses, bot_comments, author)
     used = presence(gh, repo, statuses, bot_comments, reviews)
     earlier = None
     if status_kind(newest, author) == "none" or parse_timestamp(newest["created_at"], "status created_at") < automatic:
@@ -911,6 +962,7 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
         ),
         "statusHistory": [
             {"createdAt": status["created_at"], "kind": status_kind(status, author), "description": status.get("description")}
+            | origin(status)
             for status in statuses
         ],
         "rateLimit": rate_limit,
@@ -1107,7 +1159,7 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
     if not used["active"] and now >= start + AUTOMATIC_REVIEW_SECONDS:
         return result(
             "not-active",
-            "nothing shows CodeRabbit is used here: no CodeRabbit status, comment or review on the pull "
+            "nothing shows CodeRabbit is used here: no CodeRabbit status, check run, comment or review on the pull "
             f"request {AUTOMATIC_REVIEW_SECONDS} s after {automatic['source']} at {automatic['from']} or on "
             f"the repository's {CLOSED_PULLS} latest closed pull requests, no .coderabbit* configuration "
             f"file and no automation naming CodeRabbit in {POLICY_PATH}",

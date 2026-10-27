@@ -102,6 +102,13 @@ class Replay(REPLAY.RecordedGitHub):
         case["reviews"] = [item for item in case["reviews"] if item["submitted_at"] <= after]
         for head in case["heads"].values():
             head["statuses"] = [item for item in head["statuses"] if item["created_at"] <= after]
+            runs = [run for run in head.get("checkRuns", []) if run["started_at"] <= after]
+            head["checkRuns"] = [
+                run if (run.get("completed_at") or "") <= after
+                else run | {"status": "in_progress", "conclusion": None, "completed_at": None,
+                            "output": {"title": "Review in progress", "summary": ""}}
+                for run in runs
+            ]
 
     def remove_comment(self, ref: str, identifier: int) -> None:
         self.case(ref)["comments"].remove(self.comment(ref, identifier))
@@ -1525,6 +1532,43 @@ class CheckRunTest(unittest.TestCase):
         self.assertFalse(ADAPTER.is_coderabbit_run(check(app={"slug": "github-actions"})))
         self.assertFalse(ADAPTER.is_coderabbit_run(check(name="build")))
 
+    def test_a_bare_skip_on_a_bot_authored_pull_request_is_the_bot_skip_its_summary_states(self) -> None:
+        # Synthetic, after homebrew-tap#24 (2026-08): CodeRabbit wrote "Review skipped / Bot user
+        # detected." into its summary a second before its bot-skip status. Here the skip is a bare
+        # check run, as CodeRabbit reports since 2026-10-27.
+        notice = (f"{ADAPTER.SUMMARY_MARKER}\n<!-- This is an auto-generated comment: skip review by coderabbit.ai -->\n"
+                  "> [!IMPORTANT]\n> ## Review skipped\n>\n> Bot user detected.\n"
+                  "<!-- end of auto-generated comment: skip review by coderabbit.ai -->")
+        plain = f"{ADAPTER.SUMMARY_MARKER}\n<!-- walkthrough_start -->"
+        run_ = {"id": 4242, "name": "CodeRabbit", "app": {"slug": "coderabbitai"}, "status": "completed", "conclusion": "skipped",
+                "started_at": offset(15), "completed_at": offset(15),
+                "output": {"title": "Review skipped", "summary": "Result: Skipped - Review skipped"}}
+
+        def observed(user: dict[str, Any], summary: str) -> tuple[Invented, dict[str, Any]]:
+            commit = invented_commit(branch="deps") | {"checkRuns": [run_]}
+            pull = invented_pull(7, 5, "8e9f0a1b" * 5, "deps", user=user, commit=commit,
+                                 comments=[summary_comment(9707, (14, summary))])
+            gh = Invented({"B": pull}, now=offset(20))
+            return gh, observe(gh, "B")
+
+        reduced = recorder_module().reduce_body(notice)
+        self.assertRegex(reduced, ADAPTER.BOT_SKIP_NOTICE)
+        bot = {"login": "renovate[bot]", "type": "Bot"}
+        gh, result = observed(bot, notice)
+        self.assertEqual((result["state"], result["status"]["shown"]), ("bot-skip", "Review skipped"))
+        self.assertEqual(ADAPTER.aggregate_status({"pullRequests": [result]})[0], "satisfied")
+        self.assertEqual((run(gh, "B", offset(300))[0], gh.posts), ("bot-skip", []))
+        for user, summary in ((bot, plain), ({"login": "frostney", "type": "User"}, notice)):
+            with self.subTest(user=user["login"], notice=summary == notice):
+                self.assertEqual(observed(user, summary)[1]["state"], "skipped")
+
+    def test_a_check_run_reports_its_own_id_and_source(self) -> None:
+        result = state("GocciaScript#1911", "2026-10-27T01:21:59Z")
+        self.assertEqual((result["status"]["source"], result["status"]["checkRunId"]), ("check-run", 121948923139))
+        self.assertEqual([item["checkRunId"] for item in result["statusHistory"]], [121945527953, 121945744063, 121948923139])
+        older = state("GocciaScript#1162", "2026-08-15T17:00:00Z")
+        self.assertEqual({item["source"] for item in older["statusHistory"]}, {"status"})
+
     def test_the_replay_flags_an_answered_trigger_reported_unanswered(self) -> None:
         pull = Replay("GocciaScript#1911", now="2026-10-27T01:21:59Z").case("GocciaScript#1911")
         sha = head(pull, "2e8467f9")
@@ -1597,15 +1641,20 @@ class NotActiveTest(unittest.TestCase):
             return {"nodes": [{"first": nodes(["vercel", *comments]), "last": nodes(late), "reviews": nodes(reviews),
                                "commits": {"nodes": [{"commit": {"status": {"contexts": contexts}}}]}}]}
 
+        def suites(runs: int) -> dict[str, Any]:
+            nodes = [{"app": {"slug": "github-actions"}, "checkRuns": {"totalCount": 3}},
+                     {"app": {"slug": "coderabbitai"}, "checkRuns": {"totalCount": runs}}]
+            return {"nodes": [{"commits": {"nodes": [{"commit": {"status": None, "checkSuites": {"nodes": nodes}}}]}}]}
+
         cases = (
             ({"root": {"entries": [{"name": ".coderabbit.yml"}]}}, "config .coderabbit.yml"),
             ({"pullRequests": closed(comments=["coderabbitai"])}, "closed-pull-requests"),
             ({"pullRequests": closed(late=["coderabbitai"])}, "closed-pull-requests"),
             ({"pullRequests": closed(reviews=["coderabbitai"])}, "closed-pull-requests"),
             ({"pullRequests": closed(statuses=[("CodeRabbit", "coderabbitai")])}, "closed-pull-requests"),
-            ({"pullRequests": {"nodes": [{"commits": {"nodes": [{"commit": {"status": None, "checkSuites": {
-                "nodes": [{"app": {"slug": "github-actions"}}, {"app": {"slug": "coderabbitai"}}]}}}]}}]}},
-             "closed-pull-requests"),
+            ({"pullRequests": suites(1)}, "closed-pull-requests"),
+            # CodeRabbit's app installed on the repository leaves an empty check suite on every commit.
+            ({"pullRequests": suites(0)}, None),
             ({"policy": policy(id="CodeRabbit")}, "policy"),
             ({"policy": policy(actors=["coderabbitai[bot]"])}, "policy"),
             # A broken policy waits for nothing when other evidence shows CodeRabbit.
