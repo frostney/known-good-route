@@ -118,8 +118,11 @@ readiness. Recording a walkthrough does not replace behavior testing.
    files, excluding secrets and unrelated local work, and use a concise
    Conventional Commit subject. Never amend and never skip hooks. Preserve
    already-published history and add a new commit for any correction. Run the
-   [publication guard](../git-workflow/SKILL.md#publication-guard) at each
-   commit, push and PR write.
+   [publication guard](../git-workflow/SKILL.md#publication-guard) and the
+   binding-guide ledger's
+   [publication check](../code-review/SKILL.md#binding-guides) at each
+   commit, push and PR write; the check covers the commit message, title and
+   body against the repository's rules for them.
 8. Title each pull request with a Conventional Commit subject covering the whole
    change; `git-workflow`'s squash merge makes that title the base-branch commit
    subject. Follow

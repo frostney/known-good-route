@@ -291,7 +291,7 @@ and evaluates them on the intended workload.
 | `milestone-rush` | Coordinates several deliveries, dependencies and aggregate integration checks, then invokes `create-release` for the milestone. |
 | `create-release` | Owns milestone versioning, changelog, release PR and the repository's single established release publisher. It remains directly invocable for an explicit release request. |
 | `test-against-spec` | Tests externally observable behavior against explicit requirements. Reports by default; `fix` authorizes in-scope repairs. It does not replace source review or own the aggregate project gate. |
-| `code-review`, `codebase-audit` | Retain assessment-only defaults and delegate review lanes by default for non-trivial scopes; `no-subagents` keeps them local. `fix-all` permits in-scope remediation under the caller's acceptance criteria. |
+| `code-review`, `codebase-audit` | Retain assessment-only defaults and delegate review lanes by default for non-trivial scopes; `no-subagents` keeps them local. `fix-all` permits in-scope remediation under the caller's acceptance criteria. `code-review` owns the binding-guide check that `implement`, `create-pr`, `update-pr` and `address-feedback` rely on. |
 | `git-workflow`, `delivery-wait` | Own Git rules, the default-branch health gate, guarded native stacks and deterministic waits underneath the delivery skills. |
 | `template-check` | Reports where an issue or PR body departs from the repository's template for `create-issue`, `create-pr` and `update-pr`, which own the heading rule and the fix. |
 | `run-retro` | Proposes improvements and applies only selected actions. An explicitly selected immediate delivery enters `deliver`; the retrospective remains active until that action is delivered or blocked. |
@@ -322,6 +322,7 @@ not a required full-matrix run or a claim that every scenario currently passes:
 | Existing work item, branch or PR | Infers the target, preserves settled scope and resumes without replaying completed stages. |
 | Missing or stale PR review/behavior evidence | Runs the required missing checks and fixes verified gaps before readiness; reuses valid evidence. |
 | CI or review exposes an in-scope defect | Repairs it, revalidates affected behavior and updates the same PR instead of stopping at diagnosis. |
+| Change breaks a rule in a repository guide | Lists the guides that govern the change, checks every applicable rule across the whole diff and reports or fixes every instance, not only the first one seen. |
 | Requested visual or interaction fidelity | Compares the actual result with requirements and references; does not treat a test count as acceptance. |
 | Delegated lane | Runs on the capability tier its packet records; at work above that tier it stops and returns its finding, and the coordinator starts a new lane at the needed tier. |
 | Red default branch | Lands the default-branch repair first and waits for it to go green; does not merge onto a red branch or supersede the repair's run. |
