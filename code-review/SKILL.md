@@ -193,11 +193,9 @@ not touch is one `not applicable` row.
   text as its evidence. This holds as well when a person, a reviewer or a check
   flagged the first instance.
 - Rules for commit messages and pull request titles and bodies get rows marked
-  `for publication`. Before each commit, push or pull request write, the
-  publishing workflow confirms the ledger covers the content it publishes,
-  reviewing any change made since, and checks the message, title or body it is
-  about to write against every `for publication` row. It fixes every instance
-  of a broken rule before writing, and records each row's result.
+  `for publication`; the
+  [publication guard](../git-workflow/SKILL.md#publication-guard) step checks
+  each message, title and body against them before it is written.
 
 The ledger is part of the review result: callers return it with their evidence
 and renew the rows an edit touches.

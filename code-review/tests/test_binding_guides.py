@@ -128,6 +128,20 @@ class BindingGuidesTests(unittest.TestCase):
         self.assertIn("governs new_module.py", result.stdout)
         self.assertIn("contribution guide", result.stdout)
 
+    def test_lists_an_instruction_file_linked_from_outside_the_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as shared:
+            outside = Path(shared) / "AGENTS.md"
+            outside.write_text("Follow [testing](docs/testing.md).\n", encoding="utf-8")
+            (self.root / "AGENTS.md").symlink_to(outside)
+            self.write("docs/testing.md", "# Testing\n")
+            self.write("main.py", "VALUE = 1\n")
+
+            result = run(self.root, "--base", self.base)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(listed(result.stdout), ["AGENTS.md", "docs/testing.md"])
+        self.assertIn("linked from AGENTS.md:1", result.stdout)
+
     def test_reports_when_no_guide_exists(self) -> None:
         self.write("README.md", "# Changed\n")
 

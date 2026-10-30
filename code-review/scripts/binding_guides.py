@@ -133,9 +133,9 @@ def list_guides(root: Path, base: str, depth: int) -> list[tuple[Path, list[str]
         shown = ", ".join(governed[:5])
         if len(governed) > 5:
             shown += f" and {len(governed) - 5} more"
-        reasons.setdefault(guide.resolve(), []).append(f"governs {shown}")
+        reasons.setdefault(guide, []).append(f"governs {shown}")
     for guide in contributing_guides(root):
-        reasons.setdefault(guide.resolve(), []).append("contribution guide")
+        reasons.setdefault(guide, []).append("contribution guide")
 
     frontier = list(reasons)
     for _ in range(depth):

@@ -59,11 +59,8 @@ not block the update.
 5. When relevant changes exist, commit them under `git-workflow`: stage only
    those files, use a concise Conventional Commit subject, and never amend or
    skip hooks. Run the
-   [publication guard](../git-workflow/SKILL.md#publication-guard) and the
-   binding-guide ledger's
-   [publication check](../code-review/SKILL.md#binding-guides) at each
-   commit, push and PR write; the check covers the commit message, title and
-   body against the repository's rules for them.
+   [publication guard](../git-workflow/SKILL.md#publication-guard) at each
+   commit, push and PR write.
 6. When the branch has commits its remote lacks, push an ordinary branch
    normally, setting upstream when needed. Push a verified stack only through
    the guarded official stack workflow.
