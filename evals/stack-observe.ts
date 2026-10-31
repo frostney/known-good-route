@@ -2,6 +2,7 @@ import { parseModel } from "./local-runtime.ts";
 import { z } from "zod";
 import { resolve, join } from "node:path";
 import { digest, command } from "./github-live.ts";
+import { disposableFixture } from "./github-fixture-target.ts";
 import { atomicJson } from "./issue-receipt.ts";
 import { loadSkills } from "./skill-loader.ts";
 import { createEvalTools } from "./tools.ts";
@@ -85,11 +86,8 @@ export const stackAssessmentSchema = {
 };
 export async function stackObserveTools(configPath: string, ledger: RunLedger) {
   const c = await Bun.file(configPath).json();
-  if (
-    c.repository !== "frostney/kgr-eval-20260906-native-stack" ||
-    c.repositoryId !== 1358673926 ||
-    c.stackNumber !== 3
-  )
+  disposableFixture(c);
+  if (!Number.isSafeInteger(c.stackNumber) || c.stackNumber <= 0)
     throw Error("Unexpected disposable stack identity");
   const api = async (path: string) =>
     JSON.parse(await command(["gh", "api", `repos/${c.repository}${path}`]));

@@ -7,6 +7,7 @@ import { executable, parseModel, runLocal, preflight } from "./local-runtime.ts"
 import { loadSkills, formatSkillCatalog } from "./skill-loader.ts";
 import { command, digest } from "./github-live.ts";
 import { repairModels } from "./stack-repair.ts";
+import { disposableFixture } from "./github-fixture-target.ts";
 import { allocateRepairAttempt, claimRepairFixture, repairAttemptConfiguration, repairAttemptPlan, repairConfigurationOwner, repairProtocol, repairSnapshotTreeDigest, verifyRepairConfiguration, verifyRepairSnapshot } from "./repair-resume.ts";
 import { ownedProcessGroup } from "./process-group.ts";
 import { readOperationIntent } from "./operation-intent.ts";
@@ -28,14 +29,14 @@ if (resume || start) {
   if (arg("--output") || arg("--fixture") || arg("--model") || arg("--interrupt-after")) throw Error("Continuation preserves the original run configuration");
   output = resolve((resume ?? start)!);
 } else {
-  if (!arg("--output")) throw Error("Supply fresh --output");
+  if (!arg("--output") || !arg("--fixture")) throw Error("Supply fresh --output and a prepared --fixture");
   output = resolve(arg("--output")!); await mkdir(output);
-  const fixturePath = resolve(arg("--fixture") ?? ".eval-results/stack-delivery-setup-v1/stack.json");
+  const fixturePath = resolve(arg("--fixture")!);
   const fixture = await Bun.file(fixturePath).json();
   const model = arg("--model") ?? "codex:gpt-6-astra";
   if (!Object.hasOwn(repairModels, model)) throw Error("Select an explicitly supported native repair model");
-  if (fixture.repository !== "frostney/kgr-eval-20260906-native-stack" || fixture.repositoryId !== 1358673926 ||
-      fixture.localHeads?.length !== 2 || fixture.stack?.pull_requests?.length !== 2 || fixture.stackNumber !== fixture.stack.number)
+  disposableFixture(fixture);
+  if (fixture.localHeads?.length !== 2 || fixture.stack?.pull_requests?.length !== 2 || fixture.stackNumber !== fixture.stack.number)
     throw Error("Supply an authorized separate two-layer repair fixture");
   const interruptAfter = arg("--interrupt-after") ?? null;
   if (interruptAfter && !["originalReviewPublished", "fixCommitted", "fixPublished"].includes(interruptAfter)) throw Error("Unsupported controlled interruption boundary");
@@ -74,8 +75,8 @@ if (resume || start) {
 }
 const c = await Bun.file(join(output, "config.json")).json();
 await verifyRepairConfiguration(c, output);
-if (c.repository !== "frostney/kgr-eval-20260906-native-stack" ||
-    c.repositoryId !== 1358673926 || !Object.hasOwn(repairModels, c.model)) throw Error("This evidence does not support native repair continuation");
+disposableFixture(c);
+if (!Object.hasOwn(repairModels, c.model)) throw Error("This evidence does not support native repair continuation");
 if (c.fixtureOwnerPath !== join(await command(["git", "rev-parse", "--absolute-git-dir"], c.directory), "kgr-native-repair-owner.json"))
   throw Error("Fixture owner is outside its actual checkout");
 await verifyRepairSnapshot(c.skillsRoot, c.snapshotDigest, c.snapshotTreeDigest);

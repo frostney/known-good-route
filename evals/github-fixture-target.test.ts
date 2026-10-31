@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
-import { fixtureCommand, fixtureEnvironment } from "./github-fixture-target.ts";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { disposableFixture, fixtureCommand, fixtureEnvironment, reviewFixture } from "./github-fixture-target.ts";
 
 const repository = "frostney/kgr-eval-20260906-host-binding";
 
@@ -39,4 +41,26 @@ test("conflicting API host arguments reject before launching a process", async (
     await expect(run(["gh", "api", `repos/${repository}`, ...flags])).rejects.toThrow("host differs");
   expect(calls).toBe(0);
   expect(() => fixtureEnvironment("other/repo")).toThrow("Invalid GitHub fixture target");
+});
+
+test("live runs admit the disposable fixture its setup recorded and refuse any other", () => {
+  expect(disposableFixture({ repository, repositoryId: 42 })).toEqual({ repository, repositoryId: 42 });
+  for (const fixture of [
+    { repository: "frostney/known-good-route", repositoryId: 42 },
+    { repository: "other/kgr-eval-20260906-host-binding", repositoryId: 42 },
+    { repository, repositoryId: 0 },
+    { repository, repositoryId: "42" },
+    { repository },
+  ]) expect(() => disposableFixture(fixture)).toThrow("Supply a disposable fixture repository and its recorded ID");
+});
+
+test("review comparisons take the top stack layer and its recorded head from the fixture", async () => {
+  const path = join(tmpdir(), `kgr-review-fixture-${crypto.randomUUID()}.json`);
+  const head = "c".repeat(40);
+  await Bun.write(path, JSON.stringify({ repository, repositoryId: 42, localHeads: ["b".repeat(40), head],
+    stack: { pull_requests: [{ number: 7 }, { number: 8 }] } }));
+  expect(await reviewFixture(path)).toEqual({ repository, repositoryId: 42, pr: 8, head });
+  await Bun.write(path, JSON.stringify({ repository, repositoryId: 42, localHeads: [], stack: { pull_requests: [] } }));
+  await expect(reviewFixture(path)).rejects.toThrow("The fixture records no top stack PR and head");
+  await expect(reviewFixture(undefined)).rejects.toThrow("Supply the prepared --fixture stack.json");
 });

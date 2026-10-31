@@ -1,5 +1,5 @@
 import type { OwnedProcessGroup } from "./process-group.ts";
-import { fixtureCommand } from "./github-fixture-target.ts";
+import { disposableFixture, fixtureCommand } from "./github-fixture-target.ts";
 import { join } from "node:path";
 import { realpath } from "node:fs/promises";
 import { z } from "zod";
@@ -45,8 +45,8 @@ export function validateRepairFindings(verdict: any, readablePaths: string[], pr
 }
 export async function stackRepairTools(configPath: string, ledger: RunLedger, executionOwner: OwnedProcessGroup) {
   const c = await Bun.file(configPath).json();
-  if (c.repository !== "frostney/kgr-eval-20260906-native-stack" || c.repositoryId !== 1358673926 ||
-      !Number.isSafeInteger(c.stackNumber) || c.stackNumber <= 0 || c.stackNumber !== c.stack.number ||
+  disposableFixture(c);
+  if (!Number.isSafeInteger(c.stackNumber) || c.stackNumber <= 0 || c.stackNumber !== c.stack.number ||
       c.stack.pull_requests.length !== 2 || c.localHeads.length !== 2 || c.branches.length !== 2 || !repairModels[c.model])
     throw Error("Unexpected repair fixture identity");
   const run = fixtureCommand(c.repository);
