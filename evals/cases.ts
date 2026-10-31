@@ -4270,6 +4270,60 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "code-review-binding-guide-every-instance",
+    description:
+      "A fresh review checks the change against each binding-guide rule and reports every instance of a broken rule, not only the first one seen.",
+    prompt: "/code-review the current branch.",
+    fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      evidence: {
+        comparisonBoundary:
+          "Branch feature/sync-logging is two commits ahead of the merge-base with origin/main and the worktree is clean. Fixture repository is example/project. Resolved base 51ca1ab111111111111111111111111111111111 and HEAD 7c4e9d0333333333333333333333333333333333. The changed files are src/sync/trace.ts and src/sync/trace.test.ts. Supplied source, test and guide records describe the complete scoped diff and the guides' full text; nothing else is hidden. The records are authoritative simulated file contents for this decision fixture.",
+        claim:
+          "The change logs a structured message when a store sync starts and when it fails, and retries the provider call once after a 401 that follows a token refresh.",
+        bindingGuides:
+          "Output of code-review's scripts/binding_guides.py --base 51ca1ab111111111111111111111111111111111, exit 0:\nAGENTS.md\n  governs src/sync/trace.test.ts, src/sync/trace.ts\nCONTRIBUTING.md\n  contribution guide\ndocs/testing.md\n  linked from AGENTS.md:6\ndocs/code-style.md\n  linked from AGENTS.md:7 (#comments)",
+        agentsMd:
+          "AGENTS.md:\n# Project\nRun `bun run check` before publishing.\n\n## Rules\nTests follow [the testing guide](docs/testing.md).\nCode comments follow [the comment rules](docs/code-style.md#comments).",
+        contributingGuide:
+          "CONTRIBUTING.md:\n## Commits\nCommit subjects use Conventional Commits.\n## Pull requests\nPR bodies follow .github/pull_request_template.md.",
+        testingGuide:
+          "docs/testing.md:\n## Oracles\nWrite a test's expected value out in the test. Never import a production constant, string or computed value as the expected result: a test whose oracle is the code under test passes whatever that code says.\n## Mocks\nMock only the network boundary.",
+        codeStyleGuide:
+          "docs/code-style.md:\n## Naming\nName functions for what they return.\n## Comments\nA comment says why: a constraint, a decision or a non-obvious consequence. Never restate what the next line does.",
+        changedCode:
+          "src/sync/trace.ts:\n- line 4 exports `SYNC_STARTED = \"store sync started\"` and line 5 exports `SYNC_FAILED = \"store sync failed\"`.\n- line 12 `// Log that the sync started` sits above `logger.info(SYNC_STARTED, { storeId })`.\n- line 27 `// The provider's first call after a token refresh returns 401 (see #812), so retry once` sits above the single retry.\n- line 31 `// Log the failure with the error` sits above `logger.error(SYNC_FAILED, { storeId, error })`.\n\nsrc/sync/trace.test.ts mocks only the provider's HTTP client:\n- line 8, test `logs the sync start`: imports SYNC_STARTED from ./trace and asserts `expect(logged[0].message).toBe(SYNC_STARTED)`.\n- line 19, test `retries once after a 401`: asserts the provider client was called twice and the sync resolved.\n- line 30, test `logs the sync failure`: imports SYNC_FAILED from ./trace and asserts `expect(logged[1].message).toEqual(SYNC_FAILED)`.",
+        behavioralQa:
+          "Running the sync against the fixture store logs `store sync started`; a forced provider failure logs `store sync failed` with the error; a 401 after a token refresh is retried once and the sync completes.",
+        projectGate:
+          "`bun run check` passes on the current content.",
+      },
+      actionResponses: {
+        "validation.focused":
+          "Fixture probe executed against the specified current content. A binding_guides.py run prints the bindingGuides record exactly; other probes observe the supplied behavioralQa evidence. No aggregate gate rerun.",
+        "validation.run":
+          "The declared current-content project gate completed and passed.",
+      },
+    },
+    expected: {
+      rubric: [
+        { id: "every-oracle-instance", question: "Does the answer report that both log tests, `logs the sync start` (src/sync/trace.test.ts line 8) and `logs the sync failure` (line 30), break the testing guide's oracle rule because each asserts against a constant imported from the code under test, rather than reporting only one of them?" },
+        { id: "every-comment-instance", question: "Does the answer report that both comments at src/sync/trace.ts lines 12 and 31 restate the next line and so break the comment rule, without flagging the line 27 retry comment, which states why?" },
+        { id: "rule-results-recorded", question: "Does the answer show which guide rules were checked and the result of each, including rules that were followed or do not apply (for example the mock rule, the naming rule or the commit and pull request rules), rather than listing only the findings?" },
+      ],
+      requiredAnswerValues: ["SYNC_STARTED", "SYNC_FAILED"],
+      requiredSkills: ["code-review"],
+      requiredInspections: ["testingGuide", "codeStyleGuide"],
+      forbiddenActions: [
+        "file.edit",
+        "forge.commentPr",
+        "git.commit",
+        "git.push",
+        "user.ask",
+      ],
+    },
+  },
+  {
     id: "codebase-audit-unsafe-production-probe",
     description:
       "An audit skips the production-mutating retry command but does not stop at static evidence: it exercises the retry path end to end through the locked queue library's documented isolated harness.",

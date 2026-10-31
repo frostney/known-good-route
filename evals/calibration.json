@@ -3464,6 +3464,16 @@
       "beforeSha256": null,
       "afterSha256": "9c947c9f07b56a8e6e7d998b18beaac61b4460cad30dded12cb078eec481f799",
       "frozenCaseSha256": "9c947c9f07b56a8e6e7d998b18beaac61b4460cad30dded12cb078eec481f799"
+    },
+    {
+      "caseId": "code-review-binding-guide-every-instance",
+      "status": "new",
+      "rationale": [
+        "A fresh review checks the change against each rule in the repository's binding guides and reports every instance of a broken rule: both tests that use a production constant as their oracle and both comments that restate the next line, while the comment that states why passes. A review that names only the first instance, or lists findings without the rules it checked, fails."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "3cee9a63608a7a1f4143e95f5878035b06b4f4d4bfe4719311cfc1beb31de3e9",
+      "frozenCaseSha256": "3cee9a63608a7a1f4143e95f5878035b06b4f4d4bfe4719311cfc1beb31de3e9"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",
