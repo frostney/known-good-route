@@ -2,6 +2,7 @@ import { mkdir, cp } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { command, digest } from "./github-live.ts";
 import { atomicJson } from "./issue-receipt.ts";
+import { reviewFixture } from "./github-fixture-target.ts";
 
 // A real GitHub regression fixture. The only writes are two labelled feedback
 // artifacts in the explicitly authorized disposable repository; no PR/head edits.
@@ -13,12 +14,9 @@ const arg = (name: string) => {
 };
 if (!arg("--output") || !arg("--before-helper"))
   throw Error("Supply a fresh --output and preserved --before-helper");
+const { repository, repositoryId, pr, head } = await reviewFixture(arg("--fixture"));
 const output = resolve(arg("--output")!);
 await mkdir(output);
-const repository = "frostney/kgr-eval-20260906-native-stack";
-const repositoryId = 1358673926;
-const pr = 2;
-const head = "a053acc9ffb0f2d7294e0f6e092121c4d4db08a8";
 const operation = "kgr-review-surface-regression-20260906-v1";
 const api = async (path: string, body?: unknown) => JSON.parse(await command(
   ["gh", "api", path, ...(body ? ["--method", "POST", "--input", "-"] : [])],

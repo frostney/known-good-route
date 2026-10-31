@@ -861,15 +861,15 @@ KGR_CODEX_BIN=/path/to/selected/codex \
   --output .eval-results/new-stack-observation
 ```
 
-The observation adapter currently pins the recorded disposable repository ID and
-stack number. The transition evidence joins a native membership snapshot with the
+The observation adapter admits the disposable repository and stack number the
+fixture recorded, and checks the live repository's ID and privacy. The transition evidence joins a native membership snapshot with the
 remote-base commit recorded before the actual base move; original observations
 remain unchanged. New source snapshots and raw native results are retained for
 each run. Historical observations with a missing base SHA cannot certify current
 readiness.
 
 `review-surface-live-run.ts` seeds one labelled top-level comment and one COMMENT
-review on the preserved disposable stack, then compares an explicitly selected
+review on the top layer of a stack that `stack-live-setup.ts` prepared, then compares an explicitly selected
 old helper with a frozen copy of the current helper against the same GitHub
 feedback. It verifies returned bodies and remote receipts. A caller-owned empty
 policy isolates author filtering; a missing-policy control verifies uncertainty.
@@ -878,16 +878,18 @@ existing artifacts before any retry; an uncertain write is never blindly retried
 
 ```sh
 bun evals/review-surface-live-run.ts --execute \
+  --fixture /path/to/prepared/stack.json \
   --output .eval-results/new-review-surface-comparison \
   --before-helper .eval-results/stack-observe-native-v2/snapshot/address-feedback/scripts/review_wait.py
 ```
 
-This comparison pins the known private fixture identity and preserves its draft
-PR and exact head. It exercises real GitHub feedback discovery, not native model
+This comparison takes the repository, its ID, the top PR and its head from the
+fixture, refuses a public or changed repository, and preserves the draft PR and
+exact head. It exercises real GitHub feedback discovery, not native model
 review quality. The native stack runner separately tests whether models include
 the discovered feedback in their assessment.
 
-`review-pagination-live-run.ts` extends that fixed repository/PR fixture with
+`review-pagination-live-run.ts` extends the same prepared fixture with
 labelled feedback, two inline threads and a nested reply. It reconciles stable
 operation markers before posting. The comparison uses a caller-owned synthetic
 policy and checks that an older successful check cannot erase a newer incomplete
@@ -897,6 +899,7 @@ that distinction; preserve its failed result alongside corrected runs.
 
 ```sh
 bun evals/review-pagination-live-run.ts --execute \
+  --fixture /path/to/prepared/stack.json \
   --output .eval-results/new-pagination-comparison \
   --before-helper .eval-results/stack-feedback-native-v1/snapshot/address-feedback/scripts/review_wait.py
 ```
@@ -1018,11 +1021,12 @@ publication was interrupted. It does not start a different review attempt to
 bypass an existing publication intent. Legacy pilot reviews lack this journal
 and require explicit read-only verification instead of automatic republication.
 
-Run the deterministic GitHub interruption experiment against the existing draft
-negative fixture with:
+Run the deterministic GitHub interruption experiment against the draft top
+layer of a prepared negative fixture with:
 
 ```sh
 bun evals/review-publication-live-run.ts --execute \
+  --fixture /path/to/prepared/stack.json \
   --output .eval-results/new-review-publication-recovery
 ```
 
@@ -1235,12 +1239,12 @@ refused commands that are not gh-stack and malformed update records.
 
 ```sh
 bun evals/stack-push-race-live-run.ts --execute \
-  --fixture /path/to/dedicated/race/stack.json \
+  --fixture /path/to/fresh/race/stack.json \
   --output .eval-results/new-stack-push-race
 ```
 
-This runner requires the dedicated private `frostney/kgr-eval-20260906-push-races`
-repository. It pauses actual native submit before the tracking fetch, advances
+This runner requires a private disposable fixture that `stack-live-setup.ts`
+created for this run alone. It pauses actual native submit before the tracking fetch, advances
 the first original branch by one fast-forward empty commit in another clone,
 and checks that the refreshed tracking lease cannot override the original
 admission. It intentionally changes that fixture's first head; main and the

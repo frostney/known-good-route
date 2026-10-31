@@ -2,12 +2,12 @@ import { appendFile, mkdir, open } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { command, digest } from "./github-live.ts";
 import { atomicJson } from "./issue-receipt.ts";
+import { reviewFixture } from "./github-fixture-target.ts";
 import { publishReview, type ReviewForge, type ReviewRequest, reviewOperationMarker } from "./review-publication.ts";
 
 if (process.env.CI || process.env.GITHUB_ACTIONS || !Bun.argv.includes("--execute")) throw Error("Live review recovery requires explicit local --execute");
 const arg = (name: string) => { const i = Bun.argv.indexOf(name); return i < 0 ? undefined : Bun.argv[i + 1]; };
-const repository = "frostney/kgr-eval-20260906-native-stack", repositoryId = 1358673926, pr = 2;
-const head = "a053acc9ffb0f2d7294e0f6e092121c4d4db08a8";
+const { repository, repositoryId, pr, head } = await reviewFixture(arg("--fixture"));
 const api = async (path: string, body?: unknown) => JSON.parse(await command(["gh", "api", path,
   ...(body ? ["--method", "POST", "--input", "-"] : [])], undefined, body ? JSON.stringify(body) : undefined));
 const pages = async (path: string) => {

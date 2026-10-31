@@ -1,6 +1,7 @@
 import { chmod, mkdir, readdir, realpath } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { command, digest } from "./github-live.ts";
+import { disposableFixture } from "./github-fixture-target.ts";
 import { atomicJson } from "./issue-receipt.ts";
 import { claimOperation, readOperationIntent } from "./operation-intent.ts";
 import { freezeSnapshot } from "./snapshot.ts";
@@ -29,7 +30,8 @@ if (worker) {
 if (!controller) {
   check(arg("--fixture") && arg("--output"), "Provide a fresh fixture and output");
   const root = resolve(arg("--output")!), f = await Bun.file(resolve(arg("--fixture")!)).json(); await mkdir(root);
-  check(f.repository === "frostney/kgr-eval-20260906-push-races" && f.localHeads.length === 2, "Use the dedicated mutable race fixture");
+  disposableFixture(f);
+  check(f.localHeads.length === 2, "Use a fresh two-layer race fixture");
   const context: StackPublicationContext = { repository: f.repository, repositoryId: f.repositoryId, directory: await realpath(f.directory),
     stack: f.stackNumber, stackId: f.stack.id, baseRef: f.defaultBranch, base: f.base, branch: `codex/eval-race-${crypto.randomUUID().slice(0, 8)}`,
     prefix: f.stack.pull_requests.map((p: any, i: number) => ({ pr: p.number, branch: f.branches[i], head: f.localHeads[i] })) };

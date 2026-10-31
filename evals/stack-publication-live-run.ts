@@ -1,6 +1,7 @@
 import { appendFile, mkdir, open, realpath } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { command, digest } from "./github-live.ts";
+import { disposableFixture } from "./github-fixture-target.ts";
 import { atomicJson } from "./issue-receipt.ts";
 import { stackPublisher, type PublicationStep } from "./stack-publication.ts";
 import { nativeStackPublicationDriver } from "./stack-publication-driver.ts";
@@ -45,8 +46,8 @@ if (arg("--worker")) {
   const previous = resumed ? await Bun.file(join(resumed, "config.json")).json() : undefined;
   const fixturePath = priorPlan?.fixture ?? resolve(arg("--fixture")!);
   const fixture = await Bun.file(fixturePath).json();
-  if (fixture.repository !== "frostney/kgr-eval-20260906-native-stack" || fixture.repositoryId !== 1358673926 || fixture.stackNumber === 3 || fixture.stackNumber === 6)
-    throw Error("Recovery requires a separate prepared stack in the authorized repository");
+  disposableFixture(fixture);
+  if (!Number.isSafeInteger(fixture.stackNumber) || fixture.stackNumber <= 0) throw Error("Recovery requires a prepared stack");
   const context = previous?.context ?? { repository: fixture.repository, repositoryId: fixture.repositoryId, directory: await realpath(fixture.directory),
     stack: fixture.stackNumber, stackId: fixture.stack.id, baseRef: fixture.defaultBranch, base: fixture.base,
     branch: `codex/eval-stack-recovery-${crypto.randomUUID().slice(0, 8)}`,
@@ -55,6 +56,8 @@ if (arg("--worker")) {
     intentDirectory: previous?.intentDirectory ?? join(resumed ?? output, "intents") };
   const driver = tracked(context, output), publisher = stackPublisher(context, driver, config.intentDirectory);
   const before = await driver.observe();
+  if (before.repository.id !== context.repositoryId || !before.repository.private)
+    throw Error("Recovery fixture is not the private repository its setup recorded");
   if (!resumed && (before.dirty || before.head.sha !== context.prefix.at(-1).head || before.remote.members.length !== context.prefix.length))
     throw Error("Prepared recovery fixture is not clean at its original top");
   if (resumed) {
