@@ -29,13 +29,18 @@ Use the following files when the topics apply:
 | `code-style.md` | Naming, layout, design and dependency rules |
 | `deployment.md` | Build profiles, CI/CD, release, rollback |
 | `testing.md` or `testing-pattern.md` | Non-obvious test policy |
-| `decision-log.md` | Append-only decisions |
+| `decision-log.md` | Append-only decisions that change direction and are hard to reverse |
 | `spikes/` | Immutable point-in-time investigations |
 
 Use a short summary when a long document benefits from one; small documents
 can start directly with their subject. Each topic has one
 authoritative home; other documents link to it. Do not rewrite old decision-log
 entries or spikes to match later reality.
+
+A decision-log entry records a change in direction that is hard to reverse,
+such as an architecture, product, security or scope choice. A fix or detail
+inside an agreed direction, including one the person has just settled, goes in
+the change, its pull request and the changelog, not in the decision log.
 
 ## Governance content
 
