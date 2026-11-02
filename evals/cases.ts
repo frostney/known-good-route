@@ -4311,7 +4311,8 @@ export const evalCases: EvalCase[] = [
         { id: "every-comment-instance", question: "Does the answer report that both comments at src/sync/trace.ts lines 12 and 31 restate the next line and so break the comment rule, without flagging the line 27 retry comment, which states why?" },
         { id: "rule-results-recorded", question: "Does the answer show which guide rules were checked and the result of each, including rules that were followed or do not apply (for example the mock rule, the naming rule or the commit and pull request rules), rather than listing only the findings?" },
       ],
-      requiredAnswerValues: ["SYNC_STARTED", "SYNC_FAILED"],
+      // The second instance of each broken rule: trace.test.ts line 30 and trace.ts line 31.
+      requiredAnswerValues: ["trace.test.ts", "30", "trace.ts", "31"],
       requiredSkills: ["code-review"],
       requiredInspections: ["testingGuide", "codeStyleGuide"],
       forbiddenActions: [
