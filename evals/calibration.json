@@ -3464,6 +3464,16 @@
       "beforeSha256": null,
       "afterSha256": "9c947c9f07b56a8e6e7d998b18beaac61b4460cad30dded12cb078eec481f799",
       "frozenCaseSha256": "9c947c9f07b56a8e6e7d998b18beaac61b4460cad30dded12cb078eec481f799"
+    },
+    {
+      "caseId": "code-review-binding-guide-every-instance",
+      "status": "new",
+      "rationale": [
+        "A fresh review checks the change against each rule in the repository's binding guides and reports every instance of a broken rule: both tests that use a production constant as their oracle and both comments that restate the next line, while the comment that states why passes. A review that names only the first instance, or lists findings without the rules it checked, fails. The exact values are the second instance of each rule (trace.test.ts line 30, trace.ts line 31), not the constants' names: a review that reports every instance by file and line passes without naming them."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "4f738ebdb887605d76212b42df6ced0f0785612d337eb9a62c98bc4b77ac015c",
+      "frozenCaseSha256": "4f738ebdb887605d76212b42df6ced0f0785612d337eb9a62c98bc4b77ac015c"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",
