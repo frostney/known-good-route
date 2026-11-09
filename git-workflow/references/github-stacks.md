@@ -156,7 +156,9 @@ update, merge the freshly fetched remote base and push normally.
   `gh stack sync`, and merge the next layer as soon as its new head is ready;
   repeat up the prefix. Report the reason for the fallback.
 - After merge, use the official stack cleanup/sync path, remove only clean local
-  branches owned by the run, and verify the integrated remote default.
+  branches owned by the run,
+  [remove merged worktrees](../SKILL.md#remove-merged-worktrees), and verify the
+  integrated remote default.
 
 ## Protected publication helper
 

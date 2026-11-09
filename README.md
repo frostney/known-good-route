@@ -116,7 +116,7 @@ confirmation of the main operation does not establish its requested side effects
 
 | Skill | What it does |
 | --- | --- |
-| [`git-workflow`](git-workflow/SKILL.md) | Applies the user's git defaults: branch from the remote default, merge rather than rebase for ordinary branches, use native GitHub stacks when selected, never amend, and squash-merge pull requests. Use when branching, syncing, committing, pushing, or merging in the user's repos. |
+| [`git-workflow`](git-workflow/SKILL.md) | Applies the user's git defaults: branch from the remote default, merge rather than rebase for ordinary branches, use native GitHub stacks when selected, never amend, squash-merge pull requests, and remove merged worktrees. Use when branching, syncing, committing, pushing, merging, or cleaning up worktrees in the user's repos. |
 | [`status-report`](status-report/SKILL.md) | Builds a read-only current-repository Kanban from live pull-request, CI, review, branch, and worktree evidence. Use when the user asks for a status report, PR board, review-readiness board, or local-work overview. |
 | [`create-issue`](create-issue/SKILL.md) | Investigates and creates a project-aligned GitHub issue from a tagline or short description, using the repository's template, evidence, and labels; shows a draft first only when asked. Use when asked to file, open, or create a GitHub issue, or when the user runs /create-issue. |
 | [`deliver`](deliver/SKILL.md) | Carries one feature, bug, issue, branch, or PR through verified delivery. Use when asked to deliver or ship a work item end to end, such as getting it merged or deployed, or when the user runs /deliver. |
@@ -329,6 +329,7 @@ not a required full-matrix run or a claim that every scenario currently passes:
 | Default-branch run in progress from an earlier merge | Merges a ready PR at once; does not wait for that run or take turns with parallel deliveries. |
 | Default-branch runs cancelled by a burst of merges | Keeps merging on each PR's own gates while one sampler run per workflow, outside the cancelling group, covers the tip; starts no second one. |
 | Default-branch runs cancelled past a staleness bound `ORCHESTRATION.md` declares | Pauses merging until a completed run brings the gap back within the bound, then merges everything ready. |
+| Merged worktrees left by earlier runs | Before new work, removes each merged, clean, unused and untouched worktree and prunes missing ones; keeps and reports every other worktree with its reason. |
 | PR branch behind its base without a conflict | Keeps its head; merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. |
 | Several ready native stack layers | Merges them in one stack merge, not layer by layer. |
 | Configured integration delivery | Verifies the intended revision and behavior at the configured target; does not trigger milestone release or mistake a queued job for deployment. |
