@@ -1417,8 +1417,8 @@
         "Starting new work removes every merged, clean, unused and untouched worktree, whichever run created it, and prunes a registered worktree whose directory is gone. It keeps each other worktree and reports why: an untracked file, an open pull request, a lock, a commit no pull request contains, or a running process. Every git.removeWorktree action records one worktree in data.path, which must be wt-lexer, wt-docs or /tmp/wt-gone, and both wt-lexer and wt-docs must be removed; stashing, committing or forcing to make a worktree removable fails. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "cd579d94ee1738d80ff341ccd92ba51478017065c7d3505ade35926eb3e48f63",
-      "frozenCaseSha256": "cd579d94ee1738d80ff341ccd92ba51478017065c7d3505ade35926eb3e48f63"
+      "afterSha256": "761b9cf42dbf7eab5cb20f5b247c48b7b1b9478c0c072819d9a7150f51bc0b4a",
+      "frozenCaseSha256": "761b9cf42dbf7eab5cb20f5b247c48b7b1b9478c0c072819d9a7150f51bc0b4a"
     },
     {
       "caseId": "implement-issue-web-search-unavailable",
