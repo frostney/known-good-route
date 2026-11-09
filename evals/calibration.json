@@ -1411,6 +1411,16 @@
       "frozenCaseSha256": "6a9edda1da0493dd4b5d33ff220d1629fdf4da72032fae82aad231cd4d7c8e3d"
     },
     {
+      "caseId": "git-workflow-new-work-removes-merged-worktrees",
+      "status": "new",
+      "rationale": [
+        "Starting new work removes every merged, clean, unused and untouched worktree, whichever run created it, and prunes a registered worktree whose directory is gone. It keeps each other worktree and reports why: an untracked file, an open pull request, a lock, a commit no pull request contains, or a running process. Every git.removeWorktree action records one worktree in data.path, which must be wt-lexer, wt-docs or /tmp/wt-gone, and both wt-lexer and wt-docs must be removed; stashing, committing or forcing to make a worktree removable fails. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "761b9cf42dbf7eab5cb20f5b247c48b7b1b9478c0c072819d9a7150f51bc0b4a",
+      "frozenCaseSha256": "761b9cf42dbf7eab5cb20f5b247c48b7b1b9478c0c072819d9a7150f51bc0b4a"
+    },
+    {
       "caseId": "implement-issue-web-search-unavailable",
       "status": "updated",
       "rationale": [
@@ -2234,7 +2244,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "0a04df8306d608d7583bfd35b6300cc6060d0f04210de7301f4e0a2ca67c30e1",
+      "afterSha256": "6f19aafa4e0c3413009407302eaa5e5febf2c474d950eb3fb2a57ae47b6697a1",
       "frozenCaseSha256": "0099367cca2c9c2917dd143d14f2a236f24f7b770ad539a04d66ba9d416bb33c",
       "revisions": [
         {
@@ -2251,6 +2261,11 @@
           "previousAfterSha256": "fe9676de4a314515034990a7ca6bfd212b4a055e6465c7274d9cc71bc4a8b8a7",
           "afterSha256": "241a14ebd205cc5125c7ac94cb1bbcde03abbd174d5c435c0f066302a3182b25",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "0a04df8306d608d7583bfd35b6300cc6060d0f04210de7301f4e0a2ca67c30e1",
+          "afterSha256": "6f19aafa4e0c3413009407302eaa5e5febf2c474d950eb3fb2a57ae47b6697a1",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.removeWorktree action. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -2293,7 +2308,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "fd916ea3661c679ac76155f8560b9a87eb863156a0d9395589a31a48b700ee5a",
+      "afterSha256": "9203d5be8b3eed42c8b9df959226c0e5795f49b100d27a2da3bd3ec21e7e1e23",
       "frozenCaseSha256": "6769d572cc28ff86dd667e9096aedc47c80204b1b61500c0fafd4b36190a4939",
       "revisions": [
         {
@@ -2310,6 +2325,11 @@
           "previousAfterSha256": "4fffe37328356f5d8b7dc70273649f69b489a2138e26a2a3161d6ed0575305fe",
           "afterSha256": "e09398f4562c2865613abadc363e678782d4080e2213c12a3b2dbfc42d73df89",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "fd916ea3661c679ac76155f8560b9a87eb863156a0d9395589a31a48b700ee5a",
+          "afterSha256": "9203d5be8b3eed42c8b9df959226c0e5795f49b100d27a2da3bd3ec21e7e1e23",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.removeWorktree action. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -2380,7 +2400,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "da036b64060bc0e6eb08727a64c38cd4d00e6fda3a1dcf3ef27ea632044b25c3",
+      "afterSha256": "edb731866210d7b085d560b609e115a2bd8b73a19633f9a8327db7576f3afbbc",
       "frozenCaseSha256": "54380f4fb7f5a6504a96c22ccf72cf61b706a11b8d26ccc46fd0ae309648e867",
       "revisions": [
         {
@@ -2397,6 +2417,11 @@
           "previousAfterSha256": "fa97d5586d506769c4a93fea3fd1f38fc83173bb2bd89d1e9fca9a2a76795090",
           "afterSha256": "86eb65571326e83675d23b917d32dbd39c5fec45757e73d214456792f9f067bd",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "da036b64060bc0e6eb08727a64c38cd4d00e6fda3a1dcf3ef27ea632044b25c3",
+          "afterSha256": "edb731866210d7b085d560b609e115a2bd8b73a19633f9a8327db7576f3afbbc",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.removeWorktree action. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -2468,7 +2493,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "adeb55d1642bf266e7c6bf3ec0b7811c659585f53b0a4dd14d641a0d670adbd9",
+      "afterSha256": "715a7ff8b44b433613233594ce1a699bd91a741eef543d686be48b83065af835",
       "frozenCaseSha256": "43a77e6f231059105a1d3e4838559ec22c7320a8e59cb06031d26f58ad2c5923",
       "revisions": [
         {
@@ -2485,6 +2510,11 @@
           "previousAfterSha256": "69dab3dbc6154a06fc97936a95a55006effbe056b4b59abc007982a427294d6a",
           "afterSha256": "7805b26f4fe16139d98652df44f3a33d15443da211b25344fff3f55563c01f10",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "adeb55d1642bf266e7c6bf3ec0b7811c659585f53b0a4dd14d641a0d670adbd9",
+          "afterSha256": "715a7ff8b44b433613233594ce1a699bd91a741eef543d686be48b83065af835",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.removeWorktree action. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3054,13 +3084,18 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "5a5b9c69469520a4d336f3b42af4a4527dcdbd83e1c0275d6bd9f9b2dd6c91ad",
+      "afterSha256": "f2cb6bf04d55777a063da1d02139abe8ac9ba307fd1af21da8fd2ec72a97fdab",
       "frozenCaseSha256": "328f4268f2d2c145e5cce9a3c7b949b2c514b4499522c0981e1f10501ec41f39",
       "revisions": [
         {
           "previousAfterSha256": "5317a6a43a3800bc4ead50988dab1641e5425296f7e6abfd58d8cd4df1a9d5d4",
           "afterSha256": "94a109c2f52405c67ac90f5872b93ccc3fa389d1c48f460b7ef632f938c3a947",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "5a5b9c69469520a4d336f3b42af4a4527dcdbd83e1c0275d6bd9f9b2dd6c91ad",
+          "afterSha256": "f2cb6bf04d55777a063da1d02139abe8ac9ba307fd1af21da8fd2ec72a97fdab",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.removeWorktree action. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3077,13 +3112,18 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "015da38556b2658611bde903f9e72dd7605999cadcacd7c9b77e103a8eba98d0",
+      "afterSha256": "01d5ddd88d5c264d72a393ceabf071ddcf1af5e26a012f7a875be6834ffe4b99",
       "frozenCaseSha256": "49d1c10d5474f580d7a49b198fbdad9d9db2d8e0b94aaa74c252018060d23a96",
       "revisions": [
         {
           "previousAfterSha256": "49d1c10d5474f580d7a49b198fbdad9d9db2d8e0b94aaa74c252018060d23a96",
           "afterSha256": "622702158326bbceb84ff4f36c005233648a0addb50df3f170be768b143a18af",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "015da38556b2658611bde903f9e72dd7605999cadcacd7c9b77e103a8eba98d0",
+          "afterSha256": "01d5ddd88d5c264d72a393ceabf071ddcf1af5e26a012f7a875be6834ffe4b99",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.removeWorktree action. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3104,13 +3144,18 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "ed28a9d8e26ad8f423410a4195007f41be5fabab6d90ef38dd80e85643a4dc21",
+      "afterSha256": "cd66cfc590e5b232b974a6b795e9621ce04ce74ac1162dfd14c2535e224df8f6",
       "frozenCaseSha256": "71648b210e5264c120e6616c2043842b5cdcadd81002ce4415c5e0eadfb67968",
       "revisions": [
         {
           "previousAfterSha256": "82ef34aeeae183b9e17620881f4c535c5cdfc78055b3f4407a07b765fd7ec579",
           "afterSha256": "2c0544d17ff34a2d0cb2e36830207480c7e850242049fa15b93e172c3144d3d3",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "ed28a9d8e26ad8f423410a4195007f41be5fabab6d90ef38dd80e85643a4dc21",
+          "afterSha256": "cd66cfc590e5b232b974a6b795e9621ce04ce74ac1162dfd14c2535e224df8f6",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.removeWorktree action. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3127,13 +3172,18 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "4c4cc352d661b7c3fc8531dc4b1fb0b925a7ed6d3910c47729017a5ae7f0f5b7",
+      "afterSha256": "607792f74f85491be12f9da804be86be3ed849d458b3b22cd51a4de79862758a",
       "frozenCaseSha256": "edea9fde8ae3e6613dd69a9f52776e4ff195484a1aec2bf0086b614117b86235",
       "revisions": [
         {
           "previousAfterSha256": "edea9fde8ae3e6613dd69a9f52776e4ff195484a1aec2bf0086b614117b86235",
           "afterSha256": "5fb75a8f3c4c8dd84b25504f3cd17dc9341349dd61f5c2c849ed14becb5ddcb8",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "4c4cc352d661b7c3fc8531dc4b1fb0b925a7ed6d3910c47729017a5ae7f0f5b7",
+          "afterSha256": "607792f74f85491be12f9da804be86be3ed849d458b3b22cd51a4de79862758a",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.removeWorktree action. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3154,13 +3204,18 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "ecb3e7a07837ad057af84ed377f38ffe36b9e1df5a4da491e4a4d12917fa8775",
+      "afterSha256": "1f4bb58bfe5a5cd2472000d11d5ffa2ffc2b5600a79ef91c5a0ab406396a54a9",
       "frozenCaseSha256": "28be22afb337053e291e987008a22cb2dbea9159e0a2dc3b19e5940ec72154df",
       "revisions": [
         {
           "previousAfterSha256": "4d9af14d52121e704071db3e8d5d98162f8032eba0f89691e9ca86dbafbe93b8",
           "afterSha256": "e55b8b58596f5a504bd9eec7ca7dce717fb1801e42311f227b1dc6553bffdd30",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "ecb3e7a07837ad057af84ed377f38ffe36b9e1df5a4da491e4a4d12917fa8775",
+          "afterSha256": "1f4bb58bfe5a5cd2472000d11d5ffa2ffc2b5600a79ef91c5a0ab406396a54a9",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.removeWorktree action. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3177,13 +3232,18 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "042651cdee2bb8138936174263696182c0a941e5e243075fd3d40c42bf5efa48",
+      "afterSha256": "04a575d5cb0f54a991503e1cb11da38a9f1ca091647f591e9e189bc852013a0e",
       "frozenCaseSha256": "b4c75ee28bbe8eb9787ba8e987c45392ee8d34044aa3ff0d0e842e1b0cd03d7c",
       "revisions": [
         {
           "previousAfterSha256": "b4c75ee28bbe8eb9787ba8e987c45392ee8d34044aa3ff0d0e842e1b0cd03d7c",
           "afterSha256": "ad517144ed9bdf1267ff06188d053df1ea1f8999ad3a0635131031d9fdefd3dd",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "042651cdee2bb8138936174263696182c0a941e5e243075fd3d40c42bf5efa48",
+          "afterSha256": "04a575d5cb0f54a991503e1cb11da38a9f1ca091647f591e9e189bc852013a0e",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.removeWorktree action. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3204,13 +3264,18 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "294f0e478c3aa58b0571db3f5ad9fef4bb70c9639b6c2653e3f879063cfb234a",
+      "afterSha256": "f0a8d19728593ba70b17a93b32491303f2c1c5c83ffbe1114f32d0102f252a0f",
       "frozenCaseSha256": "58b294f42269c483c7858cd16a98f050f249e750847cb464a8cb60e00271dc98",
       "revisions": [
         {
           "previousAfterSha256": "12c8abe6f812125be097a45394c38edc82959241e837e68ec166a66396cd6841",
           "afterSha256": "877581c7427d2857ffd74d17863d7555045964808cd26d1c05636c27a6cc7c3f",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "294f0e478c3aa58b0571db3f5ad9fef4bb70c9639b6c2653e3f879063cfb234a",
+          "afterSha256": "f0a8d19728593ba70b17a93b32491303f2c1c5c83ffbe1114f32d0102f252a0f",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.removeWorktree action. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3227,13 +3292,18 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "13f6389fbf2739af6eb7119648643c5deb9b337e466f09d3b906b9d86e20d0d0",
+      "afterSha256": "0c353236bdfc81c7441abe903acad4b3a449b0b243b305582bcf74e8335834a5",
       "frozenCaseSha256": "2a36b105550cd75961c0e265f47490eac89493b632b5da1324f67927b8a0d259",
       "revisions": [
         {
           "previousAfterSha256": "2a36b105550cd75961c0e265f47490eac89493b632b5da1324f67927b8a0d259",
           "afterSha256": "d530b18a2aaba0ed8ac258ae620f635a9064ee29efbc41486a8724c35f19e911",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "13f6389fbf2739af6eb7119648643c5deb9b337e466f09d3b906b9d86e20d0d0",
+          "afterSha256": "0c353236bdfc81c7441abe903acad4b3a449b0b243b305582bcf74e8335834a5",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.removeWorktree action. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3285,13 +3355,18 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "f3f73f3002f285e729bf9b44e661febff15fa79844031be6335ef38d962ae18e",
+      "afterSha256": "57756e7c066f23ab33806c1c3744dafab618725b2e2365d5a72d9288a834a9ef",
       "frozenCaseSha256": "0a433a8527c7098e39e1810208106c7250f0b79127f8e49766b7d975274bec80",
       "revisions": [
         {
           "previousAfterSha256": "0a433a8527c7098e39e1810208106c7250f0b79127f8e49766b7d975274bec80",
           "afterSha256": "dfd6fd833901235512730d20348950d5c3e871ad44f17b9dc5470bbb1cdec2ef",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "f3f73f3002f285e729bf9b44e661febff15fa79844031be6335ef38d962ae18e",
+          "afterSha256": "57756e7c066f23ab33806c1c3744dafab618725b2e2365d5a72d9288a834a9ef",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.removeWorktree action. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3312,13 +3387,18 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "78df8d7808715977d600efc44d4be5ac17ad9b50f69b863219ba8469b0e2cf87",
+      "afterSha256": "111d47fb46cb7569444a57ee8b90ed4256f3a94ed90da811664be146f7e04b9b",
       "frozenCaseSha256": "6c8de269d2fe3ca67c45dfc64e7d8e6a6ee843cf5f7c853e729be92e108a06e0",
       "revisions": [
         {
           "previousAfterSha256": "446243931474a83dd67d5e64178703292262c042e0c37bfff0ef4b1df30c5a40",
           "afterSha256": "f25c7a2520addbeebc9009d614f0a4cf275ba137f12dc0f5790f38a43b40d40f",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "78df8d7808715977d600efc44d4be5ac17ad9b50f69b863219ba8469b0e2cf87",
+          "afterSha256": "111d47fb46cb7569444a57ee8b90ed4256f3a94ed90da811664be146f7e04b9b",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.removeWorktree action. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3334,13 +3414,18 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "6ddadc3b5a1cadccf476c886cb04c95ba94a34a2b15dd6259304e856635710a5",
+      "afterSha256": "08e9c53869f78d2b4ba794562b5e27c03e359410c993bb2d20bc0811062f2b8c",
       "frozenCaseSha256": "0fc3b417e0747e94a0691d7115596c675c02d32181a9e08cb914cbadeac8f335",
       "revisions": [
         {
           "previousAfterSha256": "0fc3b417e0747e94a0691d7115596c675c02d32181a9e08cb914cbadeac8f335",
           "afterSha256": "fc336301bf8b17bcfd37575d7f6adfbcb841d83690bd09a467c843f0b421bd5b",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "6ddadc3b5a1cadccf476c886cb04c95ba94a34a2b15dd6259304e856635710a5",
+          "afterSha256": "08e9c53869f78d2b4ba794562b5e27c03e359410c993bb2d20bc0811062f2b8c",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.removeWorktree action. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3372,13 +3457,18 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "0c8f18320010f34562c64f875b713af8480c841c0c6372e609e5039cf36d39b2",
+      "afterSha256": "e5d167dfac72e06eb9eb2e849678487b19f260fc7edfb6b1173aa84a5be24300",
       "frozenCaseSha256": "000100643cf4056743cc69276429ec92b4def6b3945e6b3676208156e8cc9681",
       "revisions": [
         {
           "previousAfterSha256": "000100643cf4056743cc69276429ec92b4def6b3945e6b3676208156e8cc9681",
           "afterSha256": "f54ee9eeb8f77590be47a9546c83435465c9ef68a21605d48df5819b9efcfe91",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.dispatchRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "0c8f18320010f34562c64f875b713af8480c841c0c6372e609e5039cf36d39b2",
+          "afterSha256": "e5d167dfac72e06eb9eb2e849678487b19f260fc7edfb6b1173aa84a5be24300",
+          "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new git.removeWorktree action. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [

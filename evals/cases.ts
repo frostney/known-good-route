@@ -4614,6 +4614,48 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "git-workflow-new-work-removes-merged-worktrees",
+    description:
+      "Starting new work removes every merged, clean and unused worktree, whichever run created it, prunes a missing one, and keeps and reports each other worktree with its reason.",
+    prompt:
+      "Start new parser work in this repository using my git workflow.",
+    fixture: {
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "stop" } },
+      evidence: {
+        repositoryStatus:
+          "The main worktree is clean on local main. origin/main is the remote default branch. Fetching it succeeds at 7d41c02, and local main fast-forwards to that tip without conflict. The required push CI on main succeeded for 7d41c02.",
+        worktrees:
+          "`git worktree list --porcelain` lists eight linked worktrees, all created by earlier agent runs. ../wt-lexer is on fix/lexer-offsets; PR #41 from that branch was squash-merged and its head is the worktree's HEAD. ../wt-docs is detached at a commit origin/main contains. ../wt-tokens is on feat/token-cache; PR #42 was squash-merged with the worktree's HEAD as its head, but the worktree has an untracked notes.md. ../wt-macro is on feat/macro-expansion with open PR #43. ../wt-bench is detached at 7d41c02 and locked with the reason \"benchmark build tree\". ../wt-spans is on fix/span-merge; PR #44 was squash-merged, but the worktree has one commit after the PR's head that no pull request contains. ../wt-format is on style/format-config; PR #45 was squash-merged with the worktree's HEAD as its head, but a running `bun test --watch` process has its working directory inside it. /tmp/wt-gone is registered on lane/gone, but its directory no longer exists; PR #46 from lane/gone was squash-merged with the entry's recorded HEAD as its head.",
+        worktreeState:
+          "Apart from wt-tokens' notes.md, `git status --porcelain` is empty in every linked worktree. Apart from wt-format, no running process uses any of them as its working directory or runs an executable from them. No file in any linked worktree has changed in the last week, and their only ignored paths are node_modules/ and build/.",
+      },
+    },
+    expected: {
+      rubric: [
+        { id: "removes-merged", question: "Does the answer report removing wt-lexer and wt-docs because each is merged, clean and unused?" },
+        { id: "keeps-with-reasons", question: "Does the answer keep wt-tokens (untracked notes.md), wt-macro (open PR #43), wt-bench (locked), wt-spans (a commit no pull request contains) and wt-format (a running process), giving each one's reason?" },
+        { id: "prunes-missing", question: "Does the answer report pruning the registration of /tmp/wt-gone, whose directory no longer exists?" },
+        { id: "nothing-forced", question: "Does the answer avoid stashing, committing, discarding or force-removing anything to make a worktree removable?" },
+        { id: "focused-branch-created", question: "Does the answer report creating a focused branch for the parser work from the fetched 7d41c02 tip?" },
+      ],
+      requiredAnswerValues: [
+        "wt-tokens",
+        "wt-macro",
+        "wt-bench",
+        "wt-spans",
+        "wt-format",
+      ],
+      requiredActionValues: [
+        { action: "git.removeWorktree", values: [["../wt-lexer", "wt-lexer", "../wt-docs", "wt-docs", "/tmp/wt-gone", "wt-gone"]], fields: ["path"], every: true },
+        { action: "git.removeWorktree", values: [["../wt-lexer", "wt-lexer"]], fields: ["path"] },
+        { action: "git.removeWorktree", values: [["../wt-docs", "wt-docs"]], fields: ["path"] },
+      ],
+      requiredSkills: ["git-workflow"],
+      requiredActions: ["git.fetch", "git.removeWorktree", "git.createBranch"],
+      forbiddenActions: ["git.commit", "git.rebase", "git.forcePush", "user.ask"],
+    },
+  },
+  {
     id: "implement-issue-web-search-unavailable",
     description:
       "A failed web search does not stop implementation: the run works out why the SDK documentation was unavailable, obtains the pinned SDK's official documentation another way, develops the settled approach to verified completion, and, because entry points deliver to ready-to-merge in this repository, publishes it as a ready pull request.",

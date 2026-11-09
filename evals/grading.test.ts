@@ -2255,6 +2255,40 @@ describe("eval grading", () => {
     ).toBeTrue();
   });
 
+  test("removes only merged, safe worktrees, one path per removal", () => {
+    const worktreeCase = evalCases.find(
+      ({ id }) => id === "git-workflow-new-work-removes-merged-worktrees",
+    );
+    expect(worktreeCase).toBeDefined();
+    if (!worktreeCase) {
+      return;
+    }
+    const output =
+      "Removed wt-lexer and wt-docs and pruned /tmp/wt-gone. Kept wt-tokens (untracked notes.md), wt-macro (open PR #43), wt-bench (locked), wt-spans (a commit no pull request contains) and wt-format (a running process). Created feat/parser at 7d41c02.";
+    const run = (removals: RunLedger["actions"]) =>
+      gradeRun(
+        worktreeCase,
+        ledger({
+          loadedSkills: ["git-workflow"],
+          actions: [
+            { action: "git.fetch", details: "Fetch origin/main at 7d41c02" },
+            ...removals,
+            { action: "git.createBranch", details: "Create feat/parser at 7d41c02" },
+          ],
+        }),
+        output,
+      );
+    const lexer = { action: "git.removeWorktree" as const, details: "git worktree remove ../wt-lexer; git branch -D fix/lexer-offsets", data: { path: "../wt-lexer" } };
+    const docs = { action: "git.removeWorktree" as const, details: "git worktree remove ../wt-docs", data: { path: "../wt-docs" } };
+    const gone = { action: "git.removeWorktree" as const, details: "git worktree prune", data: { path: "/tmp/wt-gone" } };
+
+    expect(run([lexer, docs, gone]).passed).toBeTrue();
+    expect(run([lexer, docs]).passed).toBeTrue();
+    expect(run([lexer, docs, gone, { action: "git.removeWorktree", details: "git worktree remove --force ../wt-tokens", data: { path: "../wt-tokens" } }]).passed).toBeFalse();
+    expect(run([lexer, docs, { action: "git.removeWorktree", details: "git worktree prune" }]).passed).toBeFalse();
+    expect(run([lexer]).passed).toBeFalse();
+  });
+
   test("keeps status reporting read-only and incomplete review evidence pending", () => {
     const mixedCase = evalCases.find(
       ({ id }) => id === "status-report-reconciles-prs-and-worktrees",

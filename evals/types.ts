@@ -22,6 +22,7 @@ export const actionNames = [
   "git.push",
   "git.pushTag",
   "git.rebase",
+  "git.removeWorktree",
   "git.stackInit",
   "git.stackMerge",
   "git.stackSubmit",
