@@ -263,36 +263,13 @@ result decides, and everything that became ready meanwhile merges.
 ## Remove merged worktrees
 
 A merged worktree holds no work, but its checkout, dependencies and build
-output stay on disk. Parallel and delegated runs leave them behind until the
-disk fills. Remove them after each merge and whenever new work starts in a
-repository: list its worktrees (`git worktree list --porcelain`), remove every
-merged one that is safe to remove, whichever run created it, and run
-`git worktree prune` for entries whose directory is gone.
-
-A worktree is merged when the remote default branch contains its HEAD, or the
-head of a merged pull request does, so it has no commit the pull request
-lacks. A squash merge leaves the branch's own commits out of the default
-branch, so find that pull request by branch or head commit.
-
-It is safe to remove only when:
-
-- `git status --porcelain` is empty: no tracked or untracked changes;
-- it is not locked, and is neither the main worktree nor the one this session
-  is in;
-- no running process uses it as its working directory or runs an executable
-  from it; and
-- no file in it changed in the last day, unless this run just merged it:
-  another session may have created it for new work and be between commands.
-
-Remove it with `git worktree remove` without `--force`. Then delete its local
-branch, if it has one, with `git branch -D`: git treats a squash-merged branch
-as unmerged, and the pull request check above already proved it merged. Keep
-every other worktree, such as one with an open or unmerged pull request,
-commits no merged pull request contains, changes, a lock, a running process or
-recent changes, and report each with its reason. Never stash, commit, discard
-or force-remove anything to make a worktree removable. A checkout that must
-stay, such as a build tree that scripts run from, is locked with
-`git worktree lock --reason`.
+output stay on disk, and parallel and delegated runs leave them behind until
+the disk fills. At each point that links here, remove every merged worktree
+that is safe to remove, whichever run created it, prune entries whose
+directory is gone, and report each worktree kept with its reason. Never stash,
+commit, discard or force-remove anything to make a worktree removable. Read
+[references/merged-worktrees.md](references/merged-worktrees.md) before
+removing or pruning any worktree.
 
 ## Native GitHub stacks
 

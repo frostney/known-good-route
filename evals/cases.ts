@@ -4627,7 +4627,7 @@ export const evalCases: EvalCase[] = [
         worktrees:
           "`git worktree list --porcelain` lists eight linked worktrees, all created by earlier agent runs. ../wt-lexer is on fix/lexer-offsets; PR #41 from that branch was squash-merged and its head is the worktree's HEAD. ../wt-docs is detached at a commit origin/main contains. ../wt-tokens is on feat/token-cache; PR #42 was squash-merged with the worktree's HEAD as its head, but the worktree has an untracked notes.md. ../wt-macro is on feat/macro-expansion with open PR #43. ../wt-bench is detached at 7d41c02 and locked with the reason \"benchmark build tree\". ../wt-spans is on fix/span-merge; PR #44 was squash-merged, but the worktree has one commit after the PR's head that no pull request contains. ../wt-format is on style/format-config; PR #45 was squash-merged with the worktree's HEAD as its head, but a running `bun test --watch` process has its working directory inside it. /tmp/wt-gone is registered on lane/gone, but its directory no longer exists.",
         worktreeState:
-          "Apart from wt-tokens' notes.md, `git status --porcelain` is empty in every linked worktree. Apart from wt-format, no running process uses any of them as its working directory or runs an executable from them. No file in any linked worktree has changed in the last week.",
+          "Apart from wt-tokens' notes.md, `git status --porcelain` is empty in every linked worktree. Apart from wt-format, no running process uses any of them as its working directory or runs an executable from them. No file in any linked worktree has changed in the last week, and their only ignored paths are node_modules/ and build/.",
       },
     },
     expected: {
@@ -4646,9 +4646,9 @@ export const evalCases: EvalCase[] = [
         "wt-format",
       ],
       requiredActionValues: [
-        { action: "git.removeWorktree", values: [["wt-lexer", "wt-docs", "wt-gone"]], every: true },
-        { action: "git.removeWorktree", values: ["wt-lexer"] },
-        { action: "git.removeWorktree", values: ["wt-docs"] },
+        { action: "git.removeWorktree", values: [["../wt-lexer", "wt-lexer", "../wt-docs", "wt-docs", "/tmp/wt-gone", "wt-gone"]], fields: ["path"], every: true },
+        { action: "git.removeWorktree", values: [["../wt-lexer", "wt-lexer"]], fields: ["path"] },
+        { action: "git.removeWorktree", values: [["../wt-docs", "wt-docs"]], fields: ["path"] },
       ],
       requiredSkills: ["git-workflow"],
       requiredActions: ["git.fetch", "git.removeWorktree", "git.createBranch"],

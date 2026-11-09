@@ -117,7 +117,7 @@ export function createEvalTools(
           .record(z.string(), z.unknown())
           .optional()
           .describe(
-            "Structured action arguments. For file.edit, give path; for migrations, use skills.migrate rather than hand-editing generated files.",
+            "Structured action arguments. For file.edit, give path; for git.removeWorktree, record one worktree per action and give its path, including each entry a prune drops; for migrations, use skills.migrate rather than hand-editing generated files.",
           ),
       }),
       execute: async ({ action, details, data }) => {
