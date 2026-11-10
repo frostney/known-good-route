@@ -75,6 +75,9 @@ const scenarios: Array<{ id: string; actions: RunLedger["actions"]; output: stri
   { id: "delivery-tier-mechanical-lane", actions: tierMerge, output: "Merged origin/main; PR #145 head f6f6f6f, every required check passed.", omit: "monitor.wait" },
   { id: "delivery-tier-bounded-lane-review-rerun", actions: boundedFix, output: "Draft PR #153 is at a7a7a7a; review of that head found no findings.", omit: "file.edit" },
   { id: "delivery-tier-trap-lane-stops", actions: tierMerge.filter(a => a.action !== "file.edit"), output: stoppedLane, omit: "git.push" },
+  { id: "delivery-park-pending-ci-arms-wait", actions: [action("validation.reuse"), { action: "monitor.wait", details: "Arm a tracked wait for PR #520's checks", data: { head: candidateHead } }], output: "PR #520 is parked: a tracked wait is armed for its build and test checks at 2b2b2b2; nothing is merged.", omit: "monitor.wait" },
+  { id: "delivery-park-hands-unwakeable-check-to-person", actions: [action("validation.reuse")], output: "PR #521 is ready except the benchmark gate: the maintainer runs the benchmark on the lab machine and approves in the PR. That is yours to do; nothing here can follow it.", omit: "validation.reuse" },
+  { id: "delivery-park-lane-interim-report-stays-pending", actions: [tierPacket("Capability tier: mechanical. Run /update-pr to merge origin/main; push; await required checks."), { action: "monitor.wait", details: "Await PR #522's required checks on the new head", data: { head: "f6".repeat(20) } }], output: "PR #522 is ready to merge at f6f6f6f; the required checks passed there. Nothing was merged.", omit: "monitor.wait" },
   { id: "delivery-tier-trap-coordinator-new-lane", actions: [tierPacket("Capability tier: mechanical. Run /update-pr to merge origin/main; push; await required checks."), openLane], output: "PR #161 is ready to merge at a7a7a7a; nothing was merged.", omit: "delegate" },
 ];
 for (const scenario of scenarios) {

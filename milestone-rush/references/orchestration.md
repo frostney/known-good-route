@@ -129,6 +129,6 @@ report the capability as unsupported.
 Apply the shared
 [long-command and lane rules](../../delivery-wait/SKILL.md#long-commands-and-delegated-lanes)
 to every worker packet, including who owns a pending command after its turn
-ends. When only waits remain, checkpoint and end the turn; use the stated
-bounded-check fallback only when the host cannot notify. Never substitute
+ends. When only waits remain, checkpoint and end the turn once each has a live
+wake; use the stated bounded-check fallback only when the host cannot notify. Never substitute
 repeated model inferences for waiting.
