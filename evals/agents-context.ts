@@ -45,7 +45,13 @@ export async function caseEnvironment(
   agentsFor: (files: Record<string, string>) => Promise<string>,
 ) {
   const files = environmentFiles(evalCase.fixture.environment);
-  return { files, agentsMd: await agentsFor(files), repoContext: evalCase.fixture.evidence };
+  const standingInstructions = evalCase.fixture.environment?.standingInstructions;
+  return {
+    files,
+    agentsMd: await agentsFor(files),
+    repoContext: evalCase.fixture.evidence,
+    ...(standingInstructions ? { standingInstructions } : {}),
+  };
 }
 
 // The AGENTS.md a consuming repository would carry for exactly these installed

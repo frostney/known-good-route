@@ -39,8 +39,10 @@ It infers the target from context and resumes at its current state. No issue/ide
 or PR/stack selector is required, and filing an issue is optional.
 
 The frontmatter of the project's `ORCHESTRATION.md` sets the endpoint and
-whether entry points continue into `/deliver`. These values are also the
-defaults when the file or a key is missing:
+whether entry points continue into `/deliver`. When the file or a key is
+missing, the default is the one stated in your standing global agent
+instructions for repositories that set none, and otherwise the values shown
+here:
 
 ```yaml
 ---
@@ -51,8 +53,8 @@ entry-points: deliver # or stop
 
 The file only sets the default: a request in the prompt decides that one run in
 either direction, so nothing is merged unless the project sets `merged` or
-`deployed` or the request asks for it. `deployed` means deployed
-and verified in the project's configured integration destination: production,
+`deployed`, your standing instructions default to it, or the request asks for
+it. `deployed` means deployed and verified in the project's configured integration destination: production,
 staging, a nightly build, or another established target. Missing integration
 configuration is an unresolved decision, not permission to invent
 infrastructure or claim deployment succeeded.
