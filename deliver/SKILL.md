@@ -150,6 +150,8 @@ deployment, park the work item: arm one wait for each awaited transition under
 [`delivery-wait`'s running rules](../delivery-wait/SKILL.md#running-a-wait),
 record resumable state, and end the turn. Resume from each returned result,
 and arm the next wait before ending another turn while the host supports it.
+A closing report that names a pending transition is a park: end the turn only
+when each has a live wake or is explicitly handed to the person.
 If it cannot notify or keep a wait armed, use the shared bounded-check fallback
 and report the exact time or event to resume at.
 
