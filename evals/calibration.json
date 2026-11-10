@@ -3584,6 +3584,36 @@
       "beforeSha256": null,
       "afterSha256": "8fd4d42a618b554b437e738d7a812101ef5fa80181ef763bcfd47ef164d7e9a6",
       "frozenCaseSha256": "8fd4d42a618b554b437e738d7a812101ef5fa80181ef763bcfd47ef164d7e9a6"
+    },
+    {
+      "caseId": "delivery-park-pending-ci-arms-wait",
+      "status": "new",
+      "rationale": [
+        "A closing report that names pending CI with nothing armed is a stall: with the PR's required checks still running on the exact head and a host that resumes the session when a background command exits, delivery arms a tracked wait for that head and reports the item parked, not merged or done. A turn that reports the pending checks without the wait, or merges, fails."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "2160616518b70d195281576e7f699db76a81dc3797e36a36de63c93940261f79",
+      "frozenCaseSha256": "2160616518b70d195281576e7f699db76a81dc3797e36a36de63c93940261f79"
+    },
+    {
+      "caseId": "delivery-park-hands-unwakeable-check-to-person",
+      "status": "new",
+      "rationale": [
+        "A requirement that nothing in this session can watch, here a benchmark the maintainer runs by hand on another machine, is handed to the person as theirs to do rather than promised as followed. The report must say whose step remains; the judge grades the hand-over and the absence of a follow promise, since no action can prove either."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "edfa89449b42f22ed8fdb0e69ac8eca21139885a6a7b23c998540a7f39f0c545",
+      "frozenCaseSha256": "edfa89449b42f22ed8fdb0e69ac8eca21139885a6a7b23c998540a7f39f0c545"
+    },
+    {
+      "caseId": "delivery-park-lane-interim-report-stays-pending",
+      "status": "new",
+      "rationale": [
+        "A lane's report that its checks are still running is pending, not its result: the host marks the lane's task complete and never notifies the coordinator of later work, so the coordinator arms its own tracked wait on the new head and reports ready only after the checks are observed passing. Reporting ready on the interim report fails."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "c2779d58651d46abf26cb19fec07ddfd7e32e1a8e7f748f83881161abc1f0840",
+      "frozenCaseSha256": "c2779d58651d46abf26cb19fec07ddfd7e32e1a8e7f748f83881161abc1f0840"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

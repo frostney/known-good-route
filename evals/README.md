@@ -127,6 +127,22 @@ and a delegation, but not a focused, validation or behavior run, because
 `/update-pr` may run a check before its push; a diagnosing run after the
 failure is graded manually from the rubric.
 
+For the park rule, select the three park cases:
+
+```bash
+bun run eval -- --model codex:gpt-6-astra --model claude:claude-fable-5-1 \
+  --case delivery-park-pending-ci-arms-wait \
+  --case delivery-park-hands-unwakeable-check-to-person \
+  --case delivery-park-lane-interim-report-stays-pending
+```
+
+They cover a turn that must arm a tracked wait for pending CI before it reports
+the item parked, a check no session can watch that is handed to the person
+without a promise to follow it, and a lane's interim "still running" report that
+the coordinator treats as pending by arming its own wait. The deterministic
+checks require the armed wait; whether the closing message names pending work
+with nothing behind it is judged from the rubric and the recorded actions.
+
 Unavailable authentication, unsupported models, and incomplete runs are errors;
 no fallback model is configured. Native host behavior is part of this evaluation.
 
