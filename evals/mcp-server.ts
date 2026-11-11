@@ -90,6 +90,7 @@ export async function serve(root: string, caseId: string, ledgerPath: string) {
           formatSkillCatalog(skills),
           await agentsFileFor(skills, files),
           files,
+          evalCase.fixture.environment?.standingInstructions,
         );
         const result = await runLocal({
           target: target.model,

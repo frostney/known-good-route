@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { agentsFileFor, caseEnvironment, environmentFiles } from "./agents-context.ts";
 import { evalCases } from "./cases.ts";
 import { validateCases, validateEnvironment } from "./grading.ts";
+import { judgeTask } from "./judge.ts";
 import { runLocal } from "./local-runtime.ts";
 import { portableAgentInstructions } from "./run.ts";
 import type { EvalCase } from "./types.ts";
@@ -31,6 +32,7 @@ test("a case without a valid environment is rejected before any run", () => {
     { orchestration: { endpoint: "merged", entryPoints: "always" } },
     { orchestration: null, files: { "../outside.md": "x" } },
     { orchestration: null, files: { "ORCHESTRATION.md": "x" } },
+    { orchestration: null, standingInstructions: "  " },
   ])
     expect(() => validateEnvironment({ ...base, fixture: { ...base.fixture, environment } } as EvalCase)).toThrow();
   expect(() => validateEnvironment({ ...base, fixture: { ...base.fixture, environment: { orchestration: null } } })).not.toThrow();
@@ -119,4 +121,31 @@ test("every delivery-chain entry skill has a default case that delivers to ready
     expect(c!.expected.rubric!.map((item) => item.id)).toEqual(expect.arrayContaining(["delivered-to-ready-to-merge", "stops-only-for-blockers"]));
     expect(c!.expected.forbiddenActions).toContain("forge.mergePr");
   }
+});
+
+test("a standing default in the person's global instructions reaches the run, the record and the judge", async () => {
+  const standing = "Deliver to merged unless the repository's ORCHESTRATION.md sets an endpoint.";
+  const declared = { ...base, prompt: "/deliver 1", fixture: { ...base.fixture, environment: { orchestration: null, standingInstructions: standing } } };
+  expect(() => validateEnvironment(declared)).not.toThrow();
+  expect(environmentFiles(declared.fixture.environment)).toEqual({});
+  expect(portableAgentInstructions("<catalog/>", "", {}, standing)).toContain(`<standing-instructions>\n${standing}\n</standing-instructions>`);
+  expect(portableAgentInstructions("<catalog/>", "", {})).not.toContain("standing-instructions");
+  expect((await caseEnvironment(declared, async () => "")).standingInstructions).toBe(standing);
+  expect("standingInstructions" in (await caseEnvironment(base, async () => ""))).toBeFalse();
+  expect(judgeTask(declared)).toContain(standing);
+  expect(judgeTask(base)).not.toContain("standing global agent instructions:");
+});
+
+test("the standing-default cases pair a merge under the person's default with a project endpoint that wins", () => {
+  const standing = evalCases.find((x) => x.id === "deliver-standing-merged-default-merges")!;
+  expect(standing.fixture.environment?.orchestration).toBeNull();
+  expect(standing.fixture.environment?.standingInstructions).toContain("merged");
+  expect(standing.prompt).toBe("/deliver 513");
+  expect(standing.expected.requiredActions).toContain("forge.mergePr");
+  expect(standing.expected.forbiddenActions ?? []).not.toContain("forge.mergePr");
+  const project = evalCases.find((x) => x.id === "deliver-project-endpoint-wins-over-standing-merged")!;
+  expect(project.fixture.environment?.orchestration).toEqual({ endpoint: "ready-to-merge", entryPoints: "deliver" });
+  expect(project.fixture.environment?.standingInstructions).toBe(standing.fixture.environment?.standingInstructions);
+  expect(project.prompt).toBe(standing.prompt);
+  expect(project.expected.forbiddenActions).toContain("forge.mergePr");
 });

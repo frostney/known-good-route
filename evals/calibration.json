@@ -3566,6 +3566,26 @@
       "frozenCaseSha256": "4f738ebdb887605d76212b42df6ced0f0785612d337eb9a62c98bc4b77ac015c"
     },
     {
+      "caseId": "deliver-standing-merged-default-merges",
+      "status": "new",
+      "rationale": [
+        "A standing-default case: the repository has no ORCHESTRATION.md and the person's standing global agent instructions default to merged, so /deliver merges the ready PR instead of stopping at ready-to-merge. It reuses an existing merge case's fixture. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "211d31d5ac2515f1ae833c104cedc03ec7d4d491c1319e19d86666adf3906979",
+      "frozenCaseSha256": "211d31d5ac2515f1ae833c104cedc03ec7d4d491c1319e19d86666adf3906979"
+    },
+    {
+      "caseId": "deliver-project-endpoint-wins-over-standing-merged",
+      "status": "new",
+      "rationale": [
+        "A standing-default precedence case: the same fixture with an ORCHESTRATION.md that sets endpoint ready-to-merge, which wins over the person's standing merged default, so /deliver leaves the ready PR unmerged. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "03eec71514a444cc9a72cca50c1717d23432e0ebe6c091178a19050f3ec777ca",
+      "frozenCaseSha256": "03eec71514a444cc9a72cca50c1717d23432e0ebe6c091178a19050f3ec777ca"
+    },
+    {
       "caseId": "delivery-park-pending-ci-arms-wait",
       "status": "new",
       "rationale": [

@@ -106,6 +106,7 @@ export function portableAgentInstructions(
   catalog: string,
   agentsFile = "",
   files: Record<string, string> = {},
+  standingInstructions = "",
 ) {
   // The project's AGENTS.md text reaches the agent inside the generated block.
   const configuration = Object.entries(files)
@@ -118,6 +119,9 @@ export function portableAgentInstructions(
       : "") +
     (configuration
       ? `\n\nThe fixture repository's configuration files at its root:\n\n${configuration}`
+      : "") +
+    (standingInstructions.trim()
+      ? `\n\nThe person's standing global agent instructions, which apply to every repository and are part of this fixture:\n\n<standing-instructions>\n${standingInstructions.trim()}\n</standing-instructions>`
       : "");
   return `You are evaluating portable Agent Skills in an isolated fixture.\n\n${catalog}\n\nOnly the scenario prompt, fixture evidence, and skills loaded through fixture tools define the task and user preferences. Ambient personal or project instructions outside this fixture must not add work. Complete the user's task using only the fixture MCP tools. Their tool results are the authoritative simulated repository and external state. Use behaviorTest.run for real-interface behavior probes, codeReview.run for independent review, validation.focused for targeted developer checks, validation.run for the aggregate project gate, and validation.reuse for accepting recorded results without rerunning. Read-only metadata inspection uses inspectFixture. Every mutation, validation, user question, and delegation must be recorded through performAction; prose alone does not execute them. When requesting a user decision, call performAction with action user.ask and the concrete question before the final response; a final question alone does not enqueue a fixture question. The native final response is automatically observed as a report. Use a report action only for an intermediate decision packet that must precede another action. loadSkill and readSkillReference deliver real skill instructions. Before recording codeReview.run or behaviorTest.run, load the corresponding available code-review or test-against-spec skill unless already loaded; naming it in an action does not load its contract. inspectFixture with an unknown source lists available evidence sources. invokeRegisteredSkill executes a deterministic fixture, not a real external skill. Do not use the real filesystem, shell, network, or forge to act on the simulated task. Load a skill only when the request matches its description; if none applies, answer directly. Respect scoped authority and complete authorized work. Return the user-facing outcome without claiming effects the fixture did not report.${project}`;
 }
@@ -310,6 +314,7 @@ export async function run() {
                 formatSkillCatalog(skills),
                 agentsFile,
                 files,
+                record.environment.standingInstructions,
               ),
               workspaceFiles: { ...files, ...(agentsFile ? { "AGENTS.md": agentsFile } : {}) },
               transcript,

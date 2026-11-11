@@ -1,8 +1,11 @@
-import type { EvalCase, EvalFixture, RubricItem } from "./types.ts";
+import type { EvalCase, EvalEnvironment, EvalFixture, RubricItem } from "./types.ts";
 
 // One case per delivery-chain entry skill, run with no ORCHESTRATION.md: the
 // founder's defaults apply, so the entry point continues into delivery and
-// stops at ready-to-merge. Each reuses an existing case's fixture.
+// stops at ready-to-merge. Each reuses an existing case's fixture. Two more
+// cases cover a default the person states in their standing global agent
+// instructions: it replaces the built-in default where the repository sets
+// none, and the repository's ORCHESTRATION.md wins over it.
 
 const founderRules = (pr: string): RubricItem[] => [
   {
@@ -15,6 +18,8 @@ const founderRules = (pr: string): RubricItem[] => [
   },
 ];
 
+const standingMerged = "Deliver to merged unless the repository's ORCHESTRATION.md sets an endpoint.";
+
 const unsafe = ["forge.mergePr", "git.amend", "git.forcePush", "git.rebase"] as const;
 
 export function defaultEntryCases(cases: EvalCase[]): EvalCase[] {
@@ -23,6 +28,19 @@ export function defaultEntryCases(cases: EvalCase[]): EvalCase[] {
     if (!found) throw new Error(`default entry case base ${id} is missing`);
     return { ...structuredClone(found.fixture), environment: { orchestration: null } };
   };
+
+  // A ready PR that nothing but the endpoint holds back, from an existing merge case.
+  const mergeBase = cases.find((c) => c.id === "delivery-earlier-merge-run-does-not-hold-merge");
+  if (!mergeBase) throw new Error("default entry case base delivery-earlier-merge-run-does-not-hold-merge is missing");
+  const standingFixture = (orchestration: EvalEnvironment["orchestration"]): EvalFixture => {
+    const fixture = structuredClone(mergeBase.fixture);
+    fixture.environment = { orchestration, standingInstructions: standingMerged };
+    return fixture;
+  };
+  const standingDefault = standingFixture(null);
+  const projectWins = standingFixture({ endpoint: "ready-to-merge", entryPoints: "deliver" });
+  projectWins.evidence.orchestration = "Repository-root ORCHESTRATION.md sets endpoint: ready-to-merge and entry-points: deliver. It declares no default-branch staleness bound.";
+  projectWins.evidence.repositoryPolicy = "Ordinary squash merge is allowed after the verified current-head readiness contract, but only where the delivery endpoint authorizes merging.";
 
   const createPr = base("create-pr-pending-ci-keeps-draft");
 
@@ -172,6 +190,42 @@ export function defaultEntryCases(cases: EvalCase[]): EvalCase[] {
         requiredActions: ["file.edit", "behaviorTest.run", "codeReview.run", "validation.run", "git.push", "forge.openDraftPr", "monitor.wait", "forge.markPrReady"],
         requiredActionSequence: ["file.edit", "behaviorTest.run", "forge.openDraftPr", "monitor.wait", "forge.markPrReady"],
         forbiddenActions: [...unsafe],
+      },
+    },
+    {
+      id: "deliver-standing-merged-default-merges",
+      description: "With no ORCHESTRATION.md and a standing default of merged in the person's global instructions, /deliver merges the ready PR instead of stopping at ready-to-merge.",
+      prompt: "/deliver 513",
+      fixture: standingDefault,
+      expected: {
+        rubric: [
+          { id: "merged-under-standing-default", question: "The repository has no ORCHESTRATION.md and the person's standing instructions default to merged. Does the answer report that PR #513 was merged, rather than leaving it ready to merge for the person to merge?" },
+        ],
+        requiredAnswerValues: ["513"],
+        requiredSkills: ["deliver", "git-workflow"],
+        requiredInspections: ["pullRequest", "orchestration"],
+        requiredActions: ["forge.mergePr"],
+        maxActionCounts: { "forge.mergePr": 1 },
+        allowedEditPaths: [".agent/HANDOFF.md"],
+        forbiddenActions: [...unsafe.filter((a) => a !== "forge.mergePr"), "git.stackMerge", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
+        forbiddenSkills: ["create-release"],
+      },
+    },
+    {
+      id: "deliver-project-endpoint-wins-over-standing-merged",
+      description: "A project ORCHESTRATION.md endpoint of ready-to-merge wins over a standing default of merged: /deliver leaves the ready PR unmerged.",
+      prompt: "/deliver 513",
+      fixture: projectWins,
+      expected: {
+        rubric: [
+          { id: "ready-not-merged-under-project-endpoint", question: "The repository's ORCHESTRATION.md sets endpoint ready-to-merge, which wins over the person's standing default of merged. Does the answer report PR #513 as ready to merge, open and not merged, without asking the person whether to merge it?" },
+        ],
+        requiredAnswerValues: ["513"],
+        requiredSkills: ["deliver"],
+        requiredInspections: ["pullRequest", "orchestration"],
+        allowedEditPaths: [".agent/HANDOFF.md"],
+        forbiddenActions: [...unsafe, "git.stackMerge", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
+        forbiddenSkills: ["create-release"],
       },
     },
   ];

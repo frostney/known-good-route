@@ -63,7 +63,7 @@ const fixtureRegion = [
   "",
   "Generated from the `metadata.agents-role` and `metadata.agents-text` of the skills installed in `.agents/skills`. Edit outside the `known-good-route:agents` markers only.",
   "",
-  "Delivery (defaults, no `ORCHESTRATION.md`): entry points that change, review or test code continue through `/deliver` to the `ready-to-merge` endpoint.",
+  "Delivery (defaults, no `ORCHESTRATION.md`): entry points that change, review or test code continue through `/deliver` to the `ready-to-merge` endpoint. A defaulted setting gives way to a default stated in the person's standing global agent instructions.",
   "",
   "- Always apply `tidy-notes`: Keep every note short and sourced.",
   "- Start with `/brew-tea`: Brew the team's pot.",
@@ -182,7 +182,7 @@ describe("AGENTS.md block", () => {
   test("states the delivery settings from ORCHESTRATION.md and goes stale when they change", async () => {
     const root = await makeProject();
     await installFixturePack(root);
-    const defaultLine = "Delivery (defaults, no `ORCHESTRATION.md`): entry points that change, review or test code continue through `/deliver` to the `ready-to-merge` endpoint.";
+    const defaultLine = "Delivery (defaults, no `ORCHESTRATION.md`): entry points that change, review or test code continue through `/deliver` to the `ready-to-merge` endpoint. A defaulted setting gives way to a default stated in the person's standing global agent instructions.";
     await writeFile(join(root, "ORCHESTRATION.md"), "---\nendpoint: deployed\n---\n\n# Policy\n");
     await writeAgentsBlock(root);
     const configured = await readFile(agentsFile(root), "utf8");
@@ -195,6 +195,8 @@ describe("AGENTS.md block", () => {
     expect(await readFile(agentsFile(root), "utf8")).toContain(
       "Delivery (`ORCHESTRATION.md`): entry points stop after their own step, and `/deliver` stops at the `merged` endpoint.",
     );
+    // Both keys are set, so no default is left for a standing instruction to replace.
+    expect(await readFile(agentsFile(root), "utf8")).not.toContain("standing global agent instructions");
 
     await writeFile(join(root, "ORCHESTRATION.md"), "---\nendpoint: production\n---\n");
     await expect(writeAgentsBlock(root)).rejects.toThrow('sets endpoint to "production"');

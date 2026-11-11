@@ -335,7 +335,10 @@ endpoint, or `stop` to end after the command itself), plus an optional body.
 It is `null` when the repository has no `ORCHESTRATION.md`. `files` adds other
 configuration that changes the outcome, such as the integration destination,
 or the project's own `AGENTS.md` text, which the generator keeps outside its
-skills block.
+skills block. `standingInstructions` gives the person's standing global agent
+instructions, such as a default delivery endpoint; they sit outside the
+repository, reach the candidate and its workers in the instructions, and the
+judge reads them with the repository settings.
 `validateCases` rejects a case without a valid environment.
 Most cases declare entry-points `stop` and test that the setting is honoured.
 Each delivery-chain entry skill (`/create-pr`, `/implement`, `/update-pr`,
@@ -343,7 +346,10 @@ Each delivery-chain entry skill (`/create-pr`, `/implement`, `/update-pr`,
 `<skill>-default-continues-to-ready-to-merge` case with no `ORCHESTRATION.md`,
 which expects the founder's default: continue into delivery to ready-to-merge
 and stop only for a secret, a paid action, an account action or a decision
-that belongs to the person.
+that belongs to the person. Two `/deliver` cases cover a standing default of
+`merged` in the person's global instructions: with no `ORCHESTRATION.md` it
+leads to a merge, and a project `ORCHESTRATION.md` with endpoint
+`ready-to-merge` wins over it.
 
 Before each run the runner writes the case's `ORCHESTRATION.md` and declared
 files into the eval workspace. It generates the AGENTS.md block with the

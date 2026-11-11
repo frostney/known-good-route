@@ -62,6 +62,10 @@ export interface EvalEnvironment {
   } | null;
   // Other repository files that change the expected outcome, by path.
   files?: Record<string, string>;
+  // The person's standing global agent instructions, which apply across
+  // repositories and sit outside the repository (for example a default
+  // delivery endpoint). Absent when the person states none.
+  standingInstructions?: string;
 }
 
 export interface EvalFixture {
@@ -264,6 +268,7 @@ export interface EvalRunRecord {
     files: Record<string, string>;
     agentsMd: string;
     repoContext: Record<string, string>;
+    standingInstructions?: string;
   };
   error?: string;
 }

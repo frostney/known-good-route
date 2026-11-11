@@ -573,6 +573,8 @@ export function validateEnvironment(evalCase: EvalCase): void {
       !(orchestrationEntryPoints as readonly string[]).includes(orchestration.entryPoints))
   )
     throw new Error(`${evalCase.id}: invalid orchestration endpoint or entry-points`);
+  if (environment.standingInstructions !== undefined && !environment.standingInstructions.trim())
+    throw new Error(`${evalCase.id}: standingInstructions must not be empty`);
   for (const path of Object.keys(environment.files ?? {}))
     if (!path.trim() || path.startsWith("/") || path.split("/").includes("..") || path === "ORCHESTRATION.md")
       throw new Error(`${evalCase.id}: invalid environment file ${path}`);

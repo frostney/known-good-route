@@ -90,8 +90,11 @@ export function judgeTask(evalCase: EvalCase): string {
   if (!environment) return evalCase.prompt;
   const settings = environment.orchestration
     ? `ORCHESTRATION.md sets endpoint ${environment.orchestration.endpoint} and entry-points ${environment.orchestration.entryPoints}.`
-    : "There is no ORCHESTRATION.md, so the defaults apply: endpoint ready-to-merge and entry-points deliver.";
-  return `${evalCase.prompt}\n\nRepository settings: ${settings}`;
+    : "There is no ORCHESTRATION.md, so the defaults apply: endpoint ready-to-merge and entry-points deliver, except where the person's standing instructions below state another default.";
+  const standing = environment.standingInstructions
+    ? `\n\nThe person's standing global agent instructions: ${environment.standingInstructions.trim()}`
+    : "";
+  return `${evalCase.prompt}\n\nRepository settings: ${settings}${standing}`;
 }
 
 export function judgeItems(evalCase: EvalCase): JudgeItem[] {
