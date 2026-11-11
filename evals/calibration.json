@@ -3582,8 +3582,8 @@
         "A standing-default precedence case: the same fixture with an ORCHESTRATION.md that sets endpoint ready-to-merge, which wins over the person's standing merged default, so /deliver leaves the ready PR unmerged. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "8fd4d42a618b554b437e738d7a812101ef5fa80181ef763bcfd47ef164d7e9a6",
-      "frozenCaseSha256": "8fd4d42a618b554b437e738d7a812101ef5fa80181ef763bcfd47ef164d7e9a6"
+      "afterSha256": "03eec71514a444cc9a72cca50c1717d23432e0ebe6c091178a19050f3ec777ca",
+      "frozenCaseSha256": "03eec71514a444cc9a72cca50c1717d23432e0ebe6c091178a19050f3ec777ca"
     },
     {
       "caseId": "delivery-park-pending-ci-arms-wait",

@@ -40,6 +40,7 @@ export function defaultEntryCases(cases: EvalCase[]): EvalCase[] {
   const standingDefault = standingFixture(null);
   const projectWins = standingFixture({ endpoint: "ready-to-merge", entryPoints: "deliver" });
   projectWins.evidence.orchestration = "Repository-root ORCHESTRATION.md sets endpoint: ready-to-merge and entry-points: deliver. It declares no default-branch staleness bound.";
+  projectWins.evidence.repositoryPolicy = "Ordinary squash merge is allowed after the verified current-head readiness contract, but only where the delivery endpoint authorizes merging.";
 
   const createPr = base("create-pr-pending-ci-keeps-draft");
 

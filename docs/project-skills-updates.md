@@ -75,8 +75,10 @@ text, or a multi-line value fails the run.
 
 One line above the skills states the project's delivery settings, read from the
 frontmatter of `ORCHESTRATION.md` beside `AGENTS.md` by
-`deliver/scripts/delivery-settings.mjs`, or the defaults when it is absent. An
-unknown setting fails the run, and a changed setting makes the block stale.
+`deliver/scripts/delivery-settings.mjs`, or the defaults when it is absent. When
+a setting is defaulted, the line adds that the default the person states in
+their standing global agent instructions takes precedence. An unknown setting
+fails the run, and a changed setting makes the block stale.
 
 The block sits between `<!-- known-good-route:agents:begin -->` and
 `<!-- known-good-route:agents:end -->`, each on its own line and at most once.
