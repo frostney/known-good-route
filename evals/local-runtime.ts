@@ -79,11 +79,12 @@ export async function codexProxyConfig(
     throw new Error(
       "Codex provider proxy does not pass provider keys from the environment.",
     );
+  // One whole-table override: Codex's -c key path does not read TOML quoting.
   return [
     "-c",
     `model_provider=${JSON.stringify(id)}`,
     "-c",
-    `model_providers.${tomlKey(id)}=${tomlValue(provider)}`,
+    `model_providers=${tomlValue({ [id]: provider })}`,
   ];
 }
 export function executable(cli: "codex" | "claude") {
@@ -121,7 +122,12 @@ export async function preflight(target: string) {
       } catch {
         throw new Error("Claude auth status unavailable.");
       }
-      if (code || !status.loggedIn || !env.ANTHROPIC_BASE_URL)
+      if (
+        code ||
+        !status.loggedIn ||
+        !env.ANTHROPIC_BASE_URL ||
+        !env.ANTHROPIC_AUTH_TOKEN
+      )
         throw new Error(
           "Claude provider proxy unavailable; set ANTHROPIC_BASE_URL and ANTHROPIC_AUTH_TOKEN.",
         );
@@ -456,7 +462,7 @@ export async function runLocal(options: {
     }),
   );
   // JSON strings/arrays are TOML-compatible here; no shell is involved.
-  const codexConfig = options.server === false ? "mcp_servers={}" : `mcp_servers.fixture={command=${JSON.stringify(process.execPath)},args=${JSON.stringify(serverArgs)},env={KGR_EVAL_TRANSCRIPT=${JSON.stringify(options.transcript)},KGR_CODEX_BIN=${JSON.stringify(executable("codex"))},KGR_CLAUDE_BIN=${JSON.stringify(executable("claude"))}${providerProxy() ? ',KGR_PROVIDER_PROXY="1"' : ""}},required=true,startup_timeout_sec=30,tool_timeout_sec=3600}`;
+  const codexConfig = options.server === false ? "mcp_servers={}" : `mcp_servers.fixture={command=${JSON.stringify(process.execPath)},args=${JSON.stringify(serverArgs)},env={KGR_EVAL_TRANSCRIPT=${JSON.stringify(options.transcript)},KGR_CODEX_BIN=${JSON.stringify(executable("codex"))},KGR_CLAUDE_BIN=${JSON.stringify(executable("claude"))}${providerProxy() ? ',KGR_PROVIDER_PROXY="1"' : ""}}${providerProxy() ? `,env_vars=${JSON.stringify([...proxyKeys])}` : ""},required=true,startup_timeout_sec=30,tool_timeout_sec=3600}`;
   const cmd = commandFor(
     cli,
     model,

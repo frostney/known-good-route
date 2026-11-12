@@ -187,8 +187,10 @@ describe("local authenticated evaluations", () => {
         "-c",
         'model_provider="proxy"',
         "-c",
-        'model_providers.proxy={name="Proxy",base_url="https://proxy.example.test/v1",wire_api="responses",requires_openai_auth=false,http_headers={X-Client="eval"}}',
+        'model_providers={proxy={name="Proxy",base_url="https://proxy.example.test/v1",wire_api="responses",requires_openai_auth=false,http_headers={X-Client="eval"}}}',
       ]);
+      await Bun.write(path, ['model_provider = "proxy.with dot"', '[model_providers."proxy.with dot"]', 'base_url = "https://proxy.example.test/v1"'].join("\n"));
+      expect((await codexProxyConfig(path))[3]).toBe('model_providers={"proxy.with dot"={base_url="https://proxy.example.test/v1"}}');
       await Bun.write(path, 'model_provider = "missing"\n');
       await expect(codexProxyConfig(path)).rejects.toThrow("base_url");
       await Bun.write(path, ['model_provider = "keyed"', "[model_providers.keyed]", 'base_url = "https://proxy.example.test/v1"', 'env_key = "PROXY_KEY"'].join("\n"));
