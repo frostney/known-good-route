@@ -61,8 +61,9 @@ Codex receives the `model_provider` its config selects, with only that provider'
 ignored. API keys, `CLAUDE_CODE_OAUTH_TOKEN`, cloud-provider switches and a
 Codex provider that takes its key from the environment are still refused.
 Preflight then requires the proxy settings instead of a saved login, and the
-recorded CLI version ends in `via provider proxy`, so results through a proxy
-are not mistaken for saved-login results. A proxy can rewrite requests, so
+recorded CLI version ends in `via provider proxy` and the result's
+`authentication` is `provider-proxy`, so results through a proxy are not
+mistaken for saved-login results. A proxy can rewrite requests, so
 compare a baseline and a candidate through the same route.
 
 For PR description and walkthrough decisions, run the five focused cases:
