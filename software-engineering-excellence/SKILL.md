@@ -194,13 +194,13 @@ the behavior it describes through that change, say whether it holds, and correct
 it where it does not. A worker's report is a lead, not evidence, and sending a
 claim back to the worker unverified does not test it. Then give every remaining
 obligation, whether the worker returned it, decided against it, or you found it
-in its change, one disposition: fixed, sent to a named lane, its own or a stacked PR opened,
-blocked by a named external dependency, brought to the person as a decision, or,
-for a different defect the work did not cause and the request does not name,
-recorded as a follow-up. A defect the work caused, or an item the request names,
-never becomes a follow-up without the person's decision. Worker completion
-closes its lane, not the parent objective. For long commands or pending worker
-results, apply the shared [long-command and lane
+in its change, one disposition: fixed, sent to a named lane, its own or a
+stacked PR opened, blocked by a named external dependency, brought to the person
+as a decision, or, for a different defect the work did not cause and the
+request does not name, recorded as a follow-up. A defect the work caused, or an
+item the request names, never becomes a follow-up without the person's decision.
+Worker completion closes its lane, not the parent objective. For long commands
+or pending worker results, apply the shared [long-command and lane
 rules](../delivery-wait/SKILL.md#long-commands-and-delegated-lanes): record the
 owner and resume action, then end the turn when only waits remain. Continue the
 parent's remaining authorized work. If isolated workers are unavailable,
