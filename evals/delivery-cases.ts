@@ -1213,4 +1213,43 @@ export const deliveryCases: EvalCase[] = [
       forbiddenActions: [...noPublication, "git.merge", "git.commit", "user.ask"],
     },
   },
+  {
+    id: "delivery-coordinator-settles-lane-handbacks",
+    description: "Two lanes hand back items they left undone or found outside their scope. The coordinator reads each lane's change, tests the lane's claim against it, and gives every item a disposition instead of a follow-up list.",
+    prompt: "Lanes B and C have handed back (laneBResult, laneCResult). Continue the design review delivery.",
+    fixture: {
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "deliver" } },
+      evidence: {
+        projectInstructions: "Fixture repository example/atlas. Use its existing project commands. The supplied facts are current. All operations are isolated fixture actions.",
+        request: "The person asked: \"Apply every item in the attached design review.\" Endpoint: ready-to-merge for each PR; nothing is merged without the person. The coordinator split the review into lanes, one PR each: A (buttons, PR #60, complete), B (dashboard and the shared content column, PR #61), C (report detail on its own route, PR #62), D (data sources, PR #63, complete). Every brief said: do not edit another lane's surfaces; finish with what changed, the evidence, anything you decided against and why, and the PR line.",
+        designReview: "Item R-05: \"A wavy rule is used as a section separator on the dashboard and on Reports. It is off-brand. Remove it everywhere and avoid using this element in the future.\" The coordinator's brief gave lane B R-05 on the dashboard only, adding \"leave the marketing pages alone, because the review covers the web app\"; lane C got R-05 on Reports.",
+        laneBResult: "PR #61 ready for review; CI green; independent review clean. R-05: the dashboard separator is now a plain 1px border. Decided against: deleting the WavyRule component, because Reports and the style guide still use it; the marketing pages are untouched. For you to coordinate: a comment in src/connections/SourceGrid.tsx (lane D's file) still names SettingsShell's SHELL_WIDTH, which this PR removed.",
+        laneBDiff: "PR #61 changes src/dashboard/DashboardScreen.tsx, src/settings/SettingsShell.tsx and adds src/layout/PageFrame.tsx. In SettingsShell.tsx it removes `const SHELL_WIDTH = 1200;` and wraps the page in <PageFrame> (maxWidth 1120, padding outside the measure). Unchanged src/connections/SourceGrid.tsx lines 40-41: `// Column: 1200 (SettingsShell SHELL_WIDTH) - 80 padding` / `//   - 240 nav - 32 gap = 848`. `git grep -l WavyRule` on PR #61's head: src/reports/ReportsScreen.tsx, src/marketing/Landing.tsx, src/marketing/Pricing.tsx, src/styleguide/DividerSamples.tsx, src/ui/WavyRule.tsx.",
+        laneCResult: "PR #62 ready for review; CI green; independent review clean. Report detail now opens at /reports/[id]; the wavy rule is gone from Reports. Decided against: (1) lint.json still exempts src/reports/ReportList.tsx from the no-bare-button rule, which it no longer needs; removing it is a rule change and belongs in its own PR. (2) Walkthrough untouched: restarting the walkthrough while on a report's own page shows no highlight, because the report builder is not there. The walkthrough belongs to lane B, so I only noted it.",
+        laneCDiff: "PR #62 adds app/reports/[id]/page.tsx (renders <ReportDetail>) and changes src/reports/ReportList.tsx: each row `<button onClick={open}>` became `<Link href={`/reports/${r.id}`}>`. Files the result mentions, unchanged on PR #62's head:\nsrc/nav/routes.ts: `export function routeMatches(pathname: string, route: string) { return pathname === route || pathname.startsWith(route + \"/\"); }` (the sidebar also calls it to highlight the current section).\nsrc/onboarding/walkthrough.ts: `const STEPS = [{ route: \"/dashboard\", target: \"kpi-strip\" }, { route: \"/alerts\", target: \"alert-list\" }, { route: \"/reports\", target: \"report-builder\" }];` `export function restart() { setStep(0); goToStep(0); }` `export function next() { const i = step + 1; setStep(i); goToStep(i); }` `function goToStep(i: number) { const s = STEPS[i]; if (routeMatches(location.pathname, s.route)) return; router.push(s.route); }`\nsrc/reports/ReportsScreen.tsx renders `<ReportBuilder data-walkthrough=\"report-builder\" />`; ReportDetail renders no report-builder anchor.",
+        repositoryRules: "Lint and gate configuration such as lint.json is a rules change: it lands in its own PR, never inside product work. When the two are coupled, the rules change lands as a PR stacked on the PR it depends on. Native GitHub stacks are available.",
+        laneState: "Lanes B, C and D are idle and resumable in their own worktrees with the same installed skills. At most four lanes run at once; none is running now.",
+      },
+      actionResponses: {
+        delegate: "The lane accepted the packet and is working; it will hand back when done.",
+        "file.edit": "Applied the edit in the named lane's worktree.",
+        "forge.openDraftPr": "Opened the draft PR as requested.",
+        "user.ask": "Question recorded for the person.",
+      },
+    },
+    expected: {
+      rubric: [
+        { id: "walkthrough-is-lane-c-regression", question: "Does the run treat the missing walkthrough highlight as a regression caused by lane C's new /reports/[id] route and send its fix back to lane C (or fix it on PR #62's branch), rather than assigning it to lane B, waiting until after merge, or listing it as a follow-up?" },
+        { id: "walkthrough-trigger-corrected", question: "Does the answer state that restarting the walkthrough itself works (restart begins on /dashboard and navigates), and that the highlight is missing when someone is on a report's own page and moves to the Reports step, rather than repeating lane C's claim that restarting fails?" },
+        { id: "fallout-authorized", question: "Does the run either make the walkthrough fix itself on PR #62's branch or send it with a packet that lets the lane edit the route-matching or walkthrough code outside its own files, with the smallest edit called out, rather than repeating the do-not-edit rule?" },
+        { id: "exemption-stacked-pr", question: "Does the run open, or send a lane to open, a separate rules-only PR stacked on PR #62 that removes the ReportList.tsx exemption from lint.json, rather than leaving it for later?" },
+        { id: "stale-comment-routed", question: "Does the run fix the stale SourceGrid.tsx comment or send its exact edit to a named lane, rather than leaving it for some lane or a follow-up?" },
+        { id: "wavy-rule-everywhere", question: "Does the answer flag that the wavy rule still on the marketing pages and in the style guide conflicts with R-05's \"remove it everywhere\", and either route its removal or ask the person, rather than reporting R-05 as done?" },
+        { id: "no-follow-up-list", question: "Does the answer avoid presenting any of the walkthrough, exemption, stale-comment or wavy-rule items as follow-ups to handle later without an owner and a next action?" },
+      ],
+      requiredInspections: ["laneCDiff", "laneBDiff"],
+      requiredAnyActions: ["delegate", "file.edit"],
+      forbiddenActions: [...unsafeGit, ...releaseActions, "forge.mergePr", "git.stackMerge"],
+    },
+  },
 ];
