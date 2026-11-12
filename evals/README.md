@@ -1,8 +1,9 @@
 # Skill behavioral evaluations
 
 Run the portable skill contracts through native Codex and Claude CLI sessions
-using their saved local subscription logins. No Vercel AI SDK, gateway, API key,
-or copied authentication token is needed. Live runs consume account usage.
+using their saved local subscription logins, or, by opt-in, a provider proxy you
+already run in front of your own subscription accounts. No Vercel AI SDK, API
+key, or copied authentication token is needed. Live runs consume account usage.
 
 For routine changes, start with the bounded [acceptance strategy](ACCEPTANCE.md).
 The larger suite below is supporting regression and diagnostic infrastructure;
@@ -42,6 +43,27 @@ Use `KGR_CODEX_BIN` or `KGR_CLAUDE_BIN` to select an explicit local CLI
 executable, for example a newer version in a temporary cache. Existing global
 installations and login files are not modified. `codex:gpt-6.1-sol` needs Codex
 CLI 0.159.3 or later; 0.157.1 rejects it for a ChatGPT login.
+
+### Through a provider proxy
+
+When a machine reaches your subscription accounts through a provider proxy
+instead of a saved login, set `KGR_PROVIDER_PROXY=1`:
+
+```bash
+KGR_PROVIDER_PROXY=1 bun run eval -- --model claude:claude-opus-5-5 --case <id>
+```
+
+By default the runner strips every provider override from the environment and
+ignores the user's Codex config, so each CLI must use its own saved login. With
+the opt-in, Claude keeps `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN`, and
+Codex receives the `model_provider` its config selects, with only that provider's
+`model_providers` table, as `-c` overrides; the rest of the user config stays
+ignored. API keys, `CLAUDE_CODE_OAUTH_TOKEN`, cloud-provider switches and a
+Codex provider that takes its key from the environment are still refused.
+Preflight then requires the proxy settings instead of a saved login, and the
+recorded CLI version ends in `via provider proxy`, so results through a proxy
+are not mistaken for saved-login results. A proxy can rewrite requests, so
+compare a baseline and a candidate through the same route.
 
 For PR description and walkthrough decisions, run the five focused cases:
 
