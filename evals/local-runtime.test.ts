@@ -3,6 +3,7 @@ import { chmod, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
+  codexProxyConfig,
   commandFor,
   cancelLocalRuns,
   loginEnvironment,
@@ -138,6 +139,64 @@ describe("local authenticated evaluations", () => {
     } finally {
       if (saved === undefined) delete process.env.ANTHROPIC_API_KEY;
       else process.env.ANTHROPIC_API_KEY = saved;
+    }
+  });
+  test("the provider proxy opt-in keeps only the proxy's endpoint and token", () => {
+    const keys = ["KGR_PROVIDER_PROXY", "ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "OPENAI_API_KEY"];
+    const saved = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+    try {
+      process.env.ANTHROPIC_BASE_URL = "https://proxy.example.test";
+      process.env.ANTHROPIC_AUTH_TOKEN = "proxy-sentinel";
+      process.env.ANTHROPIC_API_KEY = "api-sentinel";
+      process.env.CLAUDE_CODE_OAUTH_TOKEN = "oauth-sentinel";
+      process.env.OPENAI_API_KEY = "openai-sentinel";
+      delete process.env.KGR_PROVIDER_PROXY;
+      expect(loginEnvironment().ANTHROPIC_BASE_URL).toBeUndefined();
+      expect(loginEnvironment().ANTHROPIC_AUTH_TOKEN).toBeUndefined();
+      process.env.KGR_PROVIDER_PROXY = "1";
+      const env = loginEnvironment();
+      expect(env.ANTHROPIC_BASE_URL).toBe("https://proxy.example.test");
+      expect(env.ANTHROPIC_AUTH_TOKEN).toBe("proxy-sentinel");
+      expect(env.ANTHROPIC_API_KEY).toBeUndefined();
+      expect(env.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined();
+      expect(env.OPENAI_API_KEY).toBeUndefined();
+    } finally {
+      for (const key of keys)
+        if (saved[key] === undefined) delete process.env[key];
+        else process.env[key] = saved[key];
+    }
+  });
+  test("the Codex provider proxy passes back only the selected provider's table", async () => {
+    const work = await mkdtemp(join(tmpdir(), "kgr-proxy-config-"));
+    const path = join(work, "config.toml");
+    try {
+      await Bun.write(path, [
+        'model_provider = "proxy"',
+        'model = "ignored"',
+        "[mcp_servers.personal]",
+        'command = "ignored"',
+        "[model_providers.proxy]",
+        'name = "Proxy"',
+        'base_url = "https://proxy.example.test/v1"',
+        'wire_api = "responses"',
+        "requires_openai_auth = false",
+        "[model_providers.proxy.http_headers]",
+        '"X-Client" = "eval"',
+      ].join("\n"));
+      expect(await codexProxyConfig(path)).toEqual([
+        "-c",
+        'model_provider="proxy"',
+        "-c",
+        'model_providers={proxy={name="Proxy",base_url="https://proxy.example.test/v1",wire_api="responses",requires_openai_auth=false,http_headers={X-Client="eval"}}}',
+      ]);
+      await Bun.write(path, ['model_provider = "proxy.with dot"', '[model_providers."proxy.with dot"]', 'base_url = "https://proxy.example.test/v1"'].join("\n"));
+      expect((await codexProxyConfig(path))[3]).toBe('model_providers={"proxy.with dot"={base_url="https://proxy.example.test/v1"}}');
+      await Bun.write(path, 'model_provider = "missing"\n');
+      await expect(codexProxyConfig(path)).rejects.toThrow("base_url");
+      await Bun.write(path, ['model_provider = "keyed"', "[model_providers.keyed]", 'base_url = "https://proxy.example.test/v1"', 'env_key = "PROXY_KEY"'].join("\n"));
+      await expect(codexProxyConfig(path)).rejects.toThrow("environment");
+    } finally {
+      await rm(work, { recursive: true, force: true });
     }
   });
   test("cancellation terminates a native process and retains its incomplete transcript", async () => {

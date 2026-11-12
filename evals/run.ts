@@ -30,6 +30,7 @@ import {
   defaultModels,
   parseModel,
   preflight,
+  providerProxy,
   runLocal,
 } from "./local-runtime.ts";
 import { renderSummary } from "./reporting.ts";
@@ -259,7 +260,7 @@ export async function run() {
           efforts: options.efforts,
           repeat: options.repeat,
           judges: judgePlan,
-          authentication: "native-cli-login",
+          authentication: providerProxy() ? "provider-proxy" : "native-cli-login",
           snapshot,
           records,
         },

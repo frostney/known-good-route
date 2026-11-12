@@ -1,5 +1,5 @@
 import { mkdtemp, rm, open, readFile, type FileHandle } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { EvalCase, RunLedger } from "./types.ts";
 
@@ -18,11 +18,21 @@ export function parseModel(value: string) {
   if (!match) throw new Error(`Use codex:<model> or claude:<model>: ${value}`);
   return { cli: match[1] as "codex" | "claude", model: match[2]! };
 }
+// KGR_PROVIDER_PROXY=1 opts in to a provider proxy the person already runs in
+// front of their own subscription accounts: Claude keeps ANTHROPIC_BASE_URL and
+// ANTHROPIC_AUTH_TOKEN, and Codex uses the model provider its config selects.
+export function providerProxy() {
+  return process.env.KGR_PROVIDER_PROXY === "1";
+}
+const proxyKeys = new Set(["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN"]);
 export function loginEnvironment() {
   const env = { ...process.env };
-  // Native CLIs resolve their own saved login. Never extract or copy tokens.
+  const keep = providerProxy() ? proxyKeys : new Set<string>();
+  // Native CLIs resolve their own saved login, or the person's opted-in
+  // provider proxy. Never extract or copy tokens.
   for (const key of Object.keys(env)) {
     if (
+      !keep.has(key) &&
       /^(OPENAI_API_KEY|OPENAI_BASE_URL|ANTHROPIC_API_KEY|ANTHROPIC_AUTH_TOKEN|ANTHROPIC_BASE_URL|AI_GATEWAY_API_KEY|CLAUDE_CODE_OAUTH_TOKEN|CLAUDE_CODE_USE_BEDROCK|CLAUDE_CODE_USE_VERTEX|CLAUDE_CODE_USE_FOUNDRY|CLAUDE_CODE_SIMPLE|CLAUDE_CODE_SAFE_MODE|CLAUDECODE)$/.test(
         key,
       )
@@ -30,6 +40,52 @@ export function loginEnvironment() {
       delete env[key];
   }
   return env;
+}
+function tomlValue(value: unknown): string {
+  if (typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
+  if (Array.isArray(value)) return `[${value.map(tomlValue).join(",")}]`;
+  if (value && typeof value === "object")
+    return `{${Object.entries(value)
+      .map(([key, item]) => `${tomlKey(key)}=${tomlValue(item)}`)
+      .join(",")}}`;
+  throw new Error(`Unsupported Codex provider setting: ${String(value)}`);
+}
+function tomlKey(key: string) {
+  return /^[A-Za-z0-9_-]+$/.test(key) ? key : JSON.stringify(key);
+}
+// The runner ignores the user's Codex config, so under the opt-in it passes
+// only the selected model provider's table back as explicit overrides.
+export async function codexProxyConfig(
+  path = join(
+    process.env.CODEX_HOME || join(homedir(), ".codex"),
+    "config.toml",
+  ),
+) {
+  let config: any;
+  try {
+    config = Bun.TOML.parse(await readFile(path, "utf8"));
+  } catch {
+    throw new Error(`Codex provider proxy needs a readable ${path}.`);
+  }
+  const id = config.model_provider;
+  const provider = config.model_providers?.[id];
+  if (typeof id !== "string" || typeof provider?.base_url !== "string")
+    throw new Error(
+      "Codex provider proxy needs model_provider and its model_providers table with base_url in the Codex config.",
+    );
+  if (provider.env_key || provider.env_http_headers)
+    throw new Error(
+      "Codex provider proxy does not pass provider keys from the environment.",
+    );
+  // One whole-table override: Codex's -c key path does not read TOML quoting.
+  return [
+    "-c",
+    `model_provider=${JSON.stringify(id)}`,
+    "-c",
+    `model_providers=${tomlValue({ [id]: provider })}`,
+  ];
 }
 export function executable(cli: "codex" | "claude") {
   return (
@@ -57,6 +113,27 @@ export async function preflight(target: string) {
     new Response(proc.stderr).text(),
     proc.exited,
   ]);
+  if (providerProxy()) {
+    if (cli === "codex") await codexProxyConfig();
+    else {
+      let status: any;
+      try {
+        status = JSON.parse(stdout);
+      } catch {
+        throw new Error("Claude auth status unavailable.");
+      }
+      if (
+        code ||
+        !status.loggedIn ||
+        !env.ANTHROPIC_BASE_URL ||
+        !env.ANTHROPIC_AUTH_TOKEN
+      )
+        throw new Error(
+          "Claude provider proxy unavailable; set ANTHROPIC_BASE_URL and ANTHROPIC_AUTH_TOKEN.",
+        );
+    }
+    return `${version} via provider proxy`;
+  }
   if (cli === "codex") {
     if (code || !/Logged in using ChatGPT/i.test(stdout + stderr))
       throw new Error(
@@ -378,13 +455,14 @@ export async function runLocal(options: {
             KGR_EVAL_TRANSCRIPT: options.transcript,
             KGR_CODEX_BIN: executable("codex"),
             KGR_CLAUDE_BIN: executable("claude"),
+            ...(providerProxy() ? { KGR_PROVIDER_PROXY: "1" } : {}),
           },
         },
       },
     }),
   );
   // JSON strings/arrays are TOML-compatible here; no shell is involved.
-  const codexConfig = options.server === false ? "mcp_servers={}" : `mcp_servers.fixture={command=${JSON.stringify(process.execPath)},args=${JSON.stringify(serverArgs)},env={KGR_EVAL_TRANSCRIPT=${JSON.stringify(options.transcript)},KGR_CODEX_BIN=${JSON.stringify(executable("codex"))},KGR_CLAUDE_BIN=${JSON.stringify(executable("claude"))}},required=true,startup_timeout_sec=30,tool_timeout_sec=3600}`;
+  const codexConfig = options.server === false ? "mcp_servers={}" : `mcp_servers.fixture={command=${JSON.stringify(process.execPath)},args=${JSON.stringify(serverArgs)},env={KGR_EVAL_TRANSCRIPT=${JSON.stringify(options.transcript)},KGR_CODEX_BIN=${JSON.stringify(executable("codex"))},KGR_CLAUDE_BIN=${JSON.stringify(executable("claude"))}${providerProxy() ? ',KGR_PROVIDER_PROXY="1"' : ""}}${providerProxy() ? `,env_vars=${JSON.stringify([...proxyKeys, "CODEX_HOME"])}` : ""},required=true,startup_timeout_sec=30,tool_timeout_sec=3600}`;
   const cmd = commandFor(
     cli,
     model,
@@ -393,6 +471,8 @@ export async function runLocal(options: {
     cli === "codex" ? codexConfig : configPath,
     options.instructions,
   );
+  if (cli === "codex" && providerProxy())
+    cmd.splice(cmd.length - 1, 0, ...(await codexProxyConfig()));
   if (options.responseSchema) {
     if (cli === "codex") {
       const schemaPath = join(work, "response-schema.json");
