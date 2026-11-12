@@ -3614,6 +3614,16 @@
       "beforeSha256": null,
       "afterSha256": "c2779d58651d46abf26cb19fec07ddfd7e32e1a8e7f748f83881161abc1f0840",
       "frozenCaseSha256": "c2779d58651d46abf26cb19fec07ddfd7e32e1a8e7f748f83881161abc1f0840"
+    },
+    {
+      "caseId": "delivery-coordinator-settles-lane-handbacks",
+      "status": "new",
+      "rationale": [
+        "Two lanes hand back items they left undone or found outside their scope, under 'decided against' and 'for you to coordinate'. The coordinator reads each lane's change, tests the lane's claim against the code (restarting works; moving to the Reports step from a report's own page fails), sends the regression back to the lane whose change caused it with permission to edit outside its files, opens or routes a stacked rules-only PR, routes the stale comment with its exact edit, and flags the request item narrowed below 'everywhere'. Passing these items on as a follow-up list fails."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "5cd6a9313810ea3e71acea1d43a59c7dfb23d0d2e404d1256fdbb73e380c4a7a",
+      "frozenCaseSha256": "5cd6a9313810ea3e71acea1d43a59c7dfb23d0d2e404d1256fdbb73e380c4a7a"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",
