@@ -462,7 +462,7 @@ export async function runLocal(options: {
     }),
   );
   // JSON strings/arrays are TOML-compatible here; no shell is involved.
-  const codexConfig = options.server === false ? "mcp_servers={}" : `mcp_servers.fixture={command=${JSON.stringify(process.execPath)},args=${JSON.stringify(serverArgs)},env={KGR_EVAL_TRANSCRIPT=${JSON.stringify(options.transcript)},KGR_CODEX_BIN=${JSON.stringify(executable("codex"))},KGR_CLAUDE_BIN=${JSON.stringify(executable("claude"))}${providerProxy() ? ',KGR_PROVIDER_PROXY="1"' : ""}}${providerProxy() ? `,env_vars=${JSON.stringify([...proxyKeys])}` : ""},required=true,startup_timeout_sec=30,tool_timeout_sec=3600}`;
+  const codexConfig = options.server === false ? "mcp_servers={}" : `mcp_servers.fixture={command=${JSON.stringify(process.execPath)},args=${JSON.stringify(serverArgs)},env={KGR_EVAL_TRANSCRIPT=${JSON.stringify(options.transcript)},KGR_CODEX_BIN=${JSON.stringify(executable("codex"))},KGR_CLAUDE_BIN=${JSON.stringify(executable("claude"))}${providerProxy() ? ',KGR_PROVIDER_PROXY="1"' : ""}}${providerProxy() ? `,env_vars=${JSON.stringify([...proxyKeys, "CODEX_HOME"])}` : ""},required=true,startup_timeout_sec=30,tool_timeout_sec=3600}`;
   const cmd = commandFor(
     cli,
     model,
