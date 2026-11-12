@@ -189,10 +189,12 @@ the delegation rule in [deliver](../deliver/SKILL.md).
 
 While workers run, continue the coordinator's work that does not depend on their
 results. When a worker hands back, before you integrate or report its result,
-read its change or evidence and test its main claim against it; a worker's
-report is a lead, not evidence. Then give every remaining obligation, whether
-the worker returned it, decided against it, or you found it in its change, one
-disposition: fixed, sent to a named lane, its own or a stacked PR opened,
+read its change or evidence and test its main claim against it yourself: trace
+the behavior it describes through that change, say whether it holds, and correct
+it where it does not. A worker's report is a lead, not evidence, and sending a
+claim back to the worker unverified does not test it. Then give every remaining
+obligation, whether the worker returned it, decided against it, or you found it
+in its change, one disposition: fixed, sent to a named lane, its own or a stacked PR opened,
 blocked by a named external dependency, brought to the person as a decision, or,
 for a different defect the work did not cause and the request does not name,
 recorded as a follow-up. A defect the work caused, or an item the request names,
