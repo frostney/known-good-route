@@ -324,6 +324,7 @@ not a required full-matrix run or a claim that every scenario currently passes:
 | Existing work item, branch or PR | Infers the target, preserves settled scope and resumes without replaying completed stages. |
 | Missing or stale PR review/behavior evidence | Runs the required missing checks and fixes verified gaps before readiness; reuses valid evidence. |
 | CI or review exposes an in-scope defect | Repairs it, revalidates affected behavior and updates the same PR instead of stopping at diagnosis. |
+| Work finds a defect it did not cause | Files its own issue and delivers its fix as a separate work item, in the same pass or a lane started for it; reports it without filing only when the fix needs the person's decision or the work may not write to that repository. Never lists it as a follow-up. |
 | Change breaks a rule in a repository guide | Lists the guides that govern the change, checks every applicable rule across the whole diff and reports or fixes every instance, not only the first one seen. |
 | Requested visual or interaction fidelity | Compares the actual result with requirements and references; does not treat a test count as acceptance. |
 | Delegated lane | Runs on the capability tier its packet records; at work above that tier it stops and returns its finding, and the coordinator starts a new lane at the needed tier. |
