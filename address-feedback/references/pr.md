@@ -101,7 +101,8 @@ it is no gate and its adapter posts no trigger.
    evidence. A valid finding about a defect this PR did not cause is out of
    scope here and is still
    [filed and fixed](../../software-engineering-excellence/SKILL.md#defects-the-work-did-not-cause)
-   as its own work item; its reply names that issue. Reply inline to every automation
+   as its own work item; its reply names that issue, or the decision or
+   missing authority that keeps it unfiled. Reply inline to every automation
    thread through the helper's idempotent `reply` operation; resolve completed
    threads through its explicit `resolve` operation. Handle a finding without
    a thread as that finding policy directs; without one, include its
