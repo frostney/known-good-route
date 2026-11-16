@@ -8,7 +8,7 @@ description: >-
 license: Unlicense OR MIT
 metadata:
   agents-role: ambient
-  agents-text: Base each material claim about current project state or a completed action on a file, command result or page read this session, or on what the person said, and keep what was observed apart from what was inferred; keep the agreed scope, re-run checks that return nothing, and finish verified work; when a worker hands back, read its change or evidence before accepting its report and give each item it left an owner and a next action, or record an unrelated defect as a follow-up; stop only for a secret, a paid or account action, or the person's decision.
+  agents-text: Base each material claim about current project state or a completed action on a file, command result or page read this session, or on what the person said, and keep what was observed apart from what was inferred; keep the agreed scope, re-run checks that return nothing, and finish verified work; when a worker hands back, read its change or evidence before accepting its report and give each item it left an owner and a next action; file a defect you find that the work neither caused nor addresses and deliver its fix, and report it without filing only when the fix needs the person's decision or the work may not write to its repository; stop only for a secret, a paid or account action, or the person's decision.
 ---
 
 # Software engineering excellence
@@ -124,10 +124,9 @@ Keep independent review judgment. Never weaken coverage or hide a failure to
 obtain a pass. Diagnose an observed anomaly that affects acceptance. Fix every
 instance of the defect the change addresses in this change or a stacked layer;
 never defer in-scope work to an issue. A defect the change itself causes is in
-scope wherever it shows up, including in a file another lane owns. Record a
-different defect, even one nearby, as a follow-up in the handoff, or in the
-harness's task mechanism where one exists, without asking; open an external
-issue only when the work's authority or repository policy covers it.
+scope wherever it shows up, including in a file another lane owns. A different
+defect, even one nearby, is
+[filed and fixed as its own work item](#defects-the-work-did-not-cause).
 
 Write regression tests for observable behavior or consequential invariants,
 with expectations derived from independent requirements, never from the
@@ -151,6 +150,27 @@ for GitHub transitions. Report it as unverified only when a re-run is
 impossible, and state why. Keep implementation, local validation, external
 validation and publication status distinct. Read a gate result before performing the dependent
 action. Capture shell exit status before another command can overwrite it.
+
+### Defects the work did not cause
+
+When you find a different defect, one the work neither caused nor addresses,
+file it and fix it without asking. File its own issue through `/create-issue`
+in the repository that owns the defect, or reuse the open issue that already
+tracks it, and deliver its fix through `/deliver` as a separate work item, in
+this pass or in a lane started for it. Lack of time, scope or a free lane does not change this. The fix stays
+outside this change's completion bar unless the defect blocks the requested
+result.
+
+Report the defect to the person without filing it only when its fix needs their
+[decision](#blockers-and-decisions), or when the work may not write to the
+repository that owns it, such as assessment-only work or a repository outside
+its authority; name that decision or the missing authority. Never settle such a
+defect as a follow-up, and never offer to file an issue without its fix.
+
+A defect is something wrong now, such as failing behavior, a broken check, or a
+comment, document or rule that contradicts the code. An improvement to
+something that works is not a defect: it stays outside the completion bar and
+this rule does not file it.
 
 ## Performance and maintainability
 
@@ -195,10 +215,11 @@ it where it does not. A worker's report is a lead, not evidence, and sending a
 claim back to the worker unverified does not test it. Then give every remaining
 obligation, whether the worker returned it, decided against it, or you found it
 in its change, one disposition: fixed, sent to a named lane, its own or a
-stacked PR opened, blocked by a named external dependency, brought to the person
-as a decision, or, for a different defect the work did not cause and the
-request does not name, recorded as a follow-up. A defect the work caused, or an
-item the request names, never becomes a follow-up without the person's decision.
+stacked PR opened, blocked by a named external dependency, or brought to the
+person as a decision. A different defect, one the work neither caused nor
+addresses, is settled as
+[Defects the work did not cause](#defects-the-work-did-not-cause) says. No item
+is settled as a follow-up.
 Worker completion closes its lane, not the parent objective. For long commands
 or pending worker results, apply the shared [long-command and lane
 rules](../delivery-wait/SKILL.md#long-commands-and-delegated-lanes): record the
