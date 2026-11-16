@@ -98,8 +98,8 @@ owns that operation and resumes testing afterward.
 
 Finish when every verified requirement gap is resolved, the binding-guide
 ledger covers the final diff with no broken rule left, and applicable gates
-pass; unrelated improvements do not extend the task. A defect found that the
-change did not cause does not extend it either: it is
+pass; unrelated improvements do not extend the task. A different defect found,
+one the change neither caused nor addresses, does not extend it either: it is
 [filed and fixed](../software-engineering-excellence/SKILL.md#defects-the-work-did-not-cause)
 as its own work item. Return the implemented
 result, observed requirement evidence, the ledger and any route that replaced

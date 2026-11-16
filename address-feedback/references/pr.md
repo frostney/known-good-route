@@ -98,8 +98,8 @@ it is no gate and its adapter posts no trigger.
    finding only when both axes pass and, where such a policy exists, it
    selects the finding; otherwise classify it as invalid, obsolete, duplicate,
    out of scope, not selected by policy, or a material decision, with
-   evidence. A valid finding about a defect this PR did not cause is out of
-   scope here and is still
+   evidence. A valid finding about a different defect, one this PR neither
+   caused nor addresses, is out of scope here and is still
    [filed and fixed](../../software-engineering-excellence/SKILL.md#defects-the-work-did-not-cause)
    as its own work item; its reply names that issue, or the decision or
    missing authority that keeps it unfiled. Reply inline to every automation

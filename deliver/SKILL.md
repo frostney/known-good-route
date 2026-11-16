@@ -191,6 +191,6 @@ local check passing from its actual result on the tested content. Treat a
 failure as flaky or transient only after its failing log shows it is
 intermittent. Blaming something other than the change, or leaving the failure
 out of the required repair, needs its own evidence; a flaky failure the change
-introduced is in scope. A failure the change did not cause is
+introduced is in scope. A failure the change neither caused nor addresses is
 [filed and fixed](../software-engineering-excellence/SKILL.md#defects-the-work-did-not-cause)
 as its own work item.

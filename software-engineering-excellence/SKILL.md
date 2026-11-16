@@ -8,7 +8,7 @@ description: >-
 license: Unlicense OR MIT
 metadata:
   agents-role: ambient
-  agents-text: Base each material claim about current project state or a completed action on a file, command result or page read this session, or on what the person said, and keep what was observed apart from what was inferred; keep the agreed scope, re-run checks that return nothing, and finish verified work; when a worker hands back, read its change or evidence before accepting its report and give each item it left an owner and a next action; file a defect you find that the work did not cause and deliver its fix, and report it without filing only when the fix needs the person's decision or the work may not write to its repository; stop only for a secret, a paid or account action, or the person's decision.
+  agents-text: Base each material claim about current project state or a completed action on a file, command result or page read this session, or on what the person said, and keep what was observed apart from what was inferred; keep the agreed scope, re-run checks that return nothing, and finish verified work; when a worker hands back, read its change or evidence before accepting its report and give each item it left an owner and a next action; file a defect you find that the work neither caused nor addresses and deliver its fix, and report it without filing only when the fix needs the person's decision or the work may not write to its repository; stop only for a secret, a paid or account action, or the person's decision.
 ---
 
 # Software engineering excellence
@@ -153,11 +153,11 @@ action. Capture shell exit status before another command can overwrite it.
 
 ### Defects the work did not cause
 
-When you find a defect the work did not cause, file it and fix it without
-asking. File its own issue through `/create-issue` in the repository that owns
-the defect, or reuse the open issue that already tracks it, and deliver its fix
-through `/deliver` as a separate work item, in this pass or in a lane started
-for it. Lack of time, scope or a free lane does not change this. The fix stays
+When you find a different defect, one the work neither caused nor addresses,
+file it and fix it without asking. File its own issue through `/create-issue`
+in the repository that owns the defect, or reuse the open issue that already
+tracks it, and deliver its fix through `/deliver` as a separate work item, in
+this pass or in a lane started for it. Lack of time, scope or a free lane does not change this. The fix stays
 outside this change's completion bar unless the defect blocks the requested
 result.
 
@@ -216,7 +216,8 @@ claim back to the worker unverified does not test it. Then give every remaining
 obligation, whether the worker returned it, decided against it, or you found it
 in its change, one disposition: fixed, sent to a named lane, its own or a
 stacked PR opened, blocked by a named external dependency, or brought to the
-person as a decision. A different defect the work did not cause is settled as
+person as a decision. A different defect, one the work neither caused nor
+addresses, is settled as
 [Defects the work did not cause](#defects-the-work-did-not-cause) says. No item
 is settled as a follow-up.
 Worker completion closes its lane, not the parent objective. For long commands
