@@ -216,11 +216,9 @@ claim back to the worker unverified does not test it. Then give every remaining
 obligation, whether the worker returned it, decided against it, or you found it
 in its change, one disposition: fixed, sent to a named lane, its own or a
 stacked PR opened, blocked by a named external dependency, or brought to the
-person as a decision. A different defect the work did not cause is
-[filed and its fix delivered](#defects-the-work-did-not-cause), and reaches the
-person instead only when its fix needs their decision or the work may not write
-to its repository. No item is settled as a follow-up, and no issue is offered
-without its fix.
+person as a decision. A different defect the work did not cause is settled as
+[Defects the work did not cause](#defects-the-work-did-not-cause) says. No item
+is settled as a follow-up.
 Worker completion closes its lane, not the parent objective. For long commands
 or pending worker results, apply the shared [long-command and lane
 rules](../delivery-wait/SKILL.md#long-commands-and-delegated-lanes): record the

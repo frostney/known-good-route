@@ -3629,11 +3629,11 @@
       "caseId": "delivery-coordinator-files-and-fixes-found-defect",
       "status": "new",
       "rationale": [
-        "A lane hands back a defect it found but did not cause, an overdue badge that contradicts the product docs, and suggests a follow-up. Nothing needs the person's decision. The coordinator reads the lane's change to confirm the defect predates it, files its own issue, and fixes it or sends it to a named lane as a separate work item while PR #74 stays ready to merge. Listing it as a follow-up, leaving it in the handoff or asking whether to file it fails."
+        "A lane hands back a defect it found but did not cause, an overdue badge that contradicts the product docs, and suggests a follow-up. Nothing needs the person's decision. The coordinator reads the lane's change to confirm the defect predates it, files its own issue, itself or through a lane packet that files it first, and fixes it or sends it to a named lane as a separate work item while PR #74 stays ready to merge. Listing it as a follow-up, leaving it in the handoff or asking whether to file it fails."
       ],
       "beforeSha256": null,
-      "afterSha256": "cbd7d9ee14d5a689633155c500a5e539f84056f8c8f71e3f279a8c7cd2a67a3e",
-      "frozenCaseSha256": "cbd7d9ee14d5a689633155c500a5e539f84056f8c8f71e3f279a8c7cd2a67a3e"
+      "afterSha256": "f3133d5f706e8ba66f9c566c591b8e311cbc42d8a3edb0730b621f618eb96ee8",
+      "frozenCaseSha256": "f3133d5f706e8ba66f9c566c591b8e311cbc42d8a3edb0730b621f618eb96ee8"
     },
     {
       "caseId": "delivery-coordinator-reports-defect-needing-decision",
@@ -3642,8 +3642,8 @@
         "A lane hands back a defect it found but did not cause, a cleanup job that deletes draft invoices after 30 days while the docs promise 90, whose fix is a data-retention decision nothing in the repository settles. The coordinator brings that decision to the person with both resolutions and does not file an issue, edit either file or start a lane for it, while PR #81 stays ready to merge. Filing it, fixing it or listing it as a follow-up without asking fails."
       ],
       "beforeSha256": null,
-      "afterSha256": "45dadf3e34b918481ec3ba72e9f941f57dd49b17c54b87420e49bebc5f70cc64",
-      "frozenCaseSha256": "45dadf3e34b918481ec3ba72e9f941f57dd49b17c54b87420e49bebc5f70cc64"
+      "afterSha256": "e615d549e19a168e31a87306843b70b02d28a5b7ef657dd3407827013c035c9f",
+      "frozenCaseSha256": "e615d549e19a168e31a87306843b70b02d28a5b7ef657dd3407827013c035c9f"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

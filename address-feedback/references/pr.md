@@ -98,9 +98,10 @@ it is no gate and its adapter posts no trigger.
    finding only when both axes pass and, where such a policy exists, it
    selects the finding; otherwise classify it as invalid, obsolete, duplicate,
    out of scope, not selected by policy, or a material decision, with
-   evidence. A finding that is out of scope only because this PR did not cause
-   its valid defect is still [filed and fixed](../../software-engineering-excellence/SKILL.md#defects-the-work-did-not-cause) as its own
-   work item, and its reply names that issue. Reply inline to every automation
+   evidence. A valid finding about a defect this PR did not cause is out of
+   scope here and is still
+   [filed and fixed](../../software-engineering-excellence/SKILL.md#defects-the-work-did-not-cause)
+   as its own work item; its reply names that issue. Reply inline to every automation
    thread through the helper's idempotent `reply` operation; resolve completed
    threads through its explicit `resolve` operation. Handle a finding without
    a thread as that finding policy directs; without one, include its
@@ -157,7 +158,9 @@ it is no gate and its adapter posts no trigger.
 10. Stop without merging for a material product decision, unrelated failure,
    unsafe or divergent PR, unavailable terminal external dependency, or
    unresolved required finding. Report the exact blocker. An unrelated
-   failure is also [filed and fixed](../../software-engineering-excellence/SKILL.md#defects-the-work-did-not-cause) as its own work item.
+   failure is also
+   [filed and fixed](../../software-engineering-excellence/SKILL.md#defects-the-work-did-not-cause)
+   as its own work item.
 11. In `automatic-merge` mode, squash-merge through `git-workflow` only when the
     ordinary PR is `ready` under the exact final-head contract and
     `git-workflow`'s
