@@ -122,7 +122,7 @@ function deliveryLine(settings) {
   const endpoint = `the \`${settings.endpoint}\` endpoint`;
   const line = settings["entry-points"] === "stop"
     ? `Delivery (${source}): entry points stop after their own step, and \`/deliver\` stops at ${endpoint}.`
-    : `Delivery (${source}): entry points that change, review or test code continue through \`/deliver\` to ${endpoint}.`;
+    : `Delivery (${source}): entry points that develop, review, test or publish a change continue through \`/deliver\` to ${endpoint}.`;
   // A defaulted setting gives way to a default the person states in their own
   // standing instructions, which this repository's file cannot know.
   return settings.defaulted.length > 0
