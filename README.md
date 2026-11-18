@@ -57,7 +57,9 @@ either direction, so nothing is merged unless the project sets `merged` or
 it. `deployed` means deployed and verified in the project's configured integration destination: production,
 staging, a nightly build, or another established target. Missing integration
 configuration is an unresolved decision, not permission to invent
-infrastructure or claim deployment succeeded.
+infrastructure or claim deployment succeeded. `merged` ends at the merge only
+where a merge ships nothing: in a project that deploys its default branch when
+a merge lands, it follows that deployment and verifies the change there too.
 
 ```mermaid
 flowchart TD

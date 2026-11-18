@@ -33,6 +33,15 @@ production, staging, nightly or another established target. Read project
 instructions, delivery documentation and actual workflows to identify it; do not
 assume production or choose among ambiguous destinations.
 
+`merged` ends at the merge only where a merge ships nothing. Where the project
+deploys its default branch when a merge lands, the merge starts that
+deployment, so `merged` includes it: the work is finished when the merged
+revision is delivered there and the change works there. Read the same sources
+to learn whether a merge deploys. The two endpoints differ in what they
+authorize, not in what they verify: `merged` follows a deployment the merge
+itself starts, and `deployed` also authorizes running an integration path that
+needs its own step.
+
 A delivery request authorizes the in-scope development, validation, publication,
 feedback handling and Git operations needed for its endpoint, including merge
 and the configured integration path for `deployed`. Preserve explicit limits,
@@ -109,6 +118,13 @@ workflow invoked returns to its caller.
   the authorized ordinary PR or complete native stack as soon as it is ready.
   Verify the resulting integrated revision. A partial prefix below a required
   fix layer is not done.
+- A merge that deploys is not finished at the merge. For `merged` in a project
+  that deploys its default branch when a merge lands, await that deployment
+  for the merged revision and verify it as the next item requires for
+  `deployed`. A deployment that a later merge superseded or held is still
+  pending: await the one that carries the merged revision. Do not start an
+  integration path the merge does not start, such as a manual promotion or a
+  deploy command: report it as the next transition.
 - For `deployed`, run the existing integration path or await its run for the
   merged revision through `delivery-wait`. Only after that wait reports the
   merged revision deployed, verify its destination, delivered revision or
