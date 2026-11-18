@@ -283,15 +283,12 @@ export const deliveryCases: EvalCase[] = [
       actionResponses: {
         "validation.reuse": `Accepted the recorded matching local review, browser and project-gate evidence for ${candidate}; no rerun occurred.`,
         "forge.mergePr": `PR #523 squash-merged as ${integrated}. The integrated tree contains ${candidate}'s complete change. The merge started a production deployment.`,
-        "monitor.wait": [
-          `Production serves ${before}. No newer revision has passed its promotion gate yet; the same passive wait remains available.`,
-          `The promotion gate passed and production at https://app.example.test serves ${integrated}. Its provenance contains the integrated PR #523 change.`,
-        ],
-        "behaviorTest.run": `Actual production browser smoke at https://app.example.test, served revision ${integrated}: selecting April and switching chart/table both ways retains April. The required behavior passed in production.`,
+        "monitor.wait": `PR #523's required checks are green on ${candidate}. Production serves ${before}; no newer revision is deployed.`,
+        "behaviorTest.run": `Production at https://app.example.test serves ${before}, which does not contain the change: April is lost when switching chart/table.`,
       },
+      // The wait and the probe answer from the state the run has reached, so a readiness wait before the merge cannot stand in for the deployment wait.
       transitions: [
-        { after: "forge.mergePr", evidence: { pullRequest: `PR #523 merged as ${integrated}; production deployment running.`, deploymentState: `Production serves ${before}; the ${integrated} deployment is queued.` } },
-        { after: "monitor.wait", occurrence: 2, evidence: { deploymentState: `Production serves ${integrated} at https://app.example.test. Provenance includes the complete merged change; behavior smoke has not yet run.` } },
+        { after: "forge.mergePr", evidence: { pullRequest: `PR #523 merged as ${integrated}; production deployment running.`, deploymentState: `The merge started the production deployment of ${integrated}. The foreground monitor reports its current state.` }, actionResponses: { "monitor.wait": `The promotion gate passed and production at https://app.example.test serves ${integrated}. Its provenance contains the integrated PR #523 change.`, "behaviorTest.run": `Actual production browser smoke at https://app.example.test, served revision ${integrated}: selecting April and switching chart/table both ways retains April. The required behavior passed in production.` } },
       ],
     },
     expected: {
@@ -305,7 +302,6 @@ export const deliveryCases: EvalCase[] = [
       requiredSkills: ["deliver", "test-against-spec"],
       requiredInspections: ["workItem", "completionEvidence", "integrationConfiguration", "deploymentState"],
       requiredActions: ["validation.reuse"],
-      // A readiness wait before the merge is allowed and takes the first response, so one wait after the merge is the minimum.
       requiredActionSequence: ["forge.mergePr", "monitor.wait", "behaviorTest.run"],
       maxActionCounts: { "forge.mergePr": 1 },
       forbiddenActions: [...unsafeGit, ...releaseActions, "file.edit", "git.commit", "forge.openDraftPr", "codeReview.run", "validation.run", "user.ask"],

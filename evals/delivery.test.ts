@@ -62,7 +62,7 @@ const scenarios: Array<{ id: string; actions: RunLedger["actions"]; output: stri
   { id: "delivery-create-pr-missing-gates-repair", actions: [review, edit("src/import.ts"), review, behavior, gate, action("git.commit"), action("git.push"), action("forge.openDraftPr"), action("monitor.wait"), action("forge.markPrReady")], output: "PR #502 is ready after the MissingFile correction and current gates.", omit: "validation.run" },
   { id: "delivery-existing-pr-ci-recovery", actions: [action("validation.reuse"), action("monitor.wait"), edit("src/theme-fixture.ts"), review, behavior, gate, action("git.commit"), action("git.push"), action("forge.updatePrMetadata"), action("monitor.wait"), { action: "forge.markPrReady", details: "Mark existing PR #503 ready", data: { head: "2b".repeat(20) } }], output: "Existing PR #503 is merge-ready at 2b2b2b2 after repairing the encoded pathname failure.", omit: "codeReview.run" },
   { id: "delivery-default-integration-current-revision", actions: [action("validation.reuse"), action("forge.mergePr"), action("monitor.wait"), action("monitor.wait"), deployedProbe(integratedRevision)], output: "Nightly serves 3c3c3c3 and its April chart/table acceptance passed.", omit: "behaviorTest.run" },
-  { id: "delivery-merged-follows-merge-started-deployment", actions: [action("validation.reuse"), action("forge.mergePr"), action("monitor.wait"), action("monitor.wait"), productionProbe], output: "PR #523 is merged as 3c3c3c3, production serves that revision and its April chart/table acceptance passed there.", omit: "behaviorTest.run" },
+  { id: "delivery-merged-follows-merge-started-deployment", actions: [action("validation.reuse"), action("monitor.wait"), action("forge.mergePr"), action("monitor.wait"), productionProbe], output: "PR #523 is merged as 3c3c3c3, production serves that revision and its April chart/table acceptance passed there.", omit: "behaviorTest.run" },
   { id: "delivery-missing-integration-decision", actions: [action("forge.openDraftPr"), action("monitor.wait"), action("forge.markPrReady"), action("forge.mergePr", "Squash-merge PR #505"), action("user.ask", "Which integration destination, hosting provider and billing account should be used?")], output: "PR #505 is merged. Integration remains unresolved pending the destination and provider decision.", omit: "user.ask" },
   { id: "delivery-milestone-release-boundary", actions: [releaseTag, action("monitor.wait"), action("telemetry.append"), action("forge.closeMilestone")], output: "Release 4.2.0 is published and verified; the milestone is closed.", omit: "monitor.wait" },
   { id: "delivery-delegated-publication-uses-create-pr", actions: [{ action: "delegate", details: "Publish issue #131 to ready-to-merge", data: { skills: ["create-pr", "address-feedback"], endpoint: "ready-to-merge" } }], output: "PR #140 for issue #131 is ready to merge; nothing was merged.", omit: "delegate" },
@@ -94,6 +94,17 @@ for (const scenario of scenarios) {
     expect(gradeRun(c, await replay(c, []), "I can continue with this delivery.").passed).toBeFalse();
   });
 }
+
+test("a merge that deploys is not delivered by a readiness wait or a probe without the deployment wait", async () => {
+  const s = scenarios.find(s => s.id === "delivery-merged-follows-merge-started-deployment")!;
+  const c = deliveryCases.find(c => c.id === s.id)!;
+  const merge = action("forge.mergePr"), wait = action("monitor.wait"), reuse = action("validation.reuse");
+  // The wait came before the merge only, so nothing awaited the deployment.
+  expect(gradeRun(c, await replay(c, [reuse, wait, merge, productionProbe]), s.output).passed).toBeFalse();
+  // Stopping at the merge.
+  expect(gradeRun(c, await replay(c, [reuse, merge]), "PR #523 is merged as 3c3c3c3.").passed).toBeFalse();
+  expect(gradeRun(c, await replay(c, [reuse, merge, wait, productionProbe]), s.output).checks.filter(c => !c.passed)).toEqual([]);
+});
 
 test("repair publication requires successful returned gates after the last product edit", async () => {
   const original = deliveryCases.find(c => c.id === "delivery-existing-pr-ci-recovery")!;

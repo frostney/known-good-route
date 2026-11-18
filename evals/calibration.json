@@ -2667,8 +2667,8 @@
         "A run delivered several pull requests to `merged` in a project whose production tracks the default branch, reported the merges as the finish and left production serving an older revision for hours. With `merged` and a merge that starts a deployment, delivery awaits the deployment of the merged revision and verifies the change there before reporting it done; a turn that stops at the merge, or reports production as an unrequested later step, fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
       ],
       "beforeSha256": null,
-      "afterSha256": "5d24f0ddc4d94f282adf24fa33de1b615882cbcee792ab919a3aeca40323d3d0",
-      "frozenCaseSha256": "5d24f0ddc4d94f282adf24fa33de1b615882cbcee792ab919a3aeca40323d3d0"
+      "afterSha256": "207890ec00a86e587388019db713941ce084cc585b6ecd0a06b73c97a79aac05",
+      "frozenCaseSha256": "207890ec00a86e587388019db713941ce084cc585b6ecd0a06b73c97a79aac05"
     },
     {
       "caseId": "delivery-missing-integration-decision",
