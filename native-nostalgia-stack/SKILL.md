@@ -46,6 +46,20 @@ The project chooses the implementation but provides one root entry point:
 Document the entry point, targets, and flags in `docs/build-system.md`; read it
 before changing them.
 
+## Development loop
+
+- Prefer [hotfpc](https://github.com/frostney/hotfpc) for the edit-and-run loop of
+  a program that keeps running, such as a game, server, or TUI:
+  `hotfpc [fpc options] program.pas` builds and starts it, then swaps each saved
+  edit to a unit into the running program, or starts it over when the edit needs
+  that. Install it with `brew install frostney/tap/hotfpc` or from its releases.
+- Keep the code you edit during the loop in units: the main program's block is
+  already running and keeps its old code.
+- Pass the project's own fpc options. The build entry point stays the source of
+  clean, test, and release builds; hotfpc does not replace it.
+- hotfpc builds into `.hot/` next to the program's source; ignore `.hot/` along
+  with `build/`.
+
 ## Formatter and health contracts
 
 One formatter/linter command rewrites Pascal by default and has a non-mutating
