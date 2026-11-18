@@ -102,6 +102,17 @@ through `--state`.
 
 ## Invocation
 
+The first argument is the operation, `wait` or `inspect`, and the kind follows
+it. A kind alone, such as `delivery_wait.py checks-terminal`, is rejected. The
+path is relative to this skill directory, and the helper runs the same with or
+without `python3 -I`:
+
+```sh
+python3 scripts/delivery_wait.py wait checks-terminal --repo <owner/repo> \
+  --pr <number> --head <sha> --all-workflows \
+  --deadline <ISO 8601> --json
+```
+
 `wait <kind> --repo <owner/repo> --deadline <ISO 8601> [--interval <seconds>]
 [--state <path>] [--json]` runs a wait; `inspect <kind>` takes the
 same identity flags without `--deadline`, `--interval`, or `--state`. Each kind

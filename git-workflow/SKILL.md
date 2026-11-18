@@ -188,7 +188,7 @@ and skipped runs carry no result.
   active request authorizes merging, deliver the repair as its own work item
   through `/deliver` and land it first. Otherwise report the failing job, its
   cause and the repair it needs. Once the repair has landed, await its run
-  with `delivery-wait`'s `workflow-terminal` wait, and merge nothing that
+  with `delivery-wait`'s `wait workflow-terminal` operation, and merge nothing that
   would supersede or cancel it. Independent local investigation can continue;
   nothing else starts development or merges.
 
@@ -232,8 +232,8 @@ higher-authority instructions counts as already exceeded; report it. A
 required workflow with no run that succeeded or failed is past the bound.
 
 Past the bound, merging pauses until a completed run brings the gap back
-within it. Await the run that does, with `delivery-wait`'s `workflow-terminal`
-wait: the sampler in flight when the gap after its commit is within the
+within it. Await the run that does, with `delivery-wait`'s
+`wait workflow-terminal` operation: the sampler in flight when the gap after its commit is within the
 bound, otherwise the tip's own run, which nothing cancels while merging
 pauses. Dispatch a sampler on the tip only when the tip has no run queued or
 in progress. Every delivery waits on that same run. When it completes, its

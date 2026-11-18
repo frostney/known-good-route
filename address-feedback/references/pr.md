@@ -168,7 +168,7 @@ it is no gate and its adapter posts no trigger.
     [default-branch health](../../git-workflow/SKILL.md#default-branch-health)
     gate passes. When the gate holds the merge for a run, a red branch's
     repair run or the run past a declared staleness bound, await that run
-    with `delivery-wait`'s `workflow-terminal` wait, then recheck. If the
+    with `delivery-wait`'s `wait workflow-terminal` operation, then recheck. If the
     gate still holds or the host cannot wait, return `ready` and unmerged
     with the default branch's state as the blocker. After the merge, sync the local
     default branch,
