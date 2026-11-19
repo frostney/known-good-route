@@ -95,6 +95,7 @@ workflow invoked returns to its caller.
   and inspecting the result, code review, specification testing and in-scope
   repair. Pass the agreed outcome and fidelity criteria, not just a mechanism.
 - Use `/create-pr` for first publication and `/update-pr` for an existing PR.
+  A repair PR is a first publication too, so it goes through `/create-pr`.
   Keep the same work item and reuse its open PR through repairs. Reconcile
   uncertain writes before retrying; do not create a replacement PR merely
   because a call failed. If integration verification finds a required gap after
@@ -162,7 +163,8 @@ Apply `git-workflow`'s
 before development starts and again before each merge, including its
 coverage sampler and any staleness bound repository-root `ORCHESTRATION.md`
 declares. A default-branch repair it calls for is a separate work item that
-comes before this one.
+comes before this one and takes the same route, `/create-pr` for its pull
+request included.
 
 Integration delivery and release publication are separate outcomes. Never
 invoke `/create-release` from this single-item loop or use a milestone release
