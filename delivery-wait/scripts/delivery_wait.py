@@ -332,6 +332,7 @@ def workflow_census(gh: Gh, repo: str, number: int, head: str, checks: bool, res
         observation["runs"].append({
             "id": run["id"],
             "name": run.get("name"),
+            "workflowId": run.get("workflow_id"),
             "event": run.get("event"),
             "attempt": run.get("run_attempt"),
             "status": run.get("status"),
@@ -348,12 +349,36 @@ def workflow_census(gh: Gh, repo: str, number: int, head: str, checks: bool, res
                 for job in jobs
             ],
         })
+    mark_superseded_runs(observation["runs"])
     return observation
+
+
+def mark_superseded_runs(runs: list[dict[str, Any]]) -> None:
+    """Flag every run that a newer run of the same workflow and event replaced.
+
+    A workflow that cancels its run when a second event arrives for the same
+    head, or that is triggered again by hand, leaves the older run on the head.
+    Only the newest run from one source decides, as for a named check. A run
+    whose workflow is unknown is its own source.
+    """
+    newest: dict[tuple[Any, Any], int] = {}
+    for run in runs:
+        if run.get("workflowId") is not None:
+            source = (run["workflowId"], run.get("event"))
+            newest[source] = max(newest.get(source, run["id"]), run["id"])
+    for run in runs:
+        source = (run.get("workflowId"), run.get("event"))
+        if run.get("workflowId") is not None and newest[source] != run["id"]:
+            run["superseded"] = True
+
+
+def deciding_runs(observation: dict[str, Any]) -> list[dict[str, Any]]:
+    return [run for run in observation.get("runs", []) if not run.get("superseded")]
 
 
 def workflow_failures(observation: dict[str, Any]) -> list[str]:
     failures = []
-    for run in observation.get("runs", []):
+    for run in deciding_runs(observation):
         conclusion = run.get("conclusion")
         if run.get("status") == "completed" and conclusion and conclusion not in PASSING_WORKFLOW_CONCLUSIONS:
             failures.append(f"{run.get('name')}: {conclusion}")
@@ -398,7 +423,7 @@ class WorkflowCensusGate:
         if failures:
             self.previous = None
             return "changed", "a workflow run, job or check reached a non-success terminal result: " + "; ".join(failures)
-        runs = observation.get("runs", [])
+        runs = deciding_runs(observation)
         jobs = [job for run in runs for job in run.get("jobs", [])]
         pending_runs = [run for run in runs if run.get("status") != "completed" or not run.get("conclusion")]
         pending_jobs = [

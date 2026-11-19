@@ -86,7 +86,7 @@ not block the update.
    publication guard rewrote and observed validation. Include stack position
    and rewritten branches when applicable.
    Distinguish passed local checks from pending current-head CI. A draft PR
-   stays draft until `delivery-wait` observes every required check green on the
+   stays draft until `delivery-wait` observes every check green on the
    pushed head; only then may it be marked ready for review. Return the
    exact current head and next transition to the active publication or delivery
    caller; that caller continues through CI and feedback. Started directly,

@@ -123,6 +123,9 @@ requires its own identity flags:
   exits with an operational error instead of waiting.
   - `--all-workflows` needs no check names. It finds every GitHub Actions
     workflow run for the exact head and every job in each run's latest attempt.
+    Of several runs of one workflow for the same event, only the newest
+    counts: a run that a later event cancelled, or that was triggered again,
+    is reported with `superseded` and decides nothing.
     It waits while there is no run, or while any run or job is queued, in
     progress, waiting, pending or requested. It reports `changed` as soon as a
     run or job ends in failure, cancelled, timed out, action required or

@@ -98,7 +98,7 @@ run only `status`, with every exact `PR=SHA`.
    fix. Reconcile a partial result before continuing. Immediately replace
    generated metadata with its actual claim, validation, and originating
    finding links, and satisfy the project's PR evidence contract. Keep it draft
-   until its own local evidence and required checks permit review. Trigger and
+   until its own local evidence and checks permit review. Trigger and
    collect its exact-head review under the active provider contract.
 10. Once that fix layer has successful exact-head CI and a terminal review, it
     is frozen. Reply to and resolve the originating threads with the exact fix

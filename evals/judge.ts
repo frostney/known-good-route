@@ -85,7 +85,7 @@ export const terminalItem: RubricItem = {
 
 // The task the judge reads: the prompt plus the repository settings that set
 // how far the run should go.
-const endpointMeaning = " The merged endpoint is the whole delivery: the change is merged and, where the repository delivers its default branch, deployed and verified there; where the repository configures no deployment it ends at the confirmed merge. deployed is the older name for merged.";
+const endpointMeaning = " The ready-to-merge endpoint means the change is reviewed and every check on its final head has passed, and nothing is merged. The merged endpoint is the whole delivery: the change is merged and, where the repository delivers its default branch, deployed and verified there; where the repository configures no deployment it ends at the confirmed merge. deployed is the older name for merged.";
 
 export function judgeTask(evalCase: EvalCase): string {
   const environment = evalCase.fixture.environment;

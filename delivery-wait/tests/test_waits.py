@@ -175,12 +175,15 @@ def workflow_run(
     conclusion: str | None = "success",
     head: str = "head-1",
     name: str = "PR",
+    workflow_id: int | None = None,
+    event: str = "pull_request",
 ) -> dict:
     return {
         "run": {
             "id": run_id,
             "name": name,
-            "event": "pull_request",
+            **({"workflow_id": workflow_id} if workflow_id is not None else {}),
+            "event": event,
             "run_attempt": 1,
             "head_sha": head,
             "status": status,
@@ -1112,6 +1115,54 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(output["state"], "satisfied")
         self.assertEqual(output["metrics"]["observations"], 2)
         self.assertEqual(len(output["observation"]["runs"]), 2)
+
+    def test_all_workflows_counts_only_the_newest_run_of_a_workflow_and_event(self) -> None:
+        # A second event for the same head cancelled run 101; run 102 replaced it.
+        for conclusion in ("cancelled", "failure"):
+            with self.subTest(conclusion=conclusion):
+                self.reset_census()
+                self.write_scenario(census=[census(
+                    workflow_run(101, [workflow_job(1000, "build", conclusion=conclusion)], conclusion=conclusion, workflow_id=9),
+                    workflow_run(102, [workflow_job(1001, "build", run_id=102)], workflow_id=9),
+                )])
+                result, output = self.census_wait()
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(output["state"], "satisfied")
+                self.assertIn("1 workflow runs", output["reason"])
+                superseded = [run["id"] for run in output["observation"]["runs"] if run.get("superseded")]
+                self.assertEqual(superseded, [101])
+
+    def test_all_workflows_newest_run_decides_even_when_an_older_one_passed(self) -> None:
+        self.write_scenario(census=[census(
+            workflow_run(101, [workflow_job(1000, "build")], workflow_id=9),
+            workflow_run(102, [workflow_job(1001, "build", conclusion="failure", run_id=102)], conclusion="failure", workflow_id=9),
+        )])
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "changed")
+        self.assertIn("failure", output["reason"])
+
+    def test_all_workflows_keeps_runs_of_other_events_and_workflows(self) -> None:
+        # The same workflow on another event, and another workflow, are their own sources.
+        for other in (
+            workflow_run(102, [workflow_job(1001, "build", conclusion="failure", run_id=102)], conclusion="failure", workflow_id=9, event="push"),
+            workflow_run(102, [workflow_job(1001, "lint", conclusion="failure", run_id=102)], conclusion="failure", workflow_id=10, name="Lint"),
+        ):
+            with self.subTest(event=other["run"]["event"], workflow=other["run"]["workflow_id"]):
+                self.reset_census()
+                self.write_scenario(census=[census(
+                    workflow_run(103, [workflow_job(1002, "build", run_id=103)], workflow_id=9),
+                    other,
+                )])
+                _, output = self.census_wait()
+                self.assertEqual(output["state"], "changed")
+
+    def test_all_workflows_waits_for_the_newest_run_while_it_is_in_progress(self) -> None:
+        self.write_scenario(census=[census(
+            workflow_run(101, [workflow_job(1000, "build", conclusion="cancelled")], conclusion="cancelled", workflow_id=9),
+            workflow_run(102, [workflow_job(1001, "build", "in_progress", None, run_id=102)], status="in_progress", conclusion=None, workflow_id=9),
+        )])
+        _, output = self.census_wait(deadline=self.short_deadline())
+        self.assertNotIn(output["state"], ("satisfied", "changed"))
 
     def test_all_workflows_inspect_cannot_confirm_stability(self) -> None:
         self.write_scenario(census=[census(workflow_run(101, matrix_jobs(2)))])

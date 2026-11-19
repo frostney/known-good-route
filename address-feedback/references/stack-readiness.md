@@ -6,14 +6,14 @@ independently merge-ready.
 
 ## Member states
 
-- `reviewed`: Required CI and every intentionally active review provider reached
+- `reviewed`: CI and every intentionally active review provider reached
   a terminal result for the member's exact head, and every returned finding
   surface was inspected and classified.
 - `covered`: The member is reviewed and every finding is moot at the integrated
   top, satisfied by an exact descendant commit, fixed by an exact commit in a
   required top fix layer, or declined with accepted evidence. Every originating
   inline thread has a maintainer-workflow reply and is resolved.
-- `pending`: Required CI, review, provider availability, thread handling,
+- `pending`: CI, review, provider availability, thread handling,
   validation, or live-membership evidence is incomplete.
 - `blocked`: A material decision, unsafe mutation, unresolved human judgment,
   invalid stack, unavailable required provider action, failed validation, or
@@ -25,7 +25,7 @@ a partial merge.
 
 ## Frozen members and invalidation
 
-A member becomes frozen after its exact-head required CI and review are terminal
+A member becomes frozen after its exact-head CI and review are terminal
 and every finding surface is classified. This workflow never pushes to a frozen
 member, and the protected push helper refuses to move a member's head once it
 is ready for review or has CI runs on it. The only rewrite is the final rebase
@@ -67,7 +67,8 @@ The complete stack is `ready` only when all conditions are simultaneously true:
 - every required behavior has observed black-box evidence on the final
   integrated top tree;
 - the declared project gate passed for that same final content;
-- every member's required checks are terminal and successful;
+- every check on every member's head is terminal and passed, counted as the
+  [PR gate](pr-readiness.md#terminal-exact-head-gate) counts them;
 - every intentionally active provider has terminal evidence for each head it
   was required to review;
 - the newest fix layer has no actionable finding;

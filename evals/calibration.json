@@ -2597,10 +2597,11 @@
         "New bounded September 14 synthetic decision fixture, declared before native execution: PR creation obtains missing independent gates, repairs a discovered requirement gap and finishes ready for review. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md.",
         "Bounded correction after original native batch: observed a contradictory pre-edit CLI success. Initial review and behavior now report the real gap; the repair transition makes subsequent results successful. Allow either discovery order, preserve required current review/spec/project evidence. Original Fable skipped post-edit review; keep that substantive failure. Fresh native replay required; preserve original frozen fixtures and outputs.",
         "Post-v2 helper guard: only the actual src/import.ts file.edit argument enables corrected review/behavior responses. Matching-path occurrences permit checkpoints before the repair; handoff-only and regression-only edits remain failing. Frozen v2 requests were deterministically replayed with frozen skills: all 71 returned responses and both event/action ledgers were unchanged, and both current grades passed. This is exact-request replay, not a third native batch; original native artifacts remain preserved.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "143ca5480a238ac8a3ff1135b4281355209ac1b51b1cd04c19116df01c0bd15a",
+      "afterSha256": "22b1245b5aabbb4171f58afd8c45c33c450caf14467c5766a9410048941007d3",
       "frozenCaseSha256": "401cc269a75174343ba427b8a39b768907f2de94e60ff6023ae5c8254bc417a9",
       "revisions": [
         {
@@ -2612,6 +2613,11 @@
           "previousAfterSha256": "92b31e1f90a012f099a5983ad2e4c0b6f81a511f83439b4badcbdd2fcebca05a",
           "afterSha256": "dbb95d7f813ed72f51cc6397fe3c8bdb06d2e69d10d6d9e169e49b4d362645b8",
           "rationale": "Post-v2 helper guard: only the actual src/import.ts file.edit argument enables corrected review/behavior responses. Matching-path occurrences permit checkpoints before the repair; handoff-only and regression-only edits remain failing. Frozen v2 requests were deterministically replayed with frozen skills: all 71 returned responses and both event/action ledgers were unchanged, and both current grades passed. This is exact-request replay, not a third native batch; original native artifacts remain preserved."
+        },
+        {
+          "previousAfterSha256": "143ca5480a238ac8a3ff1135b4281355209ac1b51b1cd04c19116df01c0bd15a",
+          "afterSha256": "22b1245b5aabbb4171f58afd8c45c33c450caf14467c5766a9410048941007d3",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
         }
       ]
     },
@@ -2648,10 +2654,11 @@
         "New bounded September 14 synthetic decision fixture, declared before native execution: Default delivery reuses current gates and verifies the merged change at the configured nightly destination rather than trusting a stale green deployment. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md.",
         "Original native trajectories place correct target/revision in structured probe arguments and may abbreviate the final SHA. Grade exact target/revision from action details plus selected structured fields, not a final-output spelling minimum. Retain state/acceptance ordering and manual final-probe/report grounding; Fable cleanup claims from acknowledgment-only results remain a substantive reporting limitation, not excused by this assertion correction.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
-        "The deployment's two wait answers are now installed by the merge and the second-wait transition counts from the merge, so a readiness wait recorded before the merge is answered with readiness and cannot use one up (issue #156). Expectations are unchanged."
+        "The deployment's two wait answers are now installed by the merge and the second-wait transition counts from the merge, so a readiness wait recorded before the merge is answered with readiness and cannot use one up (issue #156). Expectations are unchanged.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "2e7ad73e319106acc11bb3c23c588fabb15b07587efe995dec24bd1e153f23b0",
+      "afterSha256": "de3696f77d65256c8253125abcbd5e1234640c5dcec957082e9afe555131f476",
       "frozenCaseSha256": "57d73e895e48d9634e34041f4c578ed2f1c4e98c75c4b389b165cf5abb2bf4db",
       "revisions": [
         {
@@ -2663,6 +2670,11 @@
           "previousAfterSha256": "4fe689de0d1cdbadcc4eaa90357f0f05482f9c9129ce1eb14a0de406ef60a024",
           "afterSha256": "2e7ad73e319106acc11bb3c23c588fabb15b07587efe995dec24bd1e153f23b0",
           "rationale": "The deployment's two wait answers are now installed by the merge and the second-wait transition counts from the merge, so a readiness wait recorded before the merge is answered with readiness and cannot use one up (issue #156). Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "2e7ad73e319106acc11bb3c23c588fabb15b07587efe995dec24bd1e153f23b0",
+          "afterSha256": "de3696f77d65256c8253125abcbd5e1234640c5dcec957082e9afe555131f476",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
         }
       ]
     },
@@ -2670,11 +2682,19 @@
       "caseId": "delivery-merged-follows-merge-started-deployment",
       "status": "new",
       "rationale": [
-        "A run delivered several pull requests to `merged` in a project whose production tracks the default branch, reported the merges as the finish and left production serving an older revision for hours. With `merged` and a merge that starts a deployment, delivery awaits the deployment of the merged revision and verifies the change there before reporting it done; a turn that stops at the merge, or reports production as an unrequested later step, fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+        "A run delivered several pull requests to `merged` in a project whose production tracks the default branch, reported the merges as the finish and left production serving an older revision for hours. With `merged` and a merge that starts a deployment, delivery awaits the deployment of the merged revision and verifies the change there before reporting it done; a turn that stops at the merge, or reports production as an unrequested later step, fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "207890ec00a86e587388019db713941ce084cc585b6ecd0a06b73c97a79aac05",
-      "frozenCaseSha256": "207890ec00a86e587388019db713941ce084cc585b6ecd0a06b73c97a79aac05"
+      "afterSha256": "aebefe1af823c2198df1e2a04e893d2cdb57cd4eb9d0e2bd7f3d3aa840a09f47",
+      "frozenCaseSha256": "207890ec00a86e587388019db713941ce084cc585b6ecd0a06b73c97a79aac05",
+      "revisions": [
+        {
+          "previousAfterSha256": "207890ec00a86e587388019db713941ce084cc585b6ecd0a06b73c97a79aac05",
+          "afterSha256": "aebefe1af823c2198df1e2a04e893d2cdb57cd4eb9d0e2bd7f3d3aa840a09f47",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-missing-integration-decision",
@@ -2731,16 +2751,22 @@
         "New bounded September 14 synthetic decision fixture, declared before native execution: A merged work item whose integration reveals a requirement gap completes through a new linked repair PR and verified replacement deployment. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md.",
         "Normalize a malformed 42-character synthetic repair revision to valid 40-character state/responses. Grade explicit integration probe identity through details/structured fields and fresh default-base branch identity, without requiring the incidental word repair or a final SHA spelling length. Original identity evidence is inconclusive because fixture revisions were malformed; fresh native replay required.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
-        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "4cba359fe0174b83446c8be088ddfcc84773e541cacc35731c2f1e6f2beea753",
+      "afterSha256": "894e505e33b230f1a0d93a08fc57a91d0410daaf72ddb0c0f9a3ab16c2d968b7",
       "frozenCaseSha256": "863f754d2c7473145a9688ce7e01411e98d19f4e0de61dd2568ef68939437e87",
       "revisions": [
         {
           "previousAfterSha256": "863f754d2c7473145a9688ce7e01411e98d19f4e0de61dd2568ef68939437e87",
           "afterSha256": "fb060a6af235ab76b9b3ba4bfdfe3eb2e507a9480d8a5c0b03949e9f20d74f8a",
           "rationale": "Normalize a malformed 42-character synthetic repair revision to valid 40-character state/responses. Grade explicit integration probe identity through details/structured fields and fresh default-base branch identity, without requiring the incidental word repair or a final SHA spelling length. Original identity evidence is inconclusive because fixture revisions were malformed; fresh native replay required."
+        },
+        {
+          "previousAfterSha256": "4cba359fe0174b83446c8be088ddfcc84773e541cacc35731c2f1e6f2beea753",
+          "afterSha256": "894e505e33b230f1a0d93a08fc57a91d0410daaf72ddb0c0f9a3ab16c2d968b7",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
         }
       ]
     },
@@ -2806,132 +2832,228 @@
       "rationale": [
         "Delivery that hands publication to a worker routes it through /create-pr rather than the raw gh pr create and gh pr merge packet an issue comment proposes. Whether a packet quotes raw commands to prohibit or to prescribe them is left to manual review. Fresh native run required.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
-        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed.",
+        "A coordinator that checks the worker's report of readiness before accepting it, with a wait on the PR's checks, was answered with a bare acknowledgment and then reported readiness as unconfirmed. The fixture now answers that wait with the PR's state. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "85acb9f91190c9a129d73dda675aac2beac8d0de8a057b44f04d2c61b083de00",
-      "frozenCaseSha256": "f02d3321eff8f3a0b4385e49b482f56f3952b2275adfc3a95ad39f5d8891428b"
+      "afterSha256": "bf4702d3c0aa69545d7ffd3a7a958974a491189302d0b7f38918766963450ed3",
+      "frozenCaseSha256": "f02d3321eff8f3a0b4385e49b482f56f3952b2275adfc3a95ad39f5d8891428b",
+      "revisions": [
+        {
+          "previousAfterSha256": "85acb9f91190c9a129d73dda675aac2beac8d0de8a057b44f04d2c61b083de00",
+          "afterSha256": "bf4702d3c0aa69545d7ffd3a7a958974a491189302d0b7f38918766963450ed3",
+          "rationale": "A coordinator that checks the worker's report of readiness before accepting it, with a wait on the PR's checks, was answered with a bare acknowledgment and then reported readiness as unconfirmed. The fixture now answers that wait with the PR's state. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-red-default-branch-waits-for-repair",
       "status": "new",
       "rationale": [
         "Rebuilt from a run of parallel deliveries that kept merging onto a default branch whose push CI had failed for hours, each merge cancelling the previous run. A ready PR must not merge while the repair's run on the default-branch tip is in progress; delivery waits for that tip's own run to succeed, then merges. The wait must name the tip and precede the merge. Fresh native run required.",
-        "Converted on merge into the judged-rubric format: the rubric questions became outcome items, the answer patterns became exact answer values, and the ordered wait and merge checks became exact action values with the same before window. The run settings are ORCHESTRATION.md endpoint merged with entry-points deliver, matching the prompt."
+        "Converted on merge into the judged-rubric format: the rubric questions became outcome items, the answer patterns became exact answer values, and the ordered wait and merge checks became exact action values with the same before window. The run settings are ORCHESTRATION.md endpoint merged with entry-points deliver, matching the prompt.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "057b6f8cd8dc4009c57e8fcd272212b9a62bbfcf57ba0d606f4ae557e95b9a86",
-      "frozenCaseSha256": "e75407152602574361425232ae4067d7d563d67fc6d5c16380d0b6686d94d556"
+      "afterSha256": "1032ac29fbea2974c605e282ee2b736eb93da2526a1a9d4370a550fc09284878",
+      "frozenCaseSha256": "e75407152602574361425232ae4067d7d563d67fc6d5c16380d0b6686d94d556",
+      "revisions": [
+        {
+          "previousAfterSha256": "057b6f8cd8dc4009c57e8fcd272212b9a62bbfcf57ba0d606f4ae557e95b9a86",
+          "afterSha256": "1032ac29fbea2974c605e282ee2b736eb93da2526a1a9d4370a550fc09284878",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-red-default-branch-unowned-repair-first",
       "status": "new",
       "rationale": [
         "The core of the same incident: the default branch is red, no PR, issue or session owns the failure, and an unrelated PR is ready. Delivery must land the repair as its own work item, wait for the repair merge's own default-branch run to succeed, and only then merge the requested PR. Fresh native run required.",
-        "Converted on merge into the judged-rubric format: the rubric questions became outcome items, the answer patterns became exact answer values, and the ordered wait and merge checks became exact action values with the same before window. The run settings are ORCHESTRATION.md endpoint merged with entry-points deliver, matching the prompt."
+        "Converted on merge into the judged-rubric format: the rubric questions became outcome items, the answer patterns became exact answer values, and the ordered wait and merge checks became exact action values with the same before window. The run settings are ORCHESTRATION.md endpoint merged with entry-points deliver, matching the prompt.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "8833e76619f755a2087e83ea1375a39b31de4fda153e7844326ba20365b25174",
-      "frozenCaseSha256": "bd4b64bef639bebbf179d9c13414a68b9b04b1e17868a2154215be4bf0f668e9"
+      "afterSha256": "ce8869fbb370c51f770f0ec481773aeb71c349f58c362845df9466d6c6dbe84d",
+      "frozenCaseSha256": "bd4b64bef639bebbf179d9c13414a68b9b04b1e17868a2154215be4bf0f668e9",
+      "revisions": [
+        {
+          "previousAfterSha256": "8833e76619f755a2087e83ea1375a39b31de4fda153e7844326ba20365b25174",
+          "afterSha256": "ce8869fbb370c51f770f0ec481773aeb71c349f58c362845df9466d6c6dbe84d",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-earlier-merge-run-does-not-hold-merge",
       "status": "new",
       "rationale": [
         "Rebuilt from a day of parallel deliveries in one repository whose default-branch CI took 35 to 80 minutes: the health gate made every merge wait for the newest main run, each merge cancelled the run in progress, no main run completed for hours and merges went one per run. A ready PR on a green default branch now merges at once; the run still in progress from a parallel delivery's merge does not hold it, a branch that is only behind keeps its head, and with no main run cancelled there is nothing for a sampler run to cover, so dispatching one fails. Fresh native run required.",
-        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared."
+        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "384c22ad10c7356f50219ec104cfab5df1755ee790054a05c8ef2ad608a3bb19",
-      "frozenCaseSha256": "ab9e88f5aa4c67a60ff6eeb9a39bf34c5057ed888567ad404a98d622c2c1227f"
+      "afterSha256": "ac846e32dd92a5680f1ed57cd2a40a75715932881ed39de5eecdc46c0b366fd6",
+      "frozenCaseSha256": "ab9e88f5aa4c67a60ff6eeb9a39bf34c5057ed888567ad404a98d622c2c1227f",
+      "revisions": [
+        {
+          "previousAfterSha256": "384c22ad10c7356f50219ec104cfab5df1755ee790054a05c8ef2ad608a3bb19",
+          "afterSha256": "ac846e32dd92a5680f1ed57cd2a40a75715932881ed39de5eecdc46c0b366fd6",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-stale-default-branch-gets-one-run",
       "status": "new",
       "rationale": [
         "A repository may still declare a staleness bound in ORCHESTRATION.md, and that bound pauses merging. Here the deciding run is seven commits and five hours behind against a declared bound of four commits and three hours, so delivery awaits the tip's own run, which nothing cancels while merging pauses, then merges; merging first or dispatching a second run on the same tip fails. Fresh native run required.",
-        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared."
+        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "449b8b3cea06685750d3c4a487716e5bfb91269f0f8cab7003422ed78acbb96b",
-      "frozenCaseSha256": "6c60714899a3249f0976b0305f9ab067d2bd6b2efe048d4c5e8ea67d886946ed"
+      "afterSha256": "5bbf4d2d87eaf5dd3998d2a452397f2a919454f4a4883095528a837c5a442c9a",
+      "frozenCaseSha256": "6c60714899a3249f0976b0305f9ab067d2bd6b2efe048d4c5e8ea67d886946ed",
+      "revisions": [
+        {
+          "previousAfterSha256": "449b8b3cea06685750d3c4a487716e5bfb91269f0f8cab7003422ed78acbb96b",
+          "afterSha256": "5bbf4d2d87eaf5dd3998d2a452397f2a919454f4a4883095528a837c5a442c9a",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-stale-burst-shares-one-sampler-run",
       "status": "new",
       "rationale": [
         "Owner ruling, 2026-10-20: a fixed staleness bound punishes high-velocity projects and bursts of merges, so without a declared bound merging never pauses for coverage. One sampler run per workflow, dispatched outside the cancelling group, covers the tip, and every delivery reuses the one in flight. In a burst with sampler run 8123 in progress, delivery merges at once; waiting for any main run or dispatching a second sampler run fails. Fresh native run required.",
-        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared."
+        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "e1af54db8560e0191dcd88d7267ed6340542c31524ac97386488ff98464c1ee1",
-      "frozenCaseSha256": "f8bdf7f19cac6fd006bdfab4d78ebeb6fdb57da9837e6f51e4ef0a998db15b2a"
+      "afterSha256": "dceb8bc88d91e9c74e3ff5c2966e22af64d843305679a29ce538f19e9af2499a",
+      "frozenCaseSha256": "f8bdf7f19cac6fd006bdfab4d78ebeb6fdb57da9837e6f51e4ef0a998db15b2a",
+      "revisions": [
+        {
+          "previousAfterSha256": "e1af54db8560e0191dcd88d7267ed6340542c31524ac97386488ff98464c1ee1",
+          "afterSha256": "dceb8bc88d91e9c74e3ff5c2966e22af64d843305679a29ce538f19e9af2499a",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-stale-dispatches-one-sampler-run",
       "status": "new",
       "rationale": [
         "Owner ruling, 2026-10-20: under Stale with no declared bound, coverage comes from one sampler run per workflow. With cancelled runs and no sampler in flight, delivery dispatches exactly one on the tip outside the cancelling group and merges without waiting; merging without it, waiting for it or dispatching a second fails. Fresh native run required.",
-        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared."
+        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "01b2d55ea4ab63c52d8a3deb440125052187fe18930a0a6c7489e03d3022a2aa",
-      "frozenCaseSha256": "a90ea3cd3676cc4821230334427d3d4b3b2d487dc68f47935def39ec67559d00"
+      "afterSha256": "4b1dd58bc896a046b26bbfaede9b6d52c43bbe50b159ecba665120ba3e57731d",
+      "frozenCaseSha256": "a90ea3cd3676cc4821230334427d3d4b3b2d487dc68f47935def39ec67559d00",
+      "revisions": [
+        {
+          "previousAfterSha256": "01b2d55ea4ab63c52d8a3deb440125052187fe18930a0a6c7489e03d3022a2aa",
+          "afterSha256": "4b1dd58bc896a046b26bbfaede9b6d52c43bbe50b159ecba665120ba3e57731d",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-stale-no-sampler-reports-project-gap",
       "status": "new",
       "rationale": [
         "Owner ruling, 2026-10-20: when the workflow's concurrency group would cancel a dispatched run too, no sampler can run, so delivery reports the project gap with its fix and keeps merging under the PR gates; dispatching, waiting or a report without the gap fails. Fresh native run required.",
-        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared."
+        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "e312cc879505e4d337a4905d2fa29402b42bcd34b411e8bc1321bf8aa3f37db5",
-      "frozenCaseSha256": "00d26dd953e28c58ae47c195e4509b1f006c854107a516a64ad2514ac2f2ae7a"
+      "afterSha256": "449d645c88e68fa609143e3c12792d0214ba929f013e3f0605da9c12c4efce37",
+      "frozenCaseSha256": "00d26dd953e28c58ae47c195e4509b1f006c854107a516a64ad2514ac2f2ae7a",
+      "revisions": [
+        {
+          "previousAfterSha256": "e312cc879505e4d337a4905d2fa29402b42bcd34b411e8bc1321bf8aa3f37db5",
+          "afterSha256": "449d645c88e68fa609143e3c12792d0214ba929f013e3f0605da9c12c4efce37",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-full-ci-rule-before-merge",
       "status": "new",
       "rationale": [
         "Some changes need a full CI run before they are ready. When the repository's declared full-CI rule covers the change, delivery starts that run for the PR's head, awaits it and merges, and does not also wait for main's run from an earlier merge. The shared default-branch fixture now also says no main run was cancelled since the deciding run. Fresh native run required.",
-        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared."
+        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "e6af36d0c94ff3d1e5cd4abaf89ed9c5daff8c5e1d475e6ba85b4cc0e3becab1",
-      "frozenCaseSha256": "cbd40a280b6edc4bb67ed25782669c6fea407a4decda6a71c72fba3d9aa2d33d"
+      "afterSha256": "fe72135541e8f16c2889accdc79f6c57a91f8d2b7def658d5b8445cda6cb4753",
+      "frozenCaseSha256": "cbd40a280b6edc4bb67ed25782669c6fea407a4decda6a71c72fba3d9aa2d33d",
+      "revisions": [
+        {
+          "previousAfterSha256": "e6af36d0c94ff3d1e5cd4abaf89ed9c5daff8c5e1d475e6ba85b4cc0e3becab1",
+          "afterSha256": "fe72135541e8f16c2889accdc79f6c57a91f8d2b7def658d5b8445cda6cb4753",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-ready-stack-merges-in-one-go",
       "status": "new",
       "rationale": [
         "In the same incident, stacks merged one layer at a time, each waiting for main. When every layer of a native stack is ready, delivery merges it in one stack merge. Fresh native run required.",
-        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared."
+        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "1954e1f92277b90aa973901f061fbdd5e1bea56ec4a86b6683aa96fe2b13fd0f",
-      "frozenCaseSha256": "94e43eb4cfad3632a358d25b55ad2c864b14c9aec2e7b2821e15c5e4a8400dea"
+      "afterSha256": "1444db2969d8303e9540a8018a71e4e381fbd39a06137cd57854b0d15c787f8a",
+      "frozenCaseSha256": "94e43eb4cfad3632a358d25b55ad2c864b14c9aec2e7b2821e15c5e4a8400dea",
+      "revisions": [
+        {
+          "previousAfterSha256": "1954e1f92277b90aa973901f061fbdd5e1bea56ec4a86b6683aa96fe2b13fd0f",
+          "afterSha256": "1444db2969d8303e9540a8018a71e4e381fbd39a06137cd57854b0d15c787f8a",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-tier-mechanical-coordinator",
       "status": "new",
       "rationale": [
         "A coordinator hands a base-branch merge whose conflicts are only in append-only files to a lane and records the mechanical tier in its packet. Built from a coordinator that routed twelve mechanical and bounded lanes by capability. Fresh native run required.",
-        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared."
+        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "3cca246845e75c0ecbf32d2f54784299bcf6778cd933043761544378e76d1ed1",
-      "frozenCaseSha256": "cace0bc571c86e9515707b90588fb5477c357a0aa22448c4a44c7eea18cbed42"
+      "afterSha256": "fdfca439f51ce3e5387ea70659311f6843b8b40575035ad527162a2a423a8144",
+      "frozenCaseSha256": "cace0bc571c86e9515707b90588fb5477c357a0aa22448c4a44c7eea18cbed42",
+      "revisions": [
+        {
+          "previousAfterSha256": "3cca246845e75c0ecbf32d2f54784299bcf6778cd933043761544378e76d1ed1",
+          "afterSha256": "fdfca439f51ce3e5387ea70659311f6843b8b40575035ad527162a2a423a8144",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-tier-mechanical-lane",
       "status": "new",
       "rationale": [
         "A mechanical lane merges the default branch, keeps both sides of append-only conflicts, pushes and finishes with its checks observed green on the new head. Fresh native run required.",
-        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared."
+        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "4ba32c7a51a19f953c6d93645d6b645ada86e968a4840148d1607cbbe28a650e",
-      "frozenCaseSha256": "19b648766c12a8f308f2241e961b8ba00585c061552261dc01257be2621692ec"
+      "afterSha256": "450ad73729d524867b89e174007a29955dd8cf488c815399779dd6ca5e7fe296",
+      "frozenCaseSha256": "19b648766c12a8f308f2241e961b8ba00585c061552261dc01257be2621692ec",
+      "revisions": [
+        {
+          "previousAfterSha256": "4ba32c7a51a19f953c6d93645d6b645ada86e968a4840148d1607cbbe28a650e",
+          "afterSha256": "450ad73729d524867b89e174007a29955dd8cf488c815399779dd6ca5e7fe296",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-tier-bounded-lane-review-rerun",
@@ -2950,16 +3072,22 @@
       "rationale": [
         "A mechanical lane whose check fails with a timeout that looks like a flake stops and returns the finding instead of re-running, diagnosing or fixing it. Rebuilt from a lane that called a CI failure a timing flake whose real cause was found later. Fresh native run required.",
         "Owner ruling, 2026-10-20: a PR branch merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The branch here is only behind origin/main, so the fixture now states the repository's ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps the base merge required and leaves the case testing tier escalation. Fixture changed: fresh native runs required.",
-        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared."
+        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "3685074397dec4cbaabbfdc5d3bee29defd22813f7a98bac34c27aacbf17908b",
+      "afterSha256": "607208de0795964df374c8049690945c6905748924bf7e55e20d4a57507e80c1",
       "frozenCaseSha256": "46fcc3a03c895c0d60df1b75683b644941c5cdcae02483229f3d3e5c0b9cfe19",
       "revisions": [
         {
           "previousAfterSha256": "46fcc3a03c895c0d60df1b75683b644941c5cdcae02483229f3d3e5c0b9cfe19",
           "afterSha256": "65e8b496c102e44ed60eeac8edc692611a11f8616c49dc2ee6c02207caef48ce",
           "rationale": "Owner ruling, 2026-10-20: a PR branch merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The branch here is only behind origin/main, so the fixture now states the repository's ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps the base merge required and leaves the case testing tier escalation. Fixture changed: fresh native runs required."
+        },
+        {
+          "previousAfterSha256": "3685074397dec4cbaabbfdc5d3bee29defd22813f7a98bac34c27aacbf17908b",
+          "afterSha256": "607208de0795964df374c8049690945c6905748924bf7e55e20d4a57507e80c1",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
         }
       ],
       "postFreezeChangedFields": [
@@ -2973,16 +3101,22 @@
       "rationale": [
         "After a mechanical lane returns a failure that needs diagnosis, the coordinator starts a new open lane with that finding. Whether the coordinator resumed the old lane instead is left to the rubric and manual review, since a simulated delegate action does not show it. Fresh native run required.",
         "Owner ruling, 2026-10-20: a PR branch merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The branch here is only behind origin/main, so the fixture now states the repository's ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps the base merge required and leaves the case testing tier escalation. Fixture changed: fresh native runs required.",
-        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared."
+        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "02cda46e9db5266c21304cc9b717398d7e1ba1c4d995fb8031ee01a9d1f5153c",
+      "afterSha256": "048cc49f148cbadd637fb66aade4d4bc41f58e3f21c9424f4e6a27a90d5741b6",
       "frozenCaseSha256": "a5b0640f523f1dc36cb160880b6440016134ee6522725a19820dac38c4554142",
       "revisions": [
         {
           "previousAfterSha256": "a5b0640f523f1dc36cb160880b6440016134ee6522725a19820dac38c4554142",
           "afterSha256": "343c4b43ffe9a2c075ba3e042308fd89465ac83dd21fe0240e848b2a922231f8",
           "rationale": "Owner ruling, 2026-10-20: a PR branch merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The branch here is only behind origin/main, so the fixture now states the repository's ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps the base merge required and leaves the case testing tier escalation. Fixture changed: fresh native runs required."
+        },
+        {
+          "previousAfterSha256": "02cda46e9db5266c21304cc9b717398d7e1ba1c4d995fb8031ee01a9d1f5153c",
+          "afterSha256": "048cc49f148cbadd637fb66aade4d4bc41f58e3f21c9424f4e6a27a90d5741b6",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
         }
       ],
       "postFreezeChangedFields": [
@@ -3503,61 +3637,109 @@
       "caseId": "create-pr-default-continues-to-merged",
       "status": "new",
       "rationale": [
-        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces create-pr-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces create-pr-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "9e1a01177d82f4c154664960beec1acc48807ef537eb956beea98fcb2028f6e0",
-      "frozenCaseSha256": "9e1a01177d82f4c154664960beec1acc48807ef537eb956beea98fcb2028f6e0"
+      "afterSha256": "e48bc51b2a6edea94d7082e5936e1f7370b8fae30f74418db274dd56e06fc51a",
+      "frozenCaseSha256": "9e1a01177d82f4c154664960beec1acc48807ef537eb956beea98fcb2028f6e0",
+      "revisions": [
+        {
+          "previousAfterSha256": "9e1a01177d82f4c154664960beec1acc48807ef537eb956beea98fcb2028f6e0",
+          "afterSha256": "e48bc51b2a6edea94d7082e5936e1f7370b8fae30f74418db274dd56e06fc51a",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "implement-default-continues-to-merged",
       "status": "new",
       "rationale": [
-        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces implement-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces implement-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "4db8cd080f0d784671ec783df441e142f3bdfdbae6e439f77929aa2eb63173ec",
-      "frozenCaseSha256": "4db8cd080f0d784671ec783df441e142f3bdfdbae6e439f77929aa2eb63173ec"
+      "afterSha256": "62163f67624b02f7012aa0d328111274960124a5b1acdc62d48d58ebbc92964a",
+      "frozenCaseSha256": "4db8cd080f0d784671ec783df441e142f3bdfdbae6e439f77929aa2eb63173ec",
+      "revisions": [
+        {
+          "previousAfterSha256": "4db8cd080f0d784671ec783df441e142f3bdfdbae6e439f77929aa2eb63173ec",
+          "afterSha256": "62163f67624b02f7012aa0d328111274960124a5b1acdc62d48d58ebbc92964a",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "update-pr-default-continues-to-merged",
       "status": "new",
       "rationale": [
-        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces update-pr-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces update-pr-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "01ea9656e3ef1126da3d2c20a11efee46e2b74ccb0c9eca673a9fe99dd171368",
-      "frozenCaseSha256": "01ea9656e3ef1126da3d2c20a11efee46e2b74ccb0c9eca673a9fe99dd171368"
+      "afterSha256": "8b22182796e1b8703ab3bd51cdc4f4f9cb0fcc9de1648e50209fc141aa6d7ff7",
+      "frozenCaseSha256": "01ea9656e3ef1126da3d2c20a11efee46e2b74ccb0c9eca673a9fe99dd171368",
+      "revisions": [
+        {
+          "previousAfterSha256": "01ea9656e3ef1126da3d2c20a11efee46e2b74ccb0c9eca673a9fe99dd171368",
+          "afterSha256": "8b22182796e1b8703ab3bd51cdc4f4f9cb0fcc9de1648e50209fc141aa6d7ff7",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "address-feedback-default-continues-to-merged",
       "status": "new",
       "rationale": [
-        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces address-feedback-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces address-feedback-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "eba5a325c67ebd39a29d3a0e3cc95afb12b93114fc865b63e374c598840ab7e9",
-      "frozenCaseSha256": "eba5a325c67ebd39a29d3a0e3cc95afb12b93114fc865b63e374c598840ab7e9"
+      "afterSha256": "bdc68889a79f64e938dbe3cfdf664029ec54f02befb7e417d35122917e2b141a",
+      "frozenCaseSha256": "eba5a325c67ebd39a29d3a0e3cc95afb12b93114fc865b63e374c598840ab7e9",
+      "revisions": [
+        {
+          "previousAfterSha256": "eba5a325c67ebd39a29d3a0e3cc95afb12b93114fc865b63e374c598840ab7e9",
+          "afterSha256": "bdc68889a79f64e938dbe3cfdf664029ec54f02befb7e417d35122917e2b141a",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "code-review-default-continues-to-merged",
       "status": "new",
       "rationale": [
-        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces code-review-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces code-review-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "bcb26a71284fce3bbb2f2367aeffb85ffe122bf06714cc18b96670ada863f63b",
-      "frozenCaseSha256": "bcb26a71284fce3bbb2f2367aeffb85ffe122bf06714cc18b96670ada863f63b"
+      "afterSha256": "45cf727688afe4e4c08ee502491cd35fac1b678e84e9953c0a3e78a5bb9b509c",
+      "frozenCaseSha256": "bcb26a71284fce3bbb2f2367aeffb85ffe122bf06714cc18b96670ada863f63b",
+      "revisions": [
+        {
+          "previousAfterSha256": "bcb26a71284fce3bbb2f2367aeffb85ffe122bf06714cc18b96670ada863f63b",
+          "afterSha256": "45cf727688afe4e4c08ee502491cd35fac1b678e84e9953c0a3e78a5bb9b509c",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "test-against-spec-default-continues-to-merged",
       "status": "new",
       "rationale": [
-        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces test-against-spec-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces test-against-spec-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "61fe6b8c0a4ab4ea4c7d49049a970e83da77ef6a88cadf8f82be5c5075804ae9",
-      "frozenCaseSha256": "61fe6b8c0a4ab4ea4c7d49049a970e83da77ef6a88cadf8f82be5c5075804ae9"
+      "afterSha256": "ec7571abd40df1cf755bc54dca256c6c479b1a0a6c61a16eaa9d2884899f8936",
+      "frozenCaseSha256": "61fe6b8c0a4ab4ea4c7d49049a970e83da77ef6a88cadf8f82be5c5075804ae9",
+      "revisions": [
+        {
+          "previousAfterSha256": "61fe6b8c0a4ab4ea4c7d49049a970e83da77ef6a88cadf8f82be5c5075804ae9",
+          "afterSha256": "ec7571abd40df1cf755bc54dca256c6c479b1a0a6c61a16eaa9d2884899f8936",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "template-check-draft-mismatch",
@@ -3593,21 +3775,49 @@
       "caseId": "deliver-standing-ready-to-merge-default-stops-before-merge",
       "status": "new",
       "rationale": [
-        "A standing-default case: the repository has no ORCHESTRATION.md and the person's standing global agent instructions default to ready-to-merge, so /deliver leaves the ready PR unmerged instead of taking the built-in merged endpoint. It replaces deliver-standing-merged-default-merges, which tested a standing merged default while ready-to-merge was the built-in endpoint, and reuses the same merge case's fixture. Fresh native run required."
+        "A standing-default case: the repository has no ORCHESTRATION.md and the person's standing global agent instructions default to ready-to-merge, so /deliver leaves the ready PR unmerged instead of taking the built-in merged endpoint. It replaces deliver-standing-merged-default-merges, which tested a standing merged default while ready-to-merge was the built-in endpoint, and reuses the same merge case's fixture. Fresh native run required.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "A run that confirms every check on the pull request's head with a wait was answered with the base case's default-branch result and then reported readiness as unconfirmed. The two standing-default fixtures now answer that wait with the pull request's state. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "0c94715f2820f694c9b3892656b7ce6d8276da6fa62219f9dd0cda740c0922a7",
-      "frozenCaseSha256": "0c94715f2820f694c9b3892656b7ce6d8276da6fa62219f9dd0cda740c0922a7"
+      "afterSha256": "b3c5c1a08fd6825f3f6a65025e390b4dbf3299c39db62d9f76f561c51dea78f4",
+      "frozenCaseSha256": "0c94715f2820f694c9b3892656b7ce6d8276da6fa62219f9dd0cda740c0922a7",
+      "revisions": [
+        {
+          "previousAfterSha256": "0c94715f2820f694c9b3892656b7ce6d8276da6fa62219f9dd0cda740c0922a7",
+          "afterSha256": "d337f8a784b184b52adba9055179b764dab2084435218dd9b964be0827c32578",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "d337f8a784b184b52adba9055179b764dab2084435218dd9b964be0827c32578",
+          "afterSha256": "b3c5c1a08fd6825f3f6a65025e390b4dbf3299c39db62d9f76f561c51dea78f4",
+          "rationale": "A run that confirms every check on the pull request's head with a wait was answered with the base case's default-branch result and then reported readiness as unconfirmed. The two standing-default fixtures now answer that wait with the pull request's state. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "deliver-project-endpoint-wins-over-standing-ready-to-merge",
       "status": "new",
       "rationale": [
-        "A standing-default precedence case: the same fixture with an ORCHESTRATION.md that sets endpoint merged, which wins over the person's standing ready-to-merge default, so /deliver merges the ready PR. It replaces deliver-project-endpoint-wins-over-standing-merged. Fresh native run required."
+        "A standing-default precedence case: the same fixture with an ORCHESTRATION.md that sets endpoint merged, which wins over the person's standing ready-to-merge default, so /deliver merges the ready PR. It replaces deliver-project-endpoint-wins-over-standing-merged. Fresh native run required.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "A run that confirms every check on the pull request's head with a wait was answered with the base case's default-branch result and then reported readiness as unconfirmed. The two standing-default fixtures now answer that wait with the pull request's state. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "5ff638c47dd441c4da0de7beefed25ffd28c52fa40313be6ff6e45a8ef7c8802",
-      "frozenCaseSha256": "5ff638c47dd441c4da0de7beefed25ffd28c52fa40313be6ff6e45a8ef7c8802"
+      "afterSha256": "4a19968b270dbf3fafde747d9e320f47cbb66599fa614fd28c8568462a12b541",
+      "frozenCaseSha256": "5ff638c47dd441c4da0de7beefed25ffd28c52fa40313be6ff6e45a8ef7c8802",
+      "revisions": [
+        {
+          "previousAfterSha256": "5ff638c47dd441c4da0de7beefed25ffd28c52fa40313be6ff6e45a8ef7c8802",
+          "afterSha256": "6ea4bba3a39b85bcfe9299ca54106e1dae24b5cc898886921d58ec4d11346fd2",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "6ea4bba3a39b85bcfe9299ca54106e1dae24b5cc898886921d58ec4d11346fd2",
+          "afterSha256": "4a19968b270dbf3fafde747d9e320f47cbb66599fa614fd28c8568462a12b541",
+          "rationale": "A run that confirms every check on the pull request's head with a wait was answered with the base case's default-branch result and then reported readiness as unconfirmed. The two standing-default fixtures now answer that wait with the pull request's state. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-park-pending-ci-arms-wait",
@@ -3633,11 +3843,19 @@
       "caseId": "delivery-park-lane-interim-report-stays-pending",
       "status": "new",
       "rationale": [
-        "A lane's report that its checks are still running is pending, not its result: the host marks the lane's task complete and never notifies the coordinator of later work, so the coordinator arms its own tracked wait on the new head and reports ready only after the checks are observed passing. Reporting ready on the interim report fails."
+        "A lane's report that its checks are still running is pending, not its result: the host marks the lane's task complete and never notifies the coordinator of later work, so the coordinator arms its own tracked wait on the new head and reports ready only after the checks are observed passing. Reporting ready on the interim report fails.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "c2779d58651d46abf26cb19fec07ddfd7e32e1a8e7f748f83881161abc1f0840",
-      "frozenCaseSha256": "c2779d58651d46abf26cb19fec07ddfd7e32e1a8e7f748f83881161abc1f0840"
+      "afterSha256": "3ee3fea5034c7468add8a61a2c537e3242d7e7b7197bf3f083b972b886a0be75",
+      "frozenCaseSha256": "c2779d58651d46abf26cb19fec07ddfd7e32e1a8e7f748f83881161abc1f0840",
+      "revisions": [
+        {
+          "previousAfterSha256": "c2779d58651d46abf26cb19fec07ddfd7e32e1a8e7f748f83881161abc1f0840",
+          "afterSha256": "3ee3fea5034c7468add8a61a2c537e3242d7e7b7197bf3f083b972b886a0be75",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-coordinator-settles-lane-handbacks",
@@ -3653,21 +3871,57 @@
       "caseId": "delivery-coordinator-files-and-fixes-found-defect",
       "status": "new",
       "rationale": [
-        "A lane hands back a defect it found but did not cause, an overdue badge that contradicts the product docs, and suggests a follow-up. Nothing needs the person's decision. The coordinator reads the lane's change to confirm the defect predates it, files its own issue, itself or through a lane packet that files it first, and fixes it or sends it to a named lane as a separate work item while PR #74 stays ready to merge. Listing it as a follow-up, leaving it in the handoff or asking whether to file it fails."
+        "A lane hands back a defect it found but did not cause, an overdue badge that contradicts the product docs, and suggests a follow-up. Nothing needs the person's decision. The coordinator reads the lane's change to confirm the defect predates it, files its own issue, itself or through a lane packet that files it first, and fixes it or sends it to a named lane as a separate work item while PR #74 stays ready to merge. Listing it as a follow-up, leaving it in the handoff or asking whether to file it fails.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "f3133d5f706e8ba66f9c566c591b8e311cbc42d8a3edb0730b621f618eb96ee8",
-      "frozenCaseSha256": "f3133d5f706e8ba66f9c566c591b8e311cbc42d8a3edb0730b621f618eb96ee8"
+      "afterSha256": "d630b1885c1ed643a3f7630a6540dc66fdc1e630930795f1f6f16761338cccad",
+      "frozenCaseSha256": "f3133d5f706e8ba66f9c566c591b8e311cbc42d8a3edb0730b621f618eb96ee8",
+      "revisions": [
+        {
+          "previousAfterSha256": "f3133d5f706e8ba66f9c566c591b8e311cbc42d8a3edb0730b621f618eb96ee8",
+          "afterSha256": "d630b1885c1ed643a3f7630a6540dc66fdc1e630930795f1f6f16761338cccad",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
+    },
+    {
+      "caseId": "delivery-ready-to-merge-waits-for-every-check",
+      "status": "new",
+      "rationale": [
+        "Ready to merge means everything is reviewed and all CI is passing on the head. The readiness gate named only the checks the repository requires, so a run could report a PR ready while another check on the same head was still running. Delivery awaits every check on the head before it reports ready; reporting ready without that wait fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "1b0f462461294d04f7f8a955f6d2f47907aa320f8a8b1b723d920cb6dc4166f2",
+      "frozenCaseSha256": "1b0f462461294d04f7f8a955f6d2f47907aa320f8a8b1b723d920cb6dc4166f2"
+    },
+    {
+      "caseId": "delivery-ready-to-merge-failed-optional-check-is-repaired",
+      "status": "new",
+      "rationale": [
+        "Counterpart for a failed check: a check that failed on the head keeps the PR from ready even when merging does not require it and GitHub shows the PR mergeable. Delivery repairs the in-scope cause, publishes the new head and reports ready only after every check passed there. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "05f8b2336eef5c29f1b9d388f3c844d0a734ea1e4c39eefd998c18ce9a60e214",
+      "frozenCaseSha256": "05f8b2336eef5c29f1b9d388f3c844d0a734ea1e4c39eefd998c18ce9a60e214"
     },
     {
       "caseId": "delivery-coordinator-reports-defect-needing-decision",
       "status": "new",
       "rationale": [
-        "A lane hands back a defect it found but did not cause, a cleanup job that deletes draft invoices after 30 days while the docs promise 90, whose fix is a data-retention decision nothing in the repository settles. The coordinator brings that decision to the person with both resolutions and does not file an issue, edit either file or start a lane for it, while PR #81 stays ready to merge. Filing it, fixing it or listing it as a follow-up without asking fails."
+        "A lane hands back a defect it found but did not cause, a cleanup job that deletes draft invoices after 30 days while the docs promise 90, whose fix is a data-retention decision nothing in the repository settles. The coordinator brings that decision to the person with both resolutions and does not file an issue, edit either file or start a lane for it, while PR #81 stays ready to merge. Filing it, fixing it or listing it as a follow-up without asking fails.",
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "e615d549e19a168e31a87306843b70b02d28a5b7ef657dd3407827013c035c9f",
-      "frozenCaseSha256": "e615d549e19a168e31a87306843b70b02d28a5b7ef657dd3407827013c035c9f"
+      "afterSha256": "d457f584cacc375b0949f9b2a0e5f5ce712c3caf973bbdc226c8379aa534520f",
+      "frozenCaseSha256": "e615d549e19a168e31a87306843b70b02d28a5b7ef657dd3407827013c035c9f",
+      "revisions": [
+        {
+          "previousAfterSha256": "e615d549e19a168e31a87306843b70b02d28a5b7ef657dd3407827013c035c9f",
+          "afterSha256": "d457f584cacc375b0949f9b2a0e5f5ce712c3caf973bbdc226c8379aa534520f",
+          "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-stack-layer-below-unready-layers-asks",
