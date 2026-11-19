@@ -9,6 +9,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
+import urllib.parse
 
 SKILL = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("stack_push_guard", SKILL / "scripts/stack_push_guard.py")
@@ -103,6 +105,137 @@ class ValidationTests(unittest.TestCase):
                 guard.config_count(env)
 
 
+class FakeGitHub:
+    """Answers the guard's two GitHub lookups from fixed pull requests and run counts."""
+
+    def __init__(self, pulls=(), runs=None, fail=None, full_name="example-org/app"):
+        self.pulls, self.runs, self.fail, self.calls = list(pulls), runs or {}, fail, []
+        self.full_name = full_name
+
+    def __call__(self, host, path):
+        self.calls.append((host, path))
+        if self.fail:
+            raise guard.GuardError(self.fail)
+        if "?" not in path:
+            return {"full_name": self.full_name}
+        if "/pulls?" in path:
+            # Like GitHub, an owner other than the current one matches nothing.
+            owner, head = urllib.parse.unquote(path.split("head=", 1)[1]).split(":", 1)
+            return [p for p in self.pulls if p["head"]["ref"] == head
+                    and owner.lower() == self.full_name.split("/")[0].lower()]
+        return {"total_count": self.runs.get(path.split("head_sha=", 1)[1], 0)}
+
+
+def pull(number, branch, sha, draft=True, repository="example-org/app"):
+    return {"number": number, "draft": draft, "head": {"ref": branch, "sha": sha, "repo": {"full_name": repository}}}
+
+
+class RewriteTests(unittest.TestCase):
+    def setUp(self):
+        self.admission = guard.validate_admission({
+            "directory": "/fixture", "remote": "origin", "url": "https://github.com/example-org/app.git",
+            "refs": [{"ref": "refs/heads/stack/one", "source": "a" * 40, "expected": "b" * 40},
+                     {"ref": "refs/heads/stack/two", "source": "c" * 40, "expected": "d" * 40}]})
+
+    def with_rewrite(self, *refs):
+        return guard.validate_admission({**self.admission, "rewrite": [
+            {"ref": ref, "reason": "final rebase before merging the whole stack"} for ref in refs]})
+
+    def test_draft_pull_requests_without_runs_pass(self):
+        github = FakeGitHub([pull(12, "stack/one", "b" * 40), pull(13, "stack/two", "d" * 40)])
+        observed = guard.check_rewrites(self.admission, github)
+        self.assertEqual([o["pullRequest"] for o in observed], [12, 13])
+        self.assertEqual({host for host, _ in github.calls}, {"github.com"})
+        self.assertEqual(github.calls[0][1], "repos/example-org/app")
+        self.assertIn("repos/example-org/app/pulls?state=open&per_page=100&head=example-org%3Astack%2Fone", github.calls[1][1])
+
+    def test_a_transferred_repository_is_checked_under_its_current_owner(self):
+        github = FakeGitHub([pull(12, "stack/one", "b" * 40, draft=False, repository="example-renamed/app")],
+                            full_name="example-renamed/app")
+        with self.assertRaisesRegex(guard.GuardError, "#12"):
+            guard.check_rewrites(self.admission, github)
+
+    def test_branch_names_are_encoded_and_other_heads_ignored(self):
+        admission = guard.validate_admission({**self.admission, "refs": [
+            {"ref": "refs/heads/stack/naïve+&#", "source": "a" * 40, "expected": "b" * 40}]})
+        github = FakeGitHub([pull(12, "stack/naïve+&#", "b" * 40, draft=False)])
+        with self.assertRaisesRegex(guard.GuardError, "#12"):
+            guard.check_rewrites(admission, github)
+        self.assertTrue(github.calls[1][1].endswith("head=example-org%3Astack%2Fna%C3%AFve%2B%26%23"))
+        fork = FakeGitHub([pull(12, "stack/naïve+&#", "b" * 40, draft=False, repository="example-fork/app")])
+        self.assertEqual(guard.check_rewrites(admission, fork), [])
+
+    def test_ready_pull_request_is_refused(self):
+        github = FakeGitHub([pull(12, "stack/one", "b" * 40, draft=False), pull(13, "stack/two", "d" * 40)])
+        with self.assertRaisesRegex(guard.GuardError, r"1 open pull request\(s\): #12 \(stack/one: ready for review\)"):
+            guard.check_rewrites(self.admission, github)
+
+    def test_draft_with_a_queued_run_is_refused_and_the_cost_is_named(self):
+        # The guard asks for runs on the head without a status filter, so GitHub
+        # counts queued, in-progress and finished runs alike.
+        github = FakeGitHub([pull(12, "stack/one", "b" * 40), pull(13, "stack/two", "d" * 40, draft=False)],
+                            runs={"b" * 40: 1, "d" * 40: 3})
+        with self.assertRaises(guard.GuardError) as caught:
+            guard.check_rewrites(self.admission, github)
+        message = str(caught.exception)
+        self.assertIn("#12 (stack/one: draft, 1 workflow runs on its head)", message)
+        self.assertIn("#13 (stack/two: ready for review, 3 workflow runs on its head)", message)
+        self.assertIn("restart CI on 2 of them", message)
+
+    def test_listed_rewrite_passes_without_a_lookup(self):
+        github = FakeGitHub([pull(12, "stack/one", "b" * 40, draft=False)], runs={"b" * 40: 4})
+        self.assertEqual(guard.check_rewrites(self.with_rewrite("refs/heads/stack/one"), github), [])
+        self.assertEqual(len(github.calls), 2)  # the repository, then stack/two, which has no open pull request
+        with self.assertRaisesRegex(guard.GuardError, "#12"):
+            guard.check_rewrites(self.with_rewrite("refs/heads/stack/two"), github)
+
+    def test_invalid_rewrite_entries(self):
+        for rewrite in [[{"ref": "refs/heads/stack/three", "reason": "not admitted"}],
+                        [{"ref": "refs/heads/stack/one", "reason": "  "}],
+                        [{"ref": "refs/heads/stack/one"}], [{"ref": ["refs/heads/stack/one"], "reason": "x"}],
+                        [{"ref": "refs/heads/stack/one", "reason": "x"}] * 2, [], "refs/heads/stack/one"]:
+            with self.subTest(rewrite=rewrite), self.assertRaises(guard.GuardError):
+                guard.validate_admission({**self.admission, "rewrite": rewrite})
+        with self.assertRaisesRegex(guard.GuardError, "invalid admission fields"):
+            guard.validate_admission({**self.admission, "rewrites": []})
+
+    def test_lookup_failure_refuses(self):
+        with self.assertRaisesRegex(guard.GuardError, "HTTP 502"):
+            guard.check_rewrites(self.admission, FakeGitHub(fail="GitHub lookup failed: HTTP 502"))
+        incomplete = FakeGitHub([{"number": 12, "head": {"ref": "stack/one", "sha": "b" * 40}}])
+        with self.assertRaisesRegex(guard.GuardError, "incomplete pull request"):
+            guard.check_rewrites(self.admission, incomplete)
+        with self.assertRaisesRegex(guard.GuardError, "#12 head is"):
+            guard.check_rewrites(self.admission, FakeGitHub([pull(12, "stack/one", "e" * 40)]))
+        with self.assertRaisesRegex(guard.GuardError, "names no GitHub repository"):
+            guard.check_rewrites({**self.admission, "url": "/srv/git/app.git"}, FakeGitHub())
+
+    def test_missing_gh_refuses(self):
+        with tempfile.TemporaryDirectory() as empty, mock.patch.dict(os.environ, {"PATH": empty}):
+            with self.assertRaisesRegex(guard.GuardError, "gh is not installed"):
+                guard.github_api("github.com", "repos/example-org/app/pulls")
+
+    def test_new_or_unchanged_branches_need_no_lookup(self):
+        admission = guard.validate_admission({**self.admission, "url": "/not/github", "refs": [
+            {"ref": "refs/heads/stack/one", "source": "a" * 40, "expected": "0" * 40},
+            {"ref": "refs/heads/stack/two", "source": "d" * 40, "expected": "d" * 40}]})
+        github = FakeGitHub(fail="no lookup expected")
+        self.assertEqual(guard.check_rewrites(admission, github), [])
+        self.assertEqual(github.calls, [])
+
+    def test_remote_url_forms(self):
+        for url, expected in [("https://github.com/example-org/app.git", ("github.com", "example-org/app")),
+                              ("https://token@github.example.com/example-org/app", ("github.example.com", "example-org/app")),
+                              ("git@github.com:example-org/my.app.git", ("github.com", "example-org/my.app")),
+                              ("ssh://git@github.com:22/example-org/app.git/", ("github.com", "example-org/app")),
+                              ("ssh://git@ssh.github.com:443/example_org/app.git", ("github.com", "example_org/app"))]:
+            with self.subTest(url=url):
+                self.assertEqual(guard.github_repository(url), expected)
+        for url in ["/srv/git/app.git", "file:///srv/app.git", "https://github.com/example-org", "https://github.com/example-org/app/extra"]:
+            with self.subTest(url=url), self.assertRaises(guard.GuardError):
+                guard.github_repository(url)
+
+
 class StandaloneTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="kgr-portable-guard-")
@@ -195,6 +328,50 @@ class StandaloneTests(unittest.TestCase):
         self.assertEqual(other.read_text(), "yes")
         self.assertEqual(self.git("config", "core.hooksPath"), str(hooks))
         self.assertNotIn("GIT_CONFIG_VALUE_0", prepared["configuration"])
+
+    def moved_layer(self):
+        """The branch exists on a GitHub-named remote and moves to a new local commit."""
+        self.git("remote", "add", "github", "https://github.com/example-org/app.git")
+        self.git("commit", "--allow-empty", "-m", "rebased layer")
+        self.git("branch", "--force", self.ref.removeprefix("refs/heads/"), "HEAD")
+        source = self.git("rev-parse", "HEAD")
+        return {"directory": str(self.repo), "remote": "github", "url": "https://github.com/example-org/app.git",
+                "refs": [{"ref": self.ref, "source": source, "expected": self.head}]}
+
+    def test_prepare_refuses_a_reviewed_layer_and_admits_a_listed_rewrite(self):
+        admission = self.moved_layer()
+        github = FakeGitHub([pull(7, "feature/portable-guard", self.head, draft=False)], runs={self.head: 2})
+        with self.assertRaisesRegex(guard.GuardError, r"#7 .*restart CI on 1 of them"):
+            guard.prepare(admission, github)
+        self.assertFalse((self.repo / ".git/kgr-push-guards").exists())
+        admission["rewrite"] = [{"ref": self.ref, "reason": "final rebase before merging the whole stack"}]
+        prepared = guard.prepare(admission, github)
+        record = json.loads((Path(prepared["directory"]) / "admission.json").read_text())["request"]
+        self.assertEqual(record["admission"]["rewrite"], admission["rewrite"])
+        self.assertEqual(record["pullRequests"], [])
+
+    def test_prepare_refuses_when_gh_is_unavailable(self):
+        admission = self.moved_layer()
+        only_git = self.root / "only-git"
+        only_git.mkdir()
+        (only_git / "git").symlink_to(shutil.which("git"))
+        result = subprocess.run([sys.executable, str(self.helper), "prepare", "--admission", "-"],
+                                input=json.dumps(admission), capture_output=True, text=True,
+                                env={**os.environ, "PATH": str(only_git)})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("gh is not installed", result.stderr)
+        self.assertFalse((self.repo / ".git/kgr-push-guards").exists())
+
+    def test_hook_refuses_an_existing_branch_admitted_as_new(self):
+        # Claiming a branch is new skips the lookup, so the hook must hold the claim.
+        self.git("push", "--quiet", "origin", f"{self.ref}:{self.ref}")
+        self.git("commit", "--allow-empty", "-m", "rebased layer")
+        self.git("branch", "--force", self.ref.removeprefix("refs/heads/"), "HEAD")
+        self.admission["refs"][0]["source"] = self.git("rev-parse", "HEAD")
+        result = self.push(self.prepare())
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("advertised remote head differs from admission", result.stderr)
+        self.assertEqual(self.git("ls-remote", "--heads", "origin", self.ref), f"{self.head}\t{self.ref}")
 
     def test_frozen_helper_change_rejects_before_remote_update(self):
         prepared = self.prepare()

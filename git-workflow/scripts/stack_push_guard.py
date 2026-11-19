@@ -12,6 +12,7 @@ import shlex
 import subprocess
 import sys
 from datetime import datetime, timezone
+import urllib.parse
 import uuid
 
 sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__.
@@ -74,7 +75,7 @@ def read_record(path):
 
 
 def validate_admission(value):
-    if not isinstance(value, dict) or set(value) != {"directory", "remote", "url", "refs"}:
+    if not isinstance(value, dict) or set(value) - {"rewrite"} != {"directory", "remote", "url", "refs"}:
         raise GuardError("invalid admission fields")
     if not isinstance(value["directory"], str) or not Path(value["directory"]).is_absolute():
         raise GuardError("checkout must be an absolute path")
@@ -104,7 +105,22 @@ def validate_admission(value):
         refs.append({"ref": ref, "source": row["source"], "expected": row["expected"]})
     if len(lengths) != 1:
         raise GuardError("mixed Git object formats")
-    return {"directory": value["directory"], "remote": value["remote"], "url": value["url"], "refs": refs}
+    result = {"directory": value["directory"], "remote": value["remote"], "url": value["url"], "refs": refs}
+    if "rewrite" in value:
+        if not isinstance(value["rewrite"], list) or not value["rewrite"]:
+            raise GuardError("rewrite needs explicit entries")
+        rewrite, listed = [], set()
+        for row in value["rewrite"]:
+            if not isinstance(row, dict) or set(row) != {"ref", "reason"}:
+                raise GuardError("invalid rewrite fields")
+            if not isinstance(row["ref"], str) or row["ref"] not in seen or row["ref"] in listed:
+                raise GuardError("rewrite names a ref that is not admitted, or names it twice")
+            if not isinstance(row["reason"], str) or not row["reason"].strip():
+                raise GuardError("rewrite needs a reason for each ref")
+            listed.add(row["ref"])
+            rewrite.append({"ref": row["ref"], "reason": row["reason"]})
+        result["rewrite"] = rewrite
+    return result
 
 
 def validate_updates(admission, remote, url, text):
@@ -147,7 +163,88 @@ def config_count(environment):
     return int(raw)
 
 
-def prepare(value):
+def github_repository(url):
+    """The API host and OWNER/REPO that an HTTPS, ssh:// or scp-style remote URL names."""
+    match = (re.fullmatch(r"(?:https|ssh)://(?:[^@/]+@)?([A-Za-z0-9.-]+)(?::[0-9]+)?/([A-Za-z0-9_-]+/[A-Za-z0-9._-]+?)(?:\.git)?/?", url)
+             or re.fullmatch(r"(?:[^@/:]+@)?([A-Za-z0-9.-]+):([A-Za-z0-9_-]+/[A-Za-z0-9._-]+?)(?:\.git)?/?", url))
+    if not match:
+        raise GuardError("remote URL names no GitHub repository, so the pull requests whose head would change cannot be checked")
+    # GitHub's SSH-over-HTTPS endpoint serves the same repositories as github.com.
+    return ("github.com" if match.group(1) == "ssh.github.com" else match.group(1)), match.group(2)
+
+
+def github_api(host, path):
+    try:
+        result = subprocess.run(["gh", "api", "--hostname", host, path], stdin=subprocess.DEVNULL,
+                                capture_output=True, timeout=60)
+    except FileNotFoundError:
+        raise GuardError("gh is not installed; it checks the pull requests whose head would change") from None
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise GuardError(f"GitHub lookup failed: {path}: {error}") from None
+    if result.returncode:
+        lines = result.stderr.decode("utf-8", "replace").strip().splitlines()
+        raise GuardError(f"GitHub lookup failed: {path}: " + (lines[-1] if lines else f"gh exited {result.returncode}"))
+    try:
+        return json.loads(result.stdout)
+    except ValueError:
+        raise GuardError(f"GitHub lookup returned invalid JSON: {path}") from None
+
+
+def check_rewrites(c, api=github_api):
+    """Refuse to move the head of an open pull request that is ready for review or
+    already has GitHub Actions runs on that head, unless `rewrite` lists its ref.
+    Returns what was observed, for the prepared record."""
+    listed = {r["ref"] for r in c.get("rewrite", ())}
+    moving = [r for r in c["refs"] if set(r["expected"]) != {"0"} and r["expected"] != r["source"]
+              and r["ref"] not in listed]
+    if not moving:
+        return []
+    host, named = github_repository(c["url"])
+    # A transferred or renamed repository still answers at its old URL, but the
+    # head filter needs its current owner, or it matches no pull request.
+    found = api(host, f"repos/{named}")
+    if not isinstance(found, dict) or not isinstance(found.get("full_name"), str) or "/" not in found["full_name"]:
+        raise GuardError("GitHub lookup returned no repository for " + named)
+    repository = found["full_name"]
+    owner = repository.split("/")[0]
+    observed = []
+    for row in moving:
+        branch = row["ref"].removeprefix("refs/heads/")
+        head = urllib.parse.quote(owner + ":" + branch, safe="")
+        pulls = api(host, f"repos/{repository}/pulls?state=open&per_page=100&head={head}")
+        if not isinstance(pulls, list):
+            raise GuardError("GitHub lookup returned no pull request list for " + row["ref"])
+        for pull in pulls:
+            try:
+                number, draft, sha = pull["number"], pull["draft"], pull["head"]["sha"]
+                ref, source = pull["head"]["ref"], (pull["head"]["repo"] or {}).get("full_name")
+            except (TypeError, KeyError, AttributeError):
+                raise GuardError("GitHub lookup returned an incomplete pull request for " + row["ref"]) from None
+            if type(number) is not int or type(draft) is not bool:
+                raise GuardError("GitHub lookup returned an incomplete pull request for " + row["ref"])
+            if ref != branch or not isinstance(source, str) or source.lower() != repository.lower():
+                continue
+            if sha != row["expected"]:
+                raise GuardError(f"pull request #{number} head is {sha}, not the admitted expected commit")
+            runs = api(host, f"repos/{repository}/actions/runs?per_page=1&head_sha={sha}")
+            if not isinstance(runs, dict) or type(runs.get("total_count")) is not int:
+                raise GuardError(f"GitHub lookup returned no workflow run count for pull request #{number}")
+            observed.append({"ref": row["ref"], "pullRequest": number, "draft": draft,
+                             "workflowRuns": runs["total_count"]})
+    blocked = [o for o in observed if not o["draft"] or o["workflowRuns"]]
+    if blocked:
+        details = ", ".join(f"#{o['pullRequest']} ({o['ref'].removeprefix('refs/heads/')}: "
+                            + ("draft" if o["draft"] else "ready for review")
+                            + (f", {o['workflowRuns']} workflow runs on its head" if o["workflowRuns"] else "") + ")"
+                            for o in blocked)
+        restarted = sum(1 for o in blocked if o["workflowRuns"])
+        raise GuardError(f"refusing to move the head of {len(blocked)} open pull request(s): {details}. "
+                         f"Pushing would restart CI on {restarted} of them. Push a new top layer instead, "
+                         "or list each ref under rewrite with its reason")
+    return observed
+
+
+def prepare(value, api=github_api):
     c = validate_admission(value)
     directory = Path(c["directory"])
     if str(directory.resolve(strict=True)) != c["directory"]:
@@ -162,6 +259,9 @@ def prepare(value):
         if len(row["source"]) != object_length:
             raise GuardError("admission object format differs from repository")
         git(directory, "cat-file", "-e", row["source"] + "^{commit}")
+    # The hook runs during the push and only matches updates against this
+    # record, so the network check runs once here and its result is recorded.
+    pull_requests = check_rewrites(c, api)
     count = config_count(os.environ)
     git_dir = Path(git(directory, "rev-parse", "--absolute-git-dir"))
     original_hooks = Path(git(directory, "rev-parse", "--path-format=absolute", "--git-path", "hooks"))
@@ -182,7 +282,7 @@ def prepare(value):
         stream.write(source)
         stream.flush()
         os.fsync(stream.fileno())
-    request = {"admission": c, "directory": str(root), "originalHooks": str(original_hooks),
+    request = {"admission": c, "pullRequests": pull_requests, "directory": str(root), "originalHooks": str(original_hooks),
                "originalPrePush": original_pre_push, "helperDigest": hashlib.sha256(source).hexdigest(),
                "pythonBinary": str(Path(sys.executable).resolve()), "pythonVersion": sys.version,
                "injectedConfigIndex": count, "originalConfigCount": os.environ.get("GIT_CONFIG_COUNT")}

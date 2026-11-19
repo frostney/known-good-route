@@ -27,7 +27,11 @@ a partial merge.
 
 A member becomes frozen after its exact-head required CI and review are terminal
 and every finding surface is classified. This workflow never pushes to a frozen
-member.
+member, and the protected push helper refuses to move a member's head once it
+is ready for review or has CI runs on it. The only rewrite is the final rebase
+before merging the whole stack, under `git-workflow`'s
+[native stack reference](../../git-workflow/references/github-stacks.md#guarded-rewrite-exception);
+it changes every head, so the changed-head rule below applies to every member.
 
 - Appending one expected fix layer above an unchanged prefix preserves the
   prefix's evidence. The new member remains pending until reviewed and covered.
