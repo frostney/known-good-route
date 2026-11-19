@@ -12,6 +12,18 @@ test("synthetic full revisions are valid SHA-1 lengths and do not override concr
     expect(evidence).not.toContain("unless another concrete revision");
   }
 });
+// A model copying an id that repeats one unit can lose count of it: one model
+// wrote such ids two characters short and failed exact-value rules (issue #179).
+const repeats = (id: string) => /(.)\1{7}/.test(id)
+  || Array.from({ length: 20 }, (_, i) => i + 1).some((period) => [...id].every((ch, i) => i + period >= id.length || ch === id[i + period]));
+test("no case shows a full commit id that repeats a unit or holds a long run of one character", () => {
+  for (const id of ["2b".repeat(20), "1".repeat(40), `51ca1ab${"1".repeat(33)}`, "0123456789abcdef0123456789abcdef01234567"])
+    expect(repeats(id)).toBeTrue();
+  expect(repeats("2b2b2b2e5bc80dc07eed8e08881fd447edf43bb8")).toBeFalse();
+  for (const c of evalCases)
+    for (const [id] of JSON.stringify(c).matchAll(/\b[0-9a-f]{40}\b/g))
+      if (repeats(id)) throw new Error(`${c.id}: commit id ${id} repeats; give the fixture an id with no pattern`);
+});
 const empty = (): RunLedger => ({
   actions: [],
   events: [],

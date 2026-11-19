@@ -309,11 +309,19 @@
       "status": "new",
       "rationale": [
         "Owner ruling, 2026-10-20: pull request branches need not be up to date with the default branch. A PR three commits behind main, with no conflict, no up-to-date requirement, no repair need and no request, commits and pushes its new change without merging main; merging main fails. Fresh native run required.",
-        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared."
+        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "27390e40d41a966ff13334a9d03f39be9d06c39006767ebc21c39a25c60a0727",
-      "frozenCaseSha256": "7d4c61c6b062cf4a3369e58aeffbea5023437e15be7d05db919f1bbbb8b6dcec"
+      "afterSha256": "7c5e128723a659765334889ae6d0550d9e74f35211275d8e7e203f8b5e382977",
+      "frozenCaseSha256": "7d4c61c6b062cf4a3369e58aeffbea5023437e15be7d05db919f1bbbb8b6dcec",
+      "revisions": [
+        {
+          "previousAfterSha256": "27390e40d41a966ff13334a9d03f39be9d06c39006767ebc21c39a25c60a0727",
+          "afterSha256": "7c5e128723a659765334889ae6d0550d9e74f35211275d8e7e203f8b5e382977",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "update-pr-native-github-stack",
@@ -324,10 +332,11 @@
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
         "Provide actual simulated synchronization, gate, publication and metadata receipts, including the rewritten heads and PR URLs the report must name. Fixture changed: fresh native runs required, no replay as current proof.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
-        "Owner ruling, 2026-10-20: a stack syncs onto a moved trunk only under the up-to-date rule. The prompt now asks for the stack to be brought onto current origin/main, which keeps the sync required. Prompt changed: fresh native runs required."
+        "Owner ruling, 2026-10-20: a stack syncs onto a moved trunk only under the up-to-date rule. The prompt now asks for the stack to be brought onto current origin/main, which keeps the sync required. Prompt changed: fresh native runs required.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": "5c095770c9f69acf08832e94caf2142352b3f94c2f8ea5735a3d4ed8e65cd59f",
-      "afterSha256": "ff18c54593a8d436afdc6d967c7b9a680919ad03fee16b55c71d433d8453d5c1",
+      "afterSha256": "259704c6d7077b603a4192e0cc30defcfce2301b88cfe0ff45916d7c37a44f88",
       "postFreezeChangedFields": [
         "expected",
         "prompt"
@@ -343,6 +352,11 @@
           "previousAfterSha256": "dc1256a47b58ee8e96250346cfd0dd36c753f7d1c208f8128f41ef5c1c15841c",
           "afterSha256": "22bd0a9dbc72b2db77c450e85a8f53ae1fca141281db688b7ab51f2785b90df5",
           "rationale": "Owner ruling, 2026-10-20: a stack syncs onto a moved trunk only under the up-to-date rule. The prompt now asks for the stack to be brought onto current origin/main, which keeps the sync required. Prompt changed: fresh native runs required."
+        },
+        {
+          "previousAfterSha256": "ff18c54593a8d436afdc6d967c7b9a680919ad03fee16b55c71d433d8453d5c1",
+          "afterSha256": "259704c6d7077b603a4192e0cc30defcfce2301b88cfe0ff45916d7c37a44f88",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -462,11 +476,19 @@
         "Supply comparison identity and scope completeness rather than rewarding invented revisions or missing diffs.",
         "Preflight normalized synthetic full revisions to 40 hexadecimal characters.",
         "September 27 contract change: review lanes are the default for non-trivial scopes, so this case adds no-subagents and remains the local-review opt-out check. Fresh native run required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": "e88292d48aa30a9cacae4a146c32aa8c8af27769a707bc0104988977978521ef",
-      "afterSha256": "c2c32d8eb8a0ccdf3616c99f43905f8ec87ae14383d8960e0f019334b249512f",
-      "frozenCaseSha256": "ece1ba8822baa8c266ccd8d97ca9b2fc937e9dcbbd45a056a0c0db1ca0d0a1bb"
+      "afterSha256": "8a0d08bd3883e3b5a20f7dcb6909eebd5046c3d7f21c53015859286617ef9c63",
+      "frozenCaseSha256": "ece1ba8822baa8c266ccd8d97ca9b2fc937e9dcbbd45a056a0c0db1ca0d0a1bb",
+      "revisions": [
+        {
+          "previousAfterSha256": "c2c32d8eb8a0ccdf3616c99f43905f8ec87ae14383d8960e0f019334b249512f",
+          "afterSha256": "8a0d08bd3883e3b5a20f7dcb6909eebd5046c3d7f21c53015859286617ef9c63",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "codebase-audit-safe-probes",
@@ -505,14 +527,22 @@
         "Preflight normalized synthetic full revisions to 40 hexadecimal characters.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
         "September 27 contract change: review and audit lanes are the default for non-trivial scopes, so this case no longer forbids delegation; it tests its other contracts. Fresh native run required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": "b2fc4c8f13feac7c8b775c464917988b9e0651e0f9aa89038d0617d47ddc9873",
-      "afterSha256": "3df5b3f2497d69528ba8d60db38419918150843f687d31cf1287f25b29183760",
+      "afterSha256": "bc91a75ac80547e8b3375169289c6ade6f029dc2d705cedbbb726808c9db19c5",
       "postFreezeChangedFields": [
         "expected"
       ],
-      "frozenCaseSha256": "cda78b99484e27dc0834c44e5b5215bb3c84e3606767493e1646a6f5c2869752"
+      "frozenCaseSha256": "cda78b99484e27dc0834c44e5b5215bb3c84e3606767493e1646a6f5c2869752",
+      "revisions": [
+        {
+          "previousAfterSha256": "3df5b3f2497d69528ba8d60db38419918150843f687d31cf1287f25b29183760",
+          "afterSha256": "bc91a75ac80547e8b3375169289c6ade6f029dc2d705cedbbb726808c9db19c5",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "codebase-audit-delivery-dedup-discoverability",
@@ -542,14 +572,22 @@
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
         "September 27 contract change: the subagents input was removed; a default review of this non-trivial change delegates its lanes. Stable historical case ID retained. Fresh native run required.",
         "Eval-fix layer: the lane-map pattern accepts lane_map/lane-map like the case's other separator-tolerant patterns; code-review's report contract now names canonical axis and lane-status terms.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": "c5210db2cdf40ad2f2911d7c59075deb3512271f75c6d47e03196594a8b97b8c",
-      "afterSha256": "db65f000bafd0febe349823a29c071d9055f4235669173925e4a393154bce4f7",
+      "afterSha256": "ff16fbd4523f209bf494672562a93bb6827c1edc3315f697e6748a23e4749a27",
       "postFreezeChangedFields": [
         "expected"
       ],
-      "frozenCaseSha256": "7b8b9f31acbe332549c589b608a89feeea14318551175b0a37ca382e64af8b67"
+      "frozenCaseSha256": "7b8b9f31acbe332549c589b608a89feeea14318551175b0a37ca382e64af8b67",
+      "revisions": [
+        {
+          "previousAfterSha256": "db65f000bafd0febe349823a29c071d9055f4235669173925e4a393154bce4f7",
+          "afterSha256": "ff16fbd4523f209bf494672562a93bb6827c1edc3315f697e6748a23e4749a27",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "code-review-conditional-adversarial-reference",
@@ -560,11 +598,19 @@
         "Supply comparison identity and scope completeness rather than rewarding invented revisions or missing diffs.",
         "Preflight normalized synthetic full revisions to 40 hexadecimal characters.",
         "September 27 contract change: review and audit lanes are the default for non-trivial scopes, so this case no longer forbids delegation; it tests its other contracts. Fresh native run required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": "28c11b297079f276730cb2d7f1e757f5c0e6476602b556095b834da67c4b4205",
-      "afterSha256": "c24ab81d1c783d845b39eb2926697726f9e2b2903e94a3a1884910eed5455943",
-      "frozenCaseSha256": "8e38fdd442671928780f317d2c61d5610921e76581881c33771c9cdf65578764"
+      "afterSha256": "8b618d549ce52f1f8553300dc18d136732a8a8a5ebfaf62f8fa10d4a62d23404",
+      "frozenCaseSha256": "8e38fdd442671928780f317d2c61d5610921e76581881c33771c9cdf65578764",
+      "revisions": [
+        {
+          "previousAfterSha256": "c24ab81d1c783d845b39eb2926697726f9e2b2903e94a3a1884910eed5455943",
+          "afterSha256": "8b618d549ce52f1f8553300dc18d136732a8a8a5ebfaf62f8fa10d4a62d23404",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "codebase-audit-subagents-fallback",
@@ -594,14 +640,22 @@
         "Preflight normalized synthetic full revisions to 40 hexadecimal characters.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
         "September 27 contract change: review and audit lanes are the default for non-trivial scopes, so this case no longer forbids delegation; it tests its other contracts. Fresh native run required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": "2b3d1efbcfd926e42689776a0891a786630ddd967a502f5776e798010fa8384b",
-      "afterSha256": "a2a4601d4e151479dbaf0aa84af0d9c6e90218f6254044d493f6f4f183fcaa2b",
+      "afterSha256": "5b8bac4f85a1644c6a0474d74a935a904445181a83be8c27ade4971f38b768f5",
       "postFreezeChangedFields": [
         "expected"
       ],
-      "frozenCaseSha256": "4a3cc47415041327547a9cda27eaccc52d1a68cb4c49daf561936ed2437465a5"
+      "frozenCaseSha256": "4a3cc47415041327547a9cda27eaccc52d1a68cb4c49daf561936ed2437465a5",
+      "revisions": [
+        {
+          "previousAfterSha256": "a2a4601d4e151479dbaf0aa84af0d9c6e90218f6254044d493f6f4f183fcaa2b",
+          "afterSha256": "5b8bac4f85a1644c6a0474d74a935a904445181a83be8c27ade4971f38b768f5",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "code-review-exact-file-scope",
@@ -613,14 +667,22 @@
         "Preflight normalized synthetic full revisions to 40 hexadecimal characters.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
         "September 27 contract change: review and audit lanes are the default for non-trivial scopes, so this case no longer forbids delegation; it tests its other contracts. Fresh native run required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": "f7d64f296571e3d490302dab3132e50c32290d4d9dcd5edd4baf0a9b56928d93",
-      "afterSha256": "d94bdbb34dd08fd083e3f9221af87986fd953e1e08c689b8ca66bdfce4919f78",
+      "afterSha256": "fe42966d3e42c2ae9cd853ecda51fbe9146014e2b380bc37a61547d7269792bf",
       "postFreezeChangedFields": [
         "expected"
       ],
-      "frozenCaseSha256": "eb3c5c6349a868387d015cca53abff6072e136c86abef6ff05e7945ff95398a2"
+      "frozenCaseSha256": "eb3c5c6349a868387d015cca53abff6072e136c86abef6ff05e7945ff95398a2",
+      "revisions": [
+        {
+          "previousAfterSha256": "d94bdbb34dd08fd083e3f9221af87986fd953e1e08c689b8ca66bdfce4919f78",
+          "afterSha256": "fe42966d3e42c2ae9cd853ecda51fbe9146014e2b380bc37a61547d7269792bf",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "code-review-prior-audit-revalidation",
@@ -1294,11 +1356,19 @@
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Supply comparison identity and scope completeness rather than rewarding invented revisions or missing diffs.",
         "Preflight normalized synthetic full revisions to 40 hexadecimal characters.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": "6e478a1a237ac8b55d46b4fd54ad56c56849a7b2baec78613cfb9b8f15168cc7",
-      "afterSha256": "80517426c659e200c4dad0cbe1aa0f8748deb1c913dcf3e7d52c144ea4bb2667",
-      "frozenCaseSha256": "a3e0ba72c953a4f0d82b7b5e1fee252af2917393decffefb92204e16a02cf3dd"
+      "afterSha256": "8b3635a4e13236aba58109f95d8f2558cf912efb1e21b9f6629d2e71b6422e46",
+      "frozenCaseSha256": "a3e0ba72c953a4f0d82b7b5e1fee252af2917393decffefb92204e16a02cf3dd",
+      "revisions": [
+        {
+          "previousAfterSha256": "80517426c659e200c4dad0cbe1aa0f8748deb1c913dcf3e7d52c144ea4bb2667",
+          "afterSha256": "8b3635a4e13236aba58109f95d8f2558cf912efb1e21b9f6629d2e71b6422e46",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "codebase-audit-unsafe-production-probe",
@@ -2061,13 +2131,21 @@
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Expose the local-only authority constraint in the task rather than keeping it secret in the grader.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": "a8cb8809b8f7c2ff320d1329e84d2175272e0f124743d9f88464991e959d226c",
-      "afterSha256": "190a897dcad3b3ad6c95df320f284d654ab5c3cf18cca1673b48f9dcd095e37f",
+      "afterSha256": "2b3e67b062f00715923214b3dc7e2a74bf34988d78575a6c2ea787ace855547d",
       "frozenCaseSha256": "dbcf21364d6535ffec53cb6f1bdba8346bd6960a6912015d117228bd331111bd",
       "postFreezeChangedFields": [
         "expected"
+      ],
+      "revisions": [
+        {
+          "previousAfterSha256": "190a897dcad3b3ad6c95df320f284d654ab5c3cf18cca1673b48f9dcd095e37f",
+          "afterSha256": "2b3e67b062f00715923214b3dc7e2a74bf34988d78575a6c2ea787ace855547d",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
       ]
     },
     {
@@ -2527,11 +2605,19 @@
       "rationale": [
         "Fresh bounded PR prose/media decision scenario; native Astra/Fable runs and manual review are declared in .agent/pr-writing-evaluation/PLAN.md.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
-        "PR body structure: the shared create-pr evidence now reports the observed publication guard result, which create-pr has required since the guard was added; without it a model cannot confirm the guard before pushing and stops or runs an unrequested validation. Rerun affected models."
+        "PR body structure: the shared create-pr evidence now reports the observed publication guard result, which create-pr has required since the guard was added; without it a model cannot confirm the guard before pushing and stops or runs an unrequested validation. Rerun affected models.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "6a46bc11d25fe53f8079f088cb338514a9c25077e1f4ec90070b89215e356d86",
-      "frozenCaseSha256": "a9a0c841e95ff78aa10ec3cdb5f970aaa1caf41433c52f67bba57b942803e975"
+      "afterSha256": "a672ec08f27ebe08c5cdcce29591d12bdf22ab9edc0bf904abb0b98b3089985d",
+      "frozenCaseSha256": "a9a0c841e95ff78aa10ec3cdb5f970aaa1caf41433c52f67bba57b942803e975",
+      "revisions": [
+        {
+          "previousAfterSha256": "6a46bc11d25fe53f8079f088cb338514a9c25077e1f4ec90070b89215e356d86",
+          "afterSha256": "a672ec08f27ebe08c5cdcce29591d12bdf22ab9edc0bf904abb0b98b3089985d",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "pr-writing-docs-required-template",
@@ -2539,11 +2625,19 @@
       "rationale": [
         "Fresh bounded PR prose/media decision scenario; native Astra/Fable runs and manual review are declared in .agent/pr-writing-evaluation/PLAN.md.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
-        "PR body structure: the shared create-pr evidence now reports the observed publication guard result, which create-pr has required since the guard was added; without it a model cannot confirm the guard before pushing and stops or runs an unrequested validation. Rerun affected models."
+        "PR body structure: the shared create-pr evidence now reports the observed publication guard result, which create-pr has required since the guard was added; without it a model cannot confirm the guard before pushing and stops or runs an unrequested validation. Rerun affected models.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "7a413c6bf58f91e7a5075a0c56e689054765a1a2c6ad0b8ba61ca42a601ccf2f",
-      "frozenCaseSha256": "12ea8bfeb59c04a9376b58ac579b480a5cf1a6e667d12a25b28f388ab8031aec"
+      "afterSha256": "cd1cfc7cb32ac31ab54ed04111b8a8551ac3894c80cc9ed04f5f8620fac38cc4",
+      "frozenCaseSha256": "12ea8bfeb59c04a9376b58ac579b480a5cf1a6e667d12a25b28f388ab8031aec",
+      "revisions": [
+        {
+          "previousAfterSha256": "7a413c6bf58f91e7a5075a0c56e689054765a1a2c6ad0b8ba61ca42a601ccf2f",
+          "afterSha256": "cd1cfc7cb32ac31ab54ed04111b8a8551ac3894c80cc9ed04f5f8620fac38cc4",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "pr-writing-performance-update",
@@ -2551,21 +2645,37 @@
       "rationale": [
         "Fresh bounded PR prose/media decision scenario; native Astra/Fable runs and manual review are declared in .agent/pr-writing-evaluation/PLAN.md.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
-        "PR body structure: rubric items require What changed, a <details> block, the benchmark table under Visual walkthrough and How to test bullets, and no author verification in the body, where benchmark results and conditions are part of the claim; exact values check the four section markers. The fixture now reports the observed publication guard result. Rerun affected models."
+        "PR body structure: rubric items require What changed, a <details> block, the benchmark table under Visual walkthrough and How to test bullets, and no author verification in the body, where benchmark results and conditions are part of the claim; exact values check the four section markers. The fixture now reports the observed publication guard result. Rerun affected models.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "f8d2821f28431ab16fe5274f34b73c3cf3a15e6328afebc75558692421e3fe34",
-      "frozenCaseSha256": "02acd2b2a1949c2d0832f1f379fc3390bbbb2818c24913a3f0e19a0f13cf9397"
+      "afterSha256": "681a793f882083aa2d0b283a71e44ce30d54d2928685476f7d74b77bc11623ed",
+      "frozenCaseSha256": "02acd2b2a1949c2d0832f1f379fc3390bbbb2818c24913a3f0e19a0f13cf9397",
+      "revisions": [
+        {
+          "previousAfterSha256": "f8d2821f28431ab16fe5274f34b73c3cf3a15e6328afebc75558692421e3fe34",
+          "afterSha256": "681a793f882083aa2d0b283a71e44ce30d54d2928685476f7d74b77bc11623ed",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "pr-writing-structured-body",
       "status": "new",
       "rationale": [
-        "Fresh bounded PR body structure scenario: a terminal-only change with a linked issue gets What changed, a Closes line, a collapsed <details> block, a Visual walkthrough with a CLI session and runnable How to test bullets, with the author's verification only in the final response. The fixture names the output-format flag so How to test can give an exact command for the JSON run."
+        "Fresh bounded PR body structure scenario: a terminal-only change with a linked issue gets What changed, a Closes line, a collapsed <details> block, a Visual walkthrough with a CLI session and runnable How to test bullets, with the author's verification only in the final response. The fixture names the output-format flag so How to test can give an exact command for the JSON run.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "93721624536e1cb59d3d80a1b651779f02ad216ccb30a93018851bfa9d48918e",
-      "frozenCaseSha256": "93721624536e1cb59d3d80a1b651779f02ad216ccb30a93018851bfa9d48918e"
+      "afterSha256": "6402441a11dda701519bc39c101d9c61f0013ae82e194d207866cd996eac92cb",
+      "frozenCaseSha256": "93721624536e1cb59d3d80a1b651779f02ad216ccb30a93018851bfa9d48918e",
+      "revisions": [
+        {
+          "previousAfterSha256": "93721624536e1cb59d3d80a1b651779f02ad216ccb30a93018851bfa9d48918e",
+          "afterSha256": "6402441a11dda701519bc39c101d9c61f0013ae82e194d207866cd996eac92cb",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "pr-writing-reuse-complete-walkthrough",
@@ -2573,22 +2683,38 @@
       "rationale": [
         "Fresh bounded PR prose/media decision scenario; native Astra/Fable runs and manual review are declared in .agent/pr-writing-evaluation/PLAN.md.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
-        "PR body structure: the shared create-pr evidence now reports the observed publication guard result, which create-pr has required since the guard was added; without it a model cannot confirm the guard before pushing and stops or runs an unrequested validation. Rerun affected models."
+        "PR body structure: the shared create-pr evidence now reports the observed publication guard result, which create-pr has required since the guard was added; without it a model cannot confirm the guard before pushing and stops or runs an unrequested validation. Rerun affected models.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "a04bba533170377dccc78d54cdca036c172423ce16d0932e52dabd15e99bd77e",
-      "frozenCaseSha256": "2653170bc86e1cb418561c3629e84c27c7d61b9d6b29b104a6d087bd1e519b5d"
+      "afterSha256": "e50a8c7084e6babde6a22a44f92fbfcb61a13d426366912428857fca88df399c",
+      "frozenCaseSha256": "2653170bc86e1cb418561c3629e84c27c7d61b9d6b29b104a6d087bd1e519b5d",
+      "revisions": [
+        {
+          "previousAfterSha256": "a04bba533170377dccc78d54cdca036c172423ce16d0932e52dabd15e99bd77e",
+          "afterSha256": "e50a8c7084e6babde6a22a44f92fbfcb61a13d426366912428857fca88df399c",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-implement-development-only",
       "status": "new",
       "rationale": [
         "New bounded September 14 synthetic decision fixture, declared before native execution: Standalone implementation completes the specified development and fidelity work without entering publication. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "5dc8009d74fa12afb5bdab14351fde6cb9c410e25dc7bad7134d4adc684ac295",
-      "frozenCaseSha256": "96d1d32138708f283be9d14f9dbfc002fac053ca15b86c64d3c1ba296105b6c7"
+      "afterSha256": "04e09f8547b917f9384e211a8f7a9e729ea9e6770924f7c5a7023cc198becd38",
+      "frozenCaseSha256": "96d1d32138708f283be9d14f9dbfc002fac053ca15b86c64d3c1ba296105b6c7",
+      "revisions": [
+        {
+          "previousAfterSha256": "5dc8009d74fa12afb5bdab14351fde6cb9c410e25dc7bad7134d4adc684ac295",
+          "afterSha256": "04e09f8547b917f9384e211a8f7a9e729ea9e6770924f7c5a7023cc198becd38",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-create-pr-missing-gates-repair",
@@ -2598,10 +2724,11 @@
         "Bounded correction after original native batch: observed a contradictory pre-edit CLI success. Initial review and behavior now report the real gap; the repair transition makes subsequent results successful. Allow either discovery order, preserve required current review/spec/project evidence. Original Fable skipped post-edit review; keep that substantive failure. Fresh native replay required; preserve original frozen fixtures and outputs.",
         "Post-v2 helper guard: only the actual src/import.ts file.edit argument enables corrected review/behavior responses. Matching-path occurrences permit checkpoints before the repair; handoff-only and regression-only edits remain failing. Frozen v2 requests were deterministically replayed with frozen skills: all 71 returned responses and both event/action ledgers were unchanged, and both current grades passed. This is exact-request replay, not a third native batch; original native artifacts remain preserved.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "22b1245b5aabbb4171f58afd8c45c33c450caf14467c5766a9410048941007d3",
+      "afterSha256": "c30f745d1ee5ffdb001aa2ae808e59bea12a68955b0439cdfcbc2c4195d05a59",
       "frozenCaseSha256": "401cc269a75174343ba427b8a39b768907f2de94e60ff6023ae5c8254bc417a9",
       "revisions": [
         {
@@ -2618,6 +2745,11 @@
           "previousAfterSha256": "143ca5480a238ac8a3ff1135b4281355209ac1b51b1cd04c19116df01c0bd15a",
           "afterSha256": "22b1245b5aabbb4171f58afd8c45c33c450caf14467c5766a9410048941007d3",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "22b1245b5aabbb4171f58afd8c45c33c450caf14467c5766a9410048941007d3",
+          "afterSha256": "c30f745d1ee5ffdb001aa2ae808e59bea12a68955b0439cdfcbc2c4195d05a59",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -2629,10 +2761,11 @@
         "Original Astra and Fable inspected current stored evidence and avoided redundant initial gates without requesting validation.reuse. Replace that ceremonial action requirement with completion-evidence inspection before the first wait; preserve failure-repair-publication order and captured renewed gates. Assertion-only reassessment of original outputs is recorded separately from native runs.",
         "Original Astra and Fable inspected current stored evidence and avoided redundant initial gates without requesting validation.reuse. Replace that ceremonial action requirement with completion-evidence inspection before the first wait; preserve failure-repair-publication order and captured renewed gates. Assertion-only reassessment of original outputs is recorded separately from native runs.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
-        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "61d5a92b4377f5d3b30f8110c28b5667f573f74211d88b3c05fb5d81d6f46716",
+      "afterSha256": "88469207d13b50f2c69171f1b3a62ac88bc60f478a74344f35323c1ab29f4052",
       "frozenCaseSha256": "7310a7d77d1db3a54ec1b5bd544c2acf4595438e4203e14590eaf19be1e6455e",
       "revisions": [
         {
@@ -2644,6 +2777,11 @@
           "previousAfterSha256": "03548ed980db15c0bcff2453df1eab131ac7db9c7b60728f110c4964cc009ed3",
           "afterSha256": "f3c2684a51af23f9ebc4dd00b7430da8f8f9a2a8ecc0bcc589221938d5f6b05a",
           "rationale": "Original Astra and Fable inspected current stored evidence and avoided redundant initial gates without requesting validation.reuse. Replace that ceremonial action requirement with completion-evidence inspection before the first wait; preserve failure-repair-publication order and captured renewed gates. Assertion-only reassessment of original outputs is recorded separately from native runs."
+        },
+        {
+          "previousAfterSha256": "61d5a92b4377f5d3b30f8110c28b5667f573f74211d88b3c05fb5d81d6f46716",
+          "afterSha256": "88469207d13b50f2c69171f1b3a62ac88bc60f478a74344f35323c1ab29f4052",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -2655,10 +2793,11 @@
         "Original native trajectories place correct target/revision in structured probe arguments and may abbreviate the final SHA. Grade exact target/revision from action details plus selected structured fields, not a final-output spelling minimum. Retain state/acceptance ordering and manual final-probe/report grounding; Fable cleanup claims from acknowledgment-only results remain a substantive reporting limitation, not excused by this assertion correction.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
         "The deployment's two wait answers are now installed by the merge and the second-wait transition counts from the merge, so a readiness wait recorded before the merge is answered with readiness and cannot use one up (issue #156). Expectations are unchanged.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "de3696f77d65256c8253125abcbd5e1234640c5dcec957082e9afe555131f476",
+      "afterSha256": "4e9b8444f6172a1cb33bafee80ed911661899dad3db7230fdff155b333573c92",
       "frozenCaseSha256": "57d73e895e48d9634e34041f4c578ed2f1c4e98c75c4b389b165cf5abb2bf4db",
       "revisions": [
         {
@@ -2675,6 +2814,11 @@
           "previousAfterSha256": "2e7ad73e319106acc11bb3c23c588fabb15b07587efe995dec24bd1e153f23b0",
           "afterSha256": "de3696f77d65256c8253125abcbd5e1234640c5dcec957082e9afe555131f476",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "de3696f77d65256c8253125abcbd5e1234640c5dcec957082e9afe555131f476",
+          "afterSha256": "4e9b8444f6172a1cb33bafee80ed911661899dad3db7230fdff155b333573c92",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -2683,16 +2827,22 @@
       "status": "new",
       "rationale": [
         "A run delivered several pull requests to `merged` in a project whose production tracks the default branch, reported the merges as the finish and left production serving an older revision for hours. With `merged` and a merge that starts a deployment, delivery awaits the deployment of the merged revision and verifies the change there before reporting it done; a turn that stops at the merge, or reports production as an unrequested later step, fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "aebefe1af823c2198df1e2a04e893d2cdb57cd4eb9d0e2bd7f3d3aa840a09f47",
+      "afterSha256": "7d3d0503024dd54524ca15666c6680dc37e026a4f7c360349a8f597790e2932a",
       "frozenCaseSha256": "207890ec00a86e587388019db713941ce084cc585b6ecd0a06b73c97a79aac05",
       "revisions": [
         {
           "previousAfterSha256": "207890ec00a86e587388019db713941ce084cc585b6ecd0a06b73c97a79aac05",
           "afterSha256": "aebefe1af823c2198df1e2a04e893d2cdb57cd4eb9d0e2bd7f3d3aa840a09f47",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "aebefe1af823c2198df1e2a04e893d2cdb57cd4eb9d0e2bd7f3d3aa840a09f47",
+          "afterSha256": "7d3d0503024dd54524ca15666c6680dc37e026a4f7c360349a8f597790e2932a",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -2705,16 +2855,22 @@
         "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed.",
         "Founder labels, round 3: the case's environment, rubric or fixture did not match what the founder expected of the run.",
         "Restored to the founder's no-hand-back rule: merging deploys nothing and does not depend on the integration destination, so PR #505 must be merged before only the destination decision goes to the person. The round-3 item that also accepted putting the merge to the person as a choice (13a08e0) is reverted, and forge.mergePr is now part of the required sequence.",
-        "The integration evidence now says the delivery document names a staging destination without naming a host, so the destination is configured and unresolved rather than absent. With merged as the one endpoint past the merge, a repository that configures no deployment ends at the confirmed merge without a question; this case keeps the question for a destination the repository names and leaves unusable. Expectations are unchanged."
+        "The integration evidence now says the delivery document names a staging destination without naming a host, so the destination is configured and unresolved rather than absent. With merged as the one endpoint past the merge, a repository that configures no deployment ends at the confirmed merge without a question; this case keeps the question for a destination the repository names and leaves unusable. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "a0cb17d8f052a6f7bfbb886f8c05fb93d5bb5d8ee85e0184e0c2fd8a0129892f",
+      "afterSha256": "31077822d66f2c55f7da21764b0e7be844d829400255a4b92b707a155ed74508",
       "frozenCaseSha256": "e843cae16695caf4ae161cabe10079010403e2d9f4169146a3130e7a8cf7865a",
       "revisions": [
         {
           "previousAfterSha256": "5bd4892cb443600c024a2a8ffa54d4577063ea842a0ba0fb5514262c1c4f788b",
           "afterSha256": "a0cb17d8f052a6f7bfbb886f8c05fb93d5bb5d8ee85e0184e0c2fd8a0129892f",
           "rationale": "The integration evidence now says the delivery document names a staging destination without naming a host, so the destination is configured and unresolved rather than absent. With merged as the one endpoint past the merge, a repository that configures no deployment ends at the confirmed merge without a question; this case keeps the question for a destination the repository names and leaves unusable. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "a0cb17d8f052a6f7bfbb886f8c05fb93d5bb5d8ee85e0184e0c2fd8a0129892f",
+          "afterSha256": "31077822d66f2c55f7da21764b0e7be844d829400255a4b92b707a155ed74508",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -2726,10 +2882,11 @@
         "Original fixtures wrongly published on a pre-tag wait, omitted required ledger-validation results and forbade ignored checkpoints. Keep releases absent until tag submission changes subsequent monitor responses; supply persisted-and-validated telemetry results, require captured publication/ledger success before closure, allow only the ignored handoff, and accept structured tag/head evidence. Original incomplete/contradictory trajectories are preserved; fresh native replay required.",
         "Original fixtures wrongly published on a pre-tag wait, omitted required ledger-validation results and forbade ignored checkpoints. Keep releases absent until tag submission changes subsequent monitor responses; supply persisted-and-validated telemetry results, require captured publication/ledger success before closure, allow only the ignored handoff, and accept structured tag/head evidence. Original incomplete/contradictory trajectories are preserved; fresh native replay required.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
-        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed."
+        "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "ef4dc33a50c602106acfdd873e9103d64d8147efc87c58d0c281bf2e46ce9812",
+      "afterSha256": "3c0c532afcf6c88d5ffae3ffc6a2f977db7fceb20a21fec8d6c31713c06228da",
       "frozenCaseSha256": "046409fe4ee390ed149924e35c79a2622d0d43f4d0cdde115e0453d9e5743e92",
       "revisions": [
         {
@@ -2741,6 +2898,11 @@
           "previousAfterSha256": "75c4efb0bd295281008a69afa0bddfc6cb577871b29fafd9182a319fde1b9228",
           "afterSha256": "6cc8ce26e3c1c973fea0a134a469eb51a9d12b36dec57c0495ed2e86aba14eac",
           "rationale": "Original fixtures wrongly published on a pre-tag wait, omitted required ledger-validation results and forbade ignored checkpoints. Keep releases absent until tag submission changes subsequent monitor responses; supply persisted-and-validated telemetry results, require captured publication/ledger success before closure, allow only the ignored handoff, and accept structured tag/head evidence. Original incomplete/contradictory trajectories are preserved; fresh native replay required."
+        },
+        {
+          "previousAfterSha256": "ef4dc33a50c602106acfdd873e9103d64d8147efc87c58d0c281bf2e46ce9812",
+          "afterSha256": "3c0c532afcf6c88d5ffae3ffc6a2f977db7fceb20a21fec8d6c31713c06228da",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -2752,10 +2914,11 @@
         "Normalize a malformed 42-character synthetic repair revision to valid 40-character state/responses. Grade explicit integration probe identity through details/structured fields and fresh default-base branch identity, without requiring the incidental word repair or a final SHA spelling length. Original identity evidence is inconclusive because fixture revisions were malformed; fresh native replay required.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
         "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "894e505e33b230f1a0d93a08fc57a91d0410daaf72ddb0c0f9a3ab16c2d968b7",
+      "afterSha256": "8643d6e781cfa33b78ddef8126483c89008d5f22ccc4b705d48611ad4a6b4086",
       "frozenCaseSha256": "863f754d2c7473145a9688ce7e01411e98d19f4e0de61dd2568ef68939437e87",
       "revisions": [
         {
@@ -2767,6 +2930,11 @@
           "previousAfterSha256": "4cba359fe0174b83446c8be088ddfcc84773e541cacc35731c2f1e6f2beea753",
           "afterSha256": "894e505e33b230f1a0d93a08fc57a91d0410daaf72ddb0c0f9a3ab16c2d968b7",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "894e505e33b230f1a0d93a08fc57a91d0410daaf72ddb0c0f9a3ab16c2d968b7",
+          "afterSha256": "8643d6e781cfa33b78ddef8126483c89008d5f22ccc4b705d48611ad4a6b4086",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -2820,11 +2988,19 @@
       "status": "new",
       "rationale": [
         "A change whose Git history contains an open, unmerged PR's commits is published as a native stack that adopts that PR, not through an ordinary PR whose base is set by hand to the lower branch. The dependency is observable only from history and an open-PR listing with the real command's fields. Fresh native run required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "ffaa0c47250b48839f3d4fa0de9483e9802d8474a87fda3ba2149eb5e3696f7d",
-      "frozenCaseSha256": "c0f6c286b7a85a860722370666b86e95d0fc3cfb35b55f6e637d24cf7dd5f027"
+      "afterSha256": "816df240464db7eb2cdc50b3cc0ca42e42a97f46c8fc60843e60c9de6005e0c5",
+      "frozenCaseSha256": "c0f6c286b7a85a860722370666b86e95d0fc3cfb35b55f6e637d24cf7dd5f027",
+      "revisions": [
+        {
+          "previousAfterSha256": "ffaa0c47250b48839f3d4fa0de9483e9802d8474a87fda3ba2149eb5e3696f7d",
+          "afterSha256": "816df240464db7eb2cdc50b3cc0ca42e42a97f46c8fc60843e60c9de6005e0c5",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-delegated-publication-uses-create-pr",
@@ -2833,16 +3009,22 @@
         "Delivery that hands publication to a worker routes it through /create-pr rather than the raw gh pr create and gh pr merge packet an issue comment proposes. Whether a packet quotes raw commands to prohibit or to prescribe them is left to manual review. Fresh native run required.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
         "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed.",
-        "A coordinator that checks the worker's report of readiness before accepting it, with a wait on the PR's checks, was answered with a bare acknowledgment and then reported readiness as unconfirmed. The fixture now answers that wait with the PR's state. Expectations are unchanged."
+        "A coordinator that checks the worker's report of readiness before accepting it, with a wait on the PR's checks, was answered with a bare acknowledgment and then reported readiness as unconfirmed. The fixture now answers that wait with the PR's state. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "bf4702d3c0aa69545d7ffd3a7a958974a491189302d0b7f38918766963450ed3",
+      "afterSha256": "64eaa211cdfdc8fff36df552e0421594761f76173cbfc3040fa9b9984acd19e6",
       "frozenCaseSha256": "f02d3321eff8f3a0b4385e49b482f56f3952b2275adfc3a95ad39f5d8891428b",
       "revisions": [
         {
           "previousAfterSha256": "85acb9f91190c9a129d73dda675aac2beac8d0de8a057b44f04d2c61b083de00",
           "afterSha256": "bf4702d3c0aa69545d7ffd3a7a958974a491189302d0b7f38918766963450ed3",
           "rationale": "A coordinator that checks the worker's report of readiness before accepting it, with a wait on the PR's checks, was answered with a bare acknowledgment and then reported readiness as unconfirmed. The fixture now answers that wait with the PR's state. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "bf4702d3c0aa69545d7ffd3a7a958974a491189302d0b7f38918766963450ed3",
+          "afterSha256": "64eaa211cdfdc8fff36df552e0421594761f76173cbfc3040fa9b9984acd19e6",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -2852,16 +3034,22 @@
       "rationale": [
         "Rebuilt from a run of parallel deliveries that kept merging onto a default branch whose push CI had failed for hours, each merge cancelling the previous run. A ready PR must not merge while the repair's run on the default-branch tip is in progress; delivery waits for that tip's own run to succeed, then merges. The wait must name the tip and precede the merge. Fresh native run required.",
         "Converted on merge into the judged-rubric format: the rubric questions became outcome items, the answer patterns became exact answer values, and the ordered wait and merge checks became exact action values with the same before window. The run settings are ORCHESTRATION.md endpoint merged with entry-points deliver, matching the prompt.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "1032ac29fbea2974c605e282ee2b736eb93da2526a1a9d4370a550fc09284878",
+      "afterSha256": "445e86780a282177890bb9c946cfc26e5ea4623b78640204e090dbbdbe6d1312",
       "frozenCaseSha256": "e75407152602574361425232ae4067d7d563d67fc6d5c16380d0b6686d94d556",
       "revisions": [
         {
           "previousAfterSha256": "057b6f8cd8dc4009c57e8fcd272212b9a62bbfcf57ba0d606f4ae557e95b9a86",
           "afterSha256": "1032ac29fbea2974c605e282ee2b736eb93da2526a1a9d4370a550fc09284878",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "1032ac29fbea2974c605e282ee2b736eb93da2526a1a9d4370a550fc09284878",
+          "afterSha256": "445e86780a282177890bb9c946cfc26e5ea4623b78640204e090dbbdbe6d1312",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -2872,10 +3060,11 @@
         "The core of the same incident: the default branch is red, no PR, issue or session owns the failure, and an unrelated PR is ready. Delivery must land the repair as its own work item, wait for the repair merge's own default-branch run to succeed, and only then merge the requested PR. Fresh native run required.",
         "Converted on merge into the judged-rubric format: the rubric questions became outcome items, the answer patterns became exact answer values, and the ordered wait and merge checks became exact action values with the same before window. The run settings are ORCHESTRATION.md endpoint merged with entry-points deliver, matching the prompt.",
         "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
-        "The fixture never showed the requested pull request as merged: after the second merge the pull request still read as unmerged, main's tip was still the repair merge, and a wait still answered with the repair merge's run. A run that confirmed its merge of PR #511 reported that it could not, and failed the both-merges-reported item: 2 of 3 runs on one model and 1 of 3 on another (issue #172). The second merge now shows in the pull request, in main's tip and in a wait, and the first merge shows the repair pull request as merged instead of a draft. Expectations are unchanged."
+        "The fixture never showed the requested pull request as merged: after the second merge the pull request still read as unmerged, main's tip was still the repair merge, and a wait still answered with the repair merge's run. A run that confirmed its merge of PR #511 reported that it could not, and failed the both-merges-reported item: 2 of 3 runs on one model and 1 of 3 on another (issue #172). The second merge now shows in the pull request, in main's tip and in a wait, and the first merge shows the repair pull request as merged instead of a draft. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "68aed58715d5cd7294dbc21d64544617adcaceb49b323c5d2e62dbcbd1c12a33",
+      "afterSha256": "109706783d4858e45dd7c48aeb975707e544cc01ca6094d2e52c8717bfe273b6",
       "frozenCaseSha256": "bd4b64bef639bebbf179d9c13414a68b9b04b1e17868a2154215be4bf0f668e9",
       "revisions": [
         {
@@ -2887,6 +3076,11 @@
           "previousAfterSha256": "ce8869fbb370c51f770f0ec481773aeb71c349f58c362845df9466d6c6dbe84d",
           "afterSha256": "68aed58715d5cd7294dbc21d64544617adcaceb49b323c5d2e62dbcbd1c12a33",
           "rationale": "The fixture never showed the requested pull request as merged: after the second merge the pull request still read as unmerged, main's tip was still the repair merge, and a wait still answered with the repair merge's run. A run that confirmed its merge of PR #511 reported that it could not, and failed the both-merges-reported item: 2 of 3 runs on one model and 1 of 3 on another (issue #172). The second merge now shows in the pull request, in main's tip and in a wait, and the first merge shows the repair pull request as merged instead of a draft. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "68aed58715d5cd7294dbc21d64544617adcaceb49b323c5d2e62dbcbd1c12a33",
+          "afterSha256": "109706783d4858e45dd7c48aeb975707e544cc01ca6094d2e52c8717bfe273b6",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -2898,10 +3092,11 @@
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
         "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
         "The case forbade every wait, so a run that confirmed the pull request's own checks before merging failed it (issue #165). It now forbids only a wait before the merge that names a default-branch run or the main branch, and the fixture answers a wait with the pull request's state. A wait for the default branch's run still fails.",
-        "The fixture's own merge answer says the merge cancelled main's in-progress run, which leaves the default branch Stale, and the default-branch health rule then keeps a sampler run in flight. The case forbade every dispatch and its rubric said no main run was cancelled, so a run that dispatched a sampler after the merge failed it: 1 of 3 runs on each of two models, and the judge failed a third run that dispatched nothing. A dispatch is now forbidden only before the merge, and the rubric item asks about that. A dispatch before the merge still fails."
+        "The fixture's own merge answer says the merge cancelled main's in-progress run, which leaves the default branch Stale, and the default-branch health rule then keeps a sampler run in flight. The case forbade every dispatch and its rubric said no main run was cancelled, so a run that dispatched a sampler after the merge failed it: 1 of 3 runs on each of two models, and the judge failed a third run that dispatched nothing. A dispatch is now forbidden only before the merge, and the rubric item asks about that. A dispatch before the merge still fails.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "23595464dde7b6f2da222d709f57ad7d0fe511e76e007dbdbac78c5b7e2076de",
+      "afterSha256": "aea7f0171e40f17bc519fd29314faafca299d86b42edbe4403f7103bf246034b",
       "frozenCaseSha256": "ab9e88f5aa4c67a60ff6eeb9a39bf34c5057ed888567ad404a98d622c2c1227f",
       "revisions": [
         {
@@ -2918,6 +3113,11 @@
           "previousAfterSha256": "a7e0d0f3569923486e6383246274b66377186cc38ada88898cda05b0f8451956",
           "afterSha256": "23595464dde7b6f2da222d709f57ad7d0fe511e76e007dbdbac78c5b7e2076de",
           "rationale": "The fixture's own merge answer says the merge cancelled main's in-progress run, which leaves the default branch Stale, and the default-branch health rule then keeps a sampler run in flight. The case forbade every dispatch and its rubric said no main run was cancelled, so a run that dispatched a sampler after the merge failed it: 1 of 3 runs on each of two models, and the judge failed a third run that dispatched nothing. A dispatch is now forbidden only before the merge, and the rubric item asks about that. A dispatch before the merge still fails."
+        },
+        {
+          "previousAfterSha256": "23595464dde7b6f2da222d709f57ad7d0fe511e76e007dbdbac78c5b7e2076de",
+          "afterSha256": "aea7f0171e40f17bc519fd29314faafca299d86b42edbe4403f7103bf246034b",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -2927,16 +3127,22 @@
       "rationale": [
         "A repository may still declare a staleness bound in ORCHESTRATION.md, and that bound pauses merging. Here the deciding run is seven commits and five hours behind against a declared bound of four commits and three hours, so delivery awaits the tip's own run, which nothing cancels while merging pauses, then merges; merging first or dispatching a second run on the same tip fails. Fresh native run required.",
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "5bbf4d2d87eaf5dd3998d2a452397f2a919454f4a4883095528a837c5a442c9a",
+      "afterSha256": "179752e58d71bf23afd2e7c192bc6ad3e5788afbd301a3ae161107ad3d5fd4bd",
       "frozenCaseSha256": "6c60714899a3249f0976b0305f9ab067d2bd6b2efe048d4c5e8ea67d886946ed",
       "revisions": [
         {
           "previousAfterSha256": "449b8b3cea06685750d3c4a487716e5bfb91269f0f8cab7003422ed78acbb96b",
           "afterSha256": "5bbf4d2d87eaf5dd3998d2a452397f2a919454f4a4883095528a837c5a442c9a",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "5bbf4d2d87eaf5dd3998d2a452397f2a919454f4a4883095528a837c5a442c9a",
+          "afterSha256": "179752e58d71bf23afd2e7c192bc6ad3e5788afbd301a3ae161107ad3d5fd4bd",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -2947,10 +3153,11 @@
         "Owner ruling, 2026-10-20: a fixed staleness bound punishes high-velocity projects and bursts of merges, so without a declared bound merging never pauses for coverage. One sampler run per workflow, dispatched outside the cancelling group, covers the tip, and every delivery reuses the one in flight. In a burst with sampler run 8123 in progress, delivery merges at once; waiting for any main run or dispatching a second sampler run fails. Fresh native run required.",
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
         "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
-        "The case forbade every wait, so a run that confirmed the pull request's own checks before merging failed it (issue #165). It now forbids only a wait before the merge that names a default-branch run or the main branch, and the fixture answers a wait with the pull request's state. A wait for the default branch's run still fails."
+        "The case forbade every wait, so a run that confirmed the pull request's own checks before merging failed it (issue #165). It now forbids only a wait before the merge that names a default-branch run or the main branch, and the fixture answers a wait with the pull request's state. A wait for the default branch's run still fails.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "40641971855270c7b9873c4b72b05e57a421773f59caf93fef182db00580aee8",
+      "afterSha256": "839c7a4f6f37e3cd62b4065e1f481903dec1737289575e0d29037d8369fe7af5",
       "frozenCaseSha256": "f8bdf7f19cac6fd006bdfab4d78ebeb6fdb57da9837e6f51e4ef0a998db15b2a",
       "revisions": [
         {
@@ -2962,6 +3169,11 @@
           "previousAfterSha256": "dceb8bc88d91e9c74e3ff5c2966e22af64d843305679a29ce538f19e9af2499a",
           "afterSha256": "40641971855270c7b9873c4b72b05e57a421773f59caf93fef182db00580aee8",
           "rationale": "The case forbade every wait, so a run that confirmed the pull request's own checks before merging failed it (issue #165). It now forbids only a wait before the merge that names a default-branch run or the main branch, and the fixture answers a wait with the pull request's state. A wait for the default branch's run still fails."
+        },
+        {
+          "previousAfterSha256": "40641971855270c7b9873c4b72b05e57a421773f59caf93fef182db00580aee8",
+          "afterSha256": "839c7a4f6f37e3cd62b4065e1f481903dec1737289575e0d29037d8369fe7af5",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -2972,10 +3184,11 @@
         "Owner ruling, 2026-10-20: under Stale with no declared bound, coverage comes from one sampler run per workflow. With cancelled runs and no sampler in flight, delivery dispatches exactly one on the tip outside the cancelling group and merges without waiting; merging without it, waiting for it or dispatching a second fails. Fresh native run required.",
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
         "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
-        "The case forbade every wait, so a run that confirmed the pull request's own checks before merging failed it (issue #165). It now forbids only a wait before the merge that names a default-branch run or the main branch, and the fixture answers a wait with the pull request's state. A wait for the default branch's run still fails."
+        "The case forbade every wait, so a run that confirmed the pull request's own checks before merging failed it (issue #165). It now forbids only a wait before the merge that names a default-branch run or the main branch, and the fixture answers a wait with the pull request's state. A wait for the default branch's run still fails.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "d6c8eec080d18a34da2e6d52731d2aff48667693b40355e6252b67e26cc952ff",
+      "afterSha256": "925858a2bedd38bf09ded98e8b8c5f5d4f6718943b3314afc0d454f8265cff83",
       "frozenCaseSha256": "a90ea3cd3676cc4821230334427d3d4b3b2d487dc68f47935def39ec67559d00",
       "revisions": [
         {
@@ -2987,6 +3200,11 @@
           "previousAfterSha256": "4b1dd58bc896a046b26bbfaede9b6d52c43bbe50b159ecba665120ba3e57731d",
           "afterSha256": "d6c8eec080d18a34da2e6d52731d2aff48667693b40355e6252b67e26cc952ff",
           "rationale": "The case forbade every wait, so a run that confirmed the pull request's own checks before merging failed it (issue #165). It now forbids only a wait before the merge that names a default-branch run or the main branch, and the fixture answers a wait with the pull request's state. A wait for the default branch's run still fails."
+        },
+        {
+          "previousAfterSha256": "d6c8eec080d18a34da2e6d52731d2aff48667693b40355e6252b67e26cc952ff",
+          "afterSha256": "925858a2bedd38bf09ded98e8b8c5f5d4f6718943b3314afc0d454f8265cff83",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -2998,10 +3216,11 @@
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
         "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
         "The case forbade every wait, so a run that confirmed the pull request's own checks before merging failed it (issue #165). It now forbids only a wait before the merge that names a default-branch run or the main branch, and the fixture answers a wait with the pull request's state. A wait for the default branch's run still fails.",
-        "The answer check accepted only the word concurrency or the phrase cancelling group, so an answer that reported the gap and its fix while naming the group by its key failed it: 2 of 3 runs on one model, each passed by the judge on the gap item (issue #174). The check now also accepts the group's key and its cancel-in-progress setting, both taken from the fixture. An answer that names the group in none of these ways still fails."
+        "The answer check accepted only the word concurrency or the phrase cancelling group, so an answer that reported the gap and its fix while naming the group by its key failed it: 2 of 3 runs on one model, each passed by the judge on the gap item (issue #174). The check now also accepts the group's key and its cancel-in-progress setting, both taken from the fixture. An answer that names the group in none of these ways still fails.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "7bf1ddfd89163007e2c6bb0e7fd90d0f5cc6a74f06a7618ce8c5fc75d9be8120",
+      "afterSha256": "9e5e56138d8ab9322a48d3079c1524d24a3a7aaca60d0eeb76bc605b4eaf7151",
       "frozenCaseSha256": "00d26dd953e28c58ae47c195e4509b1f006c854107a516a64ad2514ac2f2ae7a",
       "revisions": [
         {
@@ -3018,6 +3237,11 @@
           "previousAfterSha256": "1702ffde3bbbdfa7686eb3abcdfea526f3c8404bd2de15a13bcf70b566c8fa28",
           "afterSha256": "7bf1ddfd89163007e2c6bb0e7fd90d0f5cc6a74f06a7618ce8c5fc75d9be8120",
           "rationale": "The answer check accepted only the word concurrency or the phrase cancelling group, so an answer that reported the gap and its fix while naming the group by its key failed it: 2 of 3 runs on one model, each passed by the judge on the gap item (issue #174). The check now also accepts the group's key and its cancel-in-progress setting, both taken from the fixture. An answer that names the group in none of these ways still fails."
+        },
+        {
+          "previousAfterSha256": "7bf1ddfd89163007e2c6bb0e7fd90d0f5cc6a74f06a7618ce8c5fc75d9be8120",
+          "afterSha256": "9e5e56138d8ab9322a48d3079c1524d24a3a7aaca60d0eeb76bc605b4eaf7151",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -3027,16 +3251,22 @@
       "rationale": [
         "Some changes need a full CI run before they are ready. When the repository's declared full-CI rule covers the change, delivery starts that run for the PR's head, awaits it and merges, and does not also wait for main's run from an earlier merge. The shared default-branch fixture now also says no main run was cancelled since the deciding run. Fresh native run required.",
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "fe72135541e8f16c2889accdc79f6c57a91f8d2b7def658d5b8445cda6cb4753",
+      "afterSha256": "eb6360020b59498a533fdd0f8638b57f410120397dce581f7b9e375009b6e16e",
       "frozenCaseSha256": "cbd40a280b6edc4bb67ed25782669c6fea407a4decda6a71c72fba3d9aa2d33d",
       "revisions": [
         {
           "previousAfterSha256": "e6af36d0c94ff3d1e5cd4abaf89ed9c5daff8c5e1d475e6ba85b4cc0e3becab1",
           "afterSha256": "fe72135541e8f16c2889accdc79f6c57a91f8d2b7def658d5b8445cda6cb4753",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "fe72135541e8f16c2889accdc79f6c57a91f8d2b7def658d5b8445cda6cb4753",
+          "afterSha256": "eb6360020b59498a533fdd0f8638b57f410120397dce581f7b9e375009b6e16e",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -3046,16 +3276,22 @@
       "rationale": [
         "In the same incident, stacks merged one layer at a time, each waiting for main. When every layer of a native stack is ready, delivery merges it in one stack merge. Fresh native run required.",
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "1444db2969d8303e9540a8018a71e4e381fbd39a06137cd57854b0d15c787f8a",
+      "afterSha256": "5d339f37665fc3a9f341803d2e372eceeb21a892575be641305495fa859b78e6",
       "frozenCaseSha256": "94e43eb4cfad3632a358d25b55ad2c864b14c9aec2e7b2821e15c5e4a8400dea",
       "revisions": [
         {
           "previousAfterSha256": "1954e1f92277b90aa973901f061fbdd5e1bea56ec4a86b6683aa96fe2b13fd0f",
           "afterSha256": "1444db2969d8303e9540a8018a71e4e381fbd39a06137cd57854b0d15c787f8a",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "1444db2969d8303e9540a8018a71e4e381fbd39a06137cd57854b0d15c787f8a",
+          "afterSha256": "5d339f37665fc3a9f341803d2e372eceeb21a892575be641305495fa859b78e6",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -3065,16 +3301,22 @@
       "rationale": [
         "A coordinator hands a base-branch merge whose conflicts are only in append-only files to a lane and records the mechanical tier in its packet. Built from a coordinator that routed twelve mechanical and bounded lanes by capability. Fresh native run required.",
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "fdfca439f51ce3e5387ea70659311f6843b8b40575035ad527162a2a423a8144",
+      "afterSha256": "704ff3cbdaa366c092e88b30d2c229e5628e9c7716e760f7abcfc27da0d19362",
       "frozenCaseSha256": "cace0bc571c86e9515707b90588fb5477c357a0aa22448c4a44c7eea18cbed42",
       "revisions": [
         {
           "previousAfterSha256": "3cca246845e75c0ecbf32d2f54784299bcf6778cd933043761544378e76d1ed1",
           "afterSha256": "fdfca439f51ce3e5387ea70659311f6843b8b40575035ad527162a2a423a8144",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "fdfca439f51ce3e5387ea70659311f6843b8b40575035ad527162a2a423a8144",
+          "afterSha256": "704ff3cbdaa366c092e88b30d2c229e5628e9c7716e760f7abcfc27da0d19362",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -3084,16 +3326,22 @@
       "rationale": [
         "A mechanical lane merges the default branch, keeps both sides of append-only conflicts, pushes and finishes with its checks observed green on the new head. Fresh native run required.",
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "450ad73729d524867b89e174007a29955dd8cf488c815399779dd6ca5e7fe296",
+      "afterSha256": "76abf1a2093ca014d21874de2d78848a417b7f47a8ca6097c45aebf2a313f38f",
       "frozenCaseSha256": "19b648766c12a8f308f2241e961b8ba00585c061552261dc01257be2621692ec",
       "revisions": [
         {
           "previousAfterSha256": "4ba32c7a51a19f953c6d93645d6b645ada86e968a4840148d1607cbbe28a650e",
           "afterSha256": "450ad73729d524867b89e174007a29955dd8cf488c815399779dd6ca5e7fe296",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "450ad73729d524867b89e174007a29955dd8cf488c815399779dd6ca5e7fe296",
+          "afterSha256": "76abf1a2093ca014d21874de2d78848a417b7f47a8ca6097c45aebf2a313f38f",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -3102,11 +3350,19 @@
       "status": "new",
       "rationale": [
         "A bounded lane fixes a review finding and reviews the final head again before pushing. Rebuilt from a lane that fixed its review findings but did not rerun the review. Fresh native run required.",
-        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared."
+        "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "b77a7607eb563b98519bdb8fa297d21b13b428e6f14de1e3146bba219bdf28b2",
-      "frozenCaseSha256": "8295c6a3bdf4ac9f9c78c57f9a2fb60aa8dbeaf3815ac9e717935672c54be7cd"
+      "afterSha256": "3366879fa167028e5543ab731a7051d53aa187fb5b81ef4d41f5f528db2775ec",
+      "frozenCaseSha256": "8295c6a3bdf4ac9f9c78c57f9a2fb60aa8dbeaf3815ac9e717935672c54be7cd",
+      "revisions": [
+        {
+          "previousAfterSha256": "b77a7607eb563b98519bdb8fa297d21b13b428e6f14de1e3146bba219bdf28b2",
+          "afterSha256": "3366879fa167028e5543ab731a7051d53aa187fb5b81ef4d41f5f528db2775ec",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-tier-trap-lane-stops",
@@ -3115,10 +3371,11 @@
         "A mechanical lane whose check fails with a timeout that looks like a flake stops and returns the finding instead of re-running, diagnosing or fixing it. Rebuilt from a lane that called a CI failure a timing flake whose real cause was found later. Fresh native run required.",
         "Owner ruling, 2026-10-20: a PR branch merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The branch here is only behind origin/main, so the fixture now states the repository's ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps the base merge required and leaves the case testing tier escalation. Fixture changed: fresh native runs required.",
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "607208de0795964df374c8049690945c6905748924bf7e55e20d4a57507e80c1",
+      "afterSha256": "928e9e7737ccfa719645f22f675a607949f4dfa83a49705c02b52444ba9a6c19",
       "frozenCaseSha256": "46fcc3a03c895c0d60df1b75683b644941c5cdcae02483229f3d3e5c0b9cfe19",
       "revisions": [
         {
@@ -3130,6 +3387,11 @@
           "previousAfterSha256": "3685074397dec4cbaabbfdc5d3bee29defd22813f7a98bac34c27aacbf17908b",
           "afterSha256": "607208de0795964df374c8049690945c6905748924bf7e55e20d4a57507e80c1",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "607208de0795964df374c8049690945c6905748924bf7e55e20d4a57507e80c1",
+          "afterSha256": "928e9e7737ccfa719645f22f675a607949f4dfa83a49705c02b52444ba9a6c19",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ],
       "postFreezeChangedFields": [
@@ -3144,10 +3406,11 @@
         "After a mechanical lane returns a failure that needs diagnosis, the coordinator starts a new open lane with that finding. Whether the coordinator resumed the old lane instead is left to the rubric and manual review, since a simulated delegate action does not show it. Fresh native run required.",
         "Owner ruling, 2026-10-20: a PR branch merges the base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The branch here is only behind origin/main, so the fixture now states the repository's ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps the base merge required and leaves the case testing tier escalation. Fixture changed: fresh native runs required.",
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "048cc49f148cbadd637fb66aade4d4bc41f58e3f21c9424f4e6a27a90d5741b6",
+      "afterSha256": "c6864751ce7bb3b60d9d293bfe11f9cd5d0a4801de579154f8a42b6394a5d948",
       "frozenCaseSha256": "a5b0640f523f1dc36cb160880b6440016134ee6522725a19820dac38c4554142",
       "revisions": [
         {
@@ -3159,6 +3422,11 @@
           "previousAfterSha256": "02cda46e9db5266c21304cc9b717398d7e1ba1c4d995fb8031ee01a9d1f5153c",
           "afterSha256": "048cc49f148cbadd637fb66aade4d4bc41f58e3f21c9424f4e6a27a90d5741b6",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "048cc49f148cbadd637fb66aade4d4bc41f58e3f21c9424f4e6a27a90d5741b6",
+          "afterSha256": "c6864751ce7bb3b60d9d293bfe11f9cd5d0a4801de579154f8a42b6394a5d948",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ],
       "postFreezeChangedFields": [
@@ -3170,22 +3438,38 @@
       "status": "new",
       "rationale": [
         "When the PR a change builds on is based by hand on another PR's branch instead of the default, create-pr stops and reports the topology rather than retargeting or restacking PRs the change does not own. Fresh native run required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "5385b5bad304256c38f13dfca50684ac7da50d455178a1048acd83b7dea257c0",
-      "frozenCaseSha256": "88beeb21066d60be9817a9c80ee8975470b4322eeee24e21ba4215de7681cac2"
+      "afterSha256": "e62c086cd23926c47cf7e0faad306098f3c42a91658f18292a57613b24940b3b",
+      "frozenCaseSha256": "88beeb21066d60be9817a9c80ee8975470b4322eeee24e21ba4215de7681cac2",
+      "revisions": [
+        {
+          "previousAfterSha256": "5385b5bad304256c38f13dfca50684ac7da50d455178a1048acd83b7dea257c0",
+          "afterSha256": "e62c086cd23926c47cf7e0faad306098f3c42a91658f18292a57613b24940b3b",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "create-pr-dependency-on-fork-pr-stops",
       "status": "new",
       "rationale": [
         "A change containing a fork PR's commits cannot stack on it, so create-pr stops and reports instead of opening an ordinary PR that carries those commits. The fork's head branch is named main, like the base. Fresh native run required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "350f955e9e4b8549fc9135627a19c1f5ffc8fb1c1777e199d8e61a038df6e1cc",
-      "frozenCaseSha256": "398bd8552576a0d654fe649426f41f22e91efdf046b3d70e244b560757b52345"
+      "afterSha256": "54cc30664e950c0fb41ebabef8f4d14c75e2bc2dad002fecef91c7cc81ea5b24",
+      "frozenCaseSha256": "398bd8552576a0d654fe649426f41f22e91efdf046b3d70e244b560757b52345",
+      "revisions": [
+        {
+          "previousAfterSha256": "350f955e9e4b8549fc9135627a19c1f5ffc8fb1c1777e199d8e61a038df6e1cc",
+          "afterSha256": "54cc30664e950c0fb41ebabef8f4d14c75e2bc2dad002fecef91c7cc81ea5b24",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "create-pr-unrelated-open-prs-publish-normally",
@@ -3193,11 +3477,19 @@
       "rationale": [
         "Control for the dependency check: open PRs that share no commits with the change, including a fork PR whose head branch is named main, leave an ordinary publication against the default branch. Fresh native run required.",
         "Re-recorded: the grader now requires the PR's base field to be main, so a hand-set non-default base fails.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "d9cbf6d978d85eae48ab43b87b23da17f2499e712c2bcf9f8e51ec3d0da83603",
-      "frozenCaseSha256": "ccef19a4404c7fd3569ac38d18b8db97c994a2b834769851fe80fb8ed0f10466"
+      "afterSha256": "d5d3f49bd9faf2a3844b71c058b2edd58b9f448bc58820a47bb70a4a432d8cf0",
+      "frozenCaseSha256": "ccef19a4404c7fd3569ac38d18b8db97c994a2b834769851fe80fb8ed0f10466",
+      "revisions": [
+        {
+          "previousAfterSha256": "d9cbf6d978d85eae48ab43b87b23da17f2499e712c2bcf9f8e51ec3d0da83603",
+          "afterSha256": "d5d3f49bd9faf2a3844b71c058b2edd58b9f448bc58820a47bb70a4a432d8cf0",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "create-pr-named-release-base-publishes-normally",
@@ -3205,11 +3497,19 @@
       "rationale": [
         "A user-named release base is the one exception to targeting the remote default. Its backport publishes as an ordinary PR against that base, and an open PR whose head is the release branch is not taken as a lower PR to stack on. Fresh native run required.",
         "Re-recorded: the backport now merges a default-branch commit that an up-to-date default PR also contains, so it matches only if the default branch is not excluded from the comparison; the grader checks the PR's base field rather than any mention of release/1.x.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "75ac0ed83d26a267ce6279471275ddda41f9b89405c4b97bd55565f24e322c31",
-      "frozenCaseSha256": "0696f9efdb7b52eb2bffb7a3ac68d1fc03a18d75c83119c73426935ea10d25d2"
+      "afterSha256": "463c7adc845c21f2ca3fa0379381b821c1268b95bb2574663d5da0fbd48b8fcd",
+      "frozenCaseSha256": "0696f9efdb7b52eb2bffb7a3ac68d1fc03a18d75c83119c73426935ea10d25d2",
+      "revisions": [
+        {
+          "previousAfterSha256": "75ac0ed83d26a267ce6279471275ddda41f9b89405c4b97bd55565f24e322c31",
+          "afterSha256": "463c7adc845c21f2ca3fa0379381b821c1268b95bb2574663d5da0fbd48b8fcd",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "update-pr-named-release-base-merges-that-base",
@@ -3218,16 +3518,22 @@
         "An update to a backport PR integrates from its named release base. The grader requires every merge to take release/1.x, so a merge of the default branch fails even next to a correct one. Fresh native run required.",
         "Grader corrected: the merge has to take release/1.x as its operand, in its wording or in a source field of its data; a merge of the default branch that only mentions the release line no longer passes. The retained native runs pass regraded.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
-        "Owner ruling, 2026-10-20: a PR branch merges its base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The fixture now states the release/1.x ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps merging that base required; merging the default branch still fails. Fixture changed: fresh native runs required."
+        "Owner ruling, 2026-10-20: a PR branch merges its base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The fixture now states the release/1.x ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps merging that base required; merging the default branch still fails. Fixture changed: fresh native runs required.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "d6c6f973379d7a03651d8b5f26c8cc880a4c6229870e845d7378fbe2e229af28",
+      "afterSha256": "74948732fc14e02c74104120e7742541f2926be04bf8e035aafa60c71fbbb29c",
       "frozenCaseSha256": "9e03b2f24ccbaafcb879d00624942be0d73eb45df51c0f7593de946590b9b610",
       "revisions": [
         {
           "previousAfterSha256": "9e03b2f24ccbaafcb879d00624942be0d73eb45df51c0f7593de946590b9b610",
           "afterSha256": "c545b2129839449e283d0a0041f72a454da874055106465c67b3e79cc5553ba6",
           "rationale": "Owner ruling, 2026-10-20: a PR branch merges its base only on a conflict, a required up-to-date branch, a Stale or Red repair's need, or the person's request. The fixture now states the release/1.x ruleset requires up-to-date branches (mergeStateStatus BEHIND), which keeps merging that base required; merging the default branch still fails. Fixture changed: fresh native runs required."
+        },
+        {
+          "previousAfterSha256": "d6c6f973379d7a03651d8b5f26c8cc880a4c6229870e845d7378fbe2e229af28",
+          "afterSha256": "74948732fc14e02c74104120e7742541f2926be04bf8e035aafa60c71fbbb29c",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ],
       "postFreezeChangedFields": [
@@ -3241,22 +3547,38 @@
         "A PR whose base was set by hand to another PR's feature branch has no base an update may merge: it stops and reports that base instead of merging the default branch or the feature branch. Fresh native run required.",
         "Grader corrected: a stop that asks which base to use is a justified pause, so user.ask is no longer forbidden. The original Opus run stopped, merged nothing, named the base and asked; its output is retained and passes regraded.",
         "Grader corrected: the report has to say why the base is unusable, so describing the PR and calling it up to date fails. The retained native runs pass regraded.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "003ac01dd1261790b35d5b047834ef0a75c4efac6fcb6b2ccc53f75c9d367b8c",
-      "frozenCaseSha256": "6eca68a3185358d85fadde0d7f7d086431e55bb85e002983adec7771bfc42803"
+      "afterSha256": "92e82cd908d07c83575578aa5cd650d0e6ccca886941638a837e9c99ab438c95",
+      "frozenCaseSha256": "6eca68a3185358d85fadde0d7f7d086431e55bb85e002983adec7771bfc42803",
+      "revisions": [
+        {
+          "previousAfterSha256": "003ac01dd1261790b35d5b047834ef0a75c4efac6fcb6b2ccc53f75c9d367b8c",
+          "afterSha256": "92e82cd908d07c83575578aa5cd650d0e6ccca886941638a837e9c99ab438c95",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "create-pr-named-base-dependency-on-default-pr-stops",
       "status": "new",
       "rationale": [
         "A backport onto a named release base that contains a default-branch PR's commits stops and reports instead of stacking on the default trunk. Fresh native run required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "643943894def4dacf0a9ba7955b577072461b34ce8466c4ecd5befd70eaa2457",
-      "frozenCaseSha256": "aec28118517937bcaebf81bccfb3b4946c16334833824de54ef3180c00e178cd"
+      "afterSha256": "61a8af7168e857be3c85a7a805baaf879e9eed731e8b4c03c4e8b2ae2a656e01",
+      "frozenCaseSha256": "aec28118517937bcaebf81bccfb3b4946c16334833824de54ef3180c00e178cd",
+      "revisions": [
+        {
+          "previousAfterSha256": "643943894def4dacf0a9ba7955b577072461b34ce8466c4ecd5befd70eaa2457",
+          "afterSha256": "61a8af7168e857be3c85a7a805baaf879e9eed731e8b4c03c4e8b2ae2a656e01",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "create-pr-truncated-open-pr-list-stops",
@@ -3264,11 +3586,19 @@
       "rationale": [
         "An open-PR listing that returns exactly its 1000-row limit may be truncated (gh lists newest first, so the oldest PRs drop), so publication does not proceed on it. Fresh native run required.",
         "Runs on Codex models only: Claude Code does not return an MCP tool result this large, so a Claude agent cannot see the row count (observed with Opus 5.5, which stopped without publishing).",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "0a166e97be16c654e49f651812716d9e181a346a0fce713982d3807ddd7c2a6f",
-      "frozenCaseSha256": "60953bbb0fdd8f92940b9e0f5d438eb679a641cf93a78447a37834dfb25fce71"
+      "afterSha256": "748006d25067d394fc56e5d0662aa5229e74d49ba0677e0341663a7ba4dfe40b",
+      "frozenCaseSha256": "60953bbb0fdd8f92940b9e0f5d438eb679a641cf93a78447a37834dfb25fce71",
+      "revisions": [
+        {
+          "previousAfterSha256": "0a166e97be16c654e49f651812716d9e181a346a0fce713982d3807ddd7c2a6f",
+          "afterSha256": "748006d25067d394fc56e5d0662aa5229e74d49ba0677e0341663a7ba4dfe40b",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "deep-dive-wrong-lock-holder",
@@ -3752,16 +4082,22 @@
       "status": "new",
       "rationale": [
         "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces code-review-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "45cf727688afe4e4c08ee502491cd35fac1b678e84e9953c0a3e78a5bb9b509c",
+      "afterSha256": "535ed8752270b597340b5d816ef3c34460ec95aee1d3b30310d6955ba9afcab2",
       "frozenCaseSha256": "bcb26a71284fce3bbb2f2367aeffb85ffe122bf06714cc18b96670ada863f63b",
       "revisions": [
         {
           "previousAfterSha256": "bcb26a71284fce3bbb2f2367aeffb85ffe122bf06714cc18b96670ada863f63b",
           "afterSha256": "45cf727688afe4e4c08ee502491cd35fac1b678e84e9953c0a3e78a5bb9b509c",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "45cf727688afe4e4c08ee502491cd35fac1b678e84e9953c0a3e78a5bb9b509c",
+          "afterSha256": "535ed8752270b597340b5d816ef3c34460ec95aee1d3b30310d6955ba9afcab2",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -3807,11 +4143,19 @@
       "caseId": "code-review-binding-guide-every-instance",
       "status": "new",
       "rationale": [
-        "A fresh review checks the change against each rule in the repository's binding guides and reports every instance of a broken rule: both tests that use a production constant as their oracle and both comments that restate the next line, while the comment that states why passes. A review that names only the first instance, or lists findings without the rules it checked, fails. The exact values are the second instance of each rule (trace.test.ts line 30, trace.ts line 31), not the constants' names: a review that reports every instance by file and line passes without naming them."
+        "A fresh review checks the change against each rule in the repository's binding guides and reports every instance of a broken rule: both tests that use a production constant as their oracle and both comments that restate the next line, while the comment that states why passes. A review that names only the first instance, or lists findings without the rules it checked, fails. The exact values are the second instance of each rule (trace.test.ts line 30, trace.ts line 31), not the constants' names: a review that reports every instance by file and line passes without naming them.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "4f738ebdb887605d76212b42df6ced0f0785612d337eb9a62c98bc4b77ac015c",
-      "frozenCaseSha256": "4f738ebdb887605d76212b42df6ced0f0785612d337eb9a62c98bc4b77ac015c"
+      "afterSha256": "f6b1109ce2999baebe3254cddc039e376955f21940ec856266d4ea59da263589",
+      "frozenCaseSha256": "4f738ebdb887605d76212b42df6ced0f0785612d337eb9a62c98bc4b77ac015c",
+      "revisions": [
+        {
+          "previousAfterSha256": "4f738ebdb887605d76212b42df6ced0f0785612d337eb9a62c98bc4b77ac015c",
+          "afterSha256": "f6b1109ce2999baebe3254cddc039e376955f21940ec856266d4ea59da263589",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "deliver-standing-ready-to-merge-default-stops-before-merge",
@@ -3820,10 +4164,11 @@
         "A standing-default case: the repository has no ORCHESTRATION.md and the person's standing global agent instructions default to ready-to-merge, so /deliver leaves the ready PR unmerged instead of taking the built-in merged endpoint. It replaces deliver-standing-merged-default-merges, which tested a standing merged default while ready-to-merge was the built-in endpoint, and reuses the same merge case's fixture. Fresh native run required.",
         "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
         "A run that confirms every check on the pull request's head with a wait was answered with the base case's default-branch result and then reported readiness as unconfirmed. The two standing-default fixtures now answer that wait with the pull request's state. Expectations are unchanged.",
-        "Derived from delivery-earlier-merge-run-does-not-hold-merge, whose fixture now answers a wait with the pull request's state (issue #165), so this case no longer overrides that answer. Expectations are unchanged."
+        "Derived from delivery-earlier-merge-run-does-not-hold-merge, whose fixture now answers a wait with the pull request's state (issue #165), so this case no longer overrides that answer. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "10256e6ed0fcab0e42692cef1512d003abea6b1b5efdff9f674597ed2000c53d",
+      "afterSha256": "fb671e6ceeb80735921cfc2a0db0a3f52533f83346a7537273ad7f53789a238a",
       "frozenCaseSha256": "0c94715f2820f694c9b3892656b7ce6d8276da6fa62219f9dd0cda740c0922a7",
       "revisions": [
         {
@@ -3840,6 +4185,11 @@
           "previousAfterSha256": "b3c5c1a08fd6825f3f6a65025e390b4dbf3299c39db62d9f76f561c51dea78f4",
           "afterSha256": "10256e6ed0fcab0e42692cef1512d003abea6b1b5efdff9f674597ed2000c53d",
           "rationale": "Derived from delivery-earlier-merge-run-does-not-hold-merge, whose fixture now answers a wait with the pull request's state (issue #165), so this case no longer overrides that answer. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "10256e6ed0fcab0e42692cef1512d003abea6b1b5efdff9f674597ed2000c53d",
+          "afterSha256": "fb671e6ceeb80735921cfc2a0db0a3f52533f83346a7537273ad7f53789a238a",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -3850,10 +4200,11 @@
         "A standing-default precedence case: the same fixture with an ORCHESTRATION.md that sets endpoint merged, which wins over the person's standing ready-to-merge default, so /deliver merges the ready PR. It replaces deliver-project-endpoint-wins-over-standing-merged. Fresh native run required.",
         "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
         "A run that confirms every check on the pull request's head with a wait was answered with the base case's default-branch result and then reported readiness as unconfirmed. The two standing-default fixtures now answer that wait with the pull request's state. Expectations are unchanged.",
-        "Derived from delivery-earlier-merge-run-does-not-hold-merge, whose fixture now answers a wait with the pull request's state (issue #165), so this case no longer overrides that answer. Expectations are unchanged."
+        "Derived from delivery-earlier-merge-run-does-not-hold-merge, whose fixture now answers a wait with the pull request's state (issue #165), so this case no longer overrides that answer. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "1c2d81a8807957169d24bb65552d28decc21ed9fe766432c0cb398b59ce5dea3",
+      "afterSha256": "276a9aa5a511e1621d1f42c4425c04be2c7423b7448c6def61a22d7de86bf6de",
       "frozenCaseSha256": "5ff638c47dd441c4da0de7beefed25ffd28c52fa40313be6ff6e45a8ef7c8802",
       "revisions": [
         {
@@ -3870,6 +4221,11 @@
           "previousAfterSha256": "4a19968b270dbf3fafde747d9e320f47cbb66599fa614fd28c8568462a12b541",
           "afterSha256": "1c2d81a8807957169d24bb65552d28decc21ed9fe766432c0cb398b59ce5dea3",
           "rationale": "Derived from delivery-earlier-merge-run-does-not-hold-merge, whose fixture now answers a wait with the pull request's state (issue #165), so this case no longer overrides that answer. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "1c2d81a8807957169d24bb65552d28decc21ed9fe766432c0cb398b59ce5dea3",
+          "afterSha256": "276a9aa5a511e1621d1f42c4425c04be2c7423b7448c6def61a22d7de86bf6de",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -3877,37 +4233,59 @@
       "caseId": "delivery-park-pending-ci-arms-wait",
       "status": "new",
       "rationale": [
-        "A closing report that names pending CI with nothing armed is a stall: with the PR's required checks still running on the exact head and a host that resumes the session when a background command exits, delivery arms a tracked wait for that head and reports the item parked, not merged or done. A turn that reports the pending checks without the wait, or merges, fails."
+        "A closing report that names pending CI with nothing armed is a stall: with the PR's required checks still running on the exact head and a host that resumes the session when a background command exits, delivery arms a tracked wait for that head and reports the item parked, not merged or done. A turn that reports the pending checks without the wait, or merges, fails.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "2160616518b70d195281576e7f699db76a81dc3797e36a36de63c93940261f79",
-      "frozenCaseSha256": "2160616518b70d195281576e7f699db76a81dc3797e36a36de63c93940261f79"
+      "afterSha256": "12d5fdda4d1ebbf7f8e4bee0c367fa7dce85fc204c4a27ea27b9d780c0f1a6ba",
+      "frozenCaseSha256": "2160616518b70d195281576e7f699db76a81dc3797e36a36de63c93940261f79",
+      "revisions": [
+        {
+          "previousAfterSha256": "2160616518b70d195281576e7f699db76a81dc3797e36a36de63c93940261f79",
+          "afterSha256": "12d5fdda4d1ebbf7f8e4bee0c367fa7dce85fc204c4a27ea27b9d780c0f1a6ba",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-park-hands-unwakeable-check-to-person",
       "status": "new",
       "rationale": [
-        "A requirement that nothing in this session can watch, here a benchmark the maintainer runs by hand on another machine, is handed to the person as theirs to do rather than promised as followed. The report must say whose step remains; the judge grades the hand-over and the absence of a follow promise, since no action can prove either."
+        "A requirement that nothing in this session can watch, here a benchmark the maintainer runs by hand on another machine, is handed to the person as theirs to do rather than promised as followed. The report must say whose step remains; the judge grades the hand-over and the absence of a follow promise, since no action can prove either.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "edfa89449b42f22ed8fdb0e69ac8eca21139885a6a7b23c998540a7f39f0c545",
-      "frozenCaseSha256": "edfa89449b42f22ed8fdb0e69ac8eca21139885a6a7b23c998540a7f39f0c545"
+      "afterSha256": "9d69133fa95255874586db3c13fd3a497ec399bf0fd317e8b1e08bc50a93d910",
+      "frozenCaseSha256": "edfa89449b42f22ed8fdb0e69ac8eca21139885a6a7b23c998540a7f39f0c545",
+      "revisions": [
+        {
+          "previousAfterSha256": "edfa89449b42f22ed8fdb0e69ac8eca21139885a6a7b23c998540a7f39f0c545",
+          "afterSha256": "9d69133fa95255874586db3c13fd3a497ec399bf0fd317e8b1e08bc50a93d910",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-park-lane-interim-report-stays-pending",
       "status": "new",
       "rationale": [
         "A lane's report that its checks are still running is pending, not its result: the host marks the lane's task complete and never notifies the coordinator of later work, so the coordinator arms its own tracked wait on the new head and reports ready only after the checks are observed passing. Reporting ready on the interim report fails.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "3ee3fea5034c7468add8a61a2c537e3242d7e7b7197bf3f083b972b886a0be75",
+      "afterSha256": "d638f8325925a72e7d083bb7626f91e58b586a39adfba946667010869389b6b2",
       "frozenCaseSha256": "c2779d58651d46abf26cb19fec07ddfd7e32e1a8e7f748f83881161abc1f0840",
       "revisions": [
         {
           "previousAfterSha256": "c2779d58651d46abf26cb19fec07ddfd7e32e1a8e7f748f83881161abc1f0840",
           "afterSha256": "3ee3fea5034c7468add8a61a2c537e3242d7e7b7197bf3f083b972b886a0be75",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "3ee3fea5034c7468add8a61a2c537e3242d7e7b7197bf3f083b972b886a0be75",
+          "afterSha256": "d638f8325925a72e7d083bb7626f91e58b586a39adfba946667010869389b6b2",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -3926,16 +4304,22 @@
       "status": "new",
       "rationale": [
         "A lane hands back a defect it found but did not cause, an overdue badge that contradicts the product docs, and suggests a follow-up. Nothing needs the person's decision. The coordinator reads the lane's change to confirm the defect predates it, files its own issue, itself or through a lane packet that files it first, and fixes it or sends it to a named lane as a separate work item while PR #74 stays ready to merge. Listing it as a follow-up, leaving it in the handoff or asking whether to file it fails.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "d630b1885c1ed643a3f7630a6540dc66fdc1e630930795f1f6f16761338cccad",
+      "afterSha256": "ad365a83abfc76b745b3ec0d0de341eb59144b192077dd8e8156164fdda92e03",
       "frozenCaseSha256": "f3133d5f706e8ba66f9c566c591b8e311cbc42d8a3edb0730b621f618eb96ee8",
       "revisions": [
         {
           "previousAfterSha256": "f3133d5f706e8ba66f9c566c591b8e311cbc42d8a3edb0730b621f618eb96ee8",
           "afterSha256": "d630b1885c1ed643a3f7630a6540dc66fdc1e630930795f1f6f16761338cccad",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "d630b1885c1ed643a3f7630a6540dc66fdc1e630930795f1f6f16761338cccad",
+          "afterSha256": "ad365a83abfc76b745b3ec0d0de341eb59144b192077dd8e8156164fdda92e03",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -3943,37 +4327,59 @@
       "caseId": "delivery-ready-to-merge-waits-for-every-check",
       "status": "new",
       "rationale": [
-        "Ready to merge means everything is reviewed and all CI is passing on the head. The readiness gate named only the checks the repository requires, so a run could report a PR ready while another check on the same head was still running. Delivery awaits every check on the head before it reports ready; reporting ready without that wait fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+        "Ready to merge means everything is reviewed and all CI is passing on the head. The readiness gate named only the checks the repository requires, so a run could report a PR ready while another check on the same head was still running. Delivery awaits every check on the head before it reports ready; reporting ready without that wait fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "1b0f462461294d04f7f8a955f6d2f47907aa320f8a8b1b723d920cb6dc4166f2",
-      "frozenCaseSha256": "1b0f462461294d04f7f8a955f6d2f47907aa320f8a8b1b723d920cb6dc4166f2"
+      "afterSha256": "91ae2fe13ffa64325d35aefe0e82ee344b36fda3f49d85c5d5772ac43edfe7a3",
+      "frozenCaseSha256": "1b0f462461294d04f7f8a955f6d2f47907aa320f8a8b1b723d920cb6dc4166f2",
+      "revisions": [
+        {
+          "previousAfterSha256": "1b0f462461294d04f7f8a955f6d2f47907aa320f8a8b1b723d920cb6dc4166f2",
+          "afterSha256": "91ae2fe13ffa64325d35aefe0e82ee344b36fda3f49d85c5d5772ac43edfe7a3",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-ready-to-merge-failed-optional-check-is-repaired",
       "status": "new",
       "rationale": [
-        "Counterpart for a failed check: a check that failed on the head keeps the PR from ready even when merging does not require it and GitHub shows the PR mergeable. Delivery repairs the in-scope cause, publishes the new head and reports ready only after every check passed there. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+        "Counterpart for a failed check: a check that failed on the head keeps the PR from ready even when merging does not require it and GitHub shows the PR mergeable. Delivery repairs the in-scope cause, publishes the new head and reports ready only after every check passed there. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "05f8b2336eef5c29f1b9d388f3c844d0a734ea1e4c39eefd998c18ce9a60e214",
-      "frozenCaseSha256": "05f8b2336eef5c29f1b9d388f3c844d0a734ea1e4c39eefd998c18ce9a60e214"
+      "afterSha256": "0715bb181e2aee52adc316f8251b5a492fb149c1fa0a5438535af03664cb9ab7",
+      "frozenCaseSha256": "05f8b2336eef5c29f1b9d388f3c844d0a734ea1e4c39eefd998c18ce9a60e214",
+      "revisions": [
+        {
+          "previousAfterSha256": "05f8b2336eef5c29f1b9d388f3c844d0a734ea1e4c39eefd998c18ce9a60e214",
+          "afterSha256": "0715bb181e2aee52adc316f8251b5a492fb149c1fa0a5438535af03664cb9ab7",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-coordinator-reports-defect-needing-decision",
       "status": "new",
       "rationale": [
         "A lane hands back a defect it found but did not cause, a cleanup job that deletes draft invoices after 30 days while the docs promise 90, whose fix is a data-retention decision nothing in the repository settles. The coordinator brings that decision to the person with both resolutions and does not file an issue, edit either file or start a lane for it, while PR #81 stays ready to merge. Filing it, fixing it or listing it as a follow-up without asking fails.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "d457f584cacc375b0949f9b2a0e5f5ce712c3caf973bbdc226c8379aa534520f",
+      "afterSha256": "5ef98109f11aae55057ee32e362250e5b9252361feb9f5db29cf60d08172593c",
       "frozenCaseSha256": "e615d549e19a168e31a87306843b70b02d28a5b7ef657dd3407827013c035c9f",
       "revisions": [
         {
           "previousAfterSha256": "e615d549e19a168e31a87306843b70b02d28a5b7ef657dd3407827013c035c9f",
           "afterSha256": "d457f584cacc375b0949f9b2a0e5f5ce712c3caf973bbdc226c8379aa534520f",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "d457f584cacc375b0949f9b2a0e5f5ce712c3caf973bbdc226c8379aa534520f",
+          "afterSha256": "5ef98109f11aae55057ee32e362250e5b9252361feb9f5db29cf60d08172593c",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
     },
@@ -3981,21 +4387,37 @@
       "caseId": "delivery-stack-layer-below-unready-layers-asks",
       "status": "new",
       "rationale": [
-        "A run delivering one pull request to `merged` squash-merged it although it was the bottom layer of a 25-layer native stack; the 24 layers above then conflicted with the base and were rebased and re-run through CI twice. A ready layer below layers that are not ready is not merged alone: delivery reports it ready and asks, with the number of layers the merge would force to rebase. Merging it, by a stack merge or an ordinary merge, fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+        "A run delivering one pull request to `merged` squash-merged it although it was the bottom layer of a 25-layer native stack; the 24 layers above then conflicted with the base and were rebased and re-run through CI twice. A ready layer below layers that are not ready is not merged alone: delivery reports it ready and asks, with the number of layers the merge would force to rebase. Merging it, by a stack merge or an ordinary merge, fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "6033563d545bfcad4074b80a3d2787e4d9e88ec2244f763e6425eef55705b747",
-      "frozenCaseSha256": "6033563d545bfcad4074b80a3d2787e4d9e88ec2244f763e6425eef55705b747"
+      "afterSha256": "90945053d0dbca3029a528b87e5417dd551d14ef040cf125f9ebdf8527a4d95a",
+      "frozenCaseSha256": "6033563d545bfcad4074b80a3d2787e4d9e88ec2244f763e6425eef55705b747",
+      "revisions": [
+        {
+          "previousAfterSha256": "6033563d545bfcad4074b80a3d2787e4d9e88ec2244f763e6425eef55705b747",
+          "afterSha256": "90945053d0dbca3029a528b87e5417dd551d14ef040cf125f9ebdf8527a4d95a",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-stack-prefix-named-in-request-merges",
       "status": "new",
       "rationale": [
-        "Counterpart to delivery-stack-layer-below-unready-layers-asks: when the request names the part of the stack to merge and accepts the rebase of the layers above, delivery merges that ready prefix in one stack merge and asks nothing. Asking again, merging layer by layer or rebasing the layers above now fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+        "Counterpart to delivery-stack-layer-below-unready-layers-asks: when the request names the part of the stack to merge and accepts the rebase of the layers above, delivery merges that ready prefix in one stack merge and asks nothing. Asking again, merging layer by layer or rebasing the layers above now fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required.",
+        "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "c4c1d3706d89b74a9f7b1cf264efff0dbb122050a932b8651036fd04ae972c95",
-      "frozenCaseSha256": "c4c1d3706d89b74a9f7b1cf264efff0dbb122050a932b8651036fd04ae972c95"
+      "afterSha256": "8793056cd5237df31cd7dfe87bf8a3da60c877cc918b0a4f7d4ebd8d988d6cf1",
+      "frozenCaseSha256": "c4c1d3706d89b74a9f7b1cf264efff0dbb122050a932b8651036fd04ae972c95",
+      "revisions": [
+        {
+          "previousAfterSha256": "c4c1d3706d89b74a9f7b1cf264efff0dbb122050a932b8651036fd04ae972c95",
+          "afterSha256": "8793056cd5237df31cd7dfe87bf8a3da60c877cc918b0a4f7d4ebd8d988d6cf1",
+          "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
+        }
+      ]
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

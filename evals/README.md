@@ -263,6 +263,14 @@ them (it confused a 40-character revision with a 42-character one):
 A whole token is not preceded or followed by a letter, digit or underscore, so
 `503` does not match `1503`. Matching is literal and case-sensitive.
 
+A fixture's full commit ids have no repeating pattern. One model copied ids
+that repeated one byte, such as `2b` twenty times, two characters short, which
+failed exact-value rules on runs that did the right thing; a real commit id
+gives nothing to lose count of. Each fixture id keeps a recognisable
+seven-character start, such as `2b2b2b2`, and continues without a pattern. A
+test fails a case whose full id repeats a unit or holds eight of one character
+in a row.
+
 ### Message items
 
 Every case's final message is also judged against a small shared set of

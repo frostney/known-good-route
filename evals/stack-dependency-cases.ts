@@ -1,21 +1,24 @@
+import { createHash } from "node:crypto";
 import type { ActionName, EvalCase } from "./types.ts";
 
 // A change that contains another open PR's commits. The dependency is observable
 // only from Git history and the open-PR listing, as it was for #96 on #94. The
 // listing uses the fields of the real command that create-pr prescribes; it has
 // no commit data, so detection has to compare history.
-const main = "a".repeat(40);
-const schema = "0".repeat(40);
-const budget = "1".repeat(40);
-const report = "2".repeat(40);
-const parser = "3".repeat(40);
-const fork = "4".repeat(40);
-const backport = "5".repeat(40);
-const release = "6".repeat(40);
-const releaseFix = "7".repeat(40);
-const hotfix = "8".repeat(40);
-const mergeCommit = "9".repeat(40);
-const exportCsv = "b".repeat(40);
+const main = "aaaaaaadf0d92b5ab2b95fd79fe2a3c028e7f9f9";
+const schema = "0000000b09695895c57c5c8ba49192cd81898b82";
+const budget = "1111111ced96e867635c4a9b8506174c4ed1fda0";
+const report = "222222246df57efe21b6921ac28a9ad5fd8b69f7";
+const parser = "33333335e545eca69a810f69eaf51435af8eb9fa";
+const fork = "444444499ea589f8662c54f911b481df1f7a69ff";
+const backport = "5555555de6fa38ea4fae6187eac0594c6aa084ae";
+const release = "666666686c2b3d2389083c0b0b78c4da1181cbd7";
+const releaseFix = "7777777cbe115c5465d8609a2922068fac981ad2";
+const hotfix = "8888888c37e054f6bce3e7f058f93fb1029a9f33";
+const mergeCommit = "9999999514d46c6228cd07cc5a398362b1c4f936";
+const exportCsv = "bbbbbbb617b4373529ec57482cbac4ec2da31f26";
+// A head for a long listing: an ordinary commit id, with no run or repeat to miscount.
+const listedHead = (number: number) => createHash("sha1").update(`example/project pull/${number}/head`).digest("hex");
 const pr = (number: number, headRefName: string, headRefOid: string, baseRefName = "main", isCrossRepository = false) =>
   ({ baseRefName, headRefName, headRefOid, isCrossRepository, number });
 const listing = (...rows: ReturnType<typeof pr>[]) => JSON.stringify(rows);
@@ -313,7 +316,7 @@ export const stackDependencyCases: EvalCase[] = [
         ...common,
         // gh lists newest first, so the rows dropped past the limit are the oldest PRs.
         openPullRequests: listing(...Array.from({ length: 1000 }, (_, i) =>
-          pr(5000 - i, `feat/change-${5000 - i}`, (5000 - i).toString(16).padStart(40, "c")))),
+          pr(5000 - i, `feat/change-${5000 - i}`, listedHead(5000 - i)))),
         stackTopology: "gh stack view --json reports no locally tracked stack.",
         continuousIntegration: `After publication, every check on exact head ${report} reaches a successful terminal result.`,
       },
