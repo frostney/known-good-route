@@ -1,18 +1,18 @@
 import type { EvalCase } from "./types.ts";
 
 const createEvidence = {
-  repositoryStatus: "Fixture repository example/report-ui. Ordinary branch feature/report-filter is clean, already committed, tracks origin/feature/report-filter and is ahead of freshly fetched origin/main. No native stack, unrelated work or existing PR. Head 1111111111111111111111111111111111111111. Publication and readiness are authorized.",
+  repositoryStatus: "Fixture repository example/report-ui. Ordinary branch feature/report-filter is clean, already committed, tracks origin/feature/report-filter and is ahead of freshly fetched origin/main. No native stack, unrelated work or existing PR. Head 1111111ced96e867635c4a9b8506174c4ed1fda0. Publication and readiness are authorized.",
   projectDefinitions: "The repository requires a passed independent code review, observed behavior evidence and project gate on current content, followed by exact-head CI. No extra media gate or approval requirement. The supplied evidence satisfies the implementation requirements.",
-  completionEvidence: "Independent code review, actual browser behavior checks and the declared local gate passed on head 1111111111111111111111111111111111111111 in the current environment. No changes followed. These are observed fixture results, not pending requests.",
+  completionEvidence: "Independent code review, actual browser behavior checks and the declared local gate passed on head 1111111ced96e867635c4a9b8506174c4ed1fda0 in the current environment. No changes followed. These are observed fixture results, not pending requests.",
   relatedWork: "Open/closed issue search and available sibling-session/adjacent-branch inspection are complete: no duplicate or linked issue exists. The final diff is the claim source.",
   publicationGuard: "Observed result of every git-workflow publication guard run for this change (staged, outgoing and pr): the repository is public, exit 0, nothing to rewrite, no warnings. These are observed fixture results; no rerun is needed.",
 };
 const createResponses = {
   "git.fetch": "Fetched origin/main; branch and base unchanged.",
-  "git.push": "Ordinary push confirmed current head 1111111111111111111111111111111111111111.",
-  "forge.openDraftPr": "Created draft https://github.com/example/report-ui/pull/71 at head 1111111111111111111111111111111111111111 with the submitted title/body. No attachments were uploaded.",
+  "git.push": "Ordinary push confirmed current head 1111111ced96e867635c4a9b8506174c4ed1fda0.",
+  "forge.openDraftPr": "Created draft https://github.com/example/report-ui/pull/71 at head 1111111ced96e867635c4a9b8506174c4ed1fda0 with the submitted title/body. No attachments were uploaded.",
   "forge.updatePrMetadata": "PR #71 now contains the submitted title/body at the same head.",
-  "monitor.wait": "Foreground checks-terminal returned success: all required checks passed on PR #71 head 1111111111111111111111111111111111111111.",
+  "monitor.wait": "Foreground checks-terminal returned success: all required checks passed on PR #71 head 1111111ced96e867635c4a9b8506174c4ed1fda0.",
   "forge.markPrReady": "PR #71 is now ready, open and unmerged at the verified head.",
 } as const;
 const forbiddenPublicationExtras = ["git.commit", "git.amend", "git.forcePush", "git.rebase", "forge.mergePr", "user.ask", "validation.run", "delegate"] as const;
@@ -40,7 +40,7 @@ export const prWritingCases: EvalCase[] = [
         "71",
       ],
       requiredActionValues: [
-        { action: "monitor.wait", values: ["1111111111111111111111111111111111111111"] },
+        { action: "monitor.wait", values: ["1111111ced96e867635c4a9b8506174c4ed1fda0"] },
       ],
       requiredSkills: ["create-pr"],
       requiredReferences: ["create-pr/references/walkthroughs.md", "agent-writing/references/pr-descriptions.md"],
@@ -83,10 +83,10 @@ export const prWritingCases: EvalCase[] = [
     description: "A performance PR update describes the final aggregate change with a visible comparable benchmark table.",
     prompt: "Do /update-pr 72 using the prepared final change and measurements.",
     fixture: { environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } }, evidence: {
-      repositoryStatus: "Ordinary open PR #72 in example/parser, branch perf/name-lookup, correct selected target. The remote default is freshly fetched and already integrated. Relevant implementation changes are committed and pushed at 2222222222222222222222222222222222222222. Clean worktree, no native stack, no conflicts or unrelated changes. Only PR metadata is stale.",
+      repositoryStatus: "Ordinary open PR #72 in example/parser, branch perf/name-lookup, correct selected target. The remote default is freshly fetched and already integrated. Relevant implementation changes are committed and pushed at 222222246df57efe21b6921ac28a9ad5fd8b69f7. Clean worktree, no native stack, no conflicts or unrelated changes. Only PR metadata is stale.",
       pullRequest: "Current PR title: chore: delete prototype lookup wrapper. Old body: We first added a wrapper, then removed 480 lines, reverted the cache prototype and reran tests five times. Open and unmerged. Current-head CI is pending, not passed.",
-      finalDiff: "Against target main 3333333333333333333333333333333333333333, final candidate 2222222222222222222222222222222222222222 reuses the existing interned-name index for repeated identifier lookup. Observable results are unchanged; repeated-name parsing is faster. The temporary wrapper/cache and development line-count reduction do not exist in the final diff and explain no remaining tradeoff.",
-      benchmark: "Paired observed measurements: target main 3333333333333333333333333333333333333333 median parse time 100 ms; final candidate 2222222222222222222222222222222222222222 median 70 ms. Same Apple M3 host, Node 24.18.0, release build, fixed 10,000-name corpus, 15 alternating warm runs per revision. Results are deterministic and matched for every run; timing spread is 2 ms on each side. No memory measurement was taken.",
+      finalDiff: "Against target main 33333335e545eca69a810f69eaf51435af8eb9fa, final candidate 222222246df57efe21b6921ac28a9ad5fd8b69f7 reuses the existing interned-name index for repeated identifier lookup. Observable results are unchanged; repeated-name parsing is faster. The temporary wrapper/cache and development line-count reduction do not exist in the final diff and explain no remaining tradeoff.",
+      benchmark: "Paired observed measurements: target main 33333335e545eca69a810f69eaf51435af8eb9fa median parse time 100 ms; final candidate 222222246df57efe21b6921ac28a9ad5fd8b69f7 median 70 ms. Same Apple M3 host, Node 24.18.0, release build, fixed 10,000-name corpus, 15 alternating warm runs per revision. Results are deterministic and matched for every run; timing spread is 2 ms on each side. No memory measurement was taken.",
       projectGate: "Independent review, exact-content CLI behavior checks and the declared full local gate passed on the current unchanged candidate in the same environment. No rerun is needed. Current-head remote CI remains pending.",
       template: "No required headings or routine testing section. Record the complete replacement body in data.body and title in data.title when updating metadata.",
       mediaCapabilities: "This internal lookup optimization has no additional meaningful visual or CLI workflow demonstration beyond the benchmark. No video is required by project policy.",
@@ -123,7 +123,7 @@ export const prWritingCases: EvalCase[] = [
     fixture: { environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } }, evidence: { ...createEvidence,
       relatedWork: "Open/closed issue search and available sibling-session/adjacent-branch inspection are complete. Issue #40 asks for a date filter on report export; this change completes it. No duplicate exists. The final diff is the claim source.",
       finalDiff: "The `report export` CLI now accepts `--since YYYY-MM-DD` and exports only rows dated on or after that day. Previously it always exported every row. An invalid date exits with status 2 and names the flag. The filter runs before formatting, so CSV and JSON output both honor it. This is the complete aggregate change; no benchmark claim.",
-      completionEvidence: "Independent code review passed. `bun test` passed with 412 tests and exit 0. Eight revert probes each removed one rule and the tests caught all eight. CLI behavior checks against the fixture database passed. All on head 1111111111111111111111111111111111111111 in the current environment; no changes followed.",
+      completionEvidence: "Independent code review passed. `bun test` passed with 412 tests and exit 0. Eight revert probes each removed one rule and the tests caught all eight. CLI behavior checks against the fixture database passed. All on head 1111111ced96e867635c4a9b8506174c4ed1fda0 in the current environment; no changes followed.",
       template: "No mandatory PR template. Write the body in the forge action's data.body and title in data.title so the fixture records the actual proposed text.",
       mediaCapabilities: "No screen recorder or attachment upload is available. This is a terminal-only change; a plain-text CLI session is the clearest demonstration. `report export --db PATH` selects a database and `--format csv|json` selects the output format (default csv). The sample database `examples/sales.db` ships in the repository and has rows from 2026-01-01 to 2026-03-31.",
       pullRequest: "No PR yet. After creation, metadata and diff match the submitted change.",
@@ -142,7 +142,7 @@ export const prWritingCases: EvalCase[] = [
       ],
       requiredActionValues: [
         { action: "forge.openDraftPr", values: ["## What changed", "Closes #40", "<details>", "## Visual walkthrough", "## How to test"] },
-        { action: "monitor.wait", values: ["1111111111111111111111111111111111111111"] },
+        { action: "monitor.wait", values: ["1111111ced96e867635c4a9b8506174c4ed1fda0"] },
       ],
       requiredSkills: ["create-pr"], requiredReferences: ["agent-writing/references/pr-descriptions.md"],
       requiredInspections: ["finalDiff", "template", "completionEvidence", "relatedWork", "mediaCapabilities"],

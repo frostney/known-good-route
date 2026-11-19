@@ -8,20 +8,20 @@ const noPublication: ActionName[] = [
   ...unsafeGit, ...releaseActions, "git.push", "git.stackSubmit",
   "git.stackMerge", "forge.openDraftPr", "forge.mergePr", "forge.markPrReady",
 ];
-const before = "1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a";
-const candidate = "2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b";
-const integrated = "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c";
-const delegatedHead = "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e";
-const redTip = "6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f";
-const repairTip = "7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a";
-const repairHead = "8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b";
-const repairMerged = "9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c";
+const before = "1a1a1a163d272e25dd80aa59f01d8656166c3416";
+const candidate = "2b2b2b2e5bc80dc07eed8e08881fd447edf43bb8";
+const integrated = "3c3c3c3ede379e1a4f7f94c018d83f50b12d7a9f";
+const delegatedHead = "5e5e5e5242e3515226e10bdac8c3cd7bf2398c72";
+const redTip = "6f6f6f6ef8a3b9f834153485acefbcf7e7efd875";
+const repairTip = "7a7a7a76cdb3b714122d0d0e67c58894c70b93e2";
+const repairHead = "8b8b8b8f9b8e25e2418c6d70f885a5952d92b479";
+const repairMerged = "9c9c9c9474f7539af49d2971800b62cdc7667436";
 const repairReview = "Independent review of the tests/paths.test.ts correction against the macOS failure found no findings.";
 const repairGate = "pnpm check passed on the corrected tree, including tests/paths.test.ts in a case-sensitive temporary directory.";
-const greenTip = "e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1";
-const parallelTip = "0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d";
-const samplerTip = "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a";
-const stackHeads = ["c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1", "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2", "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"] as const;
+const greenTip = "e1e1e1ec700cce9458db1f54f3a41f58bc5c7213";
+const parallelTip = "0d0d0d05b5827d5849e8b621d3ca555c571d88cb";
+const samplerTip = "5a5a5a529a6cca35041fbab20c307470d45ec293";
+const stackHeads = ["c1c1c1c7d0d632e3b438d4ec80a33536673ba1d4", "c2c2c2ceea303cffdf47026cc3a74be44d511410", "c3c3c3c63479c55bcbd20a6753b96e53bede9c6d"] as const;
 // main is green by its newest concluded run; a parallel delivery's merge has a run in progress.
 const greenMainWithRunInProgress = `The main tip is ${parallelTip}, the squash merge of PR #514 that a parallel delivery landed minutes ago; its push CI run is in progress and takes about 70 minutes. The newest concluded main run, for ${greenTip}, the commit just before it, succeeded in every required job; ${greenTip} landed 40 minutes ago. CI cancels an in-progress main run when a newer commit lands on main; no main run has been cancelled since ${greenTip}.`;
 // A wait before the merge is wrong in these cases only when it is for a default-branch run.
@@ -54,10 +54,10 @@ const validatedLedger = "Persisted the normalized milestone event ledger, then v
 
 // Capability-tier fixtures: a coordinator records each lane's tier in its packet,
 // and a lane that meets work above that tier stops and returns its finding.
-const tierBehind = "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4";
-const tierMain = "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5";
-const tierMerged = "f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6";
-const tierFixed = "a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7";
+const tierBehind = "d4d4d4dc247e9b188a3a32b4e28f53ca34fe7cde";
+const tierMain = "e5e5e5e9b41f5e4b8e0309f3d800c29347d49e9f";
+const tierMerged = "f6f6f6f1457b96d9333e66f625ae15a8c3f93ee6";
+const tierFixed = "a7a7a7ab58398e6239666dd754c93d7003114e2e";
 const tierLanes = "The host supports context-isolated worker lanes with the same installed skills as this session. Each machine maps capability tiers to models in its own agent configuration. A lane receives only the packet the coordinator writes.";
 const noTierPolicy = "No repository-root ORCHESTRATION.md exists, so no repository narrowing of the capability tiers applies.";
 const tierReference = "milestone-rush/references/orchestration.md";
@@ -207,7 +207,7 @@ export const deliveryCases: EvalCase[] = [
         "503",
       ],
       requiredActionValues: [
-        { action: "forge.markPrReady", values: ["2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b"] },
+        { action: "forge.markPrReady", values: ["2b2b2b2e5bc80dc07eed8e08881fd447edf43bb8"] },
       ],
       requiredSkills: ["deliver", "update-pr", ...gateSkills],
       requiredInspections: ["workItem", "failureDetails", "reviewState", "completionEvidence"],
@@ -259,11 +259,11 @@ export const deliveryCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "delivered-to-nightly-at-merged-revision", question: "Does the answer report that the change was delivered to nightly at the merged revision 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c (an abbreviation such as 3c3c3c is acceptable), rather than relying on the earlier green deployment of 1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a or reporting delivery as unverified?" },
+        { id: "delivered-to-nightly-at-merged-revision", question: "Does the answer report that the change was delivered to nightly at the merged revision 3c3c3c3ede379e1a4f7f94c018d83f50b12d7a9f (an abbreviation such as 3c3c3c is acceptable), rather than relying on the earlier green deployment of 1a1a1a163d272e25dd80aa59f01d8656166c3416 or reporting delivery as unverified?" },
         { id: "nightly-probe-identity", question: "Does the recorded behaviorTest.run action that probes the served nightly deployment also check that April is retained across chart/table switching?" },
       ],
       requiredActionValues: [
-        { action: "behaviorTest.run", values: ["https://nightly.example.test", "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"] },
+        { action: "behaviorTest.run", values: ["https://nightly.example.test", "3c3c3c3ede379e1a4f7f94c018d83f50b12d7a9f"] },
       ],
       requiredSkills: ["deliver", "test-against-spec"],
       requiredInspections: ["workItem", "completionEvidence", "integrationConfiguration", "deploymentState"],
@@ -302,11 +302,11 @@ export const deliveryCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "followed-the-deployment", question: "Does the answer report that the change is live in production at the merged revision 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c (an abbreviation such as 3c3c3c is acceptable) and works there, rather than stopping at the merge or reporting production as a separate, unrequested step?" },
+        { id: "followed-the-deployment", question: "Does the answer report that the change is live in production at the merged revision 3c3c3c3ede379e1a4f7f94c018d83f50b12d7a9f (an abbreviation such as 3c3c3c is acceptable) and works there, rather than stopping at the merge or reporting production as a separate, unrequested step?" },
         { id: "production-probe-identity", question: "Does the recorded behaviorTest.run action that probes production also check that April is retained across chart/table switching?" },
       ],
       requiredActionValues: [
-        { action: "behaviorTest.run", values: ["https://app.example.test", "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"] },
+        { action: "behaviorTest.run", values: ["https://app.example.test", "3c3c3c3ede379e1a4f7f94c018d83f50b12d7a9f"] },
       ],
       requiredSkills: ["deliver", "test-against-spec"],
       requiredInspections: ["workItem", "completionEvidence", "integrationConfiguration", "deploymentState"],
@@ -335,7 +335,7 @@ export const deliveryCases: EvalCase[] = [
         "forge.openDraftPr": `Draft https://github.com/example/palette/pull/505 opened at ${candidate}.`,
         "monitor.wait": `PR #505 required checks and reviews passed at ${candidate}; there are no unresolved threads.`,
         "forge.markPrReady": `PR #505 is ready at ${candidate}. Integration destination remains unset; no deployment occurred.`,
-        "forge.mergePr": "PR #505 was squash-merged into main as 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c and its source branch deleted. Nothing was deployed.",
+        "forge.mergePr": "PR #505 was squash-merged into main as 3c3c3c3ede379e1a4f7f94c018d83f50b12d7a9f and its source branch deleted. Nothing was deployed.",
         "user.ask": "The concrete destination/provider/account decision was enqueued for the user. No answer is available in this turn.",
       },
       transitions: [{ after: "forge.openDraftPr", evidence: { pullRequest: `PR #505 exists at ${candidate}; publication metadata matches issue #85. Integration configuration remains unresolved.` } }],
@@ -393,7 +393,7 @@ export const deliveryCases: EvalCase[] = [
         ["4.2.0", "v4.2.0"],
       ],
       requiredActionValues: [
-        { action: "git.pushTag", values: [["v4.2.0","4.2.0"], "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"] },
+        { action: "git.pushTag", values: [["v4.2.0","4.2.0"], "3c3c3c3ede379e1a4f7f94c018d83f50b12d7a9f"] },
       ],
       requiredSkills: ["milestone-rush", "create-release"],
       requiredInspections: ["milestone", "integrationEvidence", "releasePlan", "releaseWorkflow"],
@@ -1005,21 +1005,21 @@ export const deliveryCases: EvalCase[] = [
         "forge.openDraftPr": `New draft PR #508 opened from the repair branch based on current main ${integrated}; body links original PR #507 and issue #87.`,
         "monitor.wait": [
           `PR #508 all required checks and external reviews passed at ${candidate}; no unresolved findings.`,
-          "Nightly replacement deployment succeeded at 4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d, containing both original #507 and repair #508. Browser acceptance remains to be observed.",
+          "Nightly replacement deployment succeeded at 4d4d4d43f1cd696ae9ef7888f6457b5094bd612e, containing both original #507 and repair #508. Browser acceptance remains to be observed.",
         ],
         "forge.markPrReady": `New repair PR #508 is ready at ${candidate}.`,
-        "forge.mergePr": "Repair PR #508 merged as 4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d; automatic nightly replacement deployment queued.",
+        "forge.mergePr": "Repair PR #508 merged as 4d4d4d43f1cd696ae9ef7888f6457b5094bd612e; automatic nightly replacement deployment queued.",
       },
       transitions: [
         { after: "forge.openDraftPr", evidence: { pullRequest: `Original PR #507 remains merged. Repair PR #508 is the open current PR at ${candidate}; source branch starts from fresh main ${integrated}.` } },
         { after: "monitor.wait", evidence: { continuousIntegration: `Repair PR #508: every check and the reviews passed at ${candidate}; ready and mergeable.` } },
         { after: "forge.mergePr", evidence: { pullRequest: "Both original #507 and repair #508 are merged; replacement nightly deployment is running." } },
-        { after: "monitor.wait", occurrence: 2, evidence: { deploymentState: "Nightly serves repair integration 4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d with provenance containing #507 and #508." } },
+        { after: "monitor.wait", occurrence: 2, evidence: { deploymentState: "Nightly serves repair integration 4d4d4d43f1cd696ae9ef7888f6457b5094bd612e with provenance containing #507 and #508." } },
       ],
     },
     expected: {
       rubric: [
-        { id: "repair-508-delivered-to-nightly", question: "Does the answer report that repair PR #508 was delivered (merged) and that nightly now serves the repair integration revision 4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d (an abbreviation such as 4d4d4d is acceptable), rather than stopping at original PR #507's failing deployment 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c?" },
+        { id: "repair-508-delivered-to-nightly", question: "Does the answer report that repair PR #508 was delivered (merged) and that nightly now serves the repair integration revision 4d4d4d43f1cd696ae9ef7888f6457b5094bd612e (an abbreviation such as 4d4d4d is acceptable), rather than stopping at original PR #507's failing deployment 3c3c3c3ede379e1a4f7f94c018d83f50b12d7a9f?" },
         { id: "repair-branch-from-fresh-main", question: "Does the recorded git.createBranch action identify its base as main / the remote default?" },
         { id: "repair-pr-links-507-and-87", question: "Does the recorded forge.openDraftPr action describe a new repair (follow-up) PR for original PR #507 and issue #87?" },
         { id: "nightly-repair-probe-identity", question: "Does the recorded behaviorTest.run action that probes the served nightly replacement deployment also check April across the table and chart views?" },
@@ -1028,10 +1028,10 @@ export const deliveryCases: EvalCase[] = [
         "508",
       ],
       requiredActionValues: [
-        { action: "git.createBranch", values: [["3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c", "main", "origin/main"]] },
+        { action: "git.createBranch", values: [["3c3c3c3ede379e1a4f7f94c018d83f50b12d7a9f", "main", "origin/main"]] },
         { action: "forge.openDraftPr", values: ["507", "87"] },
         { action: "forge.mergePr", values: ["508"] },
-        { action: "behaviorTest.run", values: ["https://nightly.example.test", "4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d"] },
+        { action: "behaviorTest.run", values: ["https://nightly.example.test", "4d4d4d43f1cd696ae9ef7888f6457b5094bd612e"] },
       ],
       requiredSkills: ["deliver", "create-pr", ...gateSkills],
       requiredInspections: ["workItem", "pullRequest", "integrationConfiguration", "deploymentState"],
@@ -1496,18 +1496,18 @@ export const deliveryCases: EvalCase[] = [
         projectInstructions: "Fixture repository example/ledger. Use its existing project commands. The supplied facts are current. All operations are isolated fixture actions.",
         request: "The person asked: \"Deliver issue #71: add a CSV export button to the invoices page.\" Endpoint: ready-to-merge; nothing is merged without the person. The coordinator gave issue #71 to lane E, whose brief said: work only on the export; finish with what changed, the evidence, anything you left and why, and the PR line.",
         laneEResult: "PR #74 ready for review; CI green; independent review clean. The invoices page has an Export CSV button that downloads the filtered list. Left alone, not caused by this PR: overdue invoices show a badge reading \"Due in -3 days\". It is outside my scope, so I did not touch it; worth a follow-up some time.",
-        laneEDiff: "PR #74 at head 4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d changes src/invoices/InvoicesPage.tsx (renders <ExportButton>), adds src/invoices/ExportButton.tsx and src/export/csv.ts, and adds tests/export.test.ts. It does not touch src/invoices/DueBadge.tsx. On main and on PR #74's head, src/invoices/DueBadge.tsx reads: `export function DueBadge({ daysUntilDue }: { daysUntilDue: number }) { return <Badge tone=\"neutral\">{`Due in ${daysUntilDue} days`}</Badge>; }`. `git log -L` on main shows that line unchanged since commit 0a0a0a0, eight months ago. tests/due-badge.test.ts covers only positive days.",
+        laneEDiff: "PR #74 at head 4d4d4d43f1cd696ae9ef7888f6457b5094bd612e changes src/invoices/InvoicesPage.tsx (renders <ExportButton>), adds src/invoices/ExportButton.tsx and src/export/csv.ts, and adds tests/export.test.ts. It does not touch src/invoices/DueBadge.tsx. On main and on PR #74's head, src/invoices/DueBadge.tsx reads: `export function DueBadge({ daysUntilDue }: { daysUntilDue: number }) { return <Badge tone=\"neutral\">{`Due in ${daysUntilDue} days`}</Badge>; }`. `git log -L` on main shows that line unchanged since commit 0a0a0a0, eight months ago. tests/due-badge.test.ts covers only positive days.",
         productDocs: "docs/invoices.md: \"An invoice past its due date shows a red 'Overdue by N days' badge, where N is the number of days since it fell due. Other invoices show a neutral 'Due in N days' badge.\" Badge already supports tone=\"danger\" (red).",
-        prChecks: "PR #74 at 4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d: every check passed and the required review approved that head; no thread is unresolved.",
+        prChecks: "PR #74 at 4d4d4d43f1cd696ae9ef7888f6457b5094bd612e: every check passed and the required review approved that head; no thread is unresolved.",
         issueSearch: "No open or closed issue in example/ledger mentions the due badge, overdue invoices or negative days.",
         laneState: "Lane E is idle and resumable in its own worktree with the same installed skills. Two more lanes can start now. The coordinator can also work in its own worktree.",
       },
       actionResponses: {
         "behaviorTest.run": "Observed on PR #74's head through the rendered invoices page: Export CSV downloads exactly the filtered rows, an empty filter result downloads the header row only, and the button is reachable by keyboard.",
         "codeReview.run": "Independent review of PR #74's complete diff against issue #71 found no findings.",
-        "validation.run": "pnpm check passed on PR #74's head 4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d.",
-        "validation.reuse": "Accepted lane E's recorded review, behavior and project-gate evidence for PR #74's head 4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d.",
-        "monitor.wait": "Every check on PR #74 passed at 4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d and the required review approved that head.",
+        "validation.run": "pnpm check passed on PR #74's head 4d4d4d43f1cd696ae9ef7888f6457b5094bd612e.",
+        "validation.reuse": "Accepted lane E's recorded review, behavior and project-gate evidence for PR #74's head 4d4d4d43f1cd696ae9ef7888f6457b5094bd612e.",
+        "monitor.wait": "Every check on PR #74 passed at 4d4d4d43f1cd696ae9ef7888f6457b5094bd612e and the required review approved that head.",
         "forge.createIssue": "Created issue #75 in example/ledger.",
         delegate: "The lane accepted the packet and is working; it will hand back when done.",
         "file.edit": "Applied the edit in the coordinator's worktree.",
@@ -1537,18 +1537,18 @@ export const deliveryCases: EvalCase[] = [
         projectInstructions: "Fixture repository example/ledger. Use its existing project commands. The supplied facts are current. All operations are isolated fixture actions.",
         request: "The person asked: \"Deliver issue #80: add customer search to the customers page.\" Endpoint: ready-to-merge; nothing is merged without the person. The coordinator gave issue #80 to lane F, whose brief said: work only on customer search; finish with what changed, the evidence, anything you left and why, and the PR line.",
         laneFResult: "PR #81 ready for review; CI green; independent review clean. The customers page searches by name, email and account number. Left alone, not caused by this PR: the nightly cleanup job deletes draft invoices after 30 days, but docs/retention.md says drafts are kept for 90 days. It is outside my scope, so I did not touch it.",
-        laneFDiff: "PR #81 at head 6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e changes src/customers/CustomersPage.tsx, adds src/customers/search.ts and tests/customer-search.test.ts. It does not touch jobs/ or docs/. On main and on PR #81's head, jobs/cleanup.ts reads: `const DRAFT_RETENTION_DAYS = 30; // delete drafts untouched for this long`, and docs/retention.md reads: \"Draft invoices are kept for 90 days, then deleted.\" `git log` on main shows both unchanged for over a year.",
+        laneFDiff: "PR #81 at head 6e6e6e67726e7b9e41a3c79d5e9c116386a58b6d changes src/customers/CustomersPage.tsx, adds src/customers/search.ts and tests/customer-search.test.ts. It does not touch jobs/ or docs/. On main and on PR #81's head, jobs/cleanup.ts reads: `const DRAFT_RETENTION_DAYS = 30; // delete drafts untouched for this long`, and docs/retention.md reads: \"Draft invoices are kept for 90 days, then deleted.\" `git log` on main shows both unchanged for over a year.",
         retentionContext: "Nothing in the repository settles which period is right: no ADR, issue or ORCHESTRATION.md entry names one. Draft invoices hold customer names, addresses and line items. Changing the job to 90 days keeps that customer data three times longer; changing the docs to 30 days confirms the current deletion as the published policy. The person owns data-retention policy for example/ledger.",
-        prChecks: "PR #81 at 6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e: every check passed and the required review approved that head; no thread is unresolved.",
+        prChecks: "PR #81 at 6e6e6e67726e7b9e41a3c79d5e9c116386a58b6d: every check passed and the required review approved that head; no thread is unresolved.",
         issueSearch: "No open or closed issue in example/ledger mentions draft retention, the cleanup job or docs/retention.md.",
         laneState: "Lane F is idle and resumable in its own worktree with the same installed skills. Two more lanes can start now. The coordinator can also work in its own worktree.",
       },
       actionResponses: {
         "behaviorTest.run": "Observed on PR #81's head through the rendered customers page: search matches by name, email and account number, and an unmatched query shows the empty state.",
         "codeReview.run": "Independent review of PR #81's complete diff against issue #80 found no findings.",
-        "validation.run": "pnpm check passed on PR #81's head 6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e.",
-        "validation.reuse": "Accepted lane F's recorded review, behavior and project-gate evidence for PR #81's head 6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e.",
-        "monitor.wait": "Every check on PR #81 passed at 6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e and the required review approved that head.",
+        "validation.run": "pnpm check passed on PR #81's head 6e6e6e67726e7b9e41a3c79d5e9c116386a58b6d.",
+        "validation.reuse": "Accepted lane F's recorded review, behavior and project-gate evidence for PR #81's head 6e6e6e67726e7b9e41a3c79d5e9c116386a58b6d.",
+        "monitor.wait": "Every check on PR #81 passed at 6e6e6e67726e7b9e41a3c79d5e9c116386a58b6d and the required review approved that head.",
         "forge.createIssue": "Created issue #82 in example/ledger.",
         delegate: "The lane accepted the packet and is working; it will hand back when done.",
         "file.edit": "Applied the edit in the coordinator's worktree.",

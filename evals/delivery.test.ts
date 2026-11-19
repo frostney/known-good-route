@@ -13,8 +13,8 @@ const edit = (path: string) => action("file.edit", "Apply the scoped regression 
 const review = action("codeReview.run");
 const behavior = action("behaviorTest.run", "Observe April label fidelity in chart/table at https://nightly.example.test, including direct table URL and return to chart");
 const gate = action("validation.run");
-const integratedRevision = "3c".repeat(20);
-const repairRevision = "4d".repeat(20);
+const integratedRevision = "3c3c3c3ede379e1a4f7f94c018d83f50b12d7a9f";
+const repairRevision = "4d4d4d43f1cd696ae9ef7888f6457b5094bd612e";
 const deployedProbe = (revision: string): RunLedger["actions"][number] => ({
   action: "behaviorTest.run", details: "Observe April label in chart/table, including direct table URL and return to chart",
   data: { url: "https://nightly.example.test", revision },
@@ -24,16 +24,19 @@ const productionProbe: RunLedger["actions"][number] = {
   data: { url: "https://app.example.test", revision: integratedRevision },
 };
 const releaseTag: RunLedger["actions"][number] = { action: "git.pushTag", details: "Publish the declared release tag at the verified merged revision", data: { tag: "v4.2.0", head: integratedRevision } };
-const repairTip = "7a".repeat(20);
+const repairTip = "7a7a7a76cdb3b714122d0d0e67c58894c70b93e2";
 const mainRunWait = (head: string): RunLedger["actions"][number] => ({ action: "monitor.wait", details: "Await main's push CI run for its tip", data: { head } });
-const repairMerged = "9c".repeat(20);
+const repairMerged = "9c9c9c9474f7539af49d2971800b62cdc7667436";
 const mergeRepair: RunLedger["actions"][number] = { action: "forge.mergePr", details: "Squash-merge the repair PR", data: { pr: 512 } };
 const mergeRequested: RunLedger["actions"][number] = { action: "forge.mergePr", details: "Squash-merge the requested PR", data: { pr: 511 } };
-const candidateHead = "2b".repeat(20);
-const parallelTip = "0d".repeat(20);
-const samplerTip = "5a".repeat(20);
+const candidateHead = "2b2b2b2e5bc80dc07eed8e08881fd447edf43bb8";
+const parallelTip = "0d0d0d05b5827d5849e8b621d3ca555c571d88cb";
+const samplerTip = "5a5a5a529a6cca35041fbab20c307470d45ec293";
+const redTip = "6f6f6f6ef8a3b9f834153485acefbcf7e7efd875";
+const greenTip = "e1e1e1ec700cce9458db1f54f3a41f58bc5c7213";
+const tierMerged = "f6f6f6f1457b96d9333e66f625ae15a8c3f93ee6";
 // A wait on the pull request's own checks, which the readiness gate asks for.
-const prChecksWait: RunLedger["actions"][number] = { action: "monitor.wait", details: "Confirm every check on the PR's exact head with delivery-wait, without awaiting main's push run", data: { head: "2b".repeat(20), kind: "checks-terminal" } };
+const prChecksWait: RunLedger["actions"][number] = { action: "monitor.wait", details: "Confirm every check on the PR's exact head with delivery-wait, without awaiting main's push run", data: { head: candidateHead, kind: "checks-terminal" } };
 const heldByMain = (...revisions: string[]) => `monitor.wait omits ${revisions.map(revision => `${revision} | ${revision.slice(0, 7)}`).join(", ")} before forge.mergePr`;
 const dispatchSampler = (head: string): RunLedger["actions"][number] => ({ action: "ci.dispatchRun", details: "Dispatch main CI on the tip outside the cancelling group", data: { head } });
 const fullCiLabel: RunLedger["actions"][number] = { action: "forge.updatePrMetadata", details: "Add the full-ci label to PR #515 to start Extended CI", data: { labels: ["full-ci"] } };
@@ -65,7 +68,7 @@ async function replay(c: EvalCase, actions: RunLedger["actions"]) {
 const scenarios: Array<{ id: string; actions: RunLedger["actions"]; output: string; omit: ActionName }> = [
   { id: "delivery-implement-development-only", actions: [edit("src/report.ts"), review, behavior, gate], output: "The April selection and label now match the reference; development validation is complete.", omit: "file.edit" },
   { id: "delivery-create-pr-missing-gates-repair", actions: [review, edit("src/import.ts"), review, behavior, gate, action("git.commit"), action("git.push"), action("forge.openDraftPr"), action("monitor.wait"), action("forge.markPrReady")], output: "PR #502 is ready after the MissingFile correction and current gates.", omit: "validation.run" },
-  { id: "delivery-existing-pr-ci-recovery", actions: [action("validation.reuse"), action("monitor.wait"), edit("src/theme-fixture.ts"), review, behavior, gate, action("git.commit"), action("git.push"), action("forge.updatePrMetadata"), action("monitor.wait"), { action: "forge.markPrReady", details: "Mark existing PR #503 ready", data: { head: "2b".repeat(20) } }], output: "Existing PR #503 is merge-ready at 2b2b2b2 after repairing the encoded pathname failure.", omit: "codeReview.run" },
+  { id: "delivery-existing-pr-ci-recovery", actions: [action("validation.reuse"), action("monitor.wait"), edit("src/theme-fixture.ts"), review, behavior, gate, action("git.commit"), action("git.push"), action("forge.updatePrMetadata"), action("monitor.wait"), { action: "forge.markPrReady", details: "Mark existing PR #503 ready", data: { head: candidateHead } }], output: "Existing PR #503 is merge-ready at 2b2b2b2 after repairing the encoded pathname failure.", omit: "codeReview.run" },
   { id: "delivery-default-integration-current-revision", actions: [action("validation.reuse"), action("forge.mergePr"), action("monitor.wait"), action("monitor.wait"), deployedProbe(integratedRevision)], output: "Nightly serves 3c3c3c3 and its April chart/table acceptance passed.", omit: "behaviorTest.run" },
   { id: "delivery-merged-follows-merge-started-deployment", actions: [action("validation.reuse"), action("monitor.wait"), action("forge.mergePr"), action("monitor.wait"), productionProbe], output: "PR #523 is merged as 3c3c3c3, production serves that revision and its April chart/table acceptance passed there.", omit: "behaviorTest.run" },
   { id: "delivery-missing-integration-decision", actions: [action("forge.openDraftPr"), action("monitor.wait"), action("forge.markPrReady"), action("forge.mergePr", "Squash-merge PR #505"), action("user.ask", "Which integration destination, hosting provider and billing account should be used?")], output: "PR #505 is merged. Integration remains unresolved pending the destination and provider decision.", omit: "user.ask" },
@@ -91,7 +94,7 @@ const scenarios: Array<{ id: string; actions: RunLedger["actions"]; output: stri
   { id: "delivery-ready-to-merge-failed-optional-check-is-repaired", actions: [edit("docs/import.md"), review, gate, action("git.commit"), action("git.push"), action("forge.updatePrMetadata"), action("monitor.wait")], output: "PR #525 is ready to merge at 2b2b2b2 after correcting the docs/import.md link that failed docs-links. Nothing was merged.", omit: "git.push" },
   { id: "delivery-park-pending-ci-arms-wait", actions: [action("validation.reuse"), { action: "monitor.wait", details: "Arm a tracked wait for PR #520's checks", data: { head: candidateHead } }], output: "PR #520 is parked: a tracked wait is armed for its build and test checks at 2b2b2b2; nothing is merged.", omit: "monitor.wait" },
   { id: "delivery-park-hands-unwakeable-check-to-person", actions: [action("validation.reuse")], output: "PR #521 is ready except the benchmark gate: the maintainer runs the benchmark on the lab machine and approves in the PR. That is yours to do; nothing here can follow it.", omit: "validation.reuse" },
-  { id: "delivery-park-lane-interim-report-stays-pending", actions: [tierPacket("Capability tier: mechanical. Run /update-pr to merge origin/main; push; await required checks."), { action: "monitor.wait", details: "Await PR #522's required checks on the new head", data: { head: "f6".repeat(20) } }], output: "PR #522 is ready to merge at f6f6f6f; the required checks passed there. Nothing was merged.", omit: "monitor.wait" },
+  { id: "delivery-park-lane-interim-report-stays-pending", actions: [tierPacket("Capability tier: mechanical. Run /update-pr to merge origin/main; push; await required checks."), { action: "monitor.wait", details: "Await PR #522's required checks on the new head", data: { head: tierMerged } }], output: "PR #522 is ready to merge at f6f6f6f; the required checks passed there. Nothing was merged.", omit: "monitor.wait" },
   { id: "delivery-tier-trap-coordinator-new-lane", actions: [tierPacket("Capability tier: mechanical. Run /update-pr to merge origin/main; push; await required checks."), openLane], output: "PR #161 is ready to merge at a7a7a7a; nothing was merged.", omit: "delegate" },
 ];
 for (const scenario of scenarios) {
@@ -336,10 +339,10 @@ test("a red default branch holds the merge until its tip's own run succeeds", as
   // Merging first supersedes the repair's in-progress run, even with a later wait.
   expect(await failed([merge, mainRunWait(repairTip)])).toContain(ordered);
   // A wait on another commit before the merge does not stand in for the tip's run.
-  expect(await failed([mainRunWait("2b".repeat(20)), merge, mainRunWait(repairTip)])).toEqual([ordered]);
+  expect(await failed([mainRunWait(candidateHead), merge, mainRunWait(repairTip)])).toEqual([ordered]);
   // The red tip's completed run says nothing about the current tip.
-  expect(await failed([mainRunWait("6f".repeat(20)), merge])).toEqual([ordered]);
-  expect(await failed([mainRunWait("6f".repeat(20)), merge, mainRunWait(repairTip)])).toEqual([ordered]);
+  expect(await failed([mainRunWait(redTip), merge])).toEqual([ordered]);
+  expect(await failed([mainRunWait(redTip), merge, mainRunWait(repairTip)])).toEqual([ordered]);
 });
 
 test("an unowned red default branch is repaired and green before the requested PR merges", async () => {
@@ -355,7 +358,7 @@ test("an unowned red default branch is repaired and green before the requested P
   // The repair merged, but its own default-branch run was still in progress.
   expect(await failed([...repairUntilMerge, mergeRequested, mainRunWait(repairMerged)])).toContain(ordered);
   // Waiting on the old red tip does not establish the repaired tip.
-  expect(await failed([...repairUntilMerge, mainRunWait("6f".repeat(20)), mergeRequested])).toEqual([ordered]);
+  expect(await failed([...repairUntilMerge, mainRunWait(redTip), mergeRequested])).toEqual([ordered]);
   // Naming the repair in the requested merge, or no PR at all, does not hide its order.
   for (const requested of [
     { ...mergeRequested, details: "Merge PR #511 now that repair #512 landed" },
@@ -370,7 +373,7 @@ test("an unowned red default branch is repaired and green before the requested P
   // Each merge shows in every later read, so a run that confirms a merge finds it.
   const state = createFixtureState(c.fixture);
   for (const recorded of s.actions.slice(0, -1)) state.record(recorded.action, recorded.data);
-  expect(state.evidence.pullRequest).toBe(`PR #511 is unchanged and unmerged at ${"2b".repeat(20)}. Repair PR #512 is merged as ${repairMerged}.`);
+  expect(state.evidence.pullRequest).toBe(`PR #511 is unchanged and unmerged at ${candidateHead}. Repair PR #512 is merged as ${repairMerged}.`);
   state.record(mergeRequested.action, mergeRequested.data);
   expect(state.evidence.pullRequest).toContain(`PR #511 is merged as ${integratedRevision}`);
   expect(state.evidence.defaultBranchHealth).toContain(`The main tip is ${integratedRevision}`);
@@ -414,7 +417,7 @@ test("a declared full-CI rule holds the merge until that run succeeds on the PR'
   // Waiting for main's in-progress run as well is the serialisation the rule removes.
   expect(await failed([fullCiLabel, fullCiWait, mainRunWait(parallelTip), merge])).toEqual([`monitor.wait carries ${candidateHead} before forge.mergePr`]);
   // A wait after the merge, such as on the integrated revision, is not a wait before it.
-  expect(await failed([...s.actions, mainRunWait("3c".repeat(20))])).toEqual([]);
+  expect(await failed([...s.actions, mainRunWait(integratedRevision)])).toEqual([]);
 });
 
 test("ready stack layers merge in one stack merge, not one PR at a time", async () => {
@@ -439,7 +442,7 @@ test("past the uncovered-commit bound, one run on the tip completes before the n
   // Merging cancels the tip's run again and leaves the gap growing.
   expect(await failed([merge, mainRunWait(parallelTip)])).toEqual([`monitor.wait carries ${parallelTip} before forge.mergePr`, "required action sequence"]);
   // A wait on the old deciding commit does not cover the tip.
-  expect(await failed([mainRunWait("e1".repeat(20)), merge])).toEqual([`monitor.wait carries ${parallelTip} before forge.mergePr`]);
+  expect(await failed([mainRunWait(greenTip), merge])).toEqual([`monitor.wait carries ${parallelTip} before forge.mergePr`]);
   // While merging pauses nothing cancels the tip's run, so a second run on that tip is waste.
   expect(await failed([dispatchSampler(parallelTip), ...s.actions])).toEqual(["forbidden actions"]);
 });

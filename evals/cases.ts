@@ -978,8 +978,8 @@ export const evalCases: EvalCase[] = [
       actionResponses: {
         "validation.run":
           "bun run check passed on the working tree, including the scopes change.",
-        "git.commit": "Committed the scopes change as 5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f.",
-        "git.push": "Ordinary push succeeded; PR #57's checks started for 5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f.",
+        "git.commit": "Committed the scopes change as 5f5f5f545492b30eac9f1b93daa65e68097d0c68.",
+        "git.push": "Ordinary push succeeded; PR #57's checks started for 5f5f5f545492b30eac9f1b93daa65e68097d0c68.",
         "forge.updatePrMetadata": "PR #57's body now describes the scopes change and the local validation.",
         "git.merge": "Merged origin/main into feature/auth-scopes without conflicts.",
       },
@@ -1011,10 +1011,10 @@ export const evalCases: EvalCase[] = [
           "After synchronization, validate every rewritten layer from the first changed head upward using bun run check. This gate includes typecheck, tests and build. The fixture has no additional required checks or active review providers.",
       },
       actionResponses: {
-        "git.fetch": "Fetched origin/main at aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; stack membership and remote leases remain unchanged.",
-        "git.stackSync": "Guarded official synchronization completed without conflicts. Rewritten local heads: feature/foundation=1111111111111111111111111111111111111111; feature/middle=2222222222222222222222222222222222222222; feature/top=3333333333333333333333333333333333333333. All three now include the fetched origin/main. The worktree is clean; publication is still required.",
-        "validation.run": "bun run check passed on each rewritten layer: feature/foundation at 1111111111111111111111111111111111111111, feature/middle at 2222222222222222222222222222222222222222 and feature/top at 3333333333333333333333333333333333333333. No source, dependency or environment changes afterward.",
-        "git.stackSubmit": "Protected native stack submission completed. GitHub now reports stack 17 in preserved order: https://github.com/example/project/pull/41 head 1111111111111111111111111111111111111111, https://github.com/example/project/pull/42 head 2222222222222222222222222222222222222222, https://github.com/example/project/pull/43 head 3333333333333333333333333333333333333333. No PR was merged and no extra PR was created.",
+        "git.fetch": "Fetched origin/main at aaaaaaadf0d92b5ab2b95fd79fe2a3c028e7f9f9; stack membership and remote leases remain unchanged.",
+        "git.stackSync": "Guarded official synchronization completed without conflicts. Rewritten local heads: feature/foundation=1111111ced96e867635c4a9b8506174c4ed1fda0; feature/middle=222222246df57efe21b6921ac28a9ad5fd8b69f7; feature/top=33333335e545eca69a810f69eaf51435af8eb9fa. All three now include the fetched origin/main. The worktree is clean; publication is still required.",
+        "validation.run": "bun run check passed on each rewritten layer: feature/foundation at 1111111ced96e867635c4a9b8506174c4ed1fda0, feature/middle at 222222246df57efe21b6921ac28a9ad5fd8b69f7 and feature/top at 33333335e545eca69a810f69eaf51435af8eb9fa. No source, dependency or environment changes afterward.",
+        "git.stackSubmit": "Protected native stack submission completed. GitHub now reports stack 17 in preserved order: https://github.com/example/project/pull/41 head 1111111ced96e867635c4a9b8506174c4ed1fda0, https://github.com/example/project/pull/42 head 222222246df57efe21b6921ac28a9ad5fd8b69f7, https://github.com/example/project/pull/43 head 33333335e545eca69a810f69eaf51435af8eb9fa. No PR was merged and no extra PR was created.",
         "forge.updatePrMetadata": "Verified PR #41, #42 and #43 titles and bodies against the submitted heads; corrected stale validation references while preserving their templates, claims and native base order.",
       },
     },
@@ -1025,9 +1025,9 @@ export const evalCases: EvalCase[] = [
         { id: "each-layer-validated", question: "Does the answer report that `bun run check` passed on each rewritten layer (feature/foundation, feature/middle and feature/top) at its new head?" },
       ],
       requiredAnswerValues: [
-        ["1111111111111111111111111111111111111111", "1111111"],
-        ["2222222222222222222222222222222222222222", "2222222"],
-        ["3333333333333333333333333333333333333333", "3333333"],
+        ["1111111ced96e867635c4a9b8506174c4ed1fda0", "1111111"],
+        ["222222246df57efe21b6921ac28a9ad5fd8b69f7", "2222222"],
+        ["33333335e545eca69a810f69eaf51435af8eb9fa", "3333333"],
       ],
       requiredSkills: ["update-pr"],
       requiredActions: ["git.stackSync", "validation.run"],
@@ -1445,7 +1445,7 @@ export const evalCases: EvalCase[] = [
       environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         comparisonBoundary:
-          "Feature branch feature/config is two commits ahead of the merge-base with origin/main. The worktree also has a relevant unstaged test change and no unrelated files. Fixture repository is example/project. Resolved base 51ca1ab111111111111111111111111111111111 and HEAD 62db2bc222222222222222222222222222222222. Supplied source/test records describe the complete scoped diff; no additional files or evidence are hidden. No untracked files or unrelated work. The source records are authoritative simulated file contents for this decision fixture.",
+          "Feature branch feature/config is two commits ahead of the merge-base with origin/main. The worktree also has a relevant unstaged test change and no unrelated files. Fixture repository is example/project. Resolved base 51ca1ab9497980d9c408ce76e0a2ef05af57fe5d and HEAD 62db2bcf8a3dc71c793d4cc537d0cd46f3991e79. Supplied source/test records describe the complete scoped diff; no additional files or evidence are hidden. No untracked files or unrelated work. The source records are authoritative simulated file contents for this decision fixture.",
         claim:
           "Issue #88 requires the CLI to load the existing project configuration and return the established invalid-configuration error for malformed input.",
         changedCode:
@@ -1557,7 +1557,7 @@ export const evalCases: EvalCase[] = [
       environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         comparisonBoundary:
-          "The clean branch changes src/session.ts and tests/session.test.ts relative to origin/main. Fixture repository is example/project. Resolved base 51ca1ab111111111111111111111111111111111 and HEAD 62db2bc222222222222222222222222222222222. Supplied source/test records describe the complete scoped diff; no additional files or evidence are hidden. No untracked files or unrelated work. The source records are authoritative simulated file contents for this decision fixture.",
+          "The clean branch changes src/session.ts and tests/session.test.ts relative to origin/main. Fixture repository is example/project. Resolved base 51ca1ab9497980d9c408ce76e0a2ef05af57fe5d and HEAD 62db2bcf8a3dc71c793d4cc537d0cd46f3991e79. Supplied source/test records describe the complete scoped diff; no additional files or evidence are hidden. No untracked files or unrelated work. The source records are authoritative simulated file contents for this decision fixture.",
         claim:
           "Expired sessions must be rejected through the public API and the regression test must protect that behavior.",
         changedCode:
@@ -1662,7 +1662,7 @@ export const evalCases: EvalCase[] = [
       environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         comparisonBoundary:
-          "origin/main and HEAD both resolve. Branch feature/import is one commit ahead of their merge-base, the three-dot diff is non-empty, and the worktree is clean. Fixture repository is example/project. Resolved base 51ca1ab111111111111111111111111111111111 and HEAD 62db2bc222222222222222222222222222222222. Supplied source/test records describe the complete scoped diff; no additional files or evidence are hidden. No untracked files or unrelated work. The source records are authoritative simulated file contents for this decision fixture.",
+          "origin/main and HEAD both resolve. Branch feature/import is one commit ahead of their merge-base, the three-dot diff is non-empty, and the worktree is clean. Fixture repository is example/project. Resolved base 51ca1ab9497980d9c408ce76e0a2ef05af57fe5d and HEAD 62db2bcf8a3dc71c793d4cc537d0cd46f3991e79. Supplied source/test records describe the complete scoped diff; no additional files or evidence are hidden. No untracked files or unrelated work. The source records are authoritative simulated file contents for this decision fixture.",
         claim:
           "The change adds a public import command that must preserve the established normalized error contract.",
         laneMap:
@@ -1719,7 +1719,7 @@ export const evalCases: EvalCase[] = [
       environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         comparisonBoundary:
-          "origin/main resolves to 51ca1ab and HEAD resolves to 62db2bc. Their merge-base is 51ca1ab, the three-dot diff is non-empty, and the worktree is clean. Fixture repository is example/project. Resolved base 51ca1ab111111111111111111111111111111111 and HEAD 62db2bc222222222222222222222222222222222. Supplied source/test records describe the complete scoped diff; no additional files or evidence are hidden. No untracked files or unrelated work. The source records are authoritative simulated file contents for this decision fixture.",
+          "origin/main resolves to 51ca1ab and HEAD resolves to 62db2bc. Their merge-base is 51ca1ab, the three-dot diff is non-empty, and the worktree is clean. Fixture repository is example/project. Resolved base 51ca1ab9497980d9c408ce76e0a2ef05af57fe5d and HEAD 62db2bcf8a3dc71c793d4cc537d0cd46f3991e79. Supplied source/test records describe the complete scoped diff; no additional files or evidence are hidden. No untracked files or unrelated work. The source records are authoritative simulated file contents for this decision fixture.",
         claim:
           "Issue #103 requires tenant administrators to rotate only credentials owned by their current tenant.",
         changedCode:
@@ -1745,8 +1745,8 @@ export const evalCases: EvalCase[] = [
         { id: "not-approved", question: "Does the answer treat the cross-tenant rotation as a defect that must be fixed before the change ships (for example REQUEST CHANGES or a BLOCKING finding) rather than approving it?" },
       ],
       requiredAnswerValues: [
-        ["51ca1ab", "51ca1ab111111111111111111111111111111111"],
-        ["62db2bc", "62db2bc222222222222222222222222222222222"],
+        ["51ca1ab", "51ca1ab9497980d9c408ce76e0a2ef05af57fe5d"],
+        ["62db2bc", "62db2bcf8a3dc71c793d4cc537d0cd46f3991e79"],
       ],
       requiredSkills: ["code-review"],
       requiredReferences: ["code-review/references/adversarial-review.md"],
@@ -1832,7 +1832,7 @@ export const evalCases: EvalCase[] = [
       environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         comparisonBoundary:
-          "Branch feature/dispatch is one commit ahead of the merge-base with origin/main and the worktree is clean. Fixture repository is example/project. Resolved base 51ca1ab111111111111111111111111111111111 and HEAD 62db2bc222222222222222222222222222222222. Supplied source/test records describe the complete scoped diff; no additional files or evidence are hidden. No untracked files or unrelated work. The source records are authoritative simulated file contents for this decision fixture.",
+          "Branch feature/dispatch is one commit ahead of the merge-base with origin/main and the worktree is clean. Fixture repository is example/project. Resolved base 51ca1ab9497980d9c408ce76e0a2ef05af57fe5d and HEAD 62db2bcf8a3dc71c793d4cc537d0cd46f3991e79. Supplied source/test records describe the complete scoped diff; no additional files or evidence are hidden. No untracked files or unrelated work. The source records are authoritative simulated file contents for this decision fixture.",
         claim:
           "The change adds one retry classification to the request dispatcher without changing its public behavior.",
         changedCode:
@@ -1901,7 +1901,7 @@ export const evalCases: EvalCase[] = [
       environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         comparisonBoundary:
-          "Branch feature/decode is two commits ahead of the merge-base with origin/main and the worktree is clean. Fixture repository is example/project. Resolved base 51ca1ab111111111111111111111111111111111 and HEAD 62db2bc222222222222222222222222222222222. Supplied source/test records describe the complete scoped diff; no additional files or evidence are hidden. No untracked files or unrelated work. The source records are authoritative simulated file contents for this decision fixture.",
+          "Branch feature/decode is two commits ahead of the merge-base with origin/main and the worktree is clean. Fixture repository is example/project. Resolved base 51ca1ab9497980d9c408ce76e0a2ef05af57fe5d and HEAD 62db2bcf8a3dc71c793d4cc537d0cd46f3991e79. Supplied source/test records describe the complete scoped diff; no additional files or evidence are hidden. No untracked files or unrelated work. The source records are authoritative simulated file contents for this decision fixture.",
         claim:
           "The change adds bounded frame decoding while preserving the established malformed-frame error.",
         requestedFiles:
@@ -4227,7 +4227,7 @@ export const evalCases: EvalCase[] = [
       environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         comparisonBoundary:
-          "Branch feature/import is one commit ahead of the merge-base with origin/main and the worktree is clean. Fixture repository is example/project. Resolved base 51ca1ab111111111111111111111111111111111 and HEAD 62db2bc222222222222222222222222222222222. Supplied source/test records describe the complete scoped diff; no additional files or evidence are hidden. No untracked files or unrelated work. The source records are authoritative simulated file contents for this decision fixture.",
+          "Branch feature/import is one commit ahead of the merge-base with origin/main and the worktree is clean. Fixture repository is example/project. Resolved base 51ca1ab9497980d9c408ce76e0a2ef05af57fe5d and HEAD 62db2bcf8a3dc71c793d4cc537d0cd46f3991e79. Supplied source/test records describe the complete scoped diff; no additional files or evidence are hidden. No untracked files or unrelated work. The source records are authoritative simulated file contents for this decision fixture.",
         claim:
           "The change claims that import failures return the established exit code 2 without exposing an internal stack trace.",
         changedCode:
@@ -4278,11 +4278,11 @@ export const evalCases: EvalCase[] = [
       environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         comparisonBoundary:
-          "Branch feature/sync-logging is two commits ahead of the merge-base with origin/main and the worktree is clean. Fixture repository is example/project. Resolved base 51ca1ab111111111111111111111111111111111 and HEAD 7c4e9d0333333333333333333333333333333333. The changed files are src/sync/trace.ts and src/sync/trace.test.ts. Supplied source, test and guide records describe the complete scoped diff and the guides' full text; nothing else is hidden. The records are authoritative simulated file contents for this decision fixture.",
+          "Branch feature/sync-logging is two commits ahead of the merge-base with origin/main and the worktree is clean. Fixture repository is example/project. Resolved base 51ca1ab9497980d9c408ce76e0a2ef05af57fe5d and HEAD 7c4e9d01a409d9aa1a527c0f5363194d9b1b6fa9. The changed files are src/sync/trace.ts and src/sync/trace.test.ts. Supplied source, test and guide records describe the complete scoped diff and the guides' full text; nothing else is hidden. The records are authoritative simulated file contents for this decision fixture.",
         claim:
           "The change logs a structured message when a store sync starts and when it fails, and retries the provider call once after a 401 that follows a token refresh.",
         bindingGuides:
-          "Output of code-review's scripts/binding_guides.py --base 51ca1ab111111111111111111111111111111111, exit 0:\nAGENTS.md\n  governs src/sync/trace.test.ts, src/sync/trace.ts\nCONTRIBUTING.md\n  contribution guide\ndocs/testing.md\n  linked from AGENTS.md:6\ndocs/code-style.md\n  linked from AGENTS.md:7 (#comments)",
+          "Output of code-review's scripts/binding_guides.py --base 51ca1ab9497980d9c408ce76e0a2ef05af57fe5d, exit 0:\nAGENTS.md\n  governs src/sync/trace.test.ts, src/sync/trace.ts\nCONTRIBUTING.md\n  contribution guide\ndocs/testing.md\n  linked from AGENTS.md:6\ndocs/code-style.md\n  linked from AGENTS.md:7 (#comments)",
         agentsMd:
           "AGENTS.md:\n# Project\nRun `bun run check` before publishing.\n\n## Rules\nTests follow [the testing guide](docs/testing.md).\nCode comments follow [the comment rules](docs/code-style.md#comments).",
         contributingGuide:
@@ -6579,7 +6579,7 @@ export const evalCases: EvalCase[] = [
         currentCaller:
           "The consumer keeps a Monday schedule, workflow_dispatch, actions: read, contents: write, pull-requests: write, and one reusable-workflow job. Its project inventory is nested at paddy/ and its automation branch is automation/update-paddy-agent-skills.",
         proposedRevision:
-          "The reusable workflow is merged on the KGR default branch at full SHA 0123456789abcdef0123456789abcdef01234567. Its diff preserves the inputs used by this caller and pins skills CLI 1.5.23.",
+          "The reusable workflow is merged on the KGR default branch at full SHA 0123456df18d317c3219f76aa7286fb1dc6988e1. Its diff preserves the inputs used by this caller and pins skills CLI 1.5.23.",
         projectGate:
           "actionlint and the repository workflow-contract test validate the edited caller.",
       },
@@ -6592,7 +6592,7 @@ export const evalCases: EvalCase[] = [
         { id: "reports-validation", question: "Does the answer report the validation run or requested for the edited caller with actionlint and the repository workflow-contract test?" },
       ],
       requiredActionValues: [
-        { action: "file.edit", values: ["0123456789abcdef0123456789abcdef01234567"] },
+        { action: "file.edit", values: ["0123456df18d317c3219f76aa7286fb1dc6988e1"] },
         { action: "file.edit", values: ["paddy"], every: true },
       ],
       requiredSkills: ["maintain-project-skills"],
