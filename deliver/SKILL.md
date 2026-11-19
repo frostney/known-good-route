@@ -121,7 +121,11 @@ workflow invoked returns to its caller.
   authorized ordinary PR or complete native stack as soon as it is ready.
   Confirm the merge: the PR or stack reports merged and the remote default
   branch contains the integrated revision. A partial prefix below a required
-  fix layer is not done.
+  fix layer is not done. A PR that is a layer of a native stack merges with
+  its stack: while layers above it are not ready, merging it alone is the
+  person's decision under the stack reference's
+  [merge rules](../git-workflow/references/github-stacks.md#submit-validate-and-merge),
+  so finish its readiness and ask.
 - A merge is not the end of `merged`. Where the repository delivers its
   default branch, run its configured integration path when that needs a step,
   or await the run the merge started, for the merged revision through
