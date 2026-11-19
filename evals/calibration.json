@@ -2997,10 +2997,11 @@
         "Owner ruling, 2026-10-20: when the workflow's concurrency group would cancel a dispatched run too, no sampler can run, so delivery reports the project gap with its fix and keeps merging under the PR gates; dispatching, waiting or a report without the gap fails. Fresh native run required.",
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
         "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
-        "The case forbade every wait, so a run that confirmed the pull request's own checks before merging failed it (issue #165). It now forbids only a wait before the merge that names a default-branch run or the main branch, and the fixture answers a wait with the pull request's state. A wait for the default branch's run still fails."
+        "The case forbade every wait, so a run that confirmed the pull request's own checks before merging failed it (issue #165). It now forbids only a wait before the merge that names a default-branch run or the main branch, and the fixture answers a wait with the pull request's state. A wait for the default branch's run still fails.",
+        "The answer check accepted only the word concurrency or the phrase cancelling group, so an answer that reported the gap and its fix while naming the group by its key failed it: 2 of 3 runs on one model, each passed by the judge on the gap item (issue #174). The check now also accepts the group's key and its cancel-in-progress setting, both taken from the fixture. An answer that names the group in none of these ways still fails."
       ],
       "beforeSha256": null,
-      "afterSha256": "1702ffde3bbbdfa7686eb3abcdfea526f3c8404bd2de15a13bcf70b566c8fa28",
+      "afterSha256": "7bf1ddfd89163007e2c6bb0e7fd90d0f5cc6a74f06a7618ce8c5fc75d9be8120",
       "frozenCaseSha256": "00d26dd953e28c58ae47c195e4509b1f006c854107a516a64ad2514ac2f2ae7a",
       "revisions": [
         {
@@ -3012,6 +3013,11 @@
           "previousAfterSha256": "449d645c88e68fa609143e3c12792d0214ba929f013e3f0605da9c12c4efce37",
           "afterSha256": "1702ffde3bbbdfa7686eb3abcdfea526f3c8404bd2de15a13bcf70b566c8fa28",
           "rationale": "The case forbade every wait, so a run that confirmed the pull request's own checks before merging failed it (issue #165). It now forbids only a wait before the merge that names a default-branch run or the main branch, and the fixture answers a wait with the pull request's state. A wait for the default branch's run still fails."
+        },
+        {
+          "previousAfterSha256": "1702ffde3bbbdfa7686eb3abcdfea526f3c8404bd2de15a13bcf70b566c8fa28",
+          "afterSha256": "7bf1ddfd89163007e2c6bb0e7fd90d0f5cc6a74f06a7618ce8c5fc75d9be8120",
+          "rationale": "The answer check accepted only the word concurrency or the phrase cancelling group, so an answer that reported the gap and its fix while naming the group by its key failed it: 2 of 3 runs on one model, each passed by the judge on the gap item (issue #174). The check now also accepts the group's key and its cancel-in-progress setting, both taken from the fixture. An answer that names the group in none of these ways still fails."
         }
       ]
     },

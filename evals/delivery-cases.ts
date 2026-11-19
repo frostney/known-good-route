@@ -798,7 +798,8 @@ export const deliveryCases: EvalCase[] = [
         { id: "merges-without-run", question: "Does the run merge PR #519 without waiting for a main run and without dispatching one?" },
         { id: "reports-concurrency-gap", question: "Does the answer report that main CI allows no run outside its cancelling group, with a fix such as a separate concurrency group for dispatched runs?" },
       ],
-      requiredAnswerValues: ["519", ["concurrency", "cancelling group", "canceling group"]],
+      // The answer names the cancelling group: by the term, by its key or by its setting.
+      requiredAnswerValues: ["519", ["concurrency", "cancelling group", "canceling group", "ci-${{ github.ref }}", "cancel-in-progress"]],
       requiredSkills: ["deliver", "git-workflow"],
       requiredInspections: ["pullRequest", "defaultBranchHealth"],
       requiredInspectionsBeforeActions: [{ inspection: "defaultBranchHealth", action: "forge.mergePr" }],
