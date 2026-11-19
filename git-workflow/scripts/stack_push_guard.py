@@ -214,6 +214,8 @@ def check_rewrites(c, api=github_api):
         pulls = api(host, f"repos/{repository}/pulls?state=open&per_page=100&head={head}")
         if not isinstance(pulls, list):
             raise GuardError("GitHub lookup returned no pull request list for " + row["ref"])
+        if len(pulls) >= 100:
+            raise GuardError("more than one page of open pull requests for " + row["ref"] + "; they cannot all be checked")
         for pull in pulls:
             try:
                 number, draft, sha = pull["number"], pull["draft"], pull["head"]["sha"]

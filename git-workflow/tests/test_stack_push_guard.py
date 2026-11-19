@@ -207,6 +207,9 @@ class RewriteTests(unittest.TestCase):
             guard.check_rewrites(self.admission, incomplete)
         with self.assertRaisesRegex(guard.GuardError, "#12 head is"):
             guard.check_rewrites(self.admission, FakeGitHub([pull(12, "stack/one", "e" * 40)]))
+        crowded = FakeGitHub([pull(n, "stack/one", "b" * 40) for n in range(1, 101)])
+        with self.assertRaisesRegex(guard.GuardError, "more than one page"):
+            guard.check_rewrites(self.admission, crowded)
         with self.assertRaisesRegex(guard.GuardError, "names no GitHub repository"):
             guard.check_rewrites({**self.admission, "url": "/srv/git/app.git"}, FakeGitHub())
 

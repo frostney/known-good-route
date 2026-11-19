@@ -83,10 +83,9 @@ appears earlier waits for that rebase; it never justifies re-pushing reviewed
 layers. Rebase locally with `gh stack rebase`, then push through the
 [protected publication helper](#protected-publication-helper) with every member
 listed under `rewrite`. Every rewritten layer reruns its CI once and needs its
-readiness again on the new head. The layer-by-layer merge fallback below moves
-the remaining layers the same way, listing them under `rewrite`. `gh stack sync`
-pushes on its own, outside the helper, so use it only while no layer has an
-open PR.
+readiness again on the new head. Only the layer-by-layer merge fallback below
+rewrites again, the same way. `gh stack sync` pushes on its own, outside the
+helper, so use it only while no layer has an open PR.
 
 Run the narrowest official command that satisfies the need. Stop on a rebase
 conflict, unexpected divergence, changed topology, lease rejection, partial
@@ -165,8 +164,10 @@ update, merge the freshly fetched remote base and push normally.
 - Fall back to layers only when `gh stack merge` is unavailable, the prefix's
   top PR number also names a stack, or GitHub refuses the stack merge for a
   reason other than a readiness gate. Then squash-merge the bottom ready
-  layer, move the layers above it onto the updated base with the guarded
-  `gh stack sync`, and merge the next layer as soon as its new head is ready;
+  layer, move the layers above it onto the updated base with `gh stack rebase`
+  and a helper push that lists them under `rewrite`, as
+  [Guarded rewrite exception](#guarded-rewrite-exception) describes, and merge
+  the next layer as soon as its new head is ready;
   repeat up the prefix. Report the reason for the fallback.
 - After merge, use the official stack cleanup/sync path, remove the clean local
   branches the run owns that no worktree holds,
