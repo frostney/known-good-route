@@ -58,6 +58,7 @@ function fieldCarries(field: unknown, value: string): boolean {
 // backslash escapes the next character and joins a continued line, an
 // unquoted # at the start of a word comments out the rest of its line, and
 // unquoted control and redirection operators end a word.
+const operatorBoundary = "\u0000";
 function shellWords(command: string): string[] {
   const words: string[] = [];
   let word: string | undefined;
@@ -78,6 +79,8 @@ function shellWords(command: string): string[] {
     } else if (/[\s;&|<>()]/.test(char)) {
       if (word !== undefined) words.push(word);
       word = undefined;
+      // An operator is kept as a boundary, so the word after it is no flag's value.
+      if (!/\s/.test(char)) words.push(operatorBoundary);
     } else if (char === "#" && word === undefined) {
       const end = command.indexOf("\n", index);
       index = end < 0 ? command.length : end;
