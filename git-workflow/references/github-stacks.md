@@ -88,12 +88,12 @@ and a retargeted stack rewrite again, the same way. `gh stack sync` pushes on
 its own, outside the helper, so use it only while no layer has an open PR.
 
 When a stack's base branch is deleted, GitHub retargets the stack onto the
-default branch, and `gh stack push` and `gh stack submit` refuse to publish it,
-even a new top layer, until it is rebased; they suggest `gh stack sync`. With
-open PRs, run `gh stack rebase`, which moves the layers onto the new base, then
-push through the helper with every member under `rewrite`, naming the retarget
-as the reason. Stop when the rebase asks before dropping commits of an old base
-that never merged.
+default branch. From gh-stack 0.3.0, `gh stack push` and `gh stack submit`
+refuse to publish it, even a new top layer, until it is rebased; they suggest
+`gh stack sync`. With open PRs, run `gh stack rebase`, which from 0.3.0 moves
+the layers onto the new base, then push through the helper with every member
+under `rewrite`, naming the retarget as the reason. Stop when the rebase asks
+before dropping commits of an old base that never merged.
 
 Run the narrowest official command that satisfies the need. Stop on a rebase
 conflict, unexpected divergence, changed topology, lease rejection, partial
@@ -132,10 +132,11 @@ update, merge the freshly fetched remote base and push normally.
   push moves no PR head, so it needs no `rewrite` entry. Record successful push
   completion and re-read the exact remote heads before creation. The native push
   refreshes tracking leases first, so the guard must enforce the admitted
-  source and expected remote IDs. It updates every branch or none, unless
-  `GH_STACK_NO_ATOMIC` is set; leave it unset. It performs no PR creation or
-  base updates. An uncertain push requires stopped ownership and fresh
-  reconciliation before advancing.
+  source and expected remote IDs. From gh-stack 0.3.0 it updates every branch
+  or none, unless `GH_STACK_NO_ATOMIC` is set; leave it unset. Earlier releases
+  update each branch on its own. It performs no PR creation or base updates. A
+  partial or uncertain push requires stopped ownership and fresh reconciliation
+  before advancing.
 - Check each frozen PR's full metadata as well as its head: its base branch and
   base commit must match the approved previous layer (or remote default for the
   bottom PR), and auto-merge must be disabled while the required overlay is
