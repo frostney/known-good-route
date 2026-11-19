@@ -242,6 +242,8 @@ them (it confused a 40-character revision with a 42-character one):
   action. `before` counts only actions recorded before a given occurrence of
   another action, such as a wait on the default-branch tip that must precede
   a merge, and fails when that occurrence is missing.
+  A named field is also read from a recorded `command`: `--head SHA` or
+  `--head=SHA` there carries the `head` field.
 - `forbiddenActionValues` lists values no recorded action of that kind may
   carry, matched the same way. Use it where an action is wrong only for some
   targets: a case that must not wait for the default branch's run forbids a

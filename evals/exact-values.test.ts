@@ -56,6 +56,23 @@ test("a recorded action must carry the exact value in a named field or anywhere 
   expect(failed(files, ledger([{ action: "forge.openDraftPr", details: "report-after.png", data: { attachments: ["/tmp/report-after.png"] } }]), "")).toHaveLength(1);
 });
 
+test("a named field is also read from the flag of a recorded command", () => {
+  const wait = (data: Record<string, unknown>) => ({ action: "monitor.wait" as const, details: "Arm the wait", data });
+  const c = scenario({ requiredActionValues: [{ action: "monitor.wait", values: [revision], fields: ["head", "revision"] }] });
+  const command = (flag: string) => `python3 scripts/delivery_wait.py wait checks-terminal --repo example/palette --pr 520 ${flag} --all-workflows --json`;
+  expect(failed(c, ledger([wait({ head: revision })]), "Done.")).toEqual([]);
+  expect(failed(c, ledger([wait({ command: command(`--head ${revision}`) })]), "Done.")).toEqual([]);
+  expect(failed(c, ledger([wait({ command: command(`--head=${revision}`) })]), "Done.")).toEqual([]);
+  // Another flag's value, another commit under the flag, or the value in another field is not this field.
+  expect(failed(c, ledger([wait({ command: command(`--base ${revision}`) })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ command: command(`--head ${"2b".repeat(20)}`) })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ awaited: `checks on head ${revision}` })]), "Done.")).toHaveLength(1);
+  // A forbidden field value is caught in a command too.
+  const held = scenario({ forbiddenActionValues: [{ action: "monitor.wait", values: ["main"], fields: ["branch", "ref"] }] });
+  expect(failed(held, ledger([wait({ command: "gh run watch --branch main" })]), "Done.")).toEqual(["monitor.wait omits main"]);
+  expect(failed(held, ledger([wait({ command: command(`--head ${revision}`) })]), "Done.")).toEqual([]);
+});
+
 test("an action can be forbidden only when it carries a value, and only before another action", () => {
   const wait = (details: string, data?: Record<string, unknown>) => ({ action: "monitor.wait" as const, details, ...(data ? { data } : {}) });
   const merge = { action: "forge.mergePr" as const, details: "Squash-merge" };

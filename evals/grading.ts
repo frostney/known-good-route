@@ -54,6 +54,13 @@ function fieldCarries(field: unknown, value: string): boolean {
   return field !== undefined && rendered(field) === value;
 }
 
+// A recorded command names a field as a flag: `--head SHA` or `--head=SHA`.
+function commandCarries(command: unknown, field: string, value: string): boolean {
+  if (typeof command !== "string") return false;
+  const tokens = command.split(/\s+/);
+  return tokens.some((token, index) => token === `--${field}=${value}` || (token === `--${field}` && tokens[index + 1] === value));
+}
+
 function actionCarries(
   record: RunLedger["actions"][number],
   value: ExactValue,
@@ -61,7 +68,7 @@ function actionCarries(
 ): boolean {
   return spellings(value).some((spelling) =>
     fields
-      ? fields.some((field) => fieldCarries(record.data?.[field], spelling))
+      ? fields.some((field) => fieldCarries(record.data?.[field], spelling) || commandCarries(record.data?.command, field, spelling))
       : containsValue(
           [record.details, ...Object.values(record.data ?? {}).map(rendered)].join("\n"),
           spelling,
