@@ -54,11 +54,38 @@ function fieldCarries(field: unknown, value: string): boolean {
   return field !== undefined && rendered(field) === value;
 }
 
+// The shell words of a recorded command: quotes group and are dropped, and an
+// unquoted # at the start of a word begins a comment.
+function shellWords(command: string): string[] {
+  const words: string[] = [];
+  let word: string | undefined;
+  let quote = "";
+  for (const char of command) {
+    if (quote) {
+      if (char === quote) quote = "";
+      else word += char;
+    } else if (char === '"' || char === "'") {
+      quote = char;
+      word ??= "";
+    } else if (/\s/.test(char)) {
+      if (word !== undefined) words.push(word);
+      word = undefined;
+    } else if (char === "#" && word === undefined) break;
+    else word = (word ?? "") + char;
+  }
+  if (word !== undefined) words.push(word);
+  return words;
+}
+
 // A recorded command names a field as a flag: `--head SHA` or `--head=SHA`.
+// A repeated flag takes its last value, as an argument parser does.
 function commandCarries(command: unknown, field: string, value: string): boolean {
   if (typeof command !== "string") return false;
-  const tokens = command.split(/\s+/);
-  return tokens.some((token, index) => token === `--${field}=${value}` || (token === `--${field}` && tokens[index + 1] === value));
+  const words = shellWords(command);
+  const given = words.flatMap((word, index) =>
+    word === `--${field}` ? [words[index + 1]] : word.startsWith(`--${field}=`) ? [word.slice(field.length + 3)] : [],
+  );
+  return given.length > 0 && given[given.length - 1] === value;
 }
 
 function actionCarries(

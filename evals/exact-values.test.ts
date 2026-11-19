@@ -67,6 +67,12 @@ test("a named field is also read from the flag of a recorded command", () => {
   expect(failed(c, ledger([wait({ command: command(`--base ${revision}`) })]), "Done.")).toHaveLength(1);
   expect(failed(c, ledger([wait({ command: command(`--head ${"2b".repeat(20)}`) })]), "Done.")).toHaveLength(1);
   expect(failed(c, ledger([wait({ awaited: `checks on head ${revision}` })]), "Done.")).toHaveLength(1);
+  // The flag is read as the shell passes it: quotes are dropped, a comment is not an argument, and a repeated flag takes its last value.
+  expect(failed(c, ledger([wait({ command: command(`--head "${revision}"`) })]), "Done.")).toEqual([]);
+  expect(failed(c, ledger([wait({ command: command(`--head='${revision}'`) })]), "Done.")).toEqual([]);
+  expect(failed(c, ledger([wait({ command: `${command(`--head ${"2b".repeat(20)}`)} # expected --head ${revision}` })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ command: command(`--head ${revision} --head ${"2b".repeat(20)}`) })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ command: command(`--head ${"2b".repeat(20)} --head ${revision}`) })]), "Done.")).toEqual([]);
   // A forbidden field value is caught in a command too.
   const held = scenario({ forbiddenActionValues: [{ action: "monitor.wait", values: ["main"], fields: ["branch", "ref"] }] });
   expect(failed(held, ledger([wait({ command: "gh run watch --branch main" })]), "Done.")).toEqual(["monitor.wait omits main"]);
