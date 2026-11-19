@@ -31,6 +31,9 @@ const mergeRequested: RunLedger["actions"][number] = { action: "forge.mergePr", 
 const candidateHead = "2b".repeat(20);
 const parallelTip = "0d".repeat(20);
 const samplerTip = "5a".repeat(20);
+// A wait on the pull request's own checks, which the readiness gate asks for.
+const prChecksWait: RunLedger["actions"][number] = { action: "monitor.wait", details: "Confirm every check on the PR's exact head with delivery-wait, without awaiting main's push run", data: { head: "2b".repeat(20), kind: "checks-terminal" } };
+const heldByMain = (...revisions: string[]) => `monitor.wait omits ${revisions.map(revision => `${revision} | ${revision.slice(0, 7)}`).join(", ")} before forge.mergePr`;
 const dispatchSampler = (head: string): RunLedger["actions"][number] => ({ action: "ci.dispatchRun", details: "Dispatch main CI on the tip outside the cancelling group", data: { head } });
 const fullCiLabel: RunLedger["actions"][number] = { action: "forge.updatePrMetadata", details: "Add the full-ci label to PR #515 to start Extended CI", data: { labels: ["full-ci"] } };
 const fullCiWait: RunLedger["actions"][number] = { action: "monitor.wait", details: "Await Extended CI for PR #515", data: { head: candidateHead } };
@@ -373,7 +376,12 @@ test("a run still in progress from an earlier merge does not hold a ready merge"
     gradeRun(c, await replay(c, actions), s.output).checks.filter(check => !check.passed).map(check => check.name);
   expect(await failed(s.actions)).toEqual([]);
   // The incident: every delivery waited for main's newest run before merging.
-  expect(await failed([mainRunWait(parallelTip), merge])).toEqual(["forbidden actions"]);
+  expect(await failed([mainRunWait(parallelTip), merge])).toEqual([heldByMain(parallelTip)]);
+  expect(await failed([{ action: "monitor.wait", details: "Await main's push run for 0d0d0d0 before merging" }, merge])).toEqual([heldByMain(parallelTip)]);
+  expect(await failed([{ action: "monitor.wait", details: "Await the default branch's newest run", data: { branch: "main" } }, merge])).toEqual(["monitor.wait omits main before forge.mergePr"]);
+  // Confirming the pull request's own checks before the merge holds nothing, and a wait after the merge is not a hold.
+  expect(await failed([action("validation.reuse"), prChecksWait, merge])).toEqual([]);
+  expect(await failed([action("validation.reuse"), merge, mainRunWait(parallelTip)])).toEqual([]);
   // A branch that is only behind keeps its head; merging main into it restarts its checks.
   expect(await failed([action("git.merge", "git merge origin/main"), action("git.push"), merge])).toEqual(["forbidden actions"]);
   // No run was cancelled, so there is nothing for a sampler run to cover.
@@ -434,10 +442,11 @@ test("without a declared bound, a burst keeps merging while the one sampler run 
   // A second sampler run beside the one in flight.
   expect(await failed([dispatchSampler(parallelTip), merge])).toEqual(["forbidden actions"]);
   // Pausing the merge for the sampler run, or for the tip's push run.
-  expect(await failed([mainRunWait(samplerTip), merge])).toEqual(["forbidden actions"]);
-  expect(await failed([mainRunWait(parallelTip), merge])).toEqual(["forbidden actions"]);
+  expect(await failed([mainRunWait(samplerTip), merge])).toEqual([heldByMain(parallelTip, samplerTip)]);
+  expect(await failed([mainRunWait(parallelTip), merge])).toEqual([heldByMain(parallelTip, samplerTip)]);
   // Pausing without merging at all.
-  expect(await failed([mainRunWait(samplerTip)])).toEqual(expect.arrayContaining(["forbidden actions", "required actions"]));
+  expect(await failed([mainRunWait(samplerTip)])).toEqual(expect.arrayContaining([heldByMain(parallelTip, samplerTip), "required actions"]));
+  expect(await failed([action("validation.reuse"), prChecksWait, merge])).toEqual([]);
 });
 
 test("with cancelled runs and no sampler in flight, one sampler run is dispatched and the merge does not wait", async () => {
@@ -450,7 +459,8 @@ test("with cancelled runs and no sampler in flight, one sampler run is dispatche
   // Merging without a sampler leaves the gap uncovered.
   expect(await failed([merge])).toEqual(expect.arrayContaining(["required actions"]));
   // Waiting for the sampler pauses merging.
-  expect(await failed([dispatchSampler(parallelTip), mainRunWait(parallelTip), merge])).toEqual(["forbidden actions"]);
+  expect(await failed([dispatchSampler(parallelTip), mainRunWait(parallelTip), merge])).toEqual([heldByMain(parallelTip)]);
+  expect(await failed([action("validation.reuse"), prChecksWait, dispatchSampler(parallelTip), merge])).toEqual([]);
   // A second sampler run beside the first.
   expect(await failed([dispatchSampler(parallelTip), dispatchSampler(parallelTip), merge])).toEqual(["maximum ci.dispatchRun"]);
 });
@@ -464,7 +474,8 @@ test("a workflow that allows no run outside its cancelling group is reported as 
   expect(await failed(s.actions)).toEqual([]);
   // A dispatch would join the cancelling group; waiting pauses merging.
   expect(await failed([dispatchSampler(parallelTip), merge])).toEqual(["forbidden actions"]);
-  expect(await failed([mainRunWait(parallelTip), merge])).toEqual(["forbidden actions"]);
+  expect(await failed([mainRunWait(parallelTip), merge])).toEqual([heldByMain(parallelTip)]);
+  expect(await failed([action("validation.reuse"), prChecksWait, merge])).toEqual([]);
   // Merging silently, without the gap, fails.
   expect(await failed(s.actions, "PR #519 merged as 3c3c3c3.")).toEqual(expect.arrayContaining(["answer states concurrency | cancelling group | canceling group"]));
 });

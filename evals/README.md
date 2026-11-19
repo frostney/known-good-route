@@ -242,6 +242,13 @@ them (it confused a 40-character revision with a 42-character one):
   action. `before` counts only actions recorded before a given occurrence of
   another action, such as a wait on the default-branch tip that must precede
   a merge, and fails when that occurrence is missing.
+- `forbiddenActionValues` lists values no recorded action of that kind may
+  carry, matched the same way. Use it where an action is wrong only for some
+  targets: a case that must not wait for the default branch's run forbids a
+  wait carrying that run's revision, and still allows a wait on the pull
+  request's own checks. `before` limits it to actions recorded before a given
+  occurrence of another action; when that occurrence is missing, every action
+  counts.
 
 A whole token is not preceded or followed by a letter, digit or underscore, so
 `503` does not match `1503`. Matching is literal and case-sensitive.

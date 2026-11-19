@@ -326,6 +326,25 @@ export function gradeRun(
     });
   }
 
+  for (const rule of expected.forbiddenActionValues ?? []) {
+    const limit = rule.before;
+    const end = limit
+      ? (ledger.actions
+          .map((a, index) => (a.action === limit.action ? index : -1))
+          .filter((index) => index >= 0)[(limit.occurrence ?? 1) - 1] ?? ledger.actions.length)
+      : ledger.actions.length;
+    const carried = rule.values.filter((value) =>
+      ledger.actions
+        .slice(0, end)
+        .some((a) => a.action === rule.action && actionCarries(a, value, rule.fields)),
+    );
+    checks.push({
+      name: `${rule.action} omits ${rule.values.map(describe).join(", ")}${limit ? ` before ${limit.action}` : ""}`,
+      passed: carried.length === 0,
+      detail: `carried=${carried.map(describe).join(",") || "none"}; fields=${rule.fields?.join(",") ?? "details or any data"}`,
+    });
+  }
+
   if (expected.requiredSkills) {
     checks.push({
       name: "required skills",
@@ -553,7 +572,7 @@ function validateExactValues(evalCase: EvalCase): void {
   if (
     !(expected.requiredAnswerValues ?? []).every(valid) ||
     !(expected.forbiddenAnswerValues ?? []).every(valid) ||
-    !(expected.requiredActionValues ?? []).every(
+    ![...(expected.requiredActionValues ?? []), ...(expected.forbiddenActionValues ?? [])].every(
       (r) => r.values.length > 0 && r.values.every(valid) && (r.fields ?? ["x"]).length > 0 && (r.fields ?? []).every((f) => f.trim()),
     )
   )

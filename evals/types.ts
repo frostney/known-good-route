@@ -125,6 +125,17 @@ export interface EvalExpectations {
     // action count; the check fails when that occurrence is absent.
     before?: { action: ActionName; occurrence?: number };
   }>;
+  // No recorded action of that kind may carry any of the values, matched as
+  // for requiredActionValues. With before, only actions recorded before that
+  // occurrence (default 1) of the named action count, and every action counts
+  // when that occurrence is absent. Use it where an action is wrong only for
+  // some targets, such as a wait on the default branch's run.
+  forbiddenActionValues?: Array<{
+    action: ActionName;
+    values: ExactValue[];
+    fields?: string[];
+    before?: { action: ActionName; occurrence?: number };
+  }>;
 
   requiredWorker?: boolean;
   // A reviewer must write its verdict through writeVerdict; the parent's final
