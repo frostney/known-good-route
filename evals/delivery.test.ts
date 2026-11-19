@@ -489,7 +489,13 @@ test("a workflow that allows no run outside its cancelling group is reported as 
   expect(await failed([mainRunWait(parallelTip), merge])).toEqual([heldByMain(parallelTip)]);
   expect(await failed([action("validation.reuse"), prChecksWait, merge])).toEqual([]);
   // Merging silently, without the gap, fails.
-  expect(await failed(s.actions, "PR #519 merged as 3c3c3c3.")).toEqual(expect.arrayContaining(["answer states concurrency | cancelling group | canceling group"]));
+  const names = "answer states concurrency | cancelling group | canceling group | ci-${{ github.ref }} | cancel-in-progress";
+  expect(await failed(s.actions, "PR #519 merged as 3c3c3c3.")).toEqual(expect.arrayContaining([names]));
+  // An answer that names the group by its key or its setting, without the term, reports the gap too.
+  expect(await failed(s.actions, "PR #519 merged as 3c3c3c3. Gap: main CI runs in one group per branch (`ci-${{ github.ref }}`) and each new run cancels the one in progress, so a run started by hand is cancelled too.")).toEqual([]);
+  expect(await failed(s.actions, "PR #519 merged as 3c3c3c3. Gap: main CI sets cancel-in-progress: true for every event, so a run started by hand is cancelled by the next push.")).toEqual([]);
+  // An answer that names the group in none of these ways does not.
+  expect(await failed(s.actions, "PR #519 merged as 3c3c3c3. main CI is behind and nothing can be done about it.")).toEqual([names]);
 });
 
 test("a coordinator records the tier a lane's work needs, and a new open lane carries the finding", async () => {
