@@ -237,15 +237,16 @@ export const deliveryCases: EvalCase[] = [
       actionResponses: {
         "validation.reuse": `Accepted the recorded matching local review, browser and project-gate evidence for ${candidate}; no rerun occurred.`,
         "forge.mergePr": `PR #504 squash-merged as ${integrated}. The integrated tree contains ${candidate}'s complete change. A nightly integration deployment was queued automatically.`,
-        "monitor.wait": [
-          `The existing green nightly deployment still serves ${before}, which does not contain ${integrated}. The newly queued ${integrated} deployment is still running; the same passive wait remains available.`,
-          `Nightly deployment completed successfully at https://nightly.example.test and the served revision is ${integrated}. Its provenance contains the integrated PR #504 change.`,
-        ],
+        "monitor.wait": `PR #504's required checks are green on ${candidate}. Nightly serves ${before}; no newer revision is deployed.`,
         "behaviorTest.run": `Actual nightly browser smoke at https://nightly.example.test, served revision ${integrated}: selecting April and switching chart/table both ways retains April. The required deployed behavior passed.`,
       },
       transitions: [
-        { after: "forge.mergePr", evidence: { pullRequest: `PR #504 merged as ${integrated}; deployment running.`, deploymentState: `Old served revision ${before}; new ${integrated} deployment queued.` } },
-        { after: "monitor.wait", occurrence: 2, evidence: { deploymentState: `Nightly serves ${integrated} at https://nightly.example.test. Provenance includes the complete merged change; behavior smoke has not yet run.` } },
+        // The deployment's two answers start at the merge, so a readiness wait before it cannot use one up.
+        { after: "forge.mergePr", evidence: { pullRequest: `PR #504 merged as ${integrated}; deployment running.`, deploymentState: `Old served revision ${before}; new ${integrated} deployment queued.` }, actionResponses: { "monitor.wait": [
+          `The existing green nightly deployment still serves ${before}, which does not contain ${integrated}. The newly queued ${integrated} deployment is still running; the same passive wait remains available.`,
+          `Nightly deployment completed successfully at https://nightly.example.test and the served revision is ${integrated}. Its provenance contains the integrated PR #504 change.`,
+        ] } },
+        { after: "monitor.wait", since: "forge.mergePr", occurrence: 2, evidence: { deploymentState: `Nightly serves ${integrated} at https://nightly.example.test. Provenance includes the complete merged change; behavior smoke has not yet run.` } },
       ],
     },
     expected: {
