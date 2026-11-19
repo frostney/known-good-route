@@ -47,9 +47,11 @@ export function defaultEntryCases(cases: EvalCase[]): EvalCase[] {
   const mergeTail = (fixture: EvalFixture, pr: string, merged: string) => {
     fixture.evidence.integrationConfiguration = "Repository instructions and workflows define pull request checks only. Nothing deploys the default branch; the project ships by a manually tagged release, which is a separate milestone operation.";
     fixture.evidence.defaultBranchHealth = "The project requires no CI on default-branch commits; its checks run on pull requests only.";
+    fixture.evidence.orchestration = "No repository-root ORCHESTRATION.md exists. Reading the delivery settings succeeds and reports the defaults: endpoint merged and entry-points deliver.";
     fixture.evidence.repositoryPolicy = "An ordinary squash merge is allowed once the pull request's current head satisfies the readiness contract.";
-    fixture.actionResponses = { ...fixture.actionResponses, "forge.mergePr": `PR #${pr} squash-merged onto main as ${merged}. GitHub reports the pull request merged and main's tip is ${merged}. Nothing was deployed.` };
-    fixture.transitions = [...(fixture.transitions ?? []), { after: "forge.mergePr", evidence: { pullRequest: `PR #${pr} is merged as ${merged}, which is main's tip.` } }];
+    fixture.actionResponses = { ...fixture.actionResponses, "forge.mergePr": `PR #${pr} squash-merged onto main as ${merged}. GitHub reports the pull request merged, main's tip is ${merged}, and the source branch is deleted on the remote. Nothing was deployed.` };
+    // After the merge a fetch also settles the local side, so nothing is left for the report to hand back.
+    fixture.transitions = [...(fixture.transitions ?? []), { after: "forge.mergePr", evidence: { pullRequest: `PR #${pr} is merged as ${merged}, which is main's tip. Its source branch is deleted on the remote.` }, actionResponses: { "git.fetch": `Fetched origin and pruned. Local main is at ${merged}, the checkout is on main, and the merged local branch is removed. No other worktree exists.` } }];
   };
 
   const createPr = base("create-pr-pending-ci-keeps-draft");
@@ -59,11 +61,15 @@ export function defaultEntryCases(cases: EvalCase[]): EvalCase[] {
   delete implement.evidence.webResearch;
 
   const updatePr = base("update-pr-behind-main");
-  updatePr.evidence.pullRequest = "PR #42 is open and ready for review from feature/auth into main. Required checks and review automation run on every new head.";
+  // The repository requires up-to-date branches, which is a reason to merge the base under git-workflow's up-to-date rule.
+  updatePr.evidence.pullRequest = "PR #42 is open and ready for review from feature/auth into main. Branch protection requires a branch to be up to date with main before it merges, and GitHub reports this pull request's merge state as BEHIND. Required checks and review automation run on every new head. Independent code review and behavior testing passed on the current head; the base commit it is behind touches none of the pull request's files.";
   updatePr.actionResponses = {
     ...updatePr.actionResponses,
     "git.merge": "Merged origin/main into feature/auth with no conflicts; the new head is 5b3d042.",
     "git.push": "Pushed feature/auth at 5b3d042 to PR #42; required checks and review automation started on that head.",
+    "codeReview.run": "Independent review of the merged head 5b3d042 found no Blocking or Important findings.",
+    "validation.focused": "The requested check ran and passed on 5b3d042; a publication guard run reported nothing to rewrite.",
+    "behaviorTest.run": "Through the sign-in interface on 5b3d042: the supported flows behave as before the base merge.",
     "monitor.wait": "On PR #42 at 5b3d042 every required check passed and review automation completed with no findings; zero unresolved threads.",
   };
   updatePr.transitions = [

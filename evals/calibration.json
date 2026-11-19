@@ -3506,8 +3506,8 @@
         "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces create-pr-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "ac51289b3d710fca1a322cec8ad429457f9c7bd997d54aabe7431bd0b0afa6d8",
-      "frozenCaseSha256": "ac51289b3d710fca1a322cec8ad429457f9c7bd997d54aabe7431bd0b0afa6d8"
+      "afterSha256": "9e1a01177d82f4c154664960beec1acc48807ef537eb956beea98fcb2028f6e0",
+      "frozenCaseSha256": "9e1a01177d82f4c154664960beec1acc48807ef537eb956beea98fcb2028f6e0"
     },
     {
       "caseId": "implement-default-continues-to-merged",
@@ -3516,8 +3516,8 @@
         "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces implement-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "d96945dcd080bdb93da4a7a9c7563c341837c9b39f275c445a28668d0dc4f99b",
-      "frozenCaseSha256": "d96945dcd080bdb93da4a7a9c7563c341837c9b39f275c445a28668d0dc4f99b"
+      "afterSha256": "4db8cd080f0d784671ec783df441e142f3bdfdbae6e439f77929aa2eb63173ec",
+      "frozenCaseSha256": "4db8cd080f0d784671ec783df441e142f3bdfdbae6e439f77929aa2eb63173ec"
     },
     {
       "caseId": "update-pr-default-continues-to-merged",
@@ -3526,8 +3526,8 @@
         "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces update-pr-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "1b30dc999a512ca7a1d029d5286331bb6c31efa164d430dd93da3da537353d78",
-      "frozenCaseSha256": "1b30dc999a512ca7a1d029d5286331bb6c31efa164d430dd93da3da537353d78"
+      "afterSha256": "01ea9656e3ef1126da3d2c20a11efee46e2b74ccb0c9eca673a9fe99dd171368",
+      "frozenCaseSha256": "01ea9656e3ef1126da3d2c20a11efee46e2b74ccb0c9eca673a9fe99dd171368"
     },
     {
       "caseId": "address-feedback-default-continues-to-merged",
@@ -3536,8 +3536,8 @@
         "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces address-feedback-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "4b244352aebca5375bbf97cb9d416b26a0b4751ca03de406c2b842ad54b55e38",
-      "frozenCaseSha256": "4b244352aebca5375bbf97cb9d416b26a0b4751ca03de406c2b842ad54b55e38"
+      "afterSha256": "eba5a325c67ebd39a29d3a0e3cc95afb12b93114fc865b63e374c598840ab7e9",
+      "frozenCaseSha256": "eba5a325c67ebd39a29d3a0e3cc95afb12b93114fc865b63e374c598840ab7e9"
     },
     {
       "caseId": "code-review-default-continues-to-merged",
@@ -3546,8 +3546,8 @@
         "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces code-review-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "7f5d03cb91ba7215ad653c344b208ccf759de4c6f5f6dce18b86d00108f14cea",
-      "frozenCaseSha256": "7f5d03cb91ba7215ad653c344b208ccf759de4c6f5f6dce18b86d00108f14cea"
+      "afterSha256": "bcb26a71284fce3bbb2f2367aeffb85ffe122bf06714cc18b96670ada863f63b",
+      "frozenCaseSha256": "bcb26a71284fce3bbb2f2367aeffb85ffe122bf06714cc18b96670ada863f63b"
     },
     {
       "caseId": "test-against-spec-default-continues-to-merged",
@@ -3556,8 +3556,8 @@
         "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces test-against-spec-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "37562594c4b8cc99d4aadead3138921cc0f050ad67b020fbbe8abd4e67bd176c",
-      "frozenCaseSha256": "37562594c4b8cc99d4aadead3138921cc0f050ad67b020fbbe8abd4e67bd176c"
+      "afterSha256": "61fe6b8c0a4ab4ea4c7d49049a970e83da77ef6a88cadf8f82be5c5075804ae9",
+      "frozenCaseSha256": "61fe6b8c0a4ab4ea4c7d49049a970e83da77ef6a88cadf8f82be5c5075804ae9"
     },
     {
       "caseId": "template-check-draft-mismatch",
