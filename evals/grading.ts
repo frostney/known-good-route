@@ -79,13 +79,15 @@ function shellWords(command: string): string[] {
     } else if (/[\s;&|<>()]/.test(char)) {
       if (word !== undefined) words.push(word);
       word = undefined;
-      // An operator is kept as a boundary, so the word after it is no flag's value.
-      if (!/\s/.test(char)) words.push(operatorBoundary);
+      // An operator or a new line is kept as a boundary, so the word after it is no flag's value.
+      if (char === "\n" || !/\s/.test(char)) words.push(operatorBoundary);
     } else if (char === "#" && word === undefined) {
       const end = command.indexOf("\n", index);
-      index = end < 0 ? command.length : end;
+      index = end < 0 ? command.length : end - 1;
     } else word = (word ?? "") + char;
   }
+  // An open quote is a syntax error: the shell runs none of it.
+  if (quote) return [];
   if (word !== undefined) words.push(word);
   return words;
 }
