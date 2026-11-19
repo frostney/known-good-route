@@ -27,24 +27,21 @@ confirmed idea, current branch or PR. Verify identities and existing work before
 mutation. Use `/create-issue` only when tracking is requested or required; an
 unfiled idea can go directly to `/implement`.
 
-The endpoint comes from the [delivery settings](#delivery-settings). `deployed`
-means the project's configured default integration destination, which may be
-production, staging, nightly or another established target. Read project
-instructions, delivery documentation and actual workflows to identify it; do not
-assume production or choose among ambiguous destinations.
-
-`merged` ends at the merge only where a merge ships nothing. Where the project
-deploys its default branch when a merge lands, the merge starts that
-deployment, so `merged` includes it: the work is finished when the merged
-revision is delivered there and the change works there. Read the same sources
-to learn whether a merge deploys. The two endpoints differ in what they
-authorize, not in what they verify: `merged` follows a deployment the merge
-itself starts, and `deployed` also authorizes running an integration path that
-needs its own step.
+The endpoint comes from the [delivery settings](#delivery-settings).
+`ready-to-merge` stops before the merge. `merged` is the whole delivery: the
+change is merged, the merge is confirmed, and the merged revision is delivered
+wherever the repository delivers its default branch and works there. What is
+deployed, and how, is what the repository configures: a deployment a merge
+starts by itself, a deploy or promotion step its instructions or workflows
+define, a nightly build, or nothing. Read project instructions, delivery
+documentation and actual workflows to learn which; do not assume production or
+choose among ambiguous destinations. Where the repository configures no
+deployment, `merged` ends at the confirmed merge.
 
 A delivery request authorizes the in-scope development, validation, publication,
-feedback handling and Git operations needed for its endpoint, including merge
-and the configured integration path for `deployed`. Preserve explicit limits,
+feedback handling and Git operations needed for its endpoint. For `merged`
+that includes the merge and the repository's configured integration path.
+Preserve explicit limits,
 repository protections and existing authorization. An earlier endpoint does not
 authorize later operations. Complete independent work before asking for a
 specific unresolved destination, provider, new infrastructure, spending or other
@@ -59,8 +56,9 @@ Run `node scripts/delivery-settings.mjs <project root>`; the path is relative to
 this skill directory. It reads the frontmatter of `ORCHESTRATION.md` beside
 `AGENTS.md` and prints:
 
-- `endpoint`: `ready-to-merge`, `merged` or `deployed`, built-in default
-  `ready-to-merge`;
+- `endpoint`: `ready-to-merge` or `merged`, built-in default `merged`. A file
+  that still says `deployed`, the older name for a delivery that follows the
+  deployment, reads as `merged`;
 - `entry-points`: `deliver` or `stop`, built-in default `deliver`;
 - `defaulted`: the keys the project did not set.
 
@@ -75,9 +73,8 @@ Settings apply in this order, highest first:
 4. The built-in default printed above.
 
 So a missing file or key takes the person's standing default when they state
-one, and the built-in default otherwise. Without a request or such a default,
-nothing is merged unless the project sets `merged` or `deployed`. A failed read
-is a blocker: report its error.
+one, and the built-in default otherwise. A project that wants a person to
+merge sets `ready-to-merge`. A failed read is a blocker: report its error.
 
 With `entry-points: deliver`, a skill started directly that develops, reviews,
 tests or publishes a change continues through `/deliver` from its own stage to
@@ -114,23 +111,24 @@ workflow invoked returns to its caller.
   converged on the final head, and await it; it is part of readiness. For a
   native stack, require its complete-stack readiness, including every needed
   fix layer. Ready for review alone does not satisfy this endpoint.
-- For `merged` or `deployed`, recheck readiness and use `git-workflow` to merge
-  the authorized ordinary PR or complete native stack as soon as it is ready.
-  Verify the resulting integrated revision. A partial prefix below a required
+- For `merged`, recheck readiness and use `git-workflow` to merge the
+  authorized ordinary PR or complete native stack as soon as it is ready.
+  Confirm the merge: the PR or stack reports merged and the remote default
+  branch contains the integrated revision. A partial prefix below a required
   fix layer is not done.
-- A merge that deploys is not finished at the merge. For `merged` in a project
-  that deploys its default branch when a merge lands, await that deployment
-  for the merged revision and verify it as the next item requires for
-  `deployed`. A deployment that a later merge superseded or held is still
-  pending: await the one that carries the merged revision. Do not start an
-  integration path the merge does not start, such as a manual promotion or a
-  deploy command: report it as the next transition.
-- For `deployed`, run the existing integration path or await its run for the
-  merged revision through `delivery-wait`. Only after that wait reports the
-  merged revision deployed, verify its destination, delivered revision or
-  artifact provenance, and the required behavior in that environment. When later commits are included, verify that
-  the delivered revision contains the integrated change and that its acceptance
-  evidence still applies. A green deployment job or merge alone is insufficient.
+- A merge is not the end of `merged`. Where the repository delivers its
+  default branch, run its configured integration path when that needs a step,
+  or await the run the merge started, for the merged revision through
+  `delivery-wait`. Only after that wait reports the merged revision deployed,
+  verify its destination, delivered revision or artifact provenance, and the
+  required behavior in that environment. A deployment that a later merge
+  superseded or held is still pending: await the one that carries the merged
+  revision. When later commits are included, verify that the delivered
+  revision contains the integrated change and that its acceptance evidence
+  still applies. A green deployment job or merge alone is insufficient.
+- Where the repository configures no deployment, say so in the report and
+  finish at the confirmed merge. Do not ask for a destination nobody
+  configured, and do not create one.
 
 Delegated work runs through the same skills. A worker packet routes each step
 it hands over through the skill that owns it, such as `/implement`,
@@ -158,11 +156,12 @@ comes before this one.
 
 Integration delivery and release publication are separate outcomes. Never
 invoke `/create-release` from this single-item loop or use a milestone release
-as a substitute for integration delivery. A configured nightly integration can
-satisfy `deployed` when its revision and behavior are verified. If the project
-has only a release path and no identifiable integration destination, finish
-everything that does not depend on it, including the merge when the endpoint
-allows it, then ask for that concrete delivery decision.
+as a substitute for integration delivery. A configured nightly integration is
+the repository's delivery when its revision and behavior are verified. A
+project with only a release path and no integration destination configures no
+deployment: `merged` ends at the confirmed merge, and the release stays with
+its milestone. Ask for a delivery decision only when the repository's
+configuration names a destination and leaves it ambiguous or unusable.
 
 ## Continue or finish
 

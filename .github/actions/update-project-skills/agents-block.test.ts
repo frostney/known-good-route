@@ -63,7 +63,7 @@ const fixtureRegion = [
   "",
   "Generated from the `metadata.agents-role` and `metadata.agents-text` of the skills installed in `.agents/skills`. Edit outside the `known-good-route:agents` markers only.",
   "",
-  "Delivery (defaults, no `ORCHESTRATION.md`): entry points that develop, review, test or publish a change continue through `/deliver` to the `ready-to-merge` endpoint. A defaulted setting gives way to a default stated in the person's standing global agent instructions.",
+  "Delivery (defaults, no `ORCHESTRATION.md`): entry points that develop, review, test or publish a change continue through `/deliver` to the `merged` endpoint. A defaulted setting gives way to a default stated in the person's standing global agent instructions.",
   "",
   "- Always apply `tidy-notes`: Keep every note short and sourced.",
   "- Start with `/brew-tea`: Brew the team's pot.",
@@ -182,11 +182,12 @@ describe("AGENTS.md block", () => {
   test("states the delivery settings from ORCHESTRATION.md and goes stale when they change", async () => {
     const root = await makeProject();
     await installFixturePack(root);
-    const defaultLine = "Delivery (defaults, no `ORCHESTRATION.md`): entry points that develop, review, test or publish a change continue through `/deliver` to the `ready-to-merge` endpoint. A defaulted setting gives way to a default stated in the person's standing global agent instructions.";
+    const defaultLine = "Delivery (defaults, no `ORCHESTRATION.md`): entry points that develop, review, test or publish a change continue through `/deliver` to the `merged` endpoint. A defaulted setting gives way to a default stated in the person's standing global agent instructions.";
     await writeFile(join(root, "ORCHESTRATION.md"), "---\nendpoint: deployed\n---\n\n# Policy\n");
     await writeAgentsBlock(root);
     const configured = await readFile(agentsFile(root), "utf8");
-    expect(configured).toContain("Delivery (`ORCHESTRATION.md`): entry points that develop, review, test or publish a change continue through `/deliver` to the `deployed` endpoint.");
+    // `deployed` is the older name for `merged`, so the line states the endpoint by its current name.
+    expect(configured).toContain("Delivery (`ORCHESTRATION.md`): entry points that develop, review, test or publish a change continue through `/deliver` to the `merged` endpoint.");
     expect(configured.replace(/\nDelivery \(.*\n/, `\n${defaultLine}\n`)).toBe(`# Agent Instructions\n\n${fixtureRegion}\n`);
 
     await writeFile(join(root, "ORCHESTRATION.md"), "---\nendpoint: merged\nentry-points: stop\n---\n");

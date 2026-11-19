@@ -112,14 +112,17 @@ test("a project's own AGENTS.md text stays beside the generated skills block and
   expect(instructions.split("Run `pnpm test` before committing.").length).toBe(2);
 });
 
-test("every delivery-chain entry skill has a default case that delivers to ready-to-merge without ORCHESTRATION.md", () => {
+test("every delivery-chain entry skill has a default case that delivers to merged without ORCHESTRATION.md", () => {
   for (const skill of ["create-pr", "implement", "update-pr", "address-feedback", "code-review", "test-against-spec"]) {
-    const c = evalCases.find((x) => x.id === `${skill}-default-continues-to-ready-to-merge`);
+    const c = evalCases.find((x) => x.id === `${skill}-default-continues-to-merged`);
     expect(c, skill).toBeDefined();
     expect(c!.prompt.startsWith(`/${skill}`)).toBeTrue();
     expect(c!.fixture.environment?.orchestration).toBeNull();
-    expect(c!.expected.rubric!.map((item) => item.id)).toEqual(expect.arrayContaining(["delivered-to-ready-to-merge", "stops-only-for-blockers"]));
-    expect(c!.expected.forbiddenActions).toContain("forge.mergePr");
+    expect(c!.expected.rubric!.map((item) => item.id)).toEqual(expect.arrayContaining(["delivered-to-merged", "stops-only-for-blockers"]));
+    expect(c!.expected.requiredActions).toContain("forge.mergePr");
+    expect(c!.expected.forbiddenActions ?? []).not.toContain("forge.mergePr");
+    // Nothing deploys the default branch here, so the delivery ends at the merge.
+    expect(c!.fixture.evidence.integrationConfiguration).toContain("Nothing deploys the default branch");
   }
 });
 
@@ -136,16 +139,16 @@ test("a standing default in the person's global instructions reaches the run, th
   expect(judgeTask(base)).not.toContain("standing global agent instructions:");
 });
 
-test("the standing-default cases pair a merge under the person's default with a project endpoint that wins", () => {
-  const standing = evalCases.find((x) => x.id === "deliver-standing-merged-default-merges")!;
+test("the standing-default cases pair a stop before the merge under the person's default with a project endpoint that wins", () => {
+  const standing = evalCases.find((x) => x.id === "deliver-standing-ready-to-merge-default-stops-before-merge")!;
   expect(standing.fixture.environment?.orchestration).toBeNull();
-  expect(standing.fixture.environment?.standingInstructions).toContain("merged");
+  expect(standing.fixture.environment?.standingInstructions).toContain("ready-to-merge");
   expect(standing.prompt).toBe("/deliver 513");
-  expect(standing.expected.requiredActions).toContain("forge.mergePr");
-  expect(standing.expected.forbiddenActions ?? []).not.toContain("forge.mergePr");
-  const project = evalCases.find((x) => x.id === "deliver-project-endpoint-wins-over-standing-merged")!;
-  expect(project.fixture.environment?.orchestration).toEqual({ endpoint: "ready-to-merge", entryPoints: "deliver" });
+  expect(standing.expected.forbiddenActions).toContain("forge.mergePr");
+  const project = evalCases.find((x) => x.id === "deliver-project-endpoint-wins-over-standing-ready-to-merge")!;
+  expect(project.fixture.environment?.orchestration).toEqual({ endpoint: "merged", entryPoints: "deliver" });
   expect(project.fixture.environment?.standingInstructions).toBe(standing.fixture.environment?.standingInstructions);
   expect(project.prompt).toBe(standing.prompt);
-  expect(project.expected.forbiddenActions).toContain("forge.mergePr");
+  expect(project.expected.requiredActions).toContain("forge.mergePr");
+  expect(project.expected.forbiddenActions ?? []).not.toContain("forge.mergePr");
 });

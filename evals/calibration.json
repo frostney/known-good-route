@@ -2678,11 +2678,19 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
         "Fixture repair: the case's evidence, responses or code checks matched only one model's wording or contradicted the requested outcome, so correct runs failed.",
         "Founder labels, round 3: the case's environment, rubric or fixture did not match what the founder expected of the run.",
-        "Restored to the founder's no-hand-back rule: merging deploys nothing and does not depend on the integration destination, so PR #505 must be merged before only the destination decision goes to the person. The round-3 item that also accepted putting the merge to the person as a choice (13a08e0) is reverted, and forge.mergePr is now part of the required sequence."
+        "Restored to the founder's no-hand-back rule: merging deploys nothing and does not depend on the integration destination, so PR #505 must be merged before only the destination decision goes to the person. The round-3 item that also accepted putting the merge to the person as a choice (13a08e0) is reverted, and forge.mergePr is now part of the required sequence.",
+        "The integration evidence now says the delivery document names a staging destination without naming a host, so the destination is configured and unresolved rather than absent. With merged as the one endpoint past the merge, a repository that configures no deployment ends at the confirmed merge without a question; this case keeps the question for a destination the repository names and leaves unusable. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "5bd4892cb443600c024a2a8ffa54d4577063ea842a0ba0fb5514262c1c4f788b",
-      "frozenCaseSha256": "e843cae16695caf4ae161cabe10079010403e2d9f4169146a3130e7a8cf7865a"
+      "afterSha256": "a0cb17d8f052a6f7bfbb886f8c05fb93d5bb5d8ee85e0184e0c2fd8a0129892f",
+      "frozenCaseSha256": "e843cae16695caf4ae161cabe10079010403e2d9f4169146a3130e7a8cf7865a",
+      "revisions": [
+        {
+          "previousAfterSha256": "5bd4892cb443600c024a2a8ffa54d4577063ea842a0ba0fb5514262c1c4f788b",
+          "afterSha256": "a0cb17d8f052a6f7bfbb886f8c05fb93d5bb5d8ee85e0184e0c2fd8a0129892f",
+          "rationale": "The integration evidence now says the delivery document names a staging destination without naming a host, so the destination is configured and unresolved rather than absent. With merged as the one endpoint past the merge, a repository that configures no deployment ends at the confirmed merge without a question; this case keeps the question for a destination the repository names and leaves unusable. Expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "delivery-milestone-release-boundary",
@@ -3486,64 +3494,64 @@
       ]
     },
     {
-      "caseId": "create-pr-default-continues-to-ready-to-merge",
+      "caseId": "create-pr-default-continues-to-merged",
       "status": "new",
       "rationale": [
-        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery up to ready-to-merge, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. It reuses an existing case's fixture with the responses that delivery needs. Fresh native run required."
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces create-pr-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "156a8549c144a477d4d8db02ad5cd7fc8b45257bf5db1c1ec337dca4f40d7c41",
-      "frozenCaseSha256": "156a8549c144a477d4d8db02ad5cd7fc8b45257bf5db1c1ec337dca4f40d7c41"
+      "afterSha256": "ac51289b3d710fca1a322cec8ad429457f9c7bd997d54aabe7431bd0b0afa6d8",
+      "frozenCaseSha256": "ac51289b3d710fca1a322cec8ad429457f9c7bd997d54aabe7431bd0b0afa6d8"
     },
     {
-      "caseId": "implement-default-continues-to-ready-to-merge",
+      "caseId": "implement-default-continues-to-merged",
       "status": "new",
       "rationale": [
-        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery up to ready-to-merge, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. It reuses an existing case's fixture with the responses that delivery needs. Fresh native run required."
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces implement-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "38830602ef1f7fb2fd32b1522c48440838f72b5a48e9dd3b95db3be2e936ede0",
-      "frozenCaseSha256": "38830602ef1f7fb2fd32b1522c48440838f72b5a48e9dd3b95db3be2e936ede0"
+      "afterSha256": "d96945dcd080bdb93da4a7a9c7563c341837c9b39f275c445a28668d0dc4f99b",
+      "frozenCaseSha256": "d96945dcd080bdb93da4a7a9c7563c341837c9b39f275c445a28668d0dc4f99b"
     },
     {
-      "caseId": "update-pr-default-continues-to-ready-to-merge",
+      "caseId": "update-pr-default-continues-to-merged",
       "status": "new",
       "rationale": [
-        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery up to ready-to-merge, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. It reuses an existing case's fixture with the responses that delivery needs. Fresh native run required."
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces update-pr-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "13c96583b301d77a24a954b92cc429eb0fcc96bc4490142edab97d7fc8580f25",
-      "frozenCaseSha256": "13c96583b301d77a24a954b92cc429eb0fcc96bc4490142edab97d7fc8580f25"
+      "afterSha256": "1b30dc999a512ca7a1d029d5286331bb6c31efa164d430dd93da3da537353d78",
+      "frozenCaseSha256": "1b30dc999a512ca7a1d029d5286331bb6c31efa164d430dd93da3da537353d78"
     },
     {
-      "caseId": "address-feedback-default-continues-to-ready-to-merge",
+      "caseId": "address-feedback-default-continues-to-merged",
       "status": "new",
       "rationale": [
-        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery up to ready-to-merge, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. It reuses an existing case's fixture with the responses that delivery needs. Fresh native run required."
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces address-feedback-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "175bee4fc2df6beb8c0c8b583e0a23c157f331605e902017819ede3d08a03d41",
-      "frozenCaseSha256": "175bee4fc2df6beb8c0c8b583e0a23c157f331605e902017819ede3d08a03d41"
+      "afterSha256": "4b244352aebca5375bbf97cb9d416b26a0b4751ca03de406c2b842ad54b55e38",
+      "frozenCaseSha256": "4b244352aebca5375bbf97cb9d416b26a0b4751ca03de406c2b842ad54b55e38"
     },
     {
-      "caseId": "code-review-default-continues-to-ready-to-merge",
+      "caseId": "code-review-default-continues-to-merged",
       "status": "new",
       "rationale": [
-        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery up to ready-to-merge, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. It reuses an existing case's fixture with the responses that delivery needs. Fresh native run required."
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces code-review-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "dfd601910cafd01b18829c8061a13c16df937997941e96fb03a49b8c28d4c747",
-      "frozenCaseSha256": "dfd601910cafd01b18829c8061a13c16df937997941e96fb03a49b8c28d4c747"
+      "afterSha256": "7f5d03cb91ba7215ad653c344b208ccf759de4c6f5f6dce18b86d00108f14cea",
+      "frozenCaseSha256": "7f5d03cb91ba7215ad653c344b208ccf759de4c6f5f6dce18b86d00108f14cea"
     },
     {
-      "caseId": "test-against-spec-default-continues-to-ready-to-merge",
+      "caseId": "test-against-spec-default-continues-to-merged",
       "status": "new",
       "rationale": [
-        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery up to ready-to-merge, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. It reuses an existing case's fixture with the responses that delivery needs. Fresh native run required."
+        "A default case for a delivery-chain entry skill: the repository has no ORCHESTRATION.md, so the founder's defaults apply and the entry point continues into delivery to merged, stopping only for a secret, a paid action, an account action or a decision that belongs to the person. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. It replaces test-against-spec-default-continues-to-ready-to-merge, which expected ready-to-merge while that was the built-in endpoint, and reuses the same fixture with a merge response. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "a0f9019ac772f16261a6106f87427c8fd0688741bbea5cae5944802974e781b7",
-      "frozenCaseSha256": "a0f9019ac772f16261a6106f87427c8fd0688741bbea5cae5944802974e781b7"
+      "afterSha256": "37562594c4b8cc99d4aadead3138921cc0f050ad67b020fbbe8abd4e67bd176c",
+      "frozenCaseSha256": "37562594c4b8cc99d4aadead3138921cc0f050ad67b020fbbe8abd4e67bd176c"
     },
     {
       "caseId": "template-check-draft-mismatch",
@@ -3576,24 +3584,24 @@
       "frozenCaseSha256": "4f738ebdb887605d76212b42df6ced0f0785612d337eb9a62c98bc4b77ac015c"
     },
     {
-      "caseId": "deliver-standing-merged-default-merges",
+      "caseId": "deliver-standing-ready-to-merge-default-stops-before-merge",
       "status": "new",
       "rationale": [
-        "A standing-default case: the repository has no ORCHESTRATION.md and the person's standing global agent instructions default to merged, so /deliver merges the ready PR instead of stopping at ready-to-merge. It reuses an existing merge case's fixture. Fresh native run required."
+        "A standing-default case: the repository has no ORCHESTRATION.md and the person's standing global agent instructions default to ready-to-merge, so /deliver leaves the ready PR unmerged instead of taking the built-in merged endpoint. It replaces deliver-standing-merged-default-merges, which tested a standing merged default while ready-to-merge was the built-in endpoint, and reuses the same merge case's fixture. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "211d31d5ac2515f1ae833c104cedc03ec7d4d491c1319e19d86666adf3906979",
-      "frozenCaseSha256": "211d31d5ac2515f1ae833c104cedc03ec7d4d491c1319e19d86666adf3906979"
+      "afterSha256": "0c94715f2820f694c9b3892656b7ce6d8276da6fa62219f9dd0cda740c0922a7",
+      "frozenCaseSha256": "0c94715f2820f694c9b3892656b7ce6d8276da6fa62219f9dd0cda740c0922a7"
     },
     {
-      "caseId": "deliver-project-endpoint-wins-over-standing-merged",
+      "caseId": "deliver-project-endpoint-wins-over-standing-ready-to-merge",
       "status": "new",
       "rationale": [
-        "A standing-default precedence case: the same fixture with an ORCHESTRATION.md that sets endpoint ready-to-merge, which wins over the person's standing merged default, so /deliver leaves the ready PR unmerged. Fresh native run required."
+        "A standing-default precedence case: the same fixture with an ORCHESTRATION.md that sets endpoint merged, which wins over the person's standing ready-to-merge default, so /deliver merges the ready PR. It replaces deliver-project-endpoint-wins-over-standing-merged. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "03eec71514a444cc9a72cca50c1717d23432e0ebe6c091178a19050f3ec777ca",
-      "frozenCaseSha256": "03eec71514a444cc9a72cca50c1717d23432e0ebe6c091178a19050f3ec777ca"
+      "afterSha256": "5ff638c47dd441c4da0de7beefed25ffd28c52fa40313be6ff6e45a8ef7c8802",
+      "frozenCaseSha256": "5ff638c47dd441c4da0de7beefed25ffd28c52fa40313be6ff6e45a8ef7c8802"
     },
     {
       "caseId": "delivery-park-pending-ci-arms-wait",

@@ -46,20 +46,19 @@ here:
 
 ```yaml
 ---
-endpoint: ready-to-merge # or merged, or deployed
+endpoint: merged # or ready-to-merge
 entry-points: deliver # or stop
 ---
 ```
 
 The file only sets the default: a request in the prompt decides that one run in
-either direction, so nothing is merged unless the project sets `merged` or
-`deployed`, your standing instructions default to it, or the request asks for
-it. `deployed` means deployed and verified in the project's configured integration destination: production,
-staging, a nightly build, or another established target. Missing integration
-configuration is an unresolved decision, not permission to invent
-infrastructure or claim deployment succeeded. `merged` ends at the merge only
-where a merge ships nothing: in a project that deploys its default branch when
-a merge lands, it follows that deployment and verifies the change there too.
+either direction. `merged` is the whole delivery: the change is merged, the
+merge is confirmed, and the merged revision is delivered wherever the
+repository delivers its default branch (production, staging, a nightly build
+or another established target) and works there. What is deployed, and how, is
+what the repository configures; where it configures no deployment, `merged`
+ends at the confirmed merge. A project that wants a person to do the merge
+sets `ready-to-merge`. A file that still says `deployed` means `merged`.
 
 ```mermaid
 flowchart TD

@@ -6,10 +6,13 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const ORCHESTRATION_FILE = "ORCHESTRATION.md";
-export const ENDPOINTS = ["ready-to-merge", "merged", "deployed"];
+export const ENDPOINTS = ["ready-to-merge", "merged"];
 export const ENTRY_POINTS = ["deliver", "stop"];
-export const DEFAULT_SETTINGS = { endpoint: "ready-to-merge", "entry-points": "deliver" };
+export const DEFAULT_SETTINGS = { endpoint: "merged", "entry-points": "deliver" };
 const ALLOWED = { endpoint: ENDPOINTS, "entry-points": ENTRY_POINTS };
+// `deployed` was a separate endpoint until `merged` took over following the
+// deployment; a file that still says it means the same delivery.
+const OLDER_NAMES = { endpoint: { deployed: "merged" } };
 
 function scalar(raw) {
   const value = raw.trim();
@@ -33,9 +36,10 @@ export function parseDeliverySettings(source) {
       const match = line.match(/^([A-Za-z0-9_-]+):(.*)$/);
       if (!match || !(match[1] in ALLOWED)) continue;
       const key = match[1];
-      const value = scalar(match[2]);
+      const written = scalar(match[2]);
+      const value = OLDER_NAMES[key]?.[written] ?? written;
       if (!ALLOWED[key].includes(value)) {
-        throw new Error(`${ORCHESTRATION_FILE} sets ${key} to "${value}"; use ${ALLOWED[key].join(", ")}`);
+        throw new Error(`${ORCHESTRATION_FILE} sets ${key} to "${written}"; use ${ALLOWED[key].join(", ")}`);
       }
       settings[key] = value;
       defaulted.delete(key);

@@ -24,24 +24,33 @@ function read(root: string) {
   return { status: run.status, stderr: run.stderr, settings: run.status === 0 ? JSON.parse(run.stdout) : null };
 }
 
-test("a project without ORCHESTRATION.md continues entry points to ready-to-merge", async () => {
+test("a project without ORCHESTRATION.md continues entry points to merged", async () => {
   expect(read(await project())).toEqual({
     status: 0,
     stderr: "",
-    settings: { endpoint: "ready-to-merge", "entry-points": "deliver", file: null, defaulted: ["endpoint", "entry-points"] },
+    settings: { endpoint: "merged", "entry-points": "deliver", file: null, defaulted: ["endpoint", "entry-points"] },
   });
 });
 
 test("a key the file leaves out keeps its default, and prose without frontmatter sets nothing", async () => {
-  expect(read(await project("---\nendpoint: 'deployed' # nightly\nowner: platform\n---\n\n# Policy\n")).settings).toEqual({
-    endpoint: "deployed",
+  expect(read(await project("---\nendpoint: 'ready-to-merge' # a person merges\nowner: platform\n---\n\n# Policy\n")).settings).toEqual({
+    endpoint: "ready-to-merge",
     "entry-points": "deliver",
     file: "ORCHESTRATION.md",
     defaulted: ["entry-points"],
   });
-  expect(read(await project("# Policy\n\nendpoint: merged\n")).settings).toMatchObject({
-    endpoint: "ready-to-merge",
+  expect(read(await project("# Policy\n\nendpoint: ready-to-merge\n")).settings).toMatchObject({
+    endpoint: "merged",
     defaulted: ["endpoint", "entry-points"],
+  });
+});
+
+test("a file that still says deployed reads as merged, and is not a defaulted key", async () => {
+  expect(read(await project("---\nendpoint: deployed\n---\n")).settings).toEqual({
+    endpoint: "merged",
+    "entry-points": "deliver",
+    file: "ORCHESTRATION.md",
+    defaulted: ["entry-points"],
   });
 });
 

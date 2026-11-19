@@ -85,12 +85,14 @@ export const terminalItem: RubricItem = {
 
 // The task the judge reads: the prompt plus the repository settings that set
 // how far the run should go.
+const endpointMeaning = " The merged endpoint is the whole delivery: the change is merged and, where the repository delivers its default branch, deployed and verified there; where the repository configures no deployment it ends at the confirmed merge. deployed is the older name for merged.";
+
 export function judgeTask(evalCase: EvalCase): string {
   const environment = evalCase.fixture.environment;
   if (!environment) return evalCase.prompt;
   const settings = environment.orchestration
-    ? `ORCHESTRATION.md sets endpoint ${environment.orchestration.endpoint} and entry-points ${environment.orchestration.entryPoints}.`
-    : "There is no ORCHESTRATION.md, so the defaults apply: endpoint ready-to-merge and entry-points deliver, except where the person's standing instructions below state another default.";
+    ? `ORCHESTRATION.md sets endpoint ${environment.orchestration.endpoint} and entry-points ${environment.orchestration.entryPoints}.${endpointMeaning}`
+    : `There is no ORCHESTRATION.md, so the defaults apply: endpoint merged and entry-points deliver, except where the person's standing instructions below state another default.${endpointMeaning}`;
   const standing = environment.standingInstructions
     ? `\n\nThe person's standing global agent instructions: ${environment.standingInstructions.trim()}`
     : "";
