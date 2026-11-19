@@ -2871,16 +2871,22 @@
       "rationale": [
         "The core of the same incident: the default branch is red, no PR, issue or session owns the failure, and an unrelated PR is ready. Delivery must land the repair as its own work item, wait for the repair merge's own default-branch run to succeed, and only then merge the requested PR. Fresh native run required.",
         "Converted on merge into the judged-rubric format: the rubric questions became outcome items, the answer patterns became exact answer values, and the ordered wait and merge checks became exact action values with the same before window. The run settings are ORCHESTRATION.md endpoint merged with entry-points deliver, matching the prompt.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "The fixture never showed the requested pull request as merged: after the second merge the pull request still read as unmerged, main's tip was still the repair merge, and a wait still answered with the repair merge's run. A run that confirmed its merge of PR #511 reported that it could not, and failed the both-merges-reported item: 2 of 3 runs on one model and 1 of 3 on another (issue #172). The second merge now shows in the pull request, in main's tip and in a wait, and the first merge shows the repair pull request as merged instead of a draft. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "ce8869fbb370c51f770f0ec481773aeb71c349f58c362845df9466d6c6dbe84d",
+      "afterSha256": "68aed58715d5cd7294dbc21d64544617adcaceb49b323c5d2e62dbcbd1c12a33",
       "frozenCaseSha256": "bd4b64bef639bebbf179d9c13414a68b9b04b1e17868a2154215be4bf0f668e9",
       "revisions": [
         {
           "previousAfterSha256": "8833e76619f755a2087e83ea1375a39b31de4fda153e7844326ba20365b25174",
           "afterSha256": "ce8869fbb370c51f770f0ec481773aeb71c349f58c362845df9466d6c6dbe84d",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "ce8869fbb370c51f770f0ec481773aeb71c349f58c362845df9466d6c6dbe84d",
+          "afterSha256": "68aed58715d5cd7294dbc21d64544617adcaceb49b323c5d2e62dbcbd1c12a33",
+          "rationale": "The fixture never showed the requested pull request as merged: after the second merge the pull request still read as unmerged, main's tip was still the repair merge, and a wait still answered with the repair merge's run. A run that confirmed its merge of PR #511 reported that it could not, and failed the both-merges-reported item: 2 of 3 runs on one model and 1 of 3 on another (issue #172). The second merge now shows in the pull request, in main's tip and in a wait, and the first merge shows the repair pull request as merged instead of a draft. Expectations are unchanged."
         }
       ]
     },
