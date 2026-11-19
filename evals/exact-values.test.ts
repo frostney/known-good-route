@@ -56,6 +56,27 @@ test("a recorded action must carry the exact value in a named field or anywhere 
   expect(failed(files, ledger([{ action: "forge.openDraftPr", details: "report-after.png", data: { attachments: ["/tmp/report-after.png"] } }]), "")).toHaveLength(1);
 });
 
+test("an action can be forbidden only when it carries a value, and only before another action", () => {
+  const wait = (details: string, data?: Record<string, unknown>) => ({ action: "monitor.wait" as const, details, ...(data ? { data } : {}) });
+  const merge = { action: "forge.mergePr" as const, details: "Squash-merge" };
+  const c = scenario({ forbiddenActionValues: [
+    { action: "monitor.wait", values: [[revision, "3c3c3c3"]], before: { action: "forge.mergePr" } },
+    { action: "monitor.wait", values: ["main"], fields: ["branch"] },
+  ] });
+  const held = `monitor.wait omits ${revision} | 3c3c3c3 before forge.mergePr`;
+  expect(failed(c, ledger([wait("Await the PR's checks", { head: "2b".repeat(20) }), merge]), "Done.")).toEqual([]);
+  expect(failed(c, ledger([wait("Await the run", { head: revision }), merge]), "Done.")).toEqual([held]);
+  expect(failed(c, ledger([wait("Await the run for 3c3c3c3"), merge]), "Done.")).toEqual([held]);
+  // After the named action the value is no longer forbidden; without that action every record counts.
+  expect(failed(c, ledger([merge, wait("Await the run", { head: revision })]), "Done.")).toEqual([]);
+  expect(failed(c, ledger([wait("Await the run", { head: revision })]), "Done.")).toEqual([held]);
+  // A field rule reads that field only, and applies to the whole run when it names no limit.
+  expect(failed(c, ledger([wait("Await checks, not main")]), "Done.")).toEqual([]);
+  expect(failed(c, ledger([merge, wait("Await", { branch: "main" })]), "Done.")).toEqual(["monitor.wait omits main"]);
+  // Another action carrying the value is not this rule's concern.
+  expect(failed(c, ledger([{ action: "ci.dispatchRun", details: `Dispatch on ${revision}` }, merge]), "Done.")).toEqual([]);
+});
+
 test("exact value checks are validated before any run", () => {
   for (const expected of [
     { requiredAnswerValues: [""] },
@@ -64,6 +85,8 @@ test("exact value checks are validated before any run", () => {
     { forbiddenAnswerValues: [""] },
     { requiredActionValues: [{ action: "git.pushTag" as const, values: [] }] },
     { requiredActionValues: [{ action: "git.pushTag" as const, values: ["v1"], fields: [] }] },
+    { forbiddenActionValues: [{ action: "monitor.wait" as const, values: [] }] },
+    { forbiddenActionValues: [{ action: "monitor.wait" as const, values: ["main"], fields: [] }] },
   ])
     expect(() => validateCases([scenario(expected as EvalCase["expected"])], new Set())).toThrow("invalid exact value");
 });

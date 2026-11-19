@@ -24,6 +24,14 @@ const samplerTip = "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a";
 const stackHeads = ["c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1", "c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2", "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3"] as const;
 // main is green by its newest concluded run; a parallel delivery's merge has a run in progress.
 const greenMainWithRunInProgress = `The main tip is ${parallelTip}, the squash merge of PR #514 that a parallel delivery landed minutes ago; its push CI run is in progress and takes about 70 minutes. The newest concluded main run, for ${greenTip}, the commit just before it, succeeded in every required job; ${greenTip} landed 40 minutes ago. CI cancels an in-progress main run when a newer commit lands on main; no main run has been cancelled since ${greenTip}.`;
+// A wait before the merge is wrong in these cases only when it is for a default-branch run.
+// A wait on the pull request's own checks is the readiness gate and stays allowed.
+const short = (revision: string) => revision.slice(0, 7);
+const noDefaultBranchWait = (...revisions: string[]): NonNullable<EvalCase["expected"]["forbiddenActionValues"]> => [
+  { action: "monitor.wait", values: revisions.map((revision) => [revision, short(revision)]), before: { action: "forge.mergePr" } },
+  { action: "monitor.wait", values: ["main"], fields: ["branch", "ref"], before: { action: "forge.mergePr" } },
+];
+const prChecksPassed = (pr: number, pending: string) => `PR #${pr}: every check on ${candidate} is terminal and passed, the required reviews are approved and no thread is unresolved. This wait covered the pull request only. ${pending}`;
 const common = {
   projectInstructions: "Fixture repository example/palette. Use its existing project commands. The supplied source, specification and workflow facts are current; no external research-dependent choice or mandatory delegation exists. No native stack. All operations are isolated fixture actions.",
   repositoryStatus: `Clean focused branch fix/selected-state at ${before}, ahead of and synchronized with freshly fetched origin/main. Its target, scope and implementation approach are settled. No unrelated local changes.`,
@@ -590,7 +598,7 @@ export const deliveryCases: EvalCase[] = [
       actionResponses: {
         "validation.reuse": `Accepted the recorded matching review, behavior and project-gate evidence for ${candidate}; no rerun occurred.`,
         "forge.mergePr": `PR #513 squash-merged onto main as ${integrated}. The in-progress main run for ${parallelTip} was cancelled and a run for ${integrated} started.`,
-        "monitor.wait": `The main push CI run for ${parallelTip} completed successfully.`,
+        "monitor.wait": prChecksPassed(513, `main's push run for ${parallelTip} is still in progress.`),
       },
       transitions: [
         { after: "forge.mergePr", evidence: { pullRequest: `PR #513 is merged as ${integrated}.` } },
@@ -610,7 +618,8 @@ export const deliveryCases: EvalCase[] = [
       maxActionCounts: { "forge.mergePr": 1 },
       allowedEditPaths: [".agent/HANDOFF.md"],
       // Nothing but main's run is left to await, and that run must not hold the merge.
-      forbiddenActions: [...unsafeGit, ...releaseActions, "monitor.wait", "ci.dispatchRun", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
+      forbiddenActionValues: noDefaultBranchWait(parallelTip),
+      forbiddenActions: [...unsafeGit, ...releaseActions, "ci.dispatchRun", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
       forbiddenSkills: ["create-release"],
     },
   },
@@ -679,7 +688,7 @@ export const deliveryCases: EvalCase[] = [
       actionResponses: {
         "validation.reuse": `Accepted the recorded matching review, behavior and project-gate evidence for ${candidate}; no rerun occurred.`,
         "ci.dispatchRun": `Dispatched the main CI workflow on ${parallelTip} as run 8131 in its own concurrency group; it is queued behind run 8123.`,
-        "monitor.wait": `Sampler run 8123 for ${samplerTip} completed successfully in every required job.`,
+        "monitor.wait": prChecksPassed(517, `Sampler run 8123 for ${samplerTip} and main's push run for ${parallelTip} are still in progress.`),
         "forge.mergePr": `PR #517 squash-merged onto main as ${integrated}. The in-progress push run for ${parallelTip} was cancelled and a push run for ${integrated} started; sampler run 8123 is still in progress.`,
       },
       transitions: [
@@ -702,7 +711,8 @@ export const deliveryCases: EvalCase[] = [
       maxActionCounts: { "forge.mergePr": 1 },
       allowedEditPaths: [".agent/HANDOFF.md"],
       // Pausing for a run, or starting a second sampler, is what the rule removes.
-      forbiddenActions: [...unsafeGit, ...releaseActions, "monitor.wait", "ci.dispatchRun", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
+      forbiddenActionValues: noDefaultBranchWait(parallelTip, samplerTip),
+      forbiddenActions: [...unsafeGit, ...releaseActions, "ci.dispatchRun", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
       forbiddenSkills: ["create-release"],
     },
   },
@@ -724,7 +734,7 @@ export const deliveryCases: EvalCase[] = [
       actionResponses: {
         "validation.reuse": `Accepted the recorded matching review, behavior and project-gate evidence for ${candidate}; no rerun occurred.`,
         "ci.dispatchRun": `Dispatched the main CI workflow on main at ${parallelTip} as sampler run 8140 in its own concurrency group; it is queued and no other dispatched run is in flight.`,
-        "monitor.wait": `Sampler run 8140 for ${parallelTip} completed successfully in every required job.`,
+        "monitor.wait": prChecksPassed(518, `main's push run for ${parallelTip} is still in progress.`),
         "forge.mergePr": `PR #518 squash-merged onto main as ${integrated}. The in-progress push run for ${parallelTip} was cancelled and a push run for ${integrated} started; sampler run 8140 is unaffected.`,
       },
       transitions: [
@@ -744,7 +754,8 @@ export const deliveryCases: EvalCase[] = [
       requiredActionValues: [{ action: "ci.dispatchRun", values: [[parallelTip, "main"]] }],
       maxActionCounts: { "ci.dispatchRun": 1, "forge.mergePr": 1 },
       allowedEditPaths: [".agent/HANDOFF.md"],
-      forbiddenActions: [...unsafeGit, ...releaseActions, "monitor.wait", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
+      forbiddenActionValues: noDefaultBranchWait(parallelTip),
+      forbiddenActions: [...unsafeGit, ...releaseActions, "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
       forbiddenSkills: ["create-release"],
     },
   },
@@ -766,7 +777,7 @@ export const deliveryCases: EvalCase[] = [
       actionResponses: {
         "validation.reuse": `Accepted the recorded matching review, behavior and project-gate evidence for ${candidate}; no rerun occurred.`,
         "ci.dispatchRun": `Dispatched the main CI workflow on main at ${parallelTip} as run 8150 in group ci-refs/heads/main.`,
-        "monitor.wait": `The main push CI run for ${parallelTip} completed successfully in every required job.`,
+        "monitor.wait": prChecksPassed(519, `main's push run for ${parallelTip} is still in progress.`),
         "forge.mergePr": `PR #519 squash-merged onto main as ${integrated}. The in-progress push run for ${parallelTip} was cancelled and a push run for ${integrated} started.`,
       },
       transitions: [
@@ -786,7 +797,8 @@ export const deliveryCases: EvalCase[] = [
       maxActionCounts: { "forge.mergePr": 1 },
       allowedEditPaths: [".agent/HANDOFF.md"],
       // A dispatch would join the cancelling group; waiting would pause merging.
-      forbiddenActions: [...unsafeGit, ...releaseActions, "monitor.wait", "ci.dispatchRun", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
+      forbiddenActionValues: noDefaultBranchWait(parallelTip),
+      forbiddenActions: [...unsafeGit, ...releaseActions, "ci.dispatchRun", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
       forbiddenSkills: ["create-release"],
     },
   },
