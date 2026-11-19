@@ -1,3 +1,4 @@
+import { nodeSandbox } from "./node-sandbox.ts";
 import { readProcessText } from "./process-output.ts";
 import { createHash } from "node:crypto";
 import { mkdtemp, realpath, rm } from "node:fs/promises";
@@ -48,6 +49,9 @@ export async function executionTools(evalCase: EvalCase, ledger: RunLedger) {
     throw new Error(
       "Execution fixtures currently require macOS sandbox-exec; no unrestricted fallback",
     );
+  const node = Bun.which("node");
+  if (!node) throw new Error("Execution fixtures require node on PATH");
+  const sandbox = await nodeSandbox(node);
   const directory = await realpath(
     await mkdtemp(join(tmpdir(), "kgr-execution-")),
   );
@@ -114,10 +118,7 @@ export async function executionTools(evalCase: EvalCase, ledger: RunLedger) {
           for (const probe of probes[scenario]) {
             const child = Bun.spawn(
               [
-                "/usr/bin/sandbox-exec",
-                "-p",
-                '(version 1)(allow default)(deny network*)(deny file-write*)(deny file-read* (subpath "/Users"))',
-                "node",
+                ...sandbox,
                 "--permission",
                 `--allow-fs-read=${file}`,
                 file,

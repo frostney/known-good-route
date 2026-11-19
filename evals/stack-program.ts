@@ -1,6 +1,7 @@
 import { mkdtemp, cp, rm, realpath, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
+import { nodeSandbox } from "./node-sandbox.ts";
 import { readProcessText } from "./process-output.ts";
 
 export const stackContract = `This disposable evaluation implements a JSON record store and atomic batches.
@@ -230,10 +231,7 @@ export async function runPipeline(
       : [join(work, "src/cli.mjs")];
     const p = Bun.spawn(
       [
-        "/usr/bin/sandbox-exec",
-        "-p",
-        '(version 1)(allow default)(deny network*)(deny file-write*)(deny file-read* (subpath "/Users"))',
-        node,
+        ...(await nodeSandbox(node)),
         "--permission",
         `--allow-fs-read=${work}`,
         ...args,
