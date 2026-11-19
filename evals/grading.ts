@@ -54,14 +54,65 @@ function fieldCarries(field: unknown, value: string): boolean {
   return field !== undefined && rendered(field) === value;
 }
 
+// The shell words of a recorded command: quotes group and are dropped, a
+// backslash escapes the next character and joins a continued line, an
+// unquoted # at the start of a word comments out the rest of its line, and
+// unquoted control and redirection operators end a word.
+const operatorBoundary = "\u0000";
+function shellWords(command: string): string[] {
+  const words: string[] = [];
+  let word: string | undefined;
+  let quote = "";
+  for (let index = 0; index < command.length; index += 1) {
+    const char = command[index]!;
+    const next = command[index + 1];
+    // Inside double quotes a backslash escapes only these; elsewhere it stays.
+    if (char === "\\" && next !== undefined && (quote === "" || (quote === '"' && '$`"\\\n'.includes(next)))) {
+      index += 1;
+      if (next !== "\n") word = (word ?? "") + next;
+    } else if (quote) {
+      if (char === quote) quote = "";
+      else word += char;
+    } else if (char === '"' || char === "'") {
+      quote = char;
+      word ??= "";
+    } else if (/[\s;&|<>()]/.test(char)) {
+      if (word !== undefined) words.push(word);
+      word = undefined;
+      // An operator or a new line is kept as a boundary, so the word after it is no flag's value.
+      if (char === "\n" || !/\s/.test(char)) words.push(operatorBoundary);
+    } else if (char === "#" && word === undefined) {
+      const end = command.indexOf("\n", index);
+      index = end < 0 ? command.length : end - 1;
+    } else word = (word ?? "") + char;
+  }
+  // An open quote is a syntax error: the shell runs none of it.
+  if (quote) return [];
+  if (word !== undefined) words.push(word);
+  return words;
+}
+
+// A recorded command names a field as a flag: `--head SHA` or `--head=SHA`.
+// The command may hold several invocations, so a required value must be the
+// flag's only value there, and a forbidden value is caught wherever it appears.
+function commandCarries(command: unknown, field: string, value: string, anywhere: boolean): boolean {
+  if (typeof command !== "string") return false;
+  const words = shellWords(command);
+  const given = words.flatMap((word, index) =>
+    word === `--${field}` ? [words[index + 1]] : word.startsWith(`--${field}=`) ? [word.slice(field.length + 3)] : [],
+  );
+  return anywhere ? given.includes(value) : given.length > 0 && given.every((one) => one === value);
+}
+
 function actionCarries(
   record: RunLedger["actions"][number],
   value: ExactValue,
   fields: string[] | undefined,
+  forbidden = false,
 ): boolean {
   return spellings(value).some((spelling) =>
     fields
-      ? fields.some((field) => fieldCarries(record.data?.[field], spelling))
+      ? fields.some((field) => fieldCarries(record.data?.[field], spelling) || commandCarries(record.data?.command, field, spelling, forbidden))
       : containsValue(
           [record.details, ...Object.values(record.data ?? {}).map(rendered)].join("\n"),
           spelling,
@@ -336,7 +387,7 @@ export function gradeRun(
     const carried = rule.values.filter((value) =>
       ledger.actions
         .slice(0, end)
-        .some((a) => a.action === rule.action && actionCarries(a, value, rule.fields)),
+        .some((a) => a.action === rule.action && actionCarries(a, value, rule.fields, true)),
     );
     checks.push({
       name: `${rule.action} omits ${rule.values.map(describe).join(", ")}${limit ? ` before ${limit.action}` : ""}`,

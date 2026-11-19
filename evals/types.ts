@@ -114,8 +114,9 @@ export interface EvalExpectations {
   forbiddenAnswerValues?: string[];
   // Each value must be carried by a recorded action of that kind: equal to one
   // of the named data fields (or an element of an array field), or, without
-  // fields, a whole token in its details or data. With every, all such actions
-  // must carry it; otherwise one is enough.
+  // fields, a whole token in its details or data. A named field is also read
+  // from a recorded `command`, as its `--field value` or `--field=value` flag.
+  // With every, all such actions must carry it; otherwise one is enough.
   requiredActionValues?: Array<{
     action: ActionName;
     values: ExactValue[];

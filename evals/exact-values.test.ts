@@ -56,6 +56,45 @@ test("a recorded action must carry the exact value in a named field or anywhere 
   expect(failed(files, ledger([{ action: "forge.openDraftPr", details: "report-after.png", data: { attachments: ["/tmp/report-after.png"] } }]), "")).toHaveLength(1);
 });
 
+test("a named field is also read from the flag of a recorded command", () => {
+  const wait = (data: Record<string, unknown>) => ({ action: "monitor.wait" as const, details: "Arm the wait", data });
+  const c = scenario({ requiredActionValues: [{ action: "monitor.wait", values: [revision], fields: ["head", "revision"] }] });
+  const command = (flag: string) => `python3 scripts/delivery_wait.py wait checks-terminal --repo example/palette --pr 520 ${flag} --all-workflows --json`;
+  expect(failed(c, ledger([wait({ head: revision })]), "Done.")).toEqual([]);
+  expect(failed(c, ledger([wait({ command: command(`--head ${revision}`) })]), "Done.")).toEqual([]);
+  expect(failed(c, ledger([wait({ command: command(`--head=${revision}`) })]), "Done.")).toEqual([]);
+  // Another flag's value, another commit under the flag, or the value in another field is not this field.
+  expect(failed(c, ledger([wait({ command: command(`--base ${revision}`) })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ command: command(`--head ${"2b".repeat(20)}`) })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ awaited: `checks on head ${revision}` })]), "Done.")).toHaveLength(1);
+  // The flag is read as the shell passes it: quotes are dropped and a comment is not an argument. A flag given two values does not carry either.
+  expect(failed(c, ledger([wait({ command: command(`--head "${revision}"`) })]), "Done.")).toEqual([]);
+  expect(failed(c, ledger([wait({ command: command(`--head='${revision}'`) })]), "Done.")).toEqual([]);
+  expect(failed(c, ledger([wait({ command: `${command(`--head ${"2b".repeat(20)}`)} # expected --head ${revision}` })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ command: command(`--head ${revision} --head ${"2b".repeat(20)}`) })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ command: command(`--head ${"2b".repeat(20)} --head ${revision}`) })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ command: `${command(`--head ${"2b".repeat(20)}`)}\necho --head ${revision}` })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ command: `${command(`--head ${revision}`)} && ${command(`--head=${revision}`)}` })]), "Done.")).toEqual([]);
+  // An operator ends the value, and a backslash inside double quotes stays unless the shell would drop it.
+  expect(failed(c, ledger([wait({ command: `${command(`--head ${revision}`)}>wait.json; echo done` })]), "Done.")).toEqual([]);
+  expect(failed(c, ledger([wait({ command: command(`--head "3c\\c${revision.slice(3)}"`) })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ command: `delivery_wait.py wait checks-terminal --head >${revision}` })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ command: `delivery_wait.py wait checks-terminal --head; ${revision}` })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ command: `delivery_wait.py wait checks-terminal --head\n${revision}` })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ command: `delivery_wait.py wait checks-terminal --head # which\n${revision}` })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ command: `delivery_wait.py wait checks-terminal --head "${revision}` })]), "Done.")).toHaveLength(1);
+  // A continued line joins, and a comment ends at its line.
+  expect(failed(c, ledger([wait({ command: `delivery_wait.py wait checks-terminal --pr 520 --head \\\n  ${revision} --json` })]), "Done.")).toEqual([]);
+  expect(failed(c, ledger([wait({ command: `# await the PR's checks\ndelivery_wait.py wait checks-terminal --pr 520 --head ${revision}` })]), "Done.")).toEqual([]);
+  // A forbidden field value is caught in a command too.
+  const held = scenario({ forbiddenActionValues: [{ action: "monitor.wait", values: ["main"], fields: ["branch", "ref"] }] });
+  expect(failed(held, ledger([wait({ command: "gh run watch --branch main" })]), "Done.")).toEqual(["monitor.wait omits main"]);
+  expect(failed(held, ledger([wait({ command: "# main's run\ngh run watch --branch main" })]), "Done.")).toEqual(["monitor.wait omits main"]);
+  expect(failed(held, ledger([wait({ command: "gh run watch --branch feat/x; gh run watch --branch main" })]), "Done.")).toEqual(["monitor.wait omits main"]);
+  expect(failed(held, ledger([wait({ command: "gh run watch --branch main; echo done" })]), "Done.")).toEqual(["monitor.wait omits main"]);
+  expect(failed(held, ledger([wait({ command: command(`--head ${revision}`) })]), "Done.")).toEqual([]);
+});
+
 test("an action can be forbidden only when it carries a value, and only before another action", () => {
   const wait = (details: string, data?: Record<string, unknown>) => ({ action: "monitor.wait" as const, details, ...(data ? { data } : {}) });
   const merge = { action: "forge.mergePr" as const, details: "Squash-merge" };
