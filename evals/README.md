@@ -249,6 +249,10 @@ them (it confused a 40-character revision with a 42-character one):
   request's own checks. `before` limits it to actions recorded before a given
   occurrence of another action; when that occurrence is missing, every action
   counts.
+- `forbiddenActionsBeforeActions` forbids an action until another action has
+  been recorded, whatever it carries: a dispatch before a merge, where the
+  merge is the first thing to leave a run for the dispatch to cover. When the
+  other action is missing, every such action counts.
 
 A whole token is not preceded or followed by a letter, digit or underscore, so
 `503` does not match `1503`. Matching is literal and case-sensitive.

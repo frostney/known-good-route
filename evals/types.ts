@@ -161,6 +161,14 @@ export interface EvalExpectations {
     before: ActionName;
     after: ActionName;
   }>;
+  // No `action` may be recorded before the first `before` action; when that
+  // action is absent, every recorded `action` counts. Use it where an action
+  // is wrong only until another has happened, such as a dispatch before a
+  // merge that is the first thing to leave anything for the dispatch to cover.
+  forbiddenActionsBeforeActions?: Array<{
+    action: ActionName;
+    before: ActionName;
+  }>;
   // The native worker must have started before the first of each action.
   requiredWorkerBeforeActions?: ActionName[];
   requiredActionSequence?: ActionName[];
