@@ -1,4 +1,5 @@
 import { acknowledgmentOnlyActions, actionName, recordedActionAcknowledgment } from "./action-evidence.ts";
+import { createFixtureState } from "./fixture-state.ts";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { EvalCase, EvalRunRecord } from "./types.ts";
@@ -100,8 +101,8 @@ export function buildSemanticPacket(
     ...contracts,
     { id: "evidence:timeline", text: JSON.stringify(record.ledger.events) },
   ];
-  const state = { ...scenario.fixture.evidence };
-  const actionCounts = new Map<string, number>();
+  const fixtureState = createFixtureState(scenario.fixture);
+  const state = fixtureState.evidence;
   let actionIndex = 0, inspectionIndex = 0, eventIndex = 0;
   for (const event of record.ledger.events) {
     eventIndex++;
@@ -116,17 +117,9 @@ export function buildSemanticPacket(
       const action = record.ledger.actions[actionIndex++];
       if (!action || action.action !== event.name)
         throw new Error("Action ledger and event order disagree");
-      const count = (actionCounts.get(action.action) ?? 0) + 1;
-      actionCounts.set(action.action, count);
       sources.push({ id: "action:" + eventIndex, text: JSON.stringify(action) });
-      const scripted = scenario.fixture.actionResponses?.[action.action];
-      const result = Array.isArray(scripted)
-        ? scripted[Math.min(count - 1, scripted.length - 1)]
-        : scripted;
+      const result = fixtureState.record(action.action, action.data);
       sources.push({ id: "result:" + eventIndex, text: result ?? recordedActionAcknowledgment });
-      for (const transition of scenario.fixture.transitions ?? [])
-        if (transition.after === action.action && (transition.occurrence ?? 1) === count)
-          Object.assign(state, transition.evidence);
     }
   }
   if (actionIndex !== record.ledger.actions.length || inspectionIndex !== record.ledger.inspections.length)

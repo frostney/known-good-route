@@ -77,6 +77,16 @@ onto a moved trunk only under `git-workflow`'s
 [up-to-date rule](../SKILL.md#update-commit-and-push). A squash-merged lower
 layer leaves the layers above it conflicting with the base, so they sync.
 
+While the layers have open PRs, rewrite them at most once, immediately before
+merging the whole stack, and only when that rule calls for it. A conflict that
+appears earlier waits for that rebase; it never justifies re-pushing reviewed
+layers. Rebase locally with `gh stack rebase`, then push through the
+[protected publication helper](#protected-publication-helper) with every member
+listed under `rewrite`. Every rewritten layer reruns its CI once and needs its
+readiness again on the new head. Only the layer-by-layer merge fallback below
+rewrites again, the same way. `gh stack sync` pushes on its own, outside the
+helper, so use it only while no layer has an open PR.
+
 Run the narrowest official command that satisfies the need. Stop on a rebase
 conflict, unexpected divergence, changed topology, lease rejection, partial
 push, or remote head that cannot be explained. Use `gh stack rebase --abort`
@@ -109,7 +119,9 @@ update, merge the freshly fetched remote base and push normally.
   Use the bundled helper described below to enforce this constraint; it keeps
   existing hooks and does not change persistent Git configuration.
 - For a new top layer above frozen approved PRs, use protected `gh stack push`,
-  then the separate creation and append procedure below. Record successful push
+  then the separate creation and append procedure below. Admit each frozen
+  member with equal source and expected IDs and the new layer as absent: that
+  push moves no PR head, so it needs no `rewrite` entry. Record successful push
   completion and re-read the exact remote heads before creation. The native push
   refreshes tracking leases and is non-atomic; the guard must enforce the
   admitted source and expected remote IDs. It performs no PR creation or base
@@ -152,8 +164,10 @@ update, merge the freshly fetched remote base and push normally.
 - Fall back to layers only when `gh stack merge` is unavailable, the prefix's
   top PR number also names a stack, or GitHub refuses the stack merge for a
   reason other than a readiness gate. Then squash-merge the bottom ready
-  layer, move the layers above it onto the updated base with the guarded
-  `gh stack sync`, and merge the next layer as soon as its new head is ready;
+  layer, move the layers above it onto the updated base with `gh stack rebase`
+  and a helper push that lists them under `rewrite`, as
+  [Guarded rewrite exception](#guarded-rewrite-exception) describes, and merge
+  the next layer as soon as its new head is ready;
   repeat up the prefix. Report the reason for the fallback.
 - After merge, use the official stack cleanup/sync path, remove the clean local
   branches the run owns that no worktree holds,
@@ -177,7 +191,22 @@ the approved local commit as `source`, and the previously approved remote
 commit as `expected`. Use all-zero object IDs of the repository's object format
 only for branches verified absent remotely. Frozen members have equal source
 and expected IDs. Include every branch the native command may push; never
-refresh an approved expectation merely to make a rejection pass.
+refresh an approved expectation, or list a ref under `rewrite`, merely to make
+a rejection pass.
+
+Before any push, the helper looks up the open PR of each admitted ref whose
+remote head would change, in the repository the remote URL names. It refuses
+when that PR is ready for review, or when its current head already has GitHub
+Actions runs, queued, in progress or finished. The refusal names each blocked
+PR and how many would have CI restarted. The optional `rewrite` field lists the
+refs allowed past that check, as `[{"ref": "refs/heads/...", "reason": "..."}]`:
+each an admitted ref with a non-empty reason. Use it only for the final rebase
+under [Guarded rewrite exception](#guarded-rewrite-exception), never to put a
+fix into a reviewed layer. The lookup needs `gh` signed in to the remote's
+host; a missing `gh` or a failed lookup refuses. A branch admitted as absent
+needs no lookup, and the hook rejects it if the remote already has it. The
+helper checks when it prepares and the hook checks again at the push, with the
+same rules, so a PR marked ready in between is still refused.
 
 Run the authorized frozen-top push through the helper, using its actual installed
 path and the chosen remote name:
@@ -207,9 +236,9 @@ onto the PR below it, and the bottom one onto the default branch, or onto the
 stack's top when appending; a refused base change only warns. Check every PR's
 base and the stack again afterwards.
 
-Each invocation freezes the helper, records its Python runtime and admission,
-and keeps hook receipts under the checkout's Git directory in `kgr-push-guards`.
-The final command reports that directory. Retain it for reconciliation. A
+Each invocation freezes the helper, records its Python runtime, admission and
+the PRs it looked up, and keeps hook receipts under the checkout's Git
+directory in `kgr-push-guards`. The final command reports that directory. Retain it for reconciliation. A
 successful exit establishes command execution only; re-read GitHub and apply
 the full PR/stack readiness contract. A rejected push leaves the prepared work
 available and requires fresh scope/evidence assessment.

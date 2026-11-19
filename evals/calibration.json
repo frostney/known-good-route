@@ -2647,16 +2647,22 @@
       "rationale": [
         "New bounded September 14 synthetic decision fixture, declared before native execution: Default delivery reuses current gates and verifies the merged change at the configured nightly destination rather than trusting a stale green deployment. Local captured-response trajectories establish grader sensitivity only; native/manual acceptance remains separate in .agent/delivery-evaluation-20260914/PLAN.md.",
         "Original native trajectories place correct target/revision in structured probe arguments and may abbreviate the final SHA. Grade exact target/revision from action details plus selected structured fields, not a final-output spelling minimum. Retain state/acceptance ordering and manual final-probe/report grounding; Fable cleanup claims from acknowledgment-only results remain a substantive reporting limitation, not excused by this assertion correction.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "The deployment's two wait answers are now installed by the merge and the second-wait transition counts from the merge, so a readiness wait recorded before the merge is answered with readiness and cannot use one up (issue #156). Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "4fe689de0d1cdbadcc4eaa90357f0f05482f9c9129ce1eb14a0de406ef60a024",
+      "afterSha256": "2e7ad73e319106acc11bb3c23c588fabb15b07587efe995dec24bd1e153f23b0",
       "frozenCaseSha256": "57d73e895e48d9634e34041f4c578ed2f1c4e98c75c4b389b165cf5abb2bf4db",
       "revisions": [
         {
           "previousAfterSha256": "57d73e895e48d9634e34041f4c578ed2f1c4e98c75c4b389b165cf5abb2bf4db",
           "afterSha256": "ad6b8f670a7c7b216591da05e08efafaf295e72452b511e4d81a9796fb4fd6dc",
           "rationale": "Original native trajectories place correct target/revision in structured probe arguments and may abbreviate the final SHA. Grade exact target/revision from action details plus selected structured fields, not a final-output spelling minimum. Retain state/acceptance ordering and manual final-probe/report grounding; Fable cleanup claims from acknowledgment-only results remain a substantive reporting limitation, not excused by this assertion correction."
+        },
+        {
+          "previousAfterSha256": "4fe689de0d1cdbadcc4eaa90357f0f05482f9c9129ce1eb14a0de406ef60a024",
+          "afterSha256": "2e7ad73e319106acc11bb3c23c588fabb15b07587efe995dec24bd1e153f23b0",
+          "rationale": "The deployment's two wait answers are now installed by the merge and the second-wait transition counts from the merge, so a readiness wait recorded before the merge is answered with readiness and cannot use one up (issue #156). Expectations are unchanged."
         }
       ]
     },

@@ -76,11 +76,16 @@ export interface EvalFixture {
   transitions?: Array<{
     after: ActionName;
     occurrence?: number;
+    // Count `after` only from the first time this action was recorded, so
+    // "the second wait after the merge" is the same call whatever came before
+    // the merge. Without it, occurrences count from the start of the run.
+    since?: ActionName;
     // For file.edit, match this exact data.path; only matching edits count.
     editPath?: string;
     evidence: Record<string, string>;
-    // Scalar overrides affect subsequent calls, without resetting array counters.
-    actionResponses?: Partial<Record<ActionName, string>>;
+    // Overrides affect subsequent calls. A sequence starts at its first
+    // response on the next call; a scalar replaces whatever was there.
+    actionResponses?: Partial<Record<ActionName, string | string[]>>;
   }>;
 }
 
