@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { deliveryCases } from "./delivery-cases.ts";
+import { createFixtureState } from "./fixture-state.ts";
 import { gradeRun, validateCases } from "./grading.ts";
 import { createEvalTools } from "./tools.ts";
 import { captureToolCall } from "./tool-receipts.ts";
@@ -366,6 +367,14 @@ test("an unowned red default branch is repaired and green before the requested P
   expect(await failed([...s.actions.slice(0, -3), both, mainRunWait(repairMerged), mergeRequested])).toEqual([]);
   // The requested PR merged first fails, whatever follows.
   expect(await failed([...s.actions.slice(0, -3), mergeRequested, mainRunWait(repairMerged), mergeRepair])).toContain("forge.mergePr carries 512 before forge.mergePr");
+  // Each merge shows in every later read, so a run that confirms a merge finds it.
+  const state = createFixtureState(c.fixture);
+  for (const recorded of s.actions.slice(0, -1)) state.record(recorded.action, recorded.data);
+  expect(state.evidence.pullRequest).toBe(`PR #511 is unchanged and unmerged at ${"2b".repeat(20)}. Repair PR #512 is merged as ${repairMerged}.`);
+  state.record(mergeRequested.action, mergeRequested.data);
+  expect(state.evidence.pullRequest).toContain(`PR #511 is merged as ${integratedRevision}`);
+  expect(state.evidence.defaultBranchHealth).toContain(`The main tip is ${integratedRevision}`);
+  expect(state.record("monitor.wait")).toContain(`PR #511 is merged onto main as ${integratedRevision}`);
 });
 
 test("a run still in progress from an earlier merge does not hold a ready merge", async () => {

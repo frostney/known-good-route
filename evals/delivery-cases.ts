@@ -539,8 +539,15 @@ export const deliveryCases: EvalCase[] = [
       },
       transitions: [
         { after: "forge.openDraftPr", evidence: { pullRequest: `PR #511 is unchanged and unmerged at ${candidate}. Repair PR #512 is open as a draft at ${repairHead}; its checks are running.` } },
-        { after: "forge.mergePr", evidence: { defaultBranchHealth: `The main tip is ${repairMerged}, the squash merge of repair PR #512. The foreground monitor returns the result of its push CI run.` },
+        { after: "forge.mergePr", evidence: {
+            pullRequest: `PR #511 is unchanged and unmerged at ${candidate}. Repair PR #512 is merged as ${repairMerged}.`,
+            defaultBranchHealth: `The main tip is ${repairMerged}, the squash merge of repair PR #512. The foreground monitor returns the result of its push CI run.` },
           actionResponses: { "monitor.wait": `The main push CI run for ${repairMerged} completed successfully; every required job, including macOS, passed. No newer commit has landed on main.` } },
+        // The requested merge shows in every later read, so a run that confirms it finds it.
+        { after: "forge.mergePr", occurrence: 2, evidence: {
+            pullRequest: `PR #511 is merged as ${integrated}. Repair PR #512 is merged as ${repairMerged}.`,
+            defaultBranchHealth: `The main tip is ${integrated}, the squash merge of PR #511 onto ${repairMerged}. Its push CI run completed successfully; every required job, including macOS, passed.` },
+          actionResponses: { "monitor.wait": `PR #511 is merged onto main as ${integrated}, and main's tip is ${integrated}. The main push CI run for ${integrated} completed successfully; every required job, including macOS, passed.` } },
       ],
     },
     expected: {
