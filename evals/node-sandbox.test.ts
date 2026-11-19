@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
 import { mkdtemp, rm, symlink } from "node:fs/promises";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { nodeSandbox } from "./node-sandbox.ts";
 import { readProcessText } from "./process-output.ts";
@@ -19,7 +18,7 @@ test.skipIf(process.platform !== "darwin")(
         [
           ...(await nodeSandbox(link)),
           "-e",
-          `process.stdout.write("started");require("fs").readdirSync(${JSON.stringify(homedir())})`,
+          `process.stdout.write("started");require("fs").readdirSync("/Users")`,
         ],
         { stdout: "pipe", stderr: "pipe" },
       );
