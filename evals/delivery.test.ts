@@ -384,8 +384,11 @@ test("a run still in progress from an earlier merge does not hold a ready merge"
   expect(await failed([action("validation.reuse"), merge, mainRunWait(parallelTip)])).toEqual([]);
   // A branch that is only behind keeps its head; merging main into it restarts its checks.
   expect(await failed([action("git.merge", "git merge origin/main"), action("git.push"), merge])).toEqual(["forbidden actions"]);
-  // No run was cancelled, so there is nothing for a sampler run to cover.
-  expect(await failed([dispatchSampler(parallelTip), merge])).toEqual(["forbidden actions"]);
+  // No run was cancelled before the merge, so there is nothing for a sampler run to cover then.
+  expect(await failed([dispatchSampler(parallelTip), merge])).toEqual(["no ci.dispatchRun before forge.mergePr"]);
+  expect(await failed([dispatchSampler(parallelTip)])).toEqual(expect.arrayContaining(["no ci.dispatchRun before forge.mergePr"]));
+  // The merge cancels the run in progress, so a sampler dispatched after it has a gap to cover.
+  expect(await failed([action("validation.reuse"), merge, dispatchSampler(integratedRevision)])).toEqual([]);
 });
 
 test("a declared full-CI rule holds the merge until that run succeeds on the PR's head, and only that run", async () => {

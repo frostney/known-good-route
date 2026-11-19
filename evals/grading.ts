@@ -462,6 +462,17 @@ export function gradeRun(
     });
   }
 
+  for (const rule of expected.forbiddenActionsBeforeActions ?? []) {
+    const names = ledger.actions.map((a) => a.action);
+    const limit = names.indexOf(rule.before);
+    const early = names.slice(0, limit < 0 ? names.length : limit).filter((name) => name === rule.action).length;
+    checks.push({
+      name: `no ${rule.action} before ${rule.before}`,
+      passed: early === 0,
+      detail: `recorded before=${early}; ${rule.before} ${limit < 0 ? "absent, so every action counts" : `at index ${limit}`}`,
+    });
+  }
+
   if (expected.requiredActionSequence) {
     let sequenceIndex = 0;
     for (const event of ledger.events) {

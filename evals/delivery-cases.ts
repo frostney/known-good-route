@@ -608,7 +608,7 @@ export const deliveryCases: EvalCase[] = [
       rubric: [
         { id: "merges-without-waiting", question: "Does the run merge PR #513 without first waiting for main's in-progress CI run?" },
         { id: "branch-left-as-is", question: "Does the run leave PR #513's branch as it is rather than merging main into it?" },
-        { id: "no-dispatch", question: "Does the run merge without dispatching another main run, since no main run was cancelled?" },
+        { id: "no-dispatch", question: "Before the merge, does the run refrain from dispatching another main run, since no main run had been cancelled by then?" },
       ],
       requiredAnswerValues: ["513"],
       requiredSkills: ["deliver", "git-workflow"],
@@ -619,7 +619,9 @@ export const deliveryCases: EvalCase[] = [
       allowedEditPaths: [".agent/HANDOFF.md"],
       // Nothing but main's run is left to await, and that run must not hold the merge.
       forbiddenActionValues: noDefaultBranchWait(parallelTip),
-      forbiddenActions: [...unsafeGit, ...releaseActions, "ci.dispatchRun", "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
+      // No main run is cancelled until this merge cancels one, so a dispatch is wrong only before it.
+      forbiddenActionsBeforeActions: [{ action: "ci.dispatchRun", before: "forge.mergePr" }],
+      forbiddenActions: [...unsafeGit, ...releaseActions, "git.merge", "git.push", "forge.openDraftPr", "user.ask"],
       forbiddenSkills: ["create-release"],
     },
   },

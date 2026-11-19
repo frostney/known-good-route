@@ -2891,10 +2891,11 @@
         "Rebuilt from a day of parallel deliveries in one repository whose default-branch CI took 35 to 80 minutes: the health gate made every merge wait for the newest main run, each merge cancelled the run in progress, no main run completed for hours and merges went one per run. A ready PR on a green default branch now merges at once; the run still in progress from a parallel delivery's merge does not hold it, a branch that is only behind keeps its head, and with no main run cancelled there is nothing for a sampler run to cover, so dispatching one fails. Fresh native run required.",
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
         "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
-        "The case forbade every wait, so a run that confirmed the pull request's own checks before merging failed it (issue #165). It now forbids only a wait before the merge that names a default-branch run or the main branch, and the fixture answers a wait with the pull request's state. A wait for the default branch's run still fails."
+        "The case forbade every wait, so a run that confirmed the pull request's own checks before merging failed it (issue #165). It now forbids only a wait before the merge that names a default-branch run or the main branch, and the fixture answers a wait with the pull request's state. A wait for the default branch's run still fails.",
+        "The fixture's own merge answer says the merge cancelled main's in-progress run, which leaves the default branch Stale, and the default-branch health rule then keeps a sampler run in flight. The case forbade every dispatch and its rubric said no main run was cancelled, so a run that dispatched a sampler after the merge failed it: 1 of 3 runs on each of two models, and the judge failed a third run that dispatched nothing. A dispatch is now forbidden only before the merge, and the rubric item asks about that. A dispatch before the merge still fails."
       ],
       "beforeSha256": null,
-      "afterSha256": "a7e0d0f3569923486e6383246274b66377186cc38ada88898cda05b0f8451956",
+      "afterSha256": "23595464dde7b6f2da222d709f57ad7d0fe511e76e007dbdbac78c5b7e2076de",
       "frozenCaseSha256": "ab9e88f5aa4c67a60ff6eeb9a39bf34c5057ed888567ad404a98d622c2c1227f",
       "revisions": [
         {
@@ -2906,6 +2907,11 @@
           "previousAfterSha256": "ac846e32dd92a5680f1ed57cd2a40a75715932881ed39de5eecdc46c0b366fd6",
           "afterSha256": "a7e0d0f3569923486e6383246274b66377186cc38ada88898cda05b0f8451956",
           "rationale": "The case forbade every wait, so a run that confirmed the pull request's own checks before merging failed it (issue #165). It now forbids only a wait before the merge that names a default-branch run or the main branch, and the fixture answers a wait with the pull request's state. A wait for the default branch's run still fails."
+        },
+        {
+          "previousAfterSha256": "a7e0d0f3569923486e6383246274b66377186cc38ada88898cda05b0f8451956",
+          "afterSha256": "23595464dde7b6f2da222d709f57ad7d0fe511e76e007dbdbac78c5b7e2076de",
+          "rationale": "The fixture's own merge answer says the merge cancelled main's in-progress run, which leaves the default branch Stale, and the default-branch health rule then keeps a sampler run in flight. The case forbade every dispatch and its rubric said no main run was cancelled, so a run that dispatched a sampler after the merge failed it: 1 of 3 runs on each of two models, and the judge failed a third run that dispatched nothing. A dispatch is now forbidden only before the merge, and the rubric item asks about that. A dispatch before the merge still fails."
         }
       ]
     },
