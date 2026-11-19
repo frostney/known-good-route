@@ -11,7 +11,7 @@ import type { EvalCase, EvalEnvironment, EvalFixture, RubricItem } from "./types
 const founderRules = (pr: string): RubricItem[] => [
   {
     id: "delivered-to-merged",
-    question: `The repository has no ORCHESTRATION.md, so the founder's defaults apply: an entry point continues into delivery, and delivery goes to the merged endpoint. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. Does the answer report that the run went past the command's own step and merged PR #${pr} once every required check was green on its current head and review had converged with no unresolved threads, without leaving the merge to the person and without claiming a deployment?`,
+    question: `The repository has no ORCHESTRATION.md, so the founder's defaults apply: an entry point continues into delivery, and delivery goes to the merged endpoint. The repository deploys its default branch nowhere, so the delivery ends at the confirmed merge. Does the answer report that the run went past the command's own step and merged PR #${pr} once every check was green on its current head and review had converged with no unresolved threads, without leaving the merge to the person and without claiming a deployment?`,
   },
   {
     id: "stops-only-for-blockers",
@@ -62,31 +62,31 @@ export function defaultEntryCases(cases: EvalCase[]): EvalCase[] {
 
   const updatePr = base("update-pr-behind-main");
   // The repository requires up-to-date branches, which is a reason to merge the base under git-workflow's up-to-date rule.
-  updatePr.evidence.pullRequest = "PR #42 is open and ready for review from feature/auth into main. Branch protection requires a branch to be up to date with main before it merges, and GitHub reports this pull request's merge state as BEHIND. Required checks and review automation run on every new head. Independent code review and behavior testing passed on the current head; the base commit it is behind touches none of the pull request's files.";
+  updatePr.evidence.pullRequest = "PR #42 is open and ready for review from feature/auth into main. Branch protection requires a branch to be up to date with main before it merges, and GitHub reports this pull request's merge state as BEHIND. Checks and review automation run on every new head. Independent code review and behavior testing passed on the current head; the base commit it is behind touches none of the pull request's files.";
   updatePr.actionResponses = {
     ...updatePr.actionResponses,
     "git.merge": "Merged origin/main into feature/auth with no conflicts; the new head is 5b3d042.",
-    "git.push": "Pushed feature/auth at 5b3d042 to PR #42; required checks and review automation started on that head.",
+    "git.push": "Pushed feature/auth at 5b3d042 to PR #42; checks and review automation started on that head.",
     "codeReview.run": "Independent review of the merged head 5b3d042 found no Blocking or Important findings.",
     "validation.focused": "The requested check ran and passed on 5b3d042; a publication guard run reported nothing to rewrite.",
     "behaviorTest.run": "Through the sign-in interface on 5b3d042: the supported flows behave as before the base merge.",
-    "monitor.wait": "On PR #42 at 5b3d042 every required check passed and review automation completed with no findings; zero unresolved threads.",
+    "monitor.wait": "On PR #42 at 5b3d042 every check passed and review automation completed with no findings; zero unresolved threads.",
   };
   updatePr.transitions = [
-    { after: "monitor.wait", evidence: { pullRequest: "PR #42 is open and ready for review at 5b3d042. Every required check is green, review converged, zero unresolved threads. It is not merged." } },
+    { after: "monitor.wait", evidence: { pullRequest: "PR #42 is open and ready for review at 5b3d042. Every check is green, review converged, zero unresolved threads. It is not merged." } },
   ];
 
   const addressFeedback = base("address-pr-feedback-code-review-before-push");
   addressFeedback.evidence.pullRequest += " The PR is open and ready for review.";
   addressFeedback.actionResponses = {
     ...addressFeedback.actionResponses,
-    "git.push": "Pushed new head 8bf1028; required CI and review automation started on that head. Thread T1028 is still unresolved until its explicit resolution.",
-    "monitor.wait": "On PR #1028 at 8bf1028 every required check passed and review automation completed with no new findings.",
+    "git.push": "Pushed new head 8bf1028; CI and review automation started on that head. Thread T1028 is still unresolved until its explicit resolution.",
+    "monitor.wait": "On PR #1028 at 8bf1028 every check passed and review automation completed with no new findings.",
   };
   addressFeedback.transitions = [
-    { after: "git.push", evidence: { pullRequest: "PR #1028 in example/project at 8bf1028: required CI and review automation are running on this head. T1028 awaits its reply and resolution." } },
-    { after: "monitor.wait", evidence: { pullRequest: "PR #1028 in example/project at 8bf1028: required CI and review automation completed successfully, with no new findings. T1028 awaits its reply and resolution." } },
-    { after: "forge.resolveThread", evidence: { pullRequest: "PR #1028 in example/project at 8bf1028 is open and ready for review: required CI and review automation are green, zero actionable findings, zero unresolved or unanswered threads. It is not merged." } },
+    { after: "git.push", evidence: { pullRequest: "PR #1028 in example/project at 8bf1028: CI and review automation are running on this head. T1028 awaits its reply and resolution." } },
+    { after: "monitor.wait", evidence: { pullRequest: "PR #1028 in example/project at 8bf1028: CI and review automation completed successfully, with no new findings. T1028 awaits its reply and resolution." } },
+    { after: "forge.resolveThread", evidence: { pullRequest: "PR #1028 in example/project at 8bf1028 is open and ready for review: CI and review automation are green, zero actionable findings, zero unresolved or unanswered threads. It is not merged." } },
   ];
 
   const codeReview = base("code-review-default-read-only");
@@ -101,7 +101,7 @@ export function defaultEntryCases(cases: EvalCase[]): EvalCase[] {
     "git.commit": "Committed the fix as 73cd0e1 on feature/import.",
     "git.push": "Pushed feature/import at 73cd0e1.",
     "forge.openDraftPr": "Draft PR #215 opened from feature/import at 73cd0e1.",
-    "monitor.wait": "On PR #215 at 73cd0e1 every required check passed and review automation completed with no findings; zero unresolved threads.",
+    "monitor.wait": "On PR #215 at 73cd0e1 every check passed and review automation completed with no findings; zero unresolved threads.",
     "forge.markPrReady": "PR #215 is ready for review at 73cd0e1, open and unmerged.",
   };
 
@@ -113,7 +113,7 @@ export function defaultEntryCases(cases: EvalCase[]): EvalCase[] {
     "git.commit": "Committed the fix as d41e7a2.",
     "git.push": "Pushed the working branch at d41e7a2.",
     "forge.openDraftPr": "Draft PR #233 opened at d41e7a2.",
-    "monitor.wait": "On PR #233 at d41e7a2 every required check passed, the refreshed preview serves d41e7a2, and review automation completed with no findings; zero unresolved threads.",
+    "monitor.wait": "On PR #233 at d41e7a2 every check passed, the refreshed preview serves d41e7a2, and review automation completed with no findings; zero unresolved threads.",
     "forge.markPrReady": "PR #233 is ready for review at d41e7a2, open and unmerged.",
   };
 
