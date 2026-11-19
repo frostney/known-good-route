@@ -30,7 +30,7 @@ transition for a native stack.
   - When the lower PR must stay frozen, for example because it is approved,
     run `gh stack link LOWER-PR BRANCH --remote REMOTE`, giving the lower PR's
     number, through the protected publication helper instead. In
-    [gh-stack 0.2.1](https://github.com/github/gh-stack/blob/v0.2.1/cmd/link.go),
+    [gh-stack 0.3.0](https://github.com/github/gh-stack/blob/v0.3.0/cmd/link.go),
     that pushes only `BRANCH`, opens its draft PR on the lower PR's branch and
     creates the stack.
 
@@ -84,8 +84,16 @@ layers. Rebase locally with `gh stack rebase`, then push through the
 [protected publication helper](#protected-publication-helper) with every member
 listed under `rewrite`. Every rewritten layer reruns its CI once and needs its
 readiness again on the new head. Only the layer-by-layer merge fallback below
-rewrites again, the same way. `gh stack sync` pushes on its own, outside the
-helper, so use it only while no layer has an open PR.
+and a retargeted stack rewrite again, the same way. `gh stack sync` pushes on
+its own, outside the helper, so use it only while no layer has an open PR.
+
+When a stack's base branch is deleted, GitHub retargets the stack onto the
+default branch, and `gh stack push` and `gh stack submit` refuse to publish it,
+even a new top layer, until it is rebased; they suggest `gh stack sync`. With
+open PRs, run `gh stack rebase`, which moves the layers onto the new base, then
+push through the helper with every member under `rewrite`, naming the retarget
+as the reason. Stop when the rebase asks before dropping commits of an old base
+that never merged.
 
 Run the narrowest official command that satisfies the need. Stop on a rebase
 conflict, unexpected divergence, changed topology, lease rejection, partial
@@ -109,7 +117,7 @@ update, merge the freshly fetched remote base and push normally.
   See [GitHub CLI environment settings](https://cli.github.com/manual/gh_help_environment).
 - Preserve approved heads at the actual push boundary. A prior remote read or
   the presence of `--force-with-lease` alone is insufficient: `gh stack submit`
-  in [gh-stack 0.2.1](https://github.com/github/gh-stack/blob/v0.2.1/cmd/submit.go)
+  in [gh-stack 0.3.0](https://github.com/github/gh-stack/blob/v0.3.0/cmd/submit.go)
   refreshes tracking refs before constructing its leases. For frozen layers,
   require both the queued source and advertised remote head to match the
   approved commit; require remote absence for a new branch. An enforced
@@ -123,9 +131,10 @@ update, merge the freshly fetched remote base and push normally.
   member with equal source and expected IDs and the new layer as absent: that
   push moves no PR head, so it needs no `rewrite` entry. Record successful push
   completion and re-read the exact remote heads before creation. The native push
-  refreshes tracking leases and is non-atomic; the guard must enforce the
-  admitted source and expected remote IDs. It performs no PR creation or base
-  updates. A partial or uncertain push requires stopped ownership and fresh
+  refreshes tracking leases first, so the guard must enforce the admitted
+  source and expected remote IDs. It updates every branch or none, unless
+  `GH_STACK_NO_ATOMIC` is set; leave it unset. It performs no PR creation or
+  base updates. An uncertain push requires stopped ownership and fresh
   reconciliation before advancing.
 - Check each frozen PR's full metadata as well as its head: its base branch and
   base commit must match the approved previous layer (or remote default for the
@@ -179,7 +188,7 @@ update, merge the freshly fetched remote base and push normally.
 Use [scripts/stack_push_guard.py](../scripts/stack_push_guard.py) from this
 installed skill. It requires Python 3.11+, Git, a POSIX shell, and the official
 gh-stack extension. It checks that `gh stack --version` identifies gh-stack, not
-which version; this page describes the latest release, checked at 0.2.1. It has
+which version; this page describes the latest release, checked at 0.3.0. It has
 no third-party Python or eval-harness dependency. Existing authorization and
 native-topology checks still apply.
 
