@@ -3776,16 +3776,22 @@
       "status": "new",
       "rationale": [
         "A standing-default case: the repository has no ORCHESTRATION.md and the person's standing global agent instructions default to ready-to-merge, so /deliver leaves the ready PR unmerged instead of taking the built-in merged endpoint. It replaces deliver-standing-merged-default-merges, which tested a standing merged default while ready-to-merge was the built-in endpoint, and reuses the same merge case's fixture. Fresh native run required.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "A run that confirms every check on the pull request's head with a wait was answered with the base case's default-branch result and then reported readiness as unconfirmed. The two standing-default fixtures now answer that wait with the pull request's state. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "d337f8a784b184b52adba9055179b764dab2084435218dd9b964be0827c32578",
+      "afterSha256": "b3c5c1a08fd6825f3f6a65025e390b4dbf3299c39db62d9f76f561c51dea78f4",
       "frozenCaseSha256": "0c94715f2820f694c9b3892656b7ce6d8276da6fa62219f9dd0cda740c0922a7",
       "revisions": [
         {
           "previousAfterSha256": "0c94715f2820f694c9b3892656b7ce6d8276da6fa62219f9dd0cda740c0922a7",
           "afterSha256": "d337f8a784b184b52adba9055179b764dab2084435218dd9b964be0827c32578",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "d337f8a784b184b52adba9055179b764dab2084435218dd9b964be0827c32578",
+          "afterSha256": "b3c5c1a08fd6825f3f6a65025e390b4dbf3299c39db62d9f76f561c51dea78f4",
+          "rationale": "A run that confirms every check on the pull request's head with a wait was answered with the base case's default-branch result and then reported readiness as unconfirmed. The two standing-default fixtures now answer that wait with the pull request's state. Expectations are unchanged."
         }
       ]
     },
@@ -3794,16 +3800,22 @@
       "status": "new",
       "rationale": [
         "A standing-default precedence case: the same fixture with an ORCHESTRATION.md that sets endpoint merged, which wins over the person's standing ready-to-merge default, so /deliver merges the ready PR. It replaces deliver-project-endpoint-wins-over-standing-merged. Fresh native run required.",
-        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged.",
+        "A run that confirms every check on the pull request's head with a wait was answered with the base case's default-branch result and then reported readiness as unconfirmed. The two standing-default fixtures now answer that wait with the pull request's state. Expectations are unchanged."
       ],
       "beforeSha256": null,
-      "afterSha256": "6ea4bba3a39b85bcfe9299ca54106e1dae24b5cc898886921d58ec4d11346fd2",
+      "afterSha256": "4a19968b270dbf3fafde747d9e320f47cbb66599fa614fd28c8568462a12b541",
       "frozenCaseSha256": "5ff638c47dd441c4da0de7beefed25ffd28c52fa40313be6ff6e45a8ef7c8802",
       "revisions": [
         {
           "previousAfterSha256": "5ff638c47dd441c4da0de7beefed25ffd28c52fa40313be6ff6e45a8ef7c8802",
           "afterSha256": "6ea4bba3a39b85bcfe9299ca54106e1dae24b5cc898886921d58ec4d11346fd2",
           "rationale": "Ready to merge now means every check on the head passed, not only the checks merging requires. The fixture's statements that a pull request's required checks passed say every check passed, so its readiness is stated in the terms the gate uses and a run has no unanswered question about other checks. Expectations are unchanged."
+        },
+        {
+          "previousAfterSha256": "6ea4bba3a39b85bcfe9299ca54106e1dae24b5cc898886921d58ec4d11346fd2",
+          "afterSha256": "4a19968b270dbf3fafde747d9e320f47cbb66599fa614fd28c8568462a12b541",
+          "rationale": "A run that confirms every check on the pull request's head with a wait was answered with the base case's default-branch result and then reported readiness as unconfirmed. The two standing-default fixtures now answer that wait with the pull request's state. Expectations are unchanged."
         }
       ]
     },
