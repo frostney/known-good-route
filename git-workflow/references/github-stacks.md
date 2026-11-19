@@ -205,8 +205,8 @@ under [Guarded rewrite exception](#guarded-rewrite-exception), never to put a
 fix into a reviewed layer. The lookup needs `gh` signed in to the remote's
 host; a missing `gh` or a failed lookup refuses. A branch admitted as absent
 needs no lookup, and the hook rejects it if the remote already has it. The
-check reads GitHub once, when the helper prepares, so prepare just before the
-push.
+helper checks when it prepares and the hook checks again at the push, with the
+same rules, so a PR marked ready in between is still refused.
 
 Run the authorized frozen-top push through the helper, using its actual installed
 path and the chosen remote name:

@@ -213,6 +213,21 @@ class RewriteTests(unittest.TestCase):
         with self.assertRaisesRegex(guard.GuardError, "names no GitHub repository"):
             guard.check_rewrites({**self.admission, "url": "/srv/git/app.git"}, FakeGitHub())
 
+    def test_the_hook_checks_again_at_the_push(self):
+        line = "refs/heads/stack/one " + "a" * 40 + " refs/heads/stack/one " + "b" * 40 + "\n"
+        url = self.admission["url"]
+        github = FakeGitHub([pull(12, "stack/one", "b" * 40)])
+        self.assertEqual(len(guard.check_rewrites(self.admission, github)), 1)
+        # Marked ready after the guard was prepared.
+        github.pulls[0]["draft"] = False
+        with self.assertRaisesRegex(guard.GuardError, "#12"):
+            guard.admit_updates(self.admission, "origin", url, line, github)
+        updates, observed = guard.admit_updates(self.with_rewrite("refs/heads/stack/one"), "origin", url, line, github)
+        self.assertEqual((len(updates), observed), (1, []))
+        # Only the refs actually pushed are looked up; an empty push needs none.
+        quiet = FakeGitHub(fail="no lookup expected")
+        self.assertEqual(guard.admit_updates(self.admission, "origin", url, "", quiet), ([], []))
+
     def test_missing_gh_refuses(self):
         with tempfile.TemporaryDirectory() as empty, mock.patch.dict(os.environ, {"PATH": empty}):
             with self.assertRaisesRegex(guard.GuardError, "gh is not installed"):

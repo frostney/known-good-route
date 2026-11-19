@@ -146,6 +146,13 @@ def validate_updates(admission, remote, url, text):
     return updates
 
 
+def admit_updates(admission, remote, url, text, api=None):
+    """What the hook admits: only updates the record lists, and none that moves a
+    pull request GitHub now protects."""
+    updates = validate_updates(admission, remote, url, text)
+    return updates, check_rewrites({**validate_admission(admission), "refs": updates}, api or github_api)
+
+
 def git(directory, *args):
     result = subprocess.run(["git", *args], cwd=directory, stdin=subprocess.DEVNULL, capture_output=True)
     if result.returncode:
@@ -261,8 +268,8 @@ def prepare(value, api=github_api):
         if len(row["source"]) != object_length:
             raise GuardError("admission object format differs from repository")
         git(directory, "cat-file", "-e", row["source"] + "^{commit}")
-    # The hook runs during the push and only matches updates against this
-    # record, so the network check runs once here and its result is recorded.
+    # Refuse before anything is prepared; the hook checks again at the push,
+    # since a pull request can become ready or gain runs in between.
     pull_requests = check_rewrites(c, api)
     count = config_count(os.environ)
     git_dir = Path(git(directory, "rev-parse", "--absolute-git-dir"))
@@ -331,7 +338,8 @@ def hook(config_path, remote, url):
         data = sys.stdin.buffer.read(limit + 1)
         if len(data) > limit:
             raise GuardError("update input exceeds admitted scope")
-        updates = validate_updates(config["admission"], remote, url, data.decode("utf-8"))
+        updates, pull_requests = admit_updates(config["admission"], remote, url, data.decode("utf-8"))
+        receipt["pullRequests"] = pull_requests
         environment = original_hook_environment(config)
         if config["originalPrePush"]:
             result = subprocess.run([config["originalPrePush"], remote, url], input=data, env=environment)
