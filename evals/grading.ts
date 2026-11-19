@@ -85,24 +85,26 @@ function shellWords(command: string): string[] {
 }
 
 // A recorded command names a field as a flag: `--head SHA` or `--head=SHA`.
-// A repeated flag takes its last value, as an argument parser does.
-function commandCarries(command: unknown, field: string, value: string): boolean {
+// The command may hold several invocations, so a required value must be the
+// flag's only value there, and a forbidden value is caught wherever it appears.
+function commandCarries(command: unknown, field: string, value: string, anywhere: boolean): boolean {
   if (typeof command !== "string") return false;
   const words = shellWords(command);
   const given = words.flatMap((word, index) =>
     word === `--${field}` ? [words[index + 1]] : word.startsWith(`--${field}=`) ? [word.slice(field.length + 3)] : [],
   );
-  return given.length > 0 && given[given.length - 1] === value;
+  return anywhere ? given.includes(value) : given.length > 0 && given.every((one) => one === value);
 }
 
 function actionCarries(
   record: RunLedger["actions"][number],
   value: ExactValue,
   fields: string[] | undefined,
+  forbidden = false,
 ): boolean {
   return spellings(value).some((spelling) =>
     fields
-      ? fields.some((field) => fieldCarries(record.data?.[field], spelling) || commandCarries(record.data?.command, field, spelling))
+      ? fields.some((field) => fieldCarries(record.data?.[field], spelling) || commandCarries(record.data?.command, field, spelling, forbidden))
       : containsValue(
           [record.details, ...Object.values(record.data ?? {}).map(rendered)].join("\n"),
           spelling,
@@ -377,7 +379,7 @@ export function gradeRun(
     const carried = rule.values.filter((value) =>
       ledger.actions
         .slice(0, end)
-        .some((a) => a.action === rule.action && actionCarries(a, value, rule.fields)),
+        .some((a) => a.action === rule.action && actionCarries(a, value, rule.fields, true)),
     );
     checks.push({
       name: `${rule.action} omits ${rule.values.map(describe).join(", ")}${limit ? ` before ${limit.action}` : ""}`,

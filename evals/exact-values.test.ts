@@ -67,12 +67,14 @@ test("a named field is also read from the flag of a recorded command", () => {
   expect(failed(c, ledger([wait({ command: command(`--base ${revision}`) })]), "Done.")).toHaveLength(1);
   expect(failed(c, ledger([wait({ command: command(`--head ${"2b".repeat(20)}`) })]), "Done.")).toHaveLength(1);
   expect(failed(c, ledger([wait({ awaited: `checks on head ${revision}` })]), "Done.")).toHaveLength(1);
-  // The flag is read as the shell passes it: quotes are dropped, a comment is not an argument, and a repeated flag takes its last value.
+  // The flag is read as the shell passes it: quotes are dropped and a comment is not an argument. A flag given two values does not carry either.
   expect(failed(c, ledger([wait({ command: command(`--head "${revision}"`) })]), "Done.")).toEqual([]);
   expect(failed(c, ledger([wait({ command: command(`--head='${revision}'`) })]), "Done.")).toEqual([]);
   expect(failed(c, ledger([wait({ command: `${command(`--head ${"2b".repeat(20)}`)} # expected --head ${revision}` })]), "Done.")).toHaveLength(1);
   expect(failed(c, ledger([wait({ command: command(`--head ${revision} --head ${"2b".repeat(20)}`) })]), "Done.")).toHaveLength(1);
-  expect(failed(c, ledger([wait({ command: command(`--head ${"2b".repeat(20)} --head ${revision}`) })]), "Done.")).toEqual([]);
+  expect(failed(c, ledger([wait({ command: command(`--head ${"2b".repeat(20)} --head ${revision}`) })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ command: `${command(`--head ${"2b".repeat(20)}`)}\necho --head ${revision}` })]), "Done.")).toHaveLength(1);
+  expect(failed(c, ledger([wait({ command: `${command(`--head ${revision}`)} && ${command(`--head=${revision}`)}` })]), "Done.")).toEqual([]);
   // A continued line joins, and a comment ends at its line.
   expect(failed(c, ledger([wait({ command: `delivery_wait.py wait checks-terminal --pr 520 --head \\\n  ${revision} --json` })]), "Done.")).toEqual([]);
   expect(failed(c, ledger([wait({ command: `# await the PR's checks\ndelivery_wait.py wait checks-terminal --pr 520 --head ${revision}` })]), "Done.")).toEqual([]);
@@ -80,6 +82,7 @@ test("a named field is also read from the flag of a recorded command", () => {
   const held = scenario({ forbiddenActionValues: [{ action: "monitor.wait", values: ["main"], fields: ["branch", "ref"] }] });
   expect(failed(held, ledger([wait({ command: "gh run watch --branch main" })]), "Done.")).toEqual(["monitor.wait omits main"]);
   expect(failed(held, ledger([wait({ command: "# main's run\ngh run watch --branch main" })]), "Done.")).toEqual(["monitor.wait omits main"]);
+  expect(failed(held, ledger([wait({ command: "gh run watch --branch feat/x; gh run watch --branch main" })]), "Done.")).toEqual(["monitor.wait omits main"]);
   expect(failed(held, ledger([wait({ command: command(`--head ${revision}`) })]), "Done.")).toEqual([]);
 });
 
