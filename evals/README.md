@@ -244,7 +244,10 @@ them (it confused a 40-character revision with a 42-character one):
   a merge, and fails when that occurrence is missing.
   A named field is also read from a recorded `command`: `--head SHA` or
   `--head=SHA` there carries the `head` field, as long as the command gives
-  that flag no other value.
+  that flag no other value. The `performAction` tool's `data` description
+  names a field for every action whose rules read one, so a run knows to
+  record it; a test fails when a rule reads a field of an action it does not
+  name.
 - `forbiddenActionValues` lists values no recorded action of that kind may
   carry, matched the same way. Use it where an action is wrong only for some
   targets: a case that must not wait for the default branch's run forbids a
