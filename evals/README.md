@@ -352,7 +352,7 @@ unless every case passes, because review rows still await a human decision.
 Every case declares the repository environment it runs in under
 `fixture.environment`, and its expected terminal state and rubric follow from
 it. `orchestration` gives the `ORCHESTRATION.md` frontmatter: `endpoint`
-(`ready-to-merge`, `merged` or `deployed`) and `entry-points` (`deliver` to
+(`ready-to-merge` or `merged`; `deployed` is the older name for `merged`) and `entry-points` (`deliver` to
 continue an entry-point command through the development workflow to that
 endpoint, or `stop` to end after the command itself), plus an optional body.
 It is `null` when the repository has no `ORCHESTRATION.md`. `files` adds other
@@ -366,13 +366,14 @@ judge reads them with the repository settings.
 Most cases declare entry-points `stop` and test that the setting is honoured.
 Each delivery-chain entry skill (`/create-pr`, `/implement`, `/update-pr`,
 `/address-feedback`, `/code-review` and `/test-against-spec`) also has a
-`<skill>-default-continues-to-ready-to-merge` case with no `ORCHESTRATION.md`,
-which expects the founder's default: continue into delivery to ready-to-merge
-and stop only for a secret, a paid action, an account action or a decision
-that belongs to the person. Two `/deliver` cases cover a standing default of
-`merged` in the person's global instructions: with no `ORCHESTRATION.md` it
-leads to a merge, and a project `ORCHESTRATION.md` with endpoint
-`ready-to-merge` wins over it.
+`<skill>-default-continues-to-merged` case with no `ORCHESTRATION.md`,
+which expects the founder's default: continue into delivery to merged, in a
+repository that deploys its default branch nowhere, and stop only for a
+secret, a paid action, an account action or a decision that belongs to the
+person. Two `/deliver` cases cover a standing default of `ready-to-merge` in
+the person's global instructions: with no `ORCHESTRATION.md` it leaves the
+ready pull request unmerged, and a project `ORCHESTRATION.md` with endpoint
+`merged` wins over it.
 
 Before each run the runner writes the case's `ORCHESTRATION.md` and declared
 files into the eval workspace. It generates the AGENTS.md block with the
