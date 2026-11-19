@@ -42,8 +42,12 @@ reports on the checks merging requires and ignores the rest. Only repository
 policy can declare a check advisory; without that, a check that failed, was
 cancelled, timed out or needs action keeps the PR from ready, and one still
 queued or running keeps it pending. Await the whole set through
-`delivery-wait`'s `checks-terminal` with `--all-workflows` and one `--check`
-for each commit status or other app's check on the head.
+`delivery-wait`'s `checks-terminal`: `--all-workflows` where the repository
+runs GitHub Actions on the head, and one `--check` for each commit status or
+other app's check on it. Where nothing runs in Actions, or policy declares an
+Actions workflow advisory, name every other check with `--check` instead,
+because `--all-workflows` waits for a run to appear and counts every
+workflow.
 
 Resolving without replying does not satisfy the gate. An automation's reply to
 a maintainer reply in a thread that is now resolved answers that reply rather
