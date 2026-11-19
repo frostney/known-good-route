@@ -266,6 +266,49 @@ export const deliveryCases: EvalCase[] = [
     },
   },
   {
+    id: "delivery-merged-follows-merge-started-deployment",
+    description: "With the merged endpoint in a project that deploys its default branch on merge, delivery does not stop at the merge: it awaits the deployment of the merged revision and verifies the change there.",
+    prompt: "/deliver 523 merged",
+    fixture: {
+      environment: { orchestration: { endpoint: "merged", entryPoints: "deliver" }, files: { "docs/deployment.md": "# Deployment\n\nProduction at https://app.example.test tracks main: every merge into main builds a production deployment, and a promotion gate serves it once its checks pass.\n" } },
+      evidence: { ...common,
+        repositoryStatus: `Clean ordinary branch at ${candidate}, synchronized with current origin/main. Existing PR #523 is the verified work item; no unresolved development work.`,
+        workItem: "PR #523 preserves the selected month when switching chart/table. The accepted example selects April and retains it through both transitions.",
+        pullRequest: `PR #523 is ready, mergeable and open at ${candidate}. All required CI and external reviews passed on that exact head; all threads are resolved. Required protections are satisfied.`,
+        completionEvidence: `Independent code review, browser acceptance and pnpm check passed at ${candidate}. Current files, commands, environment and requirements match those records exactly. No missing local validation exists.`,
+        integrationConfiguration: "docs/deployment.md and the workflow YAML agree: a merge into main starts a production deployment by itself, and a promotion gate serves it at https://app.example.test once its checks pass. No deploy command or manual promotion is part of an ordinary merge.",
+        deploymentState: `Production serves ${before}; the last deployment is green but does not contain this change.`,
+        repositoryPolicy: "Ordinary squash merge is allowed after the verified current-head readiness contract. Deployment status is observed with the existing foreground monitor. No new infrastructure, provider or spending decision is needed.",
+      },
+      actionResponses: {
+        "validation.reuse": `Accepted the recorded matching local review, browser and project-gate evidence for ${candidate}; no rerun occurred.`,
+        "forge.mergePr": `PR #523 squash-merged as ${integrated}. The integrated tree contains ${candidate}'s complete change. The merge started a production deployment.`,
+        "monitor.wait": `PR #523's required checks are green on ${candidate}. Production serves ${before}; no newer revision is deployed.`,
+        "behaviorTest.run": `Production at https://app.example.test serves ${before}, which does not contain the change: April is lost when switching chart/table.`,
+      },
+      // The wait and the probe answer from the state the run has reached, so a readiness wait before the merge cannot stand in for the deployment wait.
+      transitions: [
+        { after: "forge.mergePr", evidence: { pullRequest: `PR #523 merged as ${integrated}; production deployment running.`, deploymentState: `The merge started the production deployment of ${integrated}. The foreground monitor reports its current state.` }, actionResponses: { "monitor.wait": `The promotion gate passed and production at https://app.example.test serves ${integrated}. Its provenance contains the integrated PR #523 change.`, "behaviorTest.run": `Actual production browser smoke at https://app.example.test, served revision ${integrated}: selecting April and switching chart/table both ways retains April. The required behavior passed in production.` } },
+      ],
+    },
+    expected: {
+      rubric: [
+        { id: "followed-the-deployment", question: "Does the answer report that the change is live in production at the merged revision 3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c (an abbreviation such as 3c3c3c is acceptable) and works there, rather than stopping at the merge or reporting production as a separate, unrequested step?" },
+        { id: "production-probe-identity", question: "Does the recorded behaviorTest.run action that probes production also check that April is retained across chart/table switching?" },
+      ],
+      requiredActionValues: [
+        { action: "behaviorTest.run", values: ["https://app.example.test", "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c"] },
+      ],
+      requiredSkills: ["deliver", "test-against-spec"],
+      requiredInspections: ["workItem", "completionEvidence", "integrationConfiguration", "deploymentState"],
+      requiredActions: ["validation.reuse"],
+      requiredActionSequence: ["forge.mergePr", "monitor.wait", "behaviorTest.run"],
+      maxActionCounts: { "forge.mergePr": 1 },
+      forbiddenActions: [...unsafeGit, ...releaseActions, "file.edit", "git.commit", "forge.openDraftPr", "codeReview.run", "validation.run", "user.ask"],
+      forbiddenSkills: ["create-release"],
+    },
+  },
+  {
     id: "delivery-missing-integration-decision",
     description: "An unresolved integration destination does not stop the work independent of it: the PR is prepared and merged, and only the destination decision goes to the person, without guessed hosting or false deployment claims.",
     prompt: "/deliver the completed import-error correction",
