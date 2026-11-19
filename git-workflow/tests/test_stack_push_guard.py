@@ -441,7 +441,7 @@ class StandaloneTests(unittest.TestCase):
                               input=json.dumps(self.admission), capture_output=True, text=True)
 
     def test_run_cli_preserves_guard_and_child_exit_without_an_sdk(self):
-        # Any gh-stack version is accepted; the behaviour was checked at 0.2.1.
+        # Any gh-stack version is accepted; the behaviour was checked at 0.3.0.
         for version in ["0.2.1", "0.3.0"]:
             with self.subTest(version=version):
                 self.git("push", "--quiet", "origin", "--delete", self.ref, check=False)

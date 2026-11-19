@@ -353,28 +353,34 @@ def hook(config_path, remote, url):
         write_once(root / ("check-" + str(uuid.uuid4()) + ".json"), receipt)
 
 
-# The guard follows the latest gh-stack release (checked at tag v0.2.1, 29a36d3)
+# The guard follows the latest gh-stack release (checked at tag v0.3.0, 2a49e67)
 # and checks only that the command is gh-stack, not its version: --version prints
 # "gh stack version VERSION" on stdout (cmd/root.go:84), and the release notifier
 # writes only to stderr (cmd/root.go:56-82). push and submit pass force=true with
 # per-branch --force-with-lease and fully qualified refs/heads/B:refs/heads/B
-# refspecs, pushing non-atomically after a best-effort tracking fetch
-# (cmd/push.go:106-108, cmd/submit.go:204,245); link pushes only arguments naming
-# local branches, without force and atomically (cmd/link.go:425-458);
-# internal/git/gitops.go:257-290 builds those arguments. No guarded path pushes
-# with --no-verify or a + refspec. Pushes run in the current checkout through the
+# refspecs after a best-effort tracking fetch, all branches in one push
+# (cmd/push.go:111-113, cmd/submit.go:216,254); link pushes only arguments naming
+# local branches, without force (cmd/link.go:447-480). All three push with
+# --atomic unless --no-atomic or GH_STACK_NO_ATOMIC is given.
+# internal/git/gitops.go:258-306 builds those arguments; a forced push first runs
+# git -c push.pushOption=pull.stacked push and repeats without the option when
+# the remote does not support push options, so the hook can see the same updates
+# twice. No guarded path pushes with --no-verify or a + refspec. push and submit
+# refuse a stack GitHub retargeted after its base branch was deleted
+# (cmd/utils.go:1145-1156). Pushes run in the current checkout through the
 # unscoped executor; the worktree-scoped executor drops GIT_CONFIG but keeps
 # GIT_CONFIG_COUNT/KEY/VALUE (internal/git/git.go:49-69). The flags are --auto,
-# --open and --remote for submit, --remote for push, and --base, --open and
-# --remote for link. link takes a stack or PR number, branch, or PR URL, then one
-# or more branch-or-PR arguments (cmd/link.go:27,73); a number naming a stack
-# appends to it, otherwise every PR the stack holds must be listed
-# (cmd/link.go:170-191,644-671). Its base corrections only warn on failure
-# (cmd/link.go:718-761).
+# --open, --remote and --no-atomic for submit, --remote and --no-atomic for push,
+# and --base, --open, --remote and --no-atomic for link; the accepted commands
+# below pass no --no-atomic. link takes a stack or PR number, branch, or PR
+# URL, then one or more branch-or-PR arguments (cmd/link.go:29,77); a number
+# naming a stack appends to it, otherwise every PR the stack holds must be listed
+# (cmd/link.go:175-196,666-693). Its base corrections only warn on failure
+# (cmd/link.go:740-783).
 GH_STACK_IDENTITY = re.compile(r"gh stack version \S+")
 POSITIVE_NUMBER = re.compile(r"[1-9][0-9]*")
 # What Go's strconv.Atoi parses; link tries such an argument as a PR number first
-# (cmd/link.go:538-551), so a branch named like one is not a safe branch argument.
+# (cmd/link.go:560-573), so a branch named like one is not a safe branch argument.
 ATOI_NUMBER = re.compile(r"[+-]?[0-9]+")
 
 
