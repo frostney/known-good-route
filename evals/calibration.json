@@ -3668,6 +3668,26 @@
       "beforeSha256": null,
       "afterSha256": "e615d549e19a168e31a87306843b70b02d28a5b7ef657dd3407827013c035c9f",
       "frozenCaseSha256": "e615d549e19a168e31a87306843b70b02d28a5b7ef657dd3407827013c035c9f"
+    },
+    {
+      "caseId": "delivery-stack-layer-below-unready-layers-asks",
+      "status": "new",
+      "rationale": [
+        "A run delivering one pull request to `merged` squash-merged it although it was the bottom layer of a 25-layer native stack; the 24 layers above then conflicted with the base and were rebased and re-run through CI twice. A ready layer below layers that are not ready is not merged alone: delivery reports it ready and asks, with the number of layers the merge would force to rebase. Merging it, by a stack merge or an ordinary merge, fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "6033563d545bfcad4074b80a3d2787e4d9e88ec2244f763e6425eef55705b747",
+      "frozenCaseSha256": "6033563d545bfcad4074b80a3d2787e4d9e88ec2244f763e6425eef55705b747"
+    },
+    {
+      "caseId": "delivery-stack-prefix-named-in-request-merges",
+      "status": "new",
+      "rationale": [
+        "Counterpart to delivery-stack-layer-below-unready-layers-asks: when the request names the part of the stack to merge and accepts the rebase of the layers above, delivery merges that ready prefix in one stack merge and asks nothing. Asking again, merging layer by layer or rebasing the layers above now fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "c4c1d3706d89b74a9f7b1cf264efff0dbb122050a932b8651036fd04ae972c95",
+      "frozenCaseSha256": "c4c1d3706d89b74a9f7b1cf264efff0dbb122050a932b8651036fd04ae972c95"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

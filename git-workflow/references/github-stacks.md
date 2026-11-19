@@ -171,6 +171,14 @@ update, merge the freshly fetched remote base and push normally.
   select the complete reported stack only after its final membership audit
   still matches; never merge a prefix beneath its top overlays. Never select
   rebase-merge merely because stack maintenance used rebases.
+- A stack merges whole. Before merging a prefix, count the layers above it:
+  the squash merge leaves each of them conflicting with the base, so each
+  needs the rebase, a CI run and its readiness again. Merge a prefix only when
+  the request names that part of the stack, or after the person decides it
+  from that count and cost. A request that names one PR without its stack has
+  not weighed them: bring the PR to ready, then ask, giving the number of
+  layers above and what the merge forces on them. A layer that is ready sooner
+  than the layers above it is no reason to merge it sooner.
 - Fall back to layers only when `gh stack merge` is unavailable, the prefix's
   top PR number also names a stack, or GitHub refuses the stack merge for a
   reason other than a readiness gate. Then squash-merge the bottom ready
