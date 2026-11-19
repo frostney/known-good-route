@@ -129,3 +129,19 @@ test("exact value checks are validated before any run", () => {
   ])
     expect(() => validateCases([scenario(expected as EvalCase["expected"])], new Set())).toThrow("invalid exact value");
 });
+
+test("the action tool names a field for every action whose rules read named fields", async () => {
+  const { evalCases } = await import("./cases.ts");
+  const { createEvalTools } = await import("./tools.ts");
+  const described: string = createEvalTools(new Map(), evalCases[0]!, ledger()).performAction.inputSchema.shape.data.description ?? "";
+  const read = new Map<string, Set<string>>();
+  for (const evalCase of evalCases)
+    for (const rule of [...(evalCase.expected.requiredActionValues ?? []), ...(evalCase.expected.forbiddenActionValues ?? [])])
+      for (const field of rule.fields ?? []) read.set(rule.action, (read.get(rule.action) ?? new Set()).add(field));
+  expect([...read.keys()].sort()).toEqual(["file.edit", "forge.openDraftPr", "git.removeWorktree", "monitor.wait"]);
+  // A run can only fill a field it was asked for: each such action has a clause that names one.
+  for (const [action, fields] of read) {
+    const clause = described.split(";").find((part) => containsValue(part, action)) ?? "";
+    expect({ action, named: [...fields].filter((field) => containsValue(clause, field)).length > 0 }).toEqual({ action, named: true });
+  }
+});
