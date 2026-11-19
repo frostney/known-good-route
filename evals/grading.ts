@@ -54,14 +54,19 @@ function fieldCarries(field: unknown, value: string): boolean {
   return field !== undefined && rendered(field) === value;
 }
 
-// The shell words of a recorded command: quotes group and are dropped, and an
-// unquoted # at the start of a word begins a comment.
+// The shell words of a recorded command: quotes group and are dropped, a
+// backslash escapes the next character and joins a continued line, and an
+// unquoted # at the start of a word comments out the rest of its line.
 function shellWords(command: string): string[] {
   const words: string[] = [];
   let word: string | undefined;
   let quote = "";
-  for (const char of command) {
-    if (quote) {
+  for (let index = 0; index < command.length; index += 1) {
+    const char = command[index]!;
+    if (char === "\\" && quote !== "'" && index + 1 < command.length) {
+      index += 1;
+      if (command[index] !== "\n") word = (word ?? "") + command[index];
+    } else if (quote) {
       if (char === quote) quote = "";
       else word += char;
     } else if (char === '"' || char === "'") {
@@ -70,8 +75,10 @@ function shellWords(command: string): string[] {
     } else if (/\s/.test(char)) {
       if (word !== undefined) words.push(word);
       word = undefined;
-    } else if (char === "#" && word === undefined) break;
-    else word = (word ?? "") + char;
+    } else if (char === "#" && word === undefined) {
+      const end = command.indexOf("\n", index);
+      index = end < 0 ? command.length : end;
+    } else word = (word ?? "") + char;
   }
   if (word !== undefined) words.push(word);
   return words;
