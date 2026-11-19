@@ -58,7 +58,9 @@ repository delivers its default branch (production, staging, a nightly build
 or another established target) and works there. What is deployed, and how, is
 what the repository configures; where it configures no deployment, `merged`
 ends at the confirmed merge. A project that wants a person to do the merge
-sets `ready-to-merge`. A file that still says `deployed` means `merged`.
+sets `ready-to-merge`: everything is reviewed and all CI is passing on the
+change's final head, and the run stops before the merge. A file that still
+says `deployed` means `merged`.
 
 ```mermaid
 flowchart TD

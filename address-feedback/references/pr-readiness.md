@@ -15,7 +15,12 @@ Record the repository, PR number or URL, and final head object ID. A PR is
 - every requirement without executable behavior has current evidence from code
   review or the project gate;
 - the repository's declared gate passed for that same final content;
-- every required check is terminal and successful;
+- that final content has a completed code review, from `/code-review` or the
+  reviewer the repository or the person's instructions name, with every
+  finding fixed or dispositioned;
+- every check and commit status on that head is terminal and passed, whether
+  or not the repository requires it for merging; skipped and neutral count as
+  passed, and of several runs from one source only the newest counts;
 - when the repository's declared full-CI rule requires a full or extended CI
   run for this change, that run succeeded for this head;
 - GitHub reports the PR mergeable without conflict, and its `mergeStateStatus`
@@ -31,6 +36,14 @@ Record the repository, PR number or URL, and final head object ID. A PR is
   and
 - no CI, verdict, finding, reply, or thread-readiness evidence belongs only to a
   previous head.
+
+GitHub calling the PR mergeable does not satisfy the check condition: it
+reports on the checks merging requires and ignores the rest. Only repository
+policy can declare a check advisory; without that, a check that failed, was
+cancelled, timed out or needs action keeps the PR from ready, and one still
+queued or running keeps it pending. Await the whole set through
+`delivery-wait`'s `checks-terminal` with `--all-workflows` and one `--check`
+for each commit status or other app's check on the head.
 
 Resolving without replying does not satisfy the gate. An automation's reply to
 a maintainer reply in a thread that is now resolved answers that reply rather
@@ -172,7 +185,7 @@ for review" and GitHub identifies the PR author as a bot. No CodeRabbit review
 is expected, so this state satisfies its review gate without a trigger or
 human intervention. The same status on a human-authored PR and every other
 skip reason keep their existing treatment. Findings, threads, other active
-automation and required checks still need to pass their gates.
+automation and checks still need to pass their gates.
 
 | State | Reported by | Workflow |
 | --- | --- | --- |
@@ -208,7 +221,7 @@ Return:
 - repository and PR identity;
 - exact head object ID;
 - `state`: `ready`, `pending`, `blocked`, or `merged`;
-- required-CI terminal state;
+- CI terminal state, naming any check that has not passed;
 - each active automation and its exact-head terminal state;
 - raw finding-surface count and the disposition of every inspected surface;
 - actionable current-head finding count;

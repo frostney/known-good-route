@@ -64,7 +64,7 @@ it is no gate and its adapter posts no trigger.
 ## Workflow
 
 1. Confirm the repository and exact PR identity. Read its current head, diff,
-   required checks, applicable project instructions, active review automation,
+   checks, applicable project instructions, active review automation,
    terminal states, unresolved-thread count, and unanswered inline-automation-
    thread count. Establish the complete PR specification from the user request,
    linked issue or confirmed mini-spec, required behavior, PR body, product
@@ -134,7 +134,7 @@ it is no gate and its adapter posts no trigger.
    loop passes unchanged, use `/update-pr` to commit and push without amending
    or force-pushing. If that skill is unavailable, follow its documented
    workflow directly.
-8. Re-read the exact head, required checks, terminal automation verdicts,
+8. Re-read the exact head, every check on it, terminal automation verdicts,
    actionable findings, unresolved threads, and unanswered inline automation
    threads. Apply the readiness and `retry_at` rules in the reference. A new
    head invalidates external gate evidence. Preserve local evidence for each

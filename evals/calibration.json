@@ -3660,6 +3660,26 @@
       "frozenCaseSha256": "f3133d5f706e8ba66f9c566c591b8e311cbc42d8a3edb0730b621f618eb96ee8"
     },
     {
+      "caseId": "delivery-ready-to-merge-waits-for-every-check",
+      "status": "new",
+      "rationale": [
+        "Ready to merge means everything is reviewed and all CI is passing on the head. The readiness gate named only the checks the repository requires, so a run could report a PR ready while another check on the same head was still running. Delivery awaits every check on the head before it reports ready; reporting ready without that wait fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "1b0f462461294d04f7f8a955f6d2f47907aa320f8a8b1b723d920cb6dc4166f2",
+      "frozenCaseSha256": "1b0f462461294d04f7f8a955f6d2f47907aa320f8a8b1b723d920cb6dc4166f2"
+    },
+    {
+      "caseId": "delivery-ready-to-merge-failed-optional-check-is-repaired",
+      "status": "new",
+      "rationale": [
+        "Counterpart for a failed check: a check that failed on the head keeps the PR from ready even when merging does not require it and GitHub shows the PR mergeable. Delivery repairs the in-scope cause, publishes the new head and reports ready only after every check passed there. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "05f8b2336eef5c29f1b9d388f3c844d0a734ea1e4c39eefd998c18ce9a60e214",
+      "frozenCaseSha256": "05f8b2336eef5c29f1b9d388f3c844d0a734ea1e4c39eefd998c18ce9a60e214"
+    },
+    {
       "caseId": "delivery-coordinator-reports-defect-needing-decision",
       "status": "new",
       "rationale": [

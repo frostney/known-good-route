@@ -28,9 +28,13 @@ mutation. Use `/create-issue` only when tracking is requested or required; an
 unfiled idea can go directly to `/implement`.
 
 The endpoint comes from the [delivery settings](#delivery-settings).
-`ready-to-merge` stops before the merge. `merged` is the whole delivery: the
-change is merged, the merge is confirmed, and the merged revision is delivered
-wherever the repository delivers its default branch and works there. What is
+`ready-to-merge` means everything is reviewed and all CI is passing: the
+change's final head has a completed review with every finding handled, and
+every check on it has passed, not only the checks the repository requires for
+merging. The run stops there, before the merge. `merged` is the whole
+delivery: the change is ready to merge, it is merged, the merge is confirmed,
+and the merged revision is delivered wherever the repository delivers its
+default branch and works there. What is
 deployed, and how, is what the repository configures: a deployment a merge
 starts by itself, a deploy or promotion step its instructions or workflows
 define, a nightly build, or nothing. Read project instructions, delivery
@@ -104,10 +108,12 @@ workflow invoked returns to its caller.
   development loop, then publish and verify the new exact head.
 - At `ready-to-merge`, require the complete readiness contract defined by
   `address-feedback`'s readiness references for the selected PR's exact head: all verified
-  requirement gaps resolved, current behavior and project evidence, successful
-  required CI and reviews, and completed required thread handling. When the
+  requirement gaps resolved, current behavior and project evidence, a completed
+  review, every check on the head passed, and completed required thread
+  handling. A check that is still running, or that failed where merging does
+  not require it, leaves the PR not ready. When the
   repository's declared full-CI rule requires a full or extended CI run for
-  the change, start it as that rule says once required checks and reviews have
+  the change, start it as that rule says once checks and reviews have
   converged on the final head, and await it; it is part of readiness. For a
   native stack, require its complete-stack readiness, including every needed
   fix layer. Ready for review alone does not satisfy this endpoint.
