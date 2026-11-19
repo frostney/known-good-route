@@ -75,6 +75,9 @@ test("a named field is also read from the flag of a recorded command", () => {
   expect(failed(c, ledger([wait({ command: command(`--head ${"2b".repeat(20)} --head ${revision}`) })]), "Done.")).toHaveLength(1);
   expect(failed(c, ledger([wait({ command: `${command(`--head ${"2b".repeat(20)}`)}\necho --head ${revision}` })]), "Done.")).toHaveLength(1);
   expect(failed(c, ledger([wait({ command: `${command(`--head ${revision}`)} && ${command(`--head=${revision}`)}` })]), "Done.")).toEqual([]);
+  // An operator ends the value, and a backslash inside double quotes stays unless the shell would drop it.
+  expect(failed(c, ledger([wait({ command: `${command(`--head ${revision}`)}>wait.json; echo done` })]), "Done.")).toEqual([]);
+  expect(failed(c, ledger([wait({ command: command(`--head "3c\\c${revision.slice(3)}"`) })]), "Done.")).toHaveLength(1);
   // A continued line joins, and a comment ends at its line.
   expect(failed(c, ledger([wait({ command: `delivery_wait.py wait checks-terminal --pr 520 --head \\\n  ${revision} --json` })]), "Done.")).toEqual([]);
   expect(failed(c, ledger([wait({ command: `# await the PR's checks\ndelivery_wait.py wait checks-terminal --pr 520 --head ${revision}` })]), "Done.")).toEqual([]);
@@ -83,6 +86,7 @@ test("a named field is also read from the flag of a recorded command", () => {
   expect(failed(held, ledger([wait({ command: "gh run watch --branch main" })]), "Done.")).toEqual(["monitor.wait omits main"]);
   expect(failed(held, ledger([wait({ command: "# main's run\ngh run watch --branch main" })]), "Done.")).toEqual(["monitor.wait omits main"]);
   expect(failed(held, ledger([wait({ command: "gh run watch --branch feat/x; gh run watch --branch main" })]), "Done.")).toEqual(["monitor.wait omits main"]);
+  expect(failed(held, ledger([wait({ command: "gh run watch --branch main; echo done" })]), "Done.")).toEqual(["monitor.wait omits main"]);
   expect(failed(held, ledger([wait({ command: command(`--head ${revision}`) })]), "Done.")).toEqual([]);
 });
 
