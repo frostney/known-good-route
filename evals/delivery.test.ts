@@ -41,6 +41,7 @@ const tierMerge: RunLedger["actions"] = [action("git.fetch"), action("git.merge"
 const boundedFix: RunLedger["actions"] = [edit("src/report.ts"), edit("tests/report.test.ts"), review, edit("src/table-header.ts"), edit("tests/table-header.test.ts"), review, gate, action("git.commit"), action("git.push")];
 const stoppedLane = "Stopped at f6f6f6f: test (ubuntu) failed because tests/export.test.ts timed out. Deciding whether that is a flake is above the mechanical tier.";
 const openLane = tierPacket("Capability tier: open. New lane for PR #161 at f6f6f6f: find the root cause of the test (ubuntu) failure, where tests/export.test.ts timed out, fix it and bring PR #161 to ready-to-merge.");
+const emptyLedger = (): RunLedger => ({ actions: [], events: [], loadedSkills: [], loadedReferences: [], registeredSkillCalls: [], inspections: [] });
 async function replay(c: EvalCase, actions: RunLedger["actions"]) {
   const ledger: RunLedger = { actions: [], events: [], loadedSkills: [], loadedReferences: [], registeredSkillCalls: [], inspections: [], toolReceiptVersion: 1, toolReceipts: [] };
   // Skill/source discovery is not under test here; these are grader trajectories.
@@ -223,6 +224,52 @@ test("response override applies to the call after its trigger, without changing 
   const ledger = await replay(c, [action("monitor.wait"), action("monitor.wait")]);
   const results = ledger.toolReceipts!.map(receipt => receipt.state === "completed" ? JSON.parse(receipt.response.content[0]!.text).result : "incomplete");
   expect(results).toEqual(["before", "after"]);
+});
+
+
+test("a transition's response sequence starts at the call after it, and `since` counts from the named action", async () => {
+  const c: EvalCase = { id: "sequence-transition", prompt: "", description: "", expected: {
+    rubric: [{ id: "served", question: "Does the answer report the new revision served?" }],
+  }, fixture: {
+    evidence: { deploymentState: "old" }, actionResponses: { "monitor.wait": "ready" },
+    transitions: [
+      { after: "forge.mergePr", evidence: {}, actionResponses: { "monitor.wait": ["running", "served"] } },
+      { after: "monitor.wait", since: "forge.mergePr", occurrence: 2, evidence: { deploymentState: "new" } },
+    ],
+  } };
+  const waits = (ledger: RunLedger) => ledger.toolReceipts!.flatMap(r => r.state === "completed" && (r.request.params as any)?.arguments?.action === "monitor.wait" ? [JSON.parse(r.response.content[0]!.text).result] : []);
+  const merge = action("forge.mergePr"), wait = action("monitor.wait");
+  // Two waits before the merge use up neither deployment answer and do not fire the second-wait transition.
+  const early = createEvalTools(new Map(), c, emptyLedger());
+  for (const a of [wait, wait, merge, wait]) await early.performAction.execute(a);
+  expect(await early.inspectFixture.execute({ source: "deploymentState" })).toMatchObject({ content: "old" });
+  await early.performAction.execute(wait);
+  expect(await early.inspectFixture.execute({ source: "deploymentState" })).toMatchObject({ content: "new" });
+  expect(waits(await replay(c, [wait, wait, merge, wait, wait, wait]))).toEqual(["ready", "ready", "running", "served", "served"]);
+  expect(waits(await replay(c, [merge, wait, wait]))).toEqual(["running", "served"]);
+  // Without the named action, a `since` transition never fires.
+  const never = createEvalTools(new Map(), c, emptyLedger());
+  for (const a of [wait, wait, wait]) await never.performAction.execute(a);
+  expect(await never.inspectFixture.execute({ source: "deploymentState" })).toMatchObject({ content: "old" });
+  expect(() => validateCases([{ ...c, fixture: { ...c.fixture, transitions: [{ after: "forge.mergePr", evidence: {}, actionResponses: { "monitor.wait": [] } }] } }], new Set())).toThrow("empty action response sequence");
+  expect(() => validateCases([{ ...c, fixture: { ...c.fixture, transitions: [{ after: "monitor.wait", since: "merge" as ActionName, evidence: {} }] } }], new Set())).toThrow("invalid transition since action");
+});
+
+test("a readiness wait before the merge does not use up the deployment's answers", async () => {
+  const s = scenarios.find(s => s.id === "delivery-default-integration-current-revision")!;
+  const c = deliveryCases.find(c => c.id === s.id)!;
+  const merge = s.actions.findIndex(a => a.action === "forge.mergePr");
+  const early = [...s.actions.slice(0, merge), action("monitor.wait"), ...s.actions.slice(merge)];
+  const ledger = await replay(c, early);
+  const waits = ledger.toolReceipts!.flatMap(r => r.state === "completed" && (r.request.params as any)?.arguments?.action === "monitor.wait" ? [JSON.parse(r.response.content[0]!.text).result as string] : []);
+  expect(waits).toHaveLength(3);
+  expect(waits[0]).toContain("no newer revision is deployed");
+  expect(waits[1]).toContain("still running");
+  expect(waits[2]).toContain("Nightly deployment completed");
+  expect(gradeRun(c, ledger, s.output).passed).toBeTrue();
+  // One wait after the merge is still not enough, with or without the early one.
+  const oneWait = early.filter((a, i) => a.action !== "monitor.wait" || i <= merge + 1);
+  expect(gradeRun(c, await replay(c, oneWait), s.output).passed).toBeFalse();
 });
 
 

@@ -1,7 +1,7 @@
 import { messageRubric } from "./judge.ts";
 import { hasSkillCitation } from "./skill-citation.ts";
 import { toolReceiptSchema } from "./tool-receipts.ts";
-import { orchestrationEndpoints, orchestrationEntryPoints } from "./types.ts";
+import { actionNames, orchestrationEndpoints, orchestrationEntryPoints } from "./types.ts";
 import type {
   ActionName,
   EvalCase,
@@ -639,6 +639,11 @@ export function validateCases(
       if (transition.editPath !== undefined &&
           (transition.after !== "file.edit" || typeof transition.editPath !== "string" || !transition.editPath.trim()))
         throw new Error(`${evalCase.id}: invalid transition edit path`);
+      if (transition.since !== undefined && !actionNames.includes(transition.since))
+        throw new Error(`${evalCase.id}: invalid transition since action`);
+      for (const response of Object.values(transition.actionResponses ?? {}))
+        if (Array.isArray(response) && response.length === 0)
+          throw new Error(`${evalCase.id}: empty action response sequence`);
     }
     for (const response of Object.values(
       evalCase.fixture.actionResponses ?? {},
