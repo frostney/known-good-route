@@ -1,14 +1,13 @@
 import { realpath } from "node:fs/promises";
 
-// The profile denies reads under /Users, where the selected node binary often
-// lives (a version manager or a per-user install). Run that binary by its real
-// path and allow reading that one file, so nothing else under /Users opens up.
+// The profile denies reads under /Users, which includes reading a symlink
+// there, such as a per-user bin entry pointing at the selected node. Executing
+// the binary itself is still allowed, so run it by its real path.
 export async function nodeSandbox(node: string) {
-  const binary = await realpath(node);
   return [
     "/usr/bin/sandbox-exec",
     "-p",
-    `(version 1)(allow default)(deny network*)(deny file-write*)(deny file-read* (subpath "/Users"))(allow file-read* (literal ${JSON.stringify(binary)}))`,
-    binary,
+    '(version 1)(allow default)(deny network*)(deny file-write*)(deny file-read* (subpath "/Users"))',
+    await realpath(node),
   ];
 }
