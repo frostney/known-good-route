@@ -47,8 +47,10 @@ not block the update.
    both sides' required behavior in additive conflicts; regenerate generated
    files using the project's tool. Continue through validation when
    the resolution is established. For a verified native stack, capture remote
-   heads and use the guarded `gh stack sync` or narrower official stack
-   operation; never use raw rebase or force-push commands.
+   heads and follow the stack reference's
+   [guarded rewrite exception](../git-workflow/references/github-stacks.md#guarded-rewrite-exception),
+   which rewrites layers with open PRs only once, just before the whole stack
+   merges; never use raw rebase or force-push commands.
 4. Apply `/code-review fix-all` and `/test-against-spec fix` to the changed
    behavior, including any baseline integration. Reuse only evidence whose
    content, command, environment and coverage still match; a baseline merge or
