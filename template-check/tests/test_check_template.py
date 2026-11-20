@@ -368,6 +368,20 @@ class HeadingTests(unittest.TestCase):
     def test_a_setext_underline_opens_no_list(self):
         self.assertEqual([str(h) for h in CHECK_TEMPLATE.headings("A topic\n-\n  ## Testing\n")], ["## Testing"])
 
+    def test_a_quoted_value_may_follow_a_quoted_key_with_no_space(self):
+        self.assertEqual(CHECK_TEMPLATE.flow_mapping('{"label":"Steps, logs"}'), {"label": "Steps, logs"})
+
+    def test_a_fence_ends_with_the_list_item_it_opened_in(self):
+        self.assertEqual([str(h) for h in CHECK_TEMPLATE.headings("- item\n\n  ```\n      ```\n## Next\n")], ["## Next"])
+
+    def test_an_ordered_list_not_starting_at_one_does_not_interrupt_a_paragraph(self):
+        self.assertEqual(
+            [str(h) for h in CHECK_TEMPLATE.headings("Some prose\n2. Retrying helped.\n   ## Testing\n")], ["## Testing"]
+        )
+
+    def test_an_unindented_comment_ends_a_list(self):
+        self.assertEqual([str(h) for h in CHECK_TEMPLATE.headings("- item\n<!-- note -->\n  ## Testing\n")], ["## Testing"])
+
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 

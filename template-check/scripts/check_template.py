@@ -112,6 +112,10 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
             # A line that starts a comment, or closes one, belongs to an HTML
             # block: what else it holds is text, never a heading.
             in_html = in_comment or bool(COMMENT_BLOCK.match(line))
+            if in_html and not in_comment:
+                opener = len(line) - len(line.lstrip(" "))
+                while lists and opener < lists[-1]:
+                    lists.pop()
             if in_html:
                 if "-->" not in line:
                     in_comment = True
@@ -140,12 +144,16 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
                 continue
         after_blank = False
         indent = len(line) - len(line.lstrip(" "))
+        if fence and fence_indent and indent < fence_indent:
+            fence = ""
         if not fence:
             while lists and indent < lists[-1]:
                 lists.pop()
             container = lists[-1] if lists else 0
             underline = paragraph and SETEXT_UNDERLINE.match(line)
             item = None if underline or THEMATIC_BREAK.match(line) else LIST_ITEM.match(line)
+            if item and paragraph and re.match(r" *(?![1][.)])[0-9]", line):
+                item = None
             empty_item = bool(item) and not line[len(item.group(0)) :].strip()
             if item:
                 # An empty item's content starts one column past its marker.
@@ -241,6 +249,10 @@ def scalar(value: str) -> str:
     return re.sub(r"(?:^|\s+)#.*$", "", value)
 
 
+# A quoted key and its colon, which a quoted value may follow with no space.
+QUOTED_KEY = re.compile(r"""(?:^|[\[{,\s])(?:"(?:[^"\\]|\\.)*"|'(?:[^']|'')*')[ \t]*:$""")
+
+
 def scan(text: str, separator: str) -> tuple[list[str], bool]:
     """Split text at each separator outside quotes and nested brackets.
 
@@ -260,7 +272,9 @@ def scan(text: str, separator: str) -> tuple[list[str], bool]:
         elif quote:
             quote = "" if char == quote else quote
         elif char in "\"'" and (
-            not current.strip() or current.rstrip()[-1] in "[{," or current[-1].isspace() and current.rstrip()[-1] == ":"
+            not current.strip()
+            or current.rstrip()[-1] in "[{,"
+            or current.rstrip()[-1] == ":" and (current[-1].isspace() or QUOTED_KEY.search(current))
         ):
             quote = char
         elif char in "{[":
