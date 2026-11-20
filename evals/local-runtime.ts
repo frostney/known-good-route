@@ -65,9 +65,9 @@ const argumentOnlySecrets = new Set(["query_params", "model_catalog_url", "args"
 function refuseArgumentSecrets(value: unknown, path: string): void {
   if (typeof value === "string") {
     const url = URL.canParse(value) ? new URL(value) : undefined;
-    if (url?.username || url?.password)
+    if (url?.username || url?.password || url?.search)
       throw new Error(
-        `Codex provider proxy does not pass credentials in a URL (${path}): they would show in the process list.`,
+        `Codex provider proxy does not pass a URL with credentials or a query string (${path}): they would show in the process list.`,
       );
   }
   if (!value || typeof value !== "object") return;

@@ -64,7 +64,7 @@ process's arguments are visible to every user on the machine. API keys, `CLAUDE_
 Codex provider that takes its key from the environment are still refused, and
 so is a Codex provider with a setting that Codex treats as secret but accepts
 only as an argument (`query_params`, `model_catalog_url`, a command's `args`),
-or with credentials in a URL.
+or with a user name, password or query string in a URL.
 Preflight then requires the proxy settings instead of a saved login, and the
 recorded CLI version ends in `via provider proxy` and the result's
 `authentication` is `provider-proxy`, so results through a proxy are not

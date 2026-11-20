@@ -220,6 +220,7 @@ describe("local authenticated evaluations", () => {
       for (const [setting, named] of [
         ['model_catalog_url = "https://proxy.example.test/models?key=url-sentinel"', "model_catalog_url"],
         ['base_url = "https://user:url-sentinel@proxy.example.test/v1"', "base_url"],
+        ['base_url = "https://proxy.example.test/v1?key=url-sentinel"', "base_url"],
         ['auth = { command = "helper", args = ["arg-sentinel"] }', "auth.args"],
       ] as const) {
         await Bun.write(path, ['model_provider = "proxy"', "[model_providers.proxy]", 'base_url = "https://proxy.example.test/v1"'].filter((line) => !setting.startsWith("base_url") || !line.startsWith("base_url")).concat(setting).join("\n"));
