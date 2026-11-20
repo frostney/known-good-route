@@ -27,7 +27,7 @@ from html import escape
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Callable
-from urllib.parse import unquote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__.
 
@@ -57,6 +57,8 @@ RENDER = (
 
 
 HEADING_TAG = re.compile(r"h([1-6])")
+# Whitespace HTML collapses in prose; a nonbreaking space shows as it is.
+COLLAPSIBLE = re.compile(r"[ \t\n\r\f]+")
 CODE_SPACE = "\x00"  # A space inside inline code, which no rendered text contains.
 # Block elements that only group what they hold, so a review note may sit inside one.
 WRAPPERS = {"div", "section", "article", "main", "header", "footer", "aside", "nav"}
@@ -233,7 +235,7 @@ def literal(text: str) -> str:
     return re.sub(r"(?i)\b(?:https?|ftp)(?=://)|\bwww(?=\.)", lambda match: match.group(0) + "\\", text)
 
 
-def heading_text(node: Node | str, underscore: bool = False, github: bool = True) -> str:
+def heading_text(node: Node | str, github: bool = True) -> str:
     """A heading's words, with its inline code in backticks.
 
     GitHub turns `:warning:` into an emoji in text but not in code, so a
@@ -264,8 +266,9 @@ def heading_text(node: Node | str, underscore: bool = False, github: bool = True
             # Two runs of `*` side by side would merge; write one with `_` instead.
             for side in (index, index + 1):
                 child = node.children[side]
-                if isinstance(child, Node) and INLINE_MARKERS.get(child.tag, "").startswith("*"):
-                    parts[side] = heading_text(child, underscore=True, github=github)
+                width = len(INLINE_MARKERS.get(child.tag, "")) if isinstance(child, Node) else 0
+                if width and parts[side].startswith("*" * width):
+                    parts[side] = "_" * width + parts[side][width:-width] + "_" * width
                     break
     inner = "".join(parts)
     # An empty destination is still a link, to the page itself.
@@ -274,11 +277,13 @@ def heading_text(node: Node | str, underscore: bool = False, github: bool = True
         # In angle brackets, so no text after the link can read as part of its destination.
         # An ampersand as an entity, since an entity-shaped destination would otherwise decode.
         destination = re.sub(r"([\\<>])", r"\\\1", node.attrs["href"]).replace("&", "&amp;")
+        # Whitespace in a destination is part of the URL, so it is kept through the heading's folding.
+        destination = re.sub(r"\s", lambda match: quote(match.group(0)), destination)
         return f"[{inner}](<{destination}>)"
     if node.tag in INLINE_TAGS:
         return f"<{node.tag}>{inner}</{node.tag}>"
     marker = INLINE_MARKERS.get(node.tag, "")
-    if marker.startswith("*") and (underscore or inner.startswith("*") or inner.endswith("*")):
+    if marker.startswith("*") and (inner.startswith("*") or inner.endswith("*")):
         # Around emphasis written with `*`, so `*_x_*` and `**x**` stay apart and read back as written.
         marker = marker.replace("*", "_")
     return f"{marker}{inner}{marker}"
@@ -302,7 +307,7 @@ def plain(node: Node) -> bool:
     An element that shows nothing, such as an empty code block, is ignored.
     """
     return all(
-        (child.tag == "p" and plain(child)) or (not text_of(child).strip() and not has_media(child) and child.tag not in MEDIA)
+        (child.tag in ("p", "span") and plain(child)) or (not text_of(child).strip() and not has_media(child) and child.tag not in MEDIA)
         for child in elements(node.children)
     )
 
@@ -523,7 +528,7 @@ def headings(html: str, kind: str | None = None, source: str | None = None, gith
             if level and not nested:
                 line = source_line(child)
                 written = written_heading(source_lines, child, int(level.group(1))) if source is not None else ""
-                text = " ".join(heading_text(child, github=github).split())
+                text = COLLAPSIBLE.sub(" ", heading_text(child, github=github)).strip(" ")
                 text = re.sub(f"{CODE_SPACE}([0-9a-f]+){CODE_SPACE}", lambda match: chr(int(match.group(1), 16)), text)
                 # A closing run of `#` would end the heading where it is written back.
                 text = re.sub(r"(^|\s)(#+)$", r"\1\\\2", text)
@@ -761,6 +766,14 @@ def flow_mapping(text: str) -> dict[str, str]:
     return found
 
 
+def fold(written: str, line: str) -> str:
+    """A multi-line scalar continued by its next line: YAML folds the break into a space,
+    except after a backslash in double quotes, which removes the break."""
+    if bare(written)[:1] == '"' and re.search(r"(?<!\\)(?:\\\\)*\\$", written):
+        return written[:-1] + line
+    return f"{written} {line}".strip()
+
+
 QUOTED_SCALAR = re.compile(r"""(?:"(?:[^"\\]|\\.)*"|'(?:[^']|'')*')""")
 
 
@@ -777,7 +790,7 @@ def declared_name(text: str) -> str:
             for following in lines[index + 1 :]:
                 if following.strip() and not following.startswith((" ", "\t")):
                     break  # The next key: the quote never closed.
-                joined = f"{joined} {following.strip()}"
+                joined = fold(joined, following.strip())
                 if QUOTED_SCALAR.match(joined):
                     return " ".join(scalar(joined).split())
             return ""  # A quote that never closes: unknown.
@@ -909,7 +922,7 @@ def form_template(path: str, text: str) -> Template:
             # inside an open quote, where a colon is text.
             written = pending[2]
             if not is_key or (bare(written)[:1] in ("'", '"') and not QUOTED_SCALAR.match(bare(written))):
-                written = f"{written} {content}".strip()
+                written = fold(written, content)
                 item[pending[0]] = scalar(written)
                 item["pending"] = (pending[0], pending[1], written)
                 if pending[0] == "label" and not pending[2]:

@@ -8,6 +8,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -707,6 +708,23 @@ class RendererParityTests(unittest.TestCase):
         template = "---\n{about: Report a problem, # chooser text\n name: Bug Report}\n---\n## A\n"
         self.assertEqual(CHECK_TEMPLATE.parse_template("t.md", template, REAL_RENDER).name, "Bug Report")
 
+    def test_deeply_nested_adjacent_emphasis_reads_quickly(self):
+        inner = "<strong>x</strong>"
+        for _ in range(20):
+            inner = f"<strong>y*{inner}y</strong>"  # Each level's deep side follows a literal `*`.
+        started = time.monotonic()
+        CHECK_TEMPLATE.headings(f"<h2>{inner}</h2>")
+        self.assertLess(time.monotonic() - started, 1)
+
+    def test_nonbreaking_spaces_and_destination_spaces_are_compared_as_written(self):
+        for pair in (("## A&nbsp;&nbsp;B\n", "## A B\n"), ('<h2><a href="/a  b">x</a></h2>\n', '<h2><a href="/a b">x</a></h2>\n')):
+            with self.subTest(pair=pair):
+                self.assertEqual(len({CHECK_TEMPLATE.headings(REAL_RENDER(text))[0].text for text in pair}), 2)
+
+    def test_a_bracket_placeholder_in_a_plain_span_is_no_content(self):
+        found = CHECK_TEMPLATE.headings(REAL_RENDER("## Steps\n\n- <span>[ ]</span>\n"))
+        self.assertEqual([h.has_content for h in found], [False])
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
@@ -802,6 +820,10 @@ class TemplateParsingTests(unittest.TestCase):
             "  - type: input\n    attributes:\n      label: A\n"
         )
         self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["A"])
+
+    def test_an_escaped_line_break_in_a_quoted_label_joins_its_lines(self):
+        form = 'body:\n  - type: input\n    attributes:\n      label: "Steps to re\\\n        produce"\n'
+        self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["Steps to reproduce"])
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):
