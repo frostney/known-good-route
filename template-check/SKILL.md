@@ -6,9 +6,10 @@ description: >-
   workflow must check a draft or posted body against its template.
 license: Unlicense OR MIT
 compatibility: >-
-  Requires Python 3.11 or newer and git. Reading a live body or a remote
-  repository's templates also requires the GitHub CLI (gh) authenticated to
-  that repository, and network access.
+  Requires Python 3.11 or newer, git, network access and the GitHub CLI (gh)
+  authenticated to GitHub, which renders every Markdown body and template.
+  Reading a live body or a remote repository's templates also needs access to
+  that repository.
 ---
 
 # Template check
@@ -49,25 +50,25 @@ belongs to.
 - Exit 1 with `mismatch`: fix each reported heading in the body and run the
   check again.
 - Exit 2 with `operational-error`: the check could not compare, for example
-  outside a git checkout, for an unreachable repository, for an issue form it
-  cannot read, or for a body that fits several templates equally. Fix the
+  outside a git checkout, when GitHub cannot render the Markdown, for an
+  unreachable repository, for an issue form it cannot read, or for a body that
+  fits several templates equally. Fix the
   cause it names, pass `--repo`, `--template-name` or `--template PATH` as it
   says, and never treat it as a pass.
 
-It reads Markdown headings in ATX form (`## Title`). Setext headings and
-headings inside list items are not recognized. A template heading pairs with a
-body heading at the same level before one at another level, so a subsection
-that shares a section's name does not stand in for it. A bare list marker or
-an empty task box, such as a template's `-` placeholder, is not content.
-Reading stops at a pull request's review note, a `---` rule after a blank line
-followed by an `Edit:` line, so the note is not content of the last template
-section. For an issue, the attribution note `create-issue` closes it with is
-not content either.
+It reads a Markdown body or template as GitHub renders it, through GitHub's
+Markdown API, so a heading counts exactly where GitHub shows one. Text in code,
+comments and other HTML GitHub does not show is no heading. A heading inside a
+list item, quote, table or alert is its section's content, not a section of
+its own. A template heading pairs with a body heading at the same level before
+one at another level, so a subsection that shares a section's name does not
+stand in for it. A list item that shows nothing, or only `[ ]`, such as a
+template's `-` placeholder, is not content. Reading stops at a pull request's
+review note, a rule followed by a paragraph that opens with `Edit:`, so the
+note is not content of the last template section. For an issue, the
+attribution note `create-issue` closes it with is not content either.
 
-Issue forms are read in GitHub's block layout, and a field's `attributes` may
-be a one-line flow mapping. A form written in any other flow style is an
+Issue forms are YAML that GitHub does not render here, so the check reads them
+itself: in GitHub's block layout, where a field's `attributes` may be a
+one-line flow mapping. A form written in any other flow style is an
 operational error, never a partial check.
-
-It reads the Markdown that issue and PR bodies use, not every CommonMark edge
-case. When it reports a heading missing or empty in a body that renders
-correctly, check the rendered body before you rewrite it.

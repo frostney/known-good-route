@@ -5,8 +5,10 @@ Reports template headings that are missing, renamed, out of order or left
 empty. Exits 0 when the headings match or no template exists, 1 on a
 mismatch and 2 on an operational error.
 
-Markdown headings are read in ATX form (`## Title`). Setext headings and
-headings inside list items are not recognized.
+Markdown bodies and templates are read as GitHub renders them, through its
+Markdown API, so a heading counts only where GitHub shows one. A heading
+inside a list item, quote, table or alert is that section's content, not a
+section of its own.
 """
 
 from __future__ import annotations
@@ -18,35 +20,20 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass, field
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Callable
 
 sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__.
 
 
-# A fence may be indented by up to three spaces past its container; four make
-# an indented code line.
-FENCE = re.compile(r" {0,3}(`{3,}|~{3,})(.*)")
-# A list item's marker; its content, and what nests in it, starts after it.
-LIST_ITEM = re.compile(r" *(?:[-*+]|[0-9]{1,9}[.)])(?:[ \t]+|$)")
-# A run of `-` or `=` under a paragraph line underlines a Setext heading.
-SETEXT_UNDERLINE = re.compile(r" {0,3}(?:-+|=+)[ \t]*$")
-THEMATIC_BREAK = re.compile(r" {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$")
-ATX = re.compile(r" {0,3}(#{1,6})(?:[ \t]+(.*))?$")
-# A list marker or an unchecked task box with nothing after it is a template
-# placeholder, not content.
-PLACEHOLDER = re.compile(r" {0,3}(?:[-*+]|[0-9]{1,9}[.)])(?: {1,4}\[ \])?[ \t]*$")
-# The attribution note `create-issue` ends every issue with.
-ATTRIBUTION = re.compile(r"\n> \[!NOTE\][ \t]*\n> Created on behalf of @[\w-]+ using [^\n]+\.[ \t]*\s*$")
-CLOSING_HASHES = re.compile(r"(?:^|[ \t]+)#+[ \t]*$")
-COMMENT = re.compile(r"<!--.*?-->")
-# Only a comment that starts a line opens an HTML block that can span lines;
-# an unclosed `<!--` later in a line is literal text.
-COMMENT_BLOCK = re.compile(r" {0,3}<!--")
-# A PR's review note follows the body after a `---` rule and opens with an
-# `Edit:` line; it belongs to no template section.
-NOTE_RULE = re.compile(r" {0,3}-{3,}[ \t]*$")
-NOTE_OPENING = re.compile(r" {0,3}Edit:")
+HEADING_TAG = re.compile(r"h([1-6])")
+# Elements whose headings are their section's content rather than sections.
+NESTING = {"li", "blockquote", "table", "pre", "code", "summary"}
+MEDIA = {"img", "video", "audio", "picture", "iframe", "object", "embed"}
+VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
+# The attribution note `create-issue` ends every issue with, as rendered text.
+ATTRIBUTION = re.compile(r"(?:Note\s*)?Created on behalf of @[\w-]+ using .+\.")
 YAML_KEY = re.compile(r"""(?:[A-Za-z0-9_][\w .-]*|"[^"]*"|'[^']*')[ \t]*:(?:[ \t]|$)""")
 BLOCK_SCALAR = re.compile(r"[|>](?:[+-]([0-9])?|([0-9])[+-]?)?(?:\s+#.*)?$")
 # A renamed heading still resembles the template's wording this closely.
@@ -67,7 +54,7 @@ class CheckError(Exception):
 class Heading:
     level: int
     text: str
-    line: int
+    line: int | None = None  # A form field's line; rendered Markdown has none.
     has_content: bool = False
 
     def __str__(self) -> str:
@@ -81,162 +68,126 @@ class Template:
     headings: list[Heading] = field(default_factory=list)
 
 
-def headings(text: str, kind: str | None = "pr") -> list[Heading]:
-    """ATX headings outside code blocks, HTML comments and block quotes.
+@dataclass
+class Node:
+    tag: str
+    attrs: dict[str, str]
+    children: list[Node | str] = field(default_factory=list)
 
-    Each heading records whether its section, up to the next heading of the
-    same or a higher level, holds anything a reader sees; a bare list marker
-    or empty task box does not count. For a pull request, reading stops at a
-    review note: a `---` rule after a blank line whose next line opens with
-    `Edit:`. For an issue, the closing attribution note is not content.
+
+class TreeBuilder(HTMLParser):
+    """A tree of GitHub's rendered HTML; comments, which it never renders, are dropped."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.root = Node("root", {})
+        self.stack = [self.root]
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        node = Node(tag, {key: value or "" for key, value in attrs})
+        self.stack[-1].children.append(node)
+        if tag not in VOID:
+            self.stack.append(node)
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.stack[-1].children.append(Node(tag, {key: value or "" for key, value in attrs}))
+
+    def handle_endtag(self, tag: str) -> None:
+        for index in range(len(self.stack) - 1, 0, -1):
+            if self.stack[index].tag == tag:
+                del self.stack[index:]
+                return
+
+    def handle_data(self, data: str) -> None:
+        self.stack[-1].children.append(data)
+
+
+def text_of(node: Node | str) -> str:
+    if isinstance(node, str):
+        return node
+    return "".join(text_of(child) for child in node.children)
+
+
+def words(node: Node | str) -> str:
+    return " ".join(text_of(node).split())
+
+
+def elements(nodes: list[Node | str]) -> list[Node]:
+    return [node for node in nodes if isinstance(node, Node)]
+
+
+def has_media(node: Node) -> bool:
+    return any(child.tag in MEDIA or has_media(child) for child in elements(node.children))
+
+
+def is_alert(node: Node) -> bool:
+    return node.tag == "div" and "markdown-alert" in node.attrs.get("class", "").split()
+
+
+def headings(html: str, kind: str | None = None) -> list[Heading]:
+    """Headings of rendered HTML, each with whether its section shows anything.
+
+    A section runs to the next heading of the same or a higher level. A list
+    item that shows nothing, or only `[ ]`, is a template placeholder, not
+    content. For a pull request, reading stops at a review note: a rule
+    followed by a paragraph that opens with `Edit:`. For an issue, the
+    attribution note that closes it is not content.
     """
+    builder = TreeBuilder()
+    builder.feed(html)
+    builder.close()
+    top = list(builder.root.children)
+    blocks = elements(top)
+    if kind == "pr":
+        for rule, following in zip(blocks, blocks[1:]):
+            if rule.tag == "hr" and following.tag == "p" and words(following).startswith("Edit:"):
+                top = top[: top.index(rule)]
+                break
+    if kind == "issue" and blocks:
+        last = blocks[-1]
+        if (is_alert(last) or last.tag == "blockquote") and ATTRIBUTION.fullmatch(words(last)):
+            top.remove(last)
+
     found: list[Heading] = []
     open_sections: list[Heading] = []
-    fence = ""  # The open code block's run of backticks or tildes.
-    in_comment = False
-    text = text.replace("\r\n", "\n")
-    if kind == "issue":
-        text = ATTRIBUTION.sub("\n", text)
-    lines = text.split("\n")
-    after_blank = True
-    lists: list[int] = []  # Content columns of the open list items, outermost first.
-    fence_indent = 0  # The open code block's container column.
-    container = 0  # Content column the current line sits in.
-    empty_item = False  # The last line was a list marker with nothing after it.
-    paragraph = False  # The last line was paragraph text a Setext underline can follow.
-    previous_blank = True  # The previous physical line was blank, code or not.
-    for number, line in enumerate(lines, start=1):
-        was_blank, previous_blank = previous_blank, not line.strip()
-        # Markdown measures indentation in columns, with tab stops every four.
-        margin = len(line) - len(line.lstrip(" \t"))
-        line = line[:margin].expandtabs(4) + line[margin:]
-        # A nonblank line that dedents out of a fence's list item ends both.
-        if fence and fence_indent and line.strip() and len(line) - len(line.lstrip(" ")) < fence_indent:
-            fence = ""
-        if not fence:
-            # A line that starts a comment, or closes one, belongs to an HTML
-            # block: what else it holds is text, never a heading.
-            in_html = in_comment or bool(COMMENT_BLOCK.match(line))
-            if in_html and not in_comment:
-                opener = len(line) - len(line.lstrip(" "))
-                while lists and opener < lists[-1]:
-                    lists.pop()
-                    empty_item = False
-            if in_html:
-                if "-->" not in line:
-                    in_comment = True
-                    continue
-                line, in_comment = line.split("-->", 1)[1], False
-                # A comment opened after the closing one hides what follows.
-                line = COMMENT.sub("", line)
-                if "<!--" in line:
-                    line, in_comment = line.split("<!--", 1)[0], True
-            line = COMMENT.sub("", line)
-            if not line.strip():
-                after_blank, paragraph = True, False
-                # A list item that starts empty ends at the first blank line;
-                # a line holding only a comment is not one.
-                if previous_blank:
-                    if empty_item and lists:
-                        lists.pop()
-                    empty_item = False
-                continue
-            if kind == "pr" and (after_blank or was_blank) and NOTE_RULE.match(line):
-                following = next((rest for rest in lines[number:] if rest.strip()), "")
-                if NOTE_OPENING.match(following):
-                    break
-            if in_html:
-                after_blank = paragraph = False
-                for section in open_sections:
-                    section.has_content = True
-                continue
-        after_blank = False
-        indent = len(line) - len(line.lstrip(" "))
-        if not fence:
-            # A line that continues the paragraph above, with no blank line
-            # and no new block, stays in that paragraph's list item.
-            lazy = paragraph and not was_blank and not (
-                LIST_ITEM.match(line)
-                or ATX.match(line)
-                or FENCE.match(line)
-                or THEMATIC_BREAK.match(line)
-                or line.lstrip(" ").startswith(">")
-            )
-            open_column = lists[-1] if lists else None  # Before this line closes any item.
-            while lists and indent < lists[-1] and not lazy:
-                lists.pop()
-            container = lists[-1] if lists else 0
-            underline = paragraph and SETEXT_UNDERLINE.match(line) and indent >= (open_column or 0)
-            item = None if underline or THEMATIC_BREAK.match(line) else LIST_ITEM.match(line)
-            # A sibling of an open item continues its list; only an item that
-            # would open a new list is held to the paragraph-interruption rule.
-            opens_list = open_column is None or indent >= open_column
-            if item and paragraph and opens_list and (
-                not line[item.end() :].strip() or re.match(r" *(?![1][.)])[0-9]", line)
-            ):
-                item = None
-            empty_item = bool(item) and not line[len(item.group(0)) :].strip()
-            if item:
-                # An empty item's content starts one column past its marker.
-                marker = item.group(0).expandtabs(4)
-                # Past four columns of padding, the item's content starts one
-                # column after its marker and the rest is indented code.
-                padded = len(marker) - len(marker.rstrip()) > 4
-                lists.append(len(marker.rstrip()) + 1 if empty_item or padded else len(marker))
-            fence_indent = container
-        inner = line[fence_indent:] if indent >= fence_indent else line.lstrip(" ")
-        fence, in_code = code_fence(fence, inner)
-        if in_code:
-            paragraph = False
-            for section in open_sections:
-                section.has_content = True
-            continue
-        if PLACEHOLDER.match((line[container:] if indent >= container else line).expandtabs(4)):
-            paragraph = bool(item) and not empty_item
-            continue
-        match = None if container and indent >= container else ATX.match(line)
-        if match:
-            level = len(match.group(1))
-            title = " ".join(CLOSING_HASHES.sub("", match.group(2) or "").split())
-            while open_sections and open_sections[-1].level >= level:
-                open_sections.pop()
-            for section in open_sections:
-                section.has_content = True
-            heading = Heading(level, title, number)
-            found.append(heading)
-            open_sections.append(heading)
-            paragraph = False
-            continue
-        opening = line[item.end() :] if item else ""
-        paragraph = (
-            not underline
-            and not THEMATIC_BREAK.match(line)
-            and not (item and (empty_item or ATX.match(opening) or FENCE.match(opening) or THEMATIC_BREAK.match(opening)))
-        )
+
+    def content() -> None:
         for section in open_sections:
             section.has_content = True
+
+    def visit(children: list[Node | str], nested: bool) -> None:
+        for child in children:
+            if isinstance(child, str):
+                if child.strip():
+                    content()
+                continue
+            level = HEADING_TAG.fullmatch(child.tag)
+            if level and not nested:
+                heading = Heading(int(level.group(1)), words(child))
+                while open_sections and open_sections[-1].level >= heading.level:
+                    open_sections.pop()
+                content()  # A subsection is content of the sections around it.
+                found.append(heading)
+                open_sections.append(heading)
+                continue
+            if child.tag == "li" and words(child) in ("", "[ ]") and not has_media(child):
+                continue
+            if child.tag in MEDIA:
+                content()
+            visit(child.children, nested or child.tag in NESTING or is_alert(child))
+
+    visit(top, False)
     return found
 
 
-def code_fence(fence: str, line: str) -> tuple[str, bool]:
-    """Follow a fenced code block across one line.
-
-    Takes the open block's run of backticks or tildes ("" outside a block) and
-    the line. Returns the run after the line and whether the line belongs to a
-    code block, its fences included.
-    """
-    fence_match = FENCE.match(line)
-    marker, rest = fence_match.groups() if fence_match else ("", "")
-    if fence:
-        # CommonMark closes a block only on the character that opened it,
-        # in a run at least as long, with nothing after it.
-        if marker[:1] == fence[0] and len(marker) >= len(fence) and not rest.strip():
-            return "", True
-        return fence, True
-    # A backtick fence cannot carry a backtick in its info string.
-    if marker and not (marker[0] == "`" and "`" in rest):
-        return marker, True
-    return "", False
+def render(markdown: str) -> str:
+    """Markdown as GitHub renders it in an issue or pull request."""
+    if not markdown.strip():
+        return ""
+    output = gh_runner(["api", "markdown", "--input", "-"], json.dumps({"text": markdown, "mode": "gfm"}))
+    if output is None:
+        raise CheckError("GitHub's Markdown API is not available")
+    return output
 
 
 def front_matter(text: str) -> tuple[dict[str, str], str]:
@@ -352,9 +303,14 @@ def flow_mapping(text: str) -> dict[str, str]:
         return {}
     found = {}
     for entry in top_level(text[1:-1], ","):
-        key, *value = top_level(entry, ":")
-        if value:
-            found[scalar(key)] = scalar(":".join(value))
+        # A key ends where YAML ends one: at a colon followed by a space, or
+        # straight after a quoted key.
+        parts = top_level(entry, ":")
+        for index in range(1, len(parts)):
+            key = ":".join(parts[:index])
+            if not parts[index] or parts[index][0].isspace() or QUOTED_KEY.search(key + ":"):
+                found[scalar(key)] = scalar(":".join(parts[index:]))
+                break
     return found
 
 
@@ -365,14 +321,16 @@ def declared_name(text: str) -> str:
         key, separator, value = line.partition(":")
         if not separator or line.startswith((" ", "\t", "-")) or scalar(key) != "name":
             continue
-        if not BLOCK_SCALAR.match(value.strip()):
+        if value.strip() and not BLOCK_SCALAR.match(value.strip()):
             return scalar(value)
+        # A block scalar, or a plain one continued on the lines below the key.
         block = []
         for following in lines[index + 1 :]:
             if following.strip() and not following.startswith((" ", "\t")):
                 break
             block.append(following.strip())
-        return " ".join(" ".join(block).split())
+        joined = " ".join(" ".join(block).split())
+        return joined if BLOCK_SCALAR.match(value.strip()) else scalar(joined)
     if text.lstrip().startswith("{"):
         return flow_mapping(" ".join(line.strip() for line in lines)).get("name", "")
     return ""
@@ -389,7 +347,8 @@ def form_template(path: str, text: str) -> Template:
     never checked against part of a form.
     """
     # The declared name comes first, so an error in a field still carries it.
-    name = declared_name(text) or Path(path).stem
+    declared = declared_name(text)
+    name = declared or Path(path).stem
     found: list[Heading] = []
     in_body = False
     item_indent: int | None = None
@@ -407,7 +366,7 @@ def form_template(path: str, text: str) -> Template:
             error = CheckError(
                 f"{path}: cannot read the label of the field on line {item['start']}; pass --template PATH"
             )
-            error.name = name
+            error.name = declared
             raise error
         found.append(Heading(3, " ".join(item["label"].split()), item["line"]))
 
@@ -433,7 +392,7 @@ def form_template(path: str, text: str) -> Template:
             in_body = scalar(key) == "body"
             if in_body and value.strip() and not value.strip().startswith("#"):
                 error = CheckError(f"{path}: cannot read the issue form's body on line {number}; pass --template PATH")
-                error.name = name
+                error.name = declared
                 raise error
             continue
         if not in_body:
@@ -448,6 +407,11 @@ def form_template(path: str, text: str) -> Template:
             content, indent = content[1:].lstrip(), indent + pad
             if content.startswith("#"):
                 continue
+            # Only a field's attributes may be a flow mapping, not the field.
+            if content.startswith(("{", "[")):
+                error = CheckError(f"{path}: cannot read the field on line {number}; pass --template PATH")
+                error.name = declared
+                raise error
         if item_indent is None:
             continue
         # Flow-style attributes that open on a later line are unsupported.
@@ -458,11 +422,18 @@ def form_template(path: str, text: str) -> Template:
             and content.startswith(("{", "["))
         ):
             error = CheckError(f"{path}: cannot read the attributes on line {number}; pass --template PATH")
-            error.name = name
+            error.name = declared
             raise error
         key, separator, value = content.partition(":")
-        if not separator:
+        if not separator or not (value[:1].isspace() or not value):
+            # A type or label may continue as a plain scalar below its key.
+            pending = item.pop("pending", None)
+            if pending and indent > pending[1]:
+                item[pending[0]] = scalar(content)
+                if pending[0] == "label":
+                    item["line"] = number
             continue
+        item.pop("pending", None)
         key = scalar(key)
         if key_indent is None and indent > item_indent:
             key_indent = indent
@@ -471,6 +442,8 @@ def form_template(path: str, text: str) -> Template:
             label_indent = None
             if key == "type":
                 item["type"] = scalar(value)
+                if not value.strip():
+                    item["pending"] = ("type", indent)
             elif key == "attributes" and value.strip().startswith("{"):
                 attributes_indent = None
                 mapping = flow_mapping(value.strip())
@@ -478,7 +451,7 @@ def form_template(path: str, text: str) -> Template:
                     error = CheckError(
                         f"{path}: cannot read the attributes on line {number}; pass --template PATH"
                     )
-                    error.name = name
+                    error.name = declared
                     raise error
                 if mapping.get("label"):
                     item["line"], item["label"] = number, mapping["label"]
@@ -494,26 +467,28 @@ def form_template(path: str, text: str) -> Template:
                     block, block_indent = [], indent + int(digit) if digit else None
                 else:
                     item["label"] = scalar(value)
+                    if not value.strip():
+                        item["pending"] = ("label", indent)
     if block is not None:
         item["label"] = " ".join(block)
     finish()
     if not found and re.search(r"""\b["']?label["']?\s*:""", text):
         error = CheckError(f"{path}: cannot read the issue form's field labels; pass --template PATH")
-        error.name = name
+        error.name = declared
         raise error
     return Template(path, name, found)
 
 
-def markdown_template(path: str, text: str) -> Template:
+def markdown_template(path: str, text: str, renderer: Callable[[str], str]) -> Template:
     fields, body = front_matter(text)
-    return Template(path, fields.get("name") or Path(path).stem, headings(body, None))
+    return Template(path, fields.get("name") or Path(path).stem, headings(renderer(body)))
 
 
-def parse_template(path: str, text: str) -> Template:
+def parse_template(path: str, text: str, renderer: Callable[[str], str] | None = None) -> Template:
     text = text.removeprefix("\ufeff")
     if path.lower().endswith((".yml", ".yaml")):
         return form_template(path, text)
-    return markdown_template(path, text)
+    return markdown_template(path, text, renderer or render)
 
 
 class Source:
@@ -618,7 +593,8 @@ def readable(found: list[Template | CheckError], name: str | None) -> list[Templ
 
     Without a name every template competes, so any unreadable one is needed.
     With a name, an unreadable template is needed when its file or declared
-    name is that name, or when no readable template has it.
+    name is that name, when its declared name could not be read, or when no
+    readable template has it.
     """
     templates = [entry for entry in found if isinstance(entry, Template)]
     failures = [entry for entry in found if isinstance(entry, CheckError)]
@@ -628,7 +604,10 @@ def readable(found: list[Template | CheckError], name: str | None) -> list[Templ
         raise failures[0]
     for failure in failures:
         path = Path(failure.path)
-        if name.casefold() in {failure.name.casefold(), path.name.casefold(), path.stem.casefold()}:
+        # A template whose declared name is unknown may be the one named.
+        if not failure.name or name.casefold() in {
+            failure.name.casefold(), path.name.casefold(), path.stem.casefold()
+        }:
             raise failure
     if not any(named(template, name) for template in templates):
         raise failures[0]
@@ -797,11 +776,11 @@ def select(
     return best, problems
 
 
-def gh_runner(args: list[str]) -> str | None:
+def gh_runner(args: list[str], stdin: str | None = None) -> str | None:
     """Run gh and return its output, or None for a resource GitHub reports missing."""
     try:
         completed = subprocess.run(
-            ["gh", *args], text=True, capture_output=True, timeout=60, check=False
+            ["gh", *args], input=stdin, text=True, capture_output=True, timeout=60, check=False
         )
     except FileNotFoundError as error:
         raise CheckError("gh is not installed or not on PATH") from error
@@ -867,7 +846,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             raise CheckError(f"cannot read body: {error}") from error
     kind = "pr" if args.pr is not None else "issue" if args.issue is not None else args.kind
     # Without a kind, as with --template alone, the body reads as a pull request's.
-    body = headings(text.removeprefix("\ufeff"), kind or "pr")
+    body = headings(render(text.removeprefix("\ufeff")), kind or "pr")
 
     if args.template:
         try:

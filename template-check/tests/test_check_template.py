@@ -1,6 +1,9 @@
+import html
 import importlib.util
+import inspect
 import json
 import os
+import re
 import stat
 import subprocess
 import sys
@@ -17,6 +20,42 @@ assert SPEC and SPEC.loader
 CHECK_TEMPLATE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = CHECK_TEMPLATE  # dataclasses resolve their module by name.
 SPEC.loader.exec_module(CHECK_TEMPLATE)
+
+
+def mini_render(text):
+    """Enough of GitHub's rendering for these tests' plain bodies.
+
+    Parsing tests use HTML GitHub rendered, from github_rendered.json.
+    """
+    text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
+    out = []
+    for line in text.split("\n"):
+        line = line.strip()
+        heading = re.fullmatch(r"(#{1,6})\s+(.*)", line)
+        item = re.fullmatch(r"(?:[-*+]|[0-9]+[.)])(?:\s+(.*))?", line)
+        if not line:
+            continue
+        if re.fullmatch(r"-{3,}", line):
+            out.append("<hr>")
+        elif heading:
+            level = len(heading.group(1))
+            out.append(f"<h{level}>{html.escape(heading.group(2))}</h{level}>")
+        elif item:
+            out.append(f"<ul><li>{html.escape(item.group(1) or '')}</li></ul>")
+        else:
+            out.append(f"<p>{html.escape(line)}</p>")
+    return "\n".join(out)
+
+
+# The fake gh renders Markdown with the same stand-in.
+MINI_RENDER = "import html, re\n\n" + inspect.getsource(mini_render)
+# Unit tests never call GitHub: Markdown templates render through the stand-in.
+CHECK_TEMPLATE.render = mini_render
+RENDERED = json.loads((Path(__file__).parent / "github_rendered.json").read_text(encoding="utf-8"))
+
+
+def md_headings(text, kind=None):
+    return CHECK_TEMPLATE.headings(mini_render(text), kind)
 
 
 ISSUE_TEMPLATE = """---
@@ -74,8 +113,14 @@ body:
 # a missing resource, which gh reports as HTTP 404.
 FAKE_GH = r"""#!/usr/bin/env python3
 import json, os, pathlib, sys
-
+""" + MINI_RENDER + r"""
 responses = json.loads(pathlib.Path(os.environ["FAKE_GH_SCENARIO"]).read_text())
+if sys.argv[1:] == ["api", "markdown", "--input", "-"]:
+    if "render-error" in responses:
+        print(responses["render-error"], file=sys.stderr)
+        sys.exit(1)
+    print(mini_render(json.load(sys.stdin)["text"]), end="")
+    sys.exit(0)
 answer = responses.get(" ".join(sys.argv[1:]))
 if answer is None:
     print("gh: Not Found (HTTP 404)", file=sys.stderr)
@@ -97,100 +142,70 @@ FULL = [
 ]
 
 
-class HeadingTests(unittest.TestCase):
-    def test_review_note_is_not_content_of_the_last_section(self):
-        note = ["", "---", "", "Edit: `1a2b3c4` reviewed", "", "- CI: passed.", "## After the note"]
-        found = CHECK_TEMPLATE.headings("\n".join(["## Summary", "Text.", "## Testing", *note]))
-        self.assertEqual([(h.text, h.has_content) for h in found], [("Summary", True), ("Testing", False)])
+class RenderedHeadingTests(unittest.TestCase):
+    """Headings read from HTML that GitHub's Markdown API rendered for each case."""
 
-    def test_rule_without_an_edit_line_is_content(self):
-        found = CHECK_TEMPLATE.headings("\n".join(["## Testing", "", "---", "", "Plain text."]))
-        self.assertEqual([(h.text, h.has_content) for h in found], [("Testing", True)])
+    def read(self, case, kind=None):
+        return [(heading.text, heading.has_content) for heading in CHECK_TEMPLATE.headings(RENDERED[case]["html"], kind)]
 
-    def test_reads_atx_headings_outside_code_comments_and_quotes(self):
-        found = CHECK_TEMPLATE.headings(
-            "\r\n".join([
-                "# Title #",
-                "##   Spaced   words  ",
-                "## C#",
-                "#hashtag is not a heading",
-                "> ## Quoted",
-                "<!-- ## Commented -->",
-                "<!--",
-                "## Inside a multi-line comment",
-                "-->",
-                "```markdown",
-                "## In a code block",
-                "```",
-                "~~~",
-                "## In a tilde block",
-                "~~~",
-                "    ### Indented code is not a heading either",
-                "### Last",
-            ])
-        )
-
+    def test_a_placeholder_list_item_is_not_content(self):
         self.assertEqual(
-            [str(heading) for heading in found],
-            ["# Title", "## Spaced words", "## C#", "### Last"],
+            self.read("placeholders"), [("Summary", False), ("Steps", False), ("Tasks", False), ("Filled", True)]
         )
 
-    def test_section_content_runs_to_the_next_heading_at_the_same_or_higher_level(self):
-        found = CHECK_TEMPLATE.headings(
-            "\n".join([
-                "## Only a comment",
-                "<!-- Describe the change. -->",
-                "## Has a subsection",
-                "### Sub",
-                "Text.",
-                "## Code only",
-                "```text",
-                "output",
-                "```",
-                "## Last and empty",
-                "",
-            ])
-        )
+    def test_headings_in_code_comments_quotes_lists_and_tables_are_content(self):
+        self.assertEqual(self.read("code_comment_quote"), [("A", True), ("B", True)])
 
+    def test_a_fence_inside_a_list_item_keeps_its_heading_as_code(self):
+        self.assertEqual(self.read("list_fence"), [("Summary", True)])
+
+    def test_a_section_runs_to_the_next_heading_at_the_same_or_higher_level(self):
         self.assertEqual(
-            [(heading.text, heading.has_content) for heading in found],
-            [
-                ("Only a comment", False),
-                ("Has a subsection", True),
-                ("Sub", True),
-                ("Code only", True),
-                ("Last and empty", False),
-            ],
+            self.read("sections"),
+            [("Title", True), ("Summary", True), ("Detail", True), ("Empty", False), ("Media", True)],
         )
 
-    def test_bare_list_markers_and_empty_task_boxes_are_not_content(self):
-        found = CHECK_TEMPLATE.headings(
-            "\n".join(["## Dash", "-", "## Numbered", "1.", "2)", "## Box", "- [ ]", "## Filled", "- Done", "- [x]"])
-        )
+    def test_a_pull_requests_review_note_is_not_content(self):
+        self.assertEqual(self.read("review_note", "pr"), [("Summary", True), ("Testing", False)])
         self.assertEqual(
-            [(h.text, h.has_content) for h in found],
-            [("Dash", False), ("Numbered", False), ("Box", False), ("Filled", True)],
+            self.read("review_note", "issue"), [("Summary", True), ("Testing", True), ("After the note", False)]
         )
+        self.assertEqual(self.read("rule_only", "pr"), [("Testing", True)])
 
-    def test_issue_attribution_note_is_not_content_and_a_rule_is(self):
-        text = "\n".join(["## Related", "", "> [!NOTE]", "> Created on behalf of @someone using Some Model.", ""])
-        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(text, "issue")], [False])
-        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(text, "pr")], [True])
-        note = "\n".join(["## Testing", "", "---", "", "Edit: reviewed", ""])
-        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(note, "issue")], [True])
-        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(note, "pr")], [False])
+    def test_only_the_generated_attribution_note_is_dropped_from_an_issue(self):
+        self.assertEqual(self.read("attribution", "issue"), [("Related", False)])
+        self.assertEqual(self.read("attribution", "pr"), [("Related", True)])
+        self.assertEqual(self.read("note_by_person", "issue"), [("Related", True)])
 
-    def test_fences_open_with_at_most_three_spaces_of_indentation(self):
-        found = CHECK_TEMPLATE.headings(
-            "\n".join(["## A", "    ```", "    indented code", "## B", "   ```", "## In a fence", "    ```", "## Still in it", "```", "## C"])
+    def test_a_heading_inside_an_alert_is_content(self):
+        self.assertEqual(self.read("alert_heading"), [("A", True), ("B", True)])
+
+    def test_a_heading_inside_details_is_a_section(self):
+        self.assertEqual(self.read("details"), [("Summary", True), ("Inside details", True)])
+
+    def test_text_after_a_comment_on_its_line_is_no_heading(self):
+        self.assertEqual(self.read("comment_line_heading"), [("Summary", True)])
+
+    def test_a_setext_heading_is_a_heading_as_github_shows_it(self):
+        self.assertEqual(self.read("setext"), [("A topic", True)])
+
+
+class TemplateParsingTests(unittest.TestCase):
+    def test_a_flow_key_needs_a_space_after_its_colon(self):
+        with self.assertRaises(CHECK_TEMPLATE.CheckError):
+            CHECK_TEMPLATE.parse_template("f.yml", "body:\n  - type: input\n    attributes: {label:Summary}\n")
+
+    def test_a_field_written_as_a_flow_mapping_is_an_error(self):
+        with self.assertRaises(CHECK_TEMPLATE.CheckError):
+            CHECK_TEMPLATE.parse_template("f.yml", "body:\n  - {type: input,\n    attributes: {label: Summary}\n    }\n")
+
+    def test_a_name_type_or_label_may_continue_below_its_key(self):
+        template = CHECK_TEMPLATE.parse_template(
+            "f.yml",
+            "name:\n  bug-report\nbody:\n  - type:\n      markdown\n    attributes:\n      value: hi\n"
+            "  - type: input\n    attributes:\n      label:\n        Steps\n",
         )
-        self.assertEqual([str(h) for h in found], ["## A", "## B", "## C"])
-
-    def test_text_after_a_comment_that_opens_a_line_is_not_a_heading(self):
-        found = CHECK_TEMPLATE.headings(
-            "\n".join(["## A", "<!-- note -->## Not a heading", "<!--", "--> ## Nor this", "## B <!-- trailing -->", "Text."])
-        )
-        self.assertEqual([(h.text, h.has_content) for h in found], [("A", True), ("B", True)])
+        self.assertEqual((template.name, [str(h) for h in template.headings]), ("bug-report", ["### Steps"]))
 
     def test_issue_form_reads_flow_attributes_and_rejects_an_unreadable_field(self):
         form = "\n".join([
@@ -210,31 +225,12 @@ class HeadingTests(unittest.TestCase):
         template = CHECK_TEMPLATE.parse_template("pull_request_template.md", "---\n\n## Summary\n\n-\n\n---\n\nMore.\n")
         self.assertEqual([str(h) for h in template.headings], ["## Summary"])
 
-    def test_fences_in_a_list_item_are_measured_from_its_content(self):
-        found = CHECK_TEMPLATE.headings("\n".join(["- item", "", "  ```", "  ## In code", "    ```", "", "## Next"]))
-        self.assertEqual([str(h) for h in found], ["## Next"])
-
-    def test_indented_code_is_content_and_a_nested_placeholder_is_not(self):
-        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings("## A\n\n    -\n")], [True])
-        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings("## A\n\n-\n  -\n")], [False])
-
-    def test_a_comment_opened_after_one_closes_hides_what_follows(self):
-        found = CHECK_TEMPLATE.headings("## A\n<!-- hint --> <!--\n## Hidden\n-->\n## B\n")
-        self.assertEqual([str(h) for h in found], ["## A", "## B"])
-
     def test_flow_attributes_read_the_label_key_not_text_inside_another_value(self):
         template = CHECK_TEMPLATE.parse_template(
             "form.yml",
             'body:\n  - type: textarea\n    attributes: {description: "Choose a value, label: example", label: Steps}\n',
         )
         self.assertEqual([str(h) for h in template.headings], ["### Steps"])
-
-    def test_a_tab_counts_to_the_next_four_column_stop(self):
-        found = CHECK_TEMPLATE.headings("- item\n\n  ```\n  ## In code\n\t```\n\n## Next\n")
-        self.assertEqual([str(h) for h in found], ["## Next"])
-
-    def test_an_empty_list_item_ends_at_a_blank_line(self):
-        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings("## A\n\n-\n\n    -\n")], [True])
 
     def test_flow_mapping_quotes_open_only_where_a_scalar_starts(self):
         self.assertEqual(
@@ -260,33 +256,12 @@ class HeadingTests(unittest.TestCase):
     def test_front_matter_may_end_its_yaml_document_with_dots(self):
         self.assertEqual(CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug\n...\n---\n## A\n").name, "Bug")
 
-    def test_a_fence_in_a_parent_item_closes_after_a_nested_item(self):
-        found = CHECK_TEMPLATE.headings("- parent\n  - child\n\n  ```\n  ## In code\n    ```\n\n## Next\n")
-        self.assertEqual([str(h) for h in found], ["## Next"])
-
     def test_brackets_and_commas_inside_a_nested_quoted_value_are_text(self):
         mapping = CHECK_TEMPLATE.flow_mapping('{options: ["] , label: Wrong, ]"], label: Correct}')
         self.assertEqual(mapping["label"], "Correct")
 
     def test_front_matter_may_close_a_flow_list_at_the_margin(self):
         self.assertEqual(CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug\nlabels: [\n  bug,\n]\n---\n## A\n").name, "Bug")
-
-    def test_only_the_generated_attribution_note_is_dropped(self):
-        note = "## Related\n\n> [!NOTE]\n> Created on behalf of {}.\n"
-        self.assertEqual(
-            [CHECK_TEMPLATE.headings(note.format(who), "issue")[0].has_content for who in ("@someone using Some Model", "the accessibility team")],
-            [False, True],
-        )
-
-    def test_brackets_without_a_space_are_literal_text(self):
-        self.assertEqual(
-            [CHECK_TEMPLATE.headings(f"## A\n\n- {box}\n")[0].has_content for box in ("[]", "[ ]")],
-            [True, False],
-        )
-
-    def test_a_tab_after_a_list_marker_counts_to_the_next_stop(self):
-        found = CHECK_TEMPLATE.headings("-\tExample\n\n    ```\n    ## In code\n       ```\n\n## Next\n")
-        self.assertEqual([str(h) for h in found], ["## Next"])
 
     def test_a_form_field_dash_may_stand_alone_above_its_mapping(self):
         form = "body:\n  -\n    type: textarea\n    attributes:\n      label: Summary\n  - type: input\n    attributes: {label: Steps}\n"
@@ -315,18 +290,8 @@ class HeadingTests(unittest.TestCase):
                 "form.yml", 'body:\n  - type: textarea\n    "attributes": {\n      label: Steps to\n      reproduce }\n'
             )
 
-    def test_a_thematic_break_opens_no_list(self):
-        found = CHECK_TEMPLATE.headings("## A\n\n- - -\n\n    ```\n      ```\n\n## B\n")
-        self.assertEqual([str(h) for h in found], ["## A", "## B"])
-
     def test_the_yaml_end_marker_may_carry_a_comment(self):
         self.assertEqual(CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug\n... # end\n---\n## A\n").name, "Bug")
-
-    def test_a_box_five_spaces_past_its_marker_is_code_not_a_placeholder(self):
-        self.assertEqual(
-            [CHECK_TEMPLATE.headings(f"## A\n\n-{gap}[ ]\n")[0].has_content for gap in (" " * 5, " ")],
-            [True, False],
-        )
 
     def test_inline_attributes_whose_outer_mapping_stays_open_are_an_error(self):
         with self.assertRaises(CHECK_TEMPLATE.CheckError):
@@ -335,19 +300,9 @@ class HeadingTests(unittest.TestCase):
                 "body:\n  - type: checkboxes\n    attributes: {label: Terms, options: [{label: I agree}\n      ]}\n",
             )
 
-    def test_a_heading_inside_a_list_item_is_content_not_a_section(self):
-        found = CHECK_TEMPLATE.headings("## Summary\n\n-\n  ## Environments\n  text\n")
-        self.assertEqual([(h.text, h.has_content) for h in found], [("Summary", True)])
-
     def test_front_matter_keys_may_contain_spaces(self):
         template = CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug Report\ncustom display: ignored\n---\n## A\n")
         self.assertEqual(template.name, "Bug Report")
-
-    def test_a_tab_before_an_empty_box_is_measured_in_columns(self):
-        self.assertEqual(
-            [CHECK_TEMPLATE.headings(f"## A\n\n-{gap}[ ]\n")[0].has_content for gap in ("\t", "\t  ")],
-            [False, True],
-        )
 
     def test_a_folded_form_name_names_the_form_and_its_errors(self):
         with self.assertRaises(CHECK_TEMPLATE.CheckError) as raised:
@@ -361,33 +316,8 @@ class HeadingTests(unittest.TestCase):
         template = CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug Report\nabout: 'Tell us\nwhat broke'\n---\n## A\n")
         self.assertEqual(template.name, "Bug Report")
 
-    def test_a_padded_list_item_starts_its_content_one_column_past_the_marker(self):
-        found = CHECK_TEMPLATE.headings("-     code\n\n  ```\n    ```\n\n## Next\n")
-        self.assertEqual([str(h) for h in found], ["## Next"])
-
-    def test_a_setext_underline_opens_no_list(self):
-        self.assertEqual([str(h) for h in CHECK_TEMPLATE.headings("A topic\n-\n  ## Testing\n")], ["## Testing"])
-
     def test_a_quoted_value_may_follow_a_quoted_key_with_no_space(self):
         self.assertEqual(CHECK_TEMPLATE.flow_mapping('{"label":"Steps, logs"}'), {"label": "Steps, logs"})
-
-    def test_a_fence_ends_with_the_list_item_it_opened_in(self):
-        self.assertEqual([str(h) for h in CHECK_TEMPLATE.headings("- item\n\n  ```\n      ```\n## Next\n")], ["## Next"])
-
-    def test_an_ordered_list_not_starting_at_one_does_not_interrupt_a_paragraph(self):
-        self.assertEqual(
-            [str(h) for h in CHECK_TEMPLATE.headings("Some prose\n2. Retrying helped.\n   ## Testing\n")], ["## Testing"]
-        )
-
-    def test_an_unindented_comment_ends_a_list(self):
-        self.assertEqual([str(h) for h in CHECK_TEMPLATE.headings("- item\n<!-- note -->\n  ## Testing\n")], ["## Testing"])
-
-    def test_a_comment_after_an_empty_item_does_not_crash(self):
-        found = CHECK_TEMPLATE.headings("## A\n\n-\n<!-- Describe this section. -->\n\n## B\n")
-        self.assertEqual([str(h) for h in found], ["## A", "## B"])
-
-    def test_a_heading_in_a_comment_after_a_list_fence_stays_hidden(self):
-        self.assertEqual(CHECK_TEMPLATE.headings("- item\n\n  ```\n  code\n<!--\n## Testing\n-->\n"), [])
 
     def test_a_form_written_as_one_flow_mapping_keeps_its_name(self):
         self.assertEqual(
@@ -397,9 +327,6 @@ class HeadingTests(unittest.TestCase):
     def test_a_field_key_column_follows_the_padding_after_its_dash(self):
         template = CHECK_TEMPLATE.parse_template("f.yml", "body:\n  -   type: input\n      attributes:\n        label: A\n")
         self.assertEqual([str(h) for h in template.headings], ["### A"])
-
-    def test_an_empty_ordered_marker_does_not_interrupt_a_paragraph(self):
-        self.assertEqual([str(h) for h in CHECK_TEMPLATE.headings("Prose\n1.\n   ## Testing\n")], ["## Testing"])
 
     def test_yaml_escapes_in_a_double_quoted_label_decode(self):
         self.assertEqual(CHECK_TEMPLATE.flow_mapping('{label: "OS \\x28optional\\x29"}'), {"label": "OS (optional)"})
@@ -414,23 +341,11 @@ class HeadingTests(unittest.TestCase):
         form = "body:\n  -  # instructions\n    type: markdown\n    attributes:\n      value: hi\n  - type: input\n    attributes:\n      label: A\n"
         self.assertEqual([str(h) for h in CHECK_TEMPLATE.parse_template("f.yml", form).headings], ["### A"])
 
-    def test_a_thematic_break_is_not_a_paragraph_a_list_cannot_interrupt(self):
-        found = CHECK_TEMPLATE.headings("text\n\n---\n2. item\n\n   ```\n      ```\n\n## Testing\n")
-        self.assertEqual([str(h) for h in found], ["## Testing"])
-
-    def test_a_review_note_after_a_list_fence_is_not_body_content(self):
-        text = "## Summary\n\nx\n\n- item\n\n  ```\n  code\n\n---\n\nEdit: reviewed\n\n## Testing\n"
-        self.assertEqual([str(h) for h in CHECK_TEMPLATE.headings(text, "pr")], ["## Summary"])
-
     def test_double_quoted_values_decode_yaml_escapes(self):
         self.assertEqual(
             [CHECK_TEMPLATE.scalar(value) for value in ('"Before\\_after"', '"OS \\x28optional\\x29"', '"\\"q\\" \\\\"')],
             ["Before\xa0after", "OS (optional)", '"q" \\'],
         )
-
-    def test_a_lazy_continuation_keeps_a_later_fence_in_its_list_item(self):
-        found = CHECK_TEMPLATE.headings("- item text\ncontinued lazily\n\n    ```\n  ## Required\n    ```\n")
-        self.assertEqual(found, [])
 
     def test_an_inline_form_body_is_an_error_whatever_its_quoting(self):
         with self.assertRaises(CHECK_TEMPLATE.CheckError):
@@ -440,27 +355,12 @@ class HeadingTests(unittest.TestCase):
         form = "body:\n  -  # Overview: context\n    type: input\n    attributes:\n      label: A\n"
         self.assertEqual([str(h) for h in CHECK_TEMPLATE.parse_template("f.yml", form).headings], ["### A"])
 
-    def test_a_sibling_ordered_item_keeps_its_fence_in_the_list(self):
-        self.assertEqual(CHECK_TEMPLATE.headings("1. First\n2. Second\n    ```\n   ## Testing\n    ```\n"), [])
-
-    def test_a_blockquote_after_a_list_item_closes_the_list(self):
-        self.assertEqual(CHECK_TEMPLATE.headings("- item\n> Note\n\n  ```\ncode\n  ## Testing\n  ```\n"), [])
-
-    def test_a_bare_dash_after_a_sibling_item_is_an_item_not_an_underline(self):
-        self.assertEqual(CHECK_TEMPLATE.headings("- first\n-\n    ```\n  ## Testing\n    ```\n"), [])
-
     def test_escapes_past_the_last_code_point_are_value_errors(self):
         with self.assertRaises(ValueError):
             CHECK_TEMPLATE.scalar('"\\UFFFFFFFF"')
 
-    def test_an_empty_task_box_keeps_its_item_paragraph_open(self):
-        self.assertEqual(CHECK_TEMPLATE.headings("- [ ]\ncontinued\n\n    ```\n  ## Testing\n    ```\n"), [])
-
     def test_inline_attributes_with_mismatched_brackets_are_an_error(self):
         self.assertEqual(CHECK_TEMPLATE.flow_mapping("{label: Steps, description: [unfinished}}"), {})
-
-    def test_a_comment_line_does_not_end_an_empty_list_item(self):
-        self.assertEqual(CHECK_TEMPLATE.headings("-\n  <!-- hint -->\n    ```\n  ## Required\n    ```\n"), [])
 
     def test_flow_attributes_opening_on_a_later_line_are_an_error(self):
         with self.assertRaises(CHECK_TEMPLATE.CheckError):
@@ -472,9 +372,6 @@ class HeadingTests(unittest.TestCase):
         form = "body:\n  - type: markdown\n    attributes:\n      value: |\n        [Read the guide](https://example.org/guide)\n  - type: input\n    attributes:\n      label: A\n"
         self.assertEqual([str(h) for h in CHECK_TEMPLATE.parse_template("f.yml", form).headings], ["### A"])
 
-    def test_a_list_item_that_opens_with_a_heading_starts_no_paragraph(self):
-        self.assertEqual(CHECK_TEMPLATE.headings("- ## Notes\nprose\n  ```\n## Testing\n  ```\n"), [])
-
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 
@@ -483,11 +380,6 @@ class HeadingTests(unittest.TestCase):
             [str(heading) for heading in template.headings],
             ["### Version", "### Steps to reproduce", "### Checks"],
         )
-
-    def test_unclosed_comment_inside_a_line_is_literal_text(self):
-        found = CHECK_TEMPLATE.headings("## A\nUse `<!--` to open a comment.\n## B\nText.\n")
-
-        self.assertEqual([str(heading) for heading in found], ["## A", "## B"])
 
     def test_issue_form_layouts_and_label_styles(self):
         template = CHECK_TEMPLATE.parse_template(
@@ -549,7 +441,7 @@ class CompareTests(unittest.TestCase):
         return [
             (problem["kind"], problem["expected"], problem["actual"])
             for problem in CHECK_TEMPLATE.compare(
-                template.headings, CHECK_TEMPLATE.headings(body(*sections))
+                template.headings, md_headings(body(*sections))
             )
         ]
 
@@ -626,7 +518,7 @@ class SelectTests(unittest.TestCase):
     def test_body_missing_a_heading_still_selects_the_template_it_follows(self):
         smaller = CHECK_TEMPLATE.parse_template("small.md", "## Summary\n\n## Testing\n")
         larger = CHECK_TEMPLATE.parse_template("large.md", "## Summary\n\n## Why\n\n## Testing\n\n## Notes\n")
-        found = CHECK_TEMPLATE.headings(body(("## Summary", "A."), ("## Why", "B."), ("## Testing", "C.")))
+        found = md_headings(body(("## Summary", "A."), ("## Why", "B."), ("## Testing", "C.")))
 
         template, problems = CHECK_TEMPLATE.select([smaller, larger], found, None)
 
@@ -635,9 +527,9 @@ class SelectTests(unittest.TestCase):
 
 
     def test_a_same_level_preference_does_not_shrink_the_kept_headings(self):
-        larger = CHECK_TEMPLATE.Template("larger.md", "larger", CHECK_TEMPLATE.headings("## Summary\n## Rationale\n## Testing\n## Scope\n"))
-        smaller = CHECK_TEMPLATE.Template("smaller.md", "smaller", CHECK_TEMPLATE.headings("## Testing\n## Scope\n"))
-        found = CHECK_TEMPLATE.headings("## Testing\nx\n## Scope\nx\n### Summary\nx\n### Rationale\nx\n### Testing\nx\n")
+        larger = CHECK_TEMPLATE.Template("larger.md", "larger", md_headings("## Summary\n## Rationale\n## Testing\n## Scope\n"))
+        smaller = CHECK_TEMPLATE.Template("smaller.md", "smaller", md_headings("## Testing\n## Scope\n"))
+        found = md_headings("## Testing\nx\n## Scope\nx\n### Summary\nx\n### Rationale\nx\n### Testing\nx\n")
 
         template, problems = CHECK_TEMPLATE.select([larger, smaller], found, None)
 
@@ -772,21 +664,20 @@ class CommandTests(unittest.TestCase):
         self.assertEqual((code, result["state"]), (2, "operational-error"))
         self.assertIn("report.yml", result["reason"])
 
-    def test_a_template_that_cannot_be_decoded_blocks_only_a_check_that_needs_it(self):
+    def test_a_template_that_cannot_be_decoded_blocks_every_check(self):
+        # Its declared name cannot be read, so it may be the template named.
         self.write(".github/ISSUE_TEMPLATE/default.md", ISSUE_TEMPLATE)
         (self.checkout / ".github/ISSUE_TEMPLATE/other.md").write_bytes(b"\xff\xfe")
         common = ("--root", str(self.checkout), "--kind", "issue", "--body", "-")
-
-        code, result = self.run_check(*common, "--template-name", "Issue", stdin=body(*FULL))
-        self.assertEqual((code, result["state"]), (0, "match"))
-
-        code, result = self.run_check(*common, stdin=body(*FULL))
-        self.assertEqual((code, result["state"]), (2, "operational-error"))
-        self.assertIn("other.md", result["reason"])
+        for name in ((), ("--template-name", "Issue")):
+            with self.subTest(name=name):
+                code, result = self.run_check(*common, *name, stdin=body(*FULL))
+                self.assertEqual((code, result["state"]), (2, "operational-error"))
+                self.assertIn("other.md", result["reason"])
 
     def test_a_template_with_an_invalid_escape_blocks_only_a_check_that_needs_it(self):
         self.write(".github/ISSUE_TEMPLATE/default.md", ISSUE_TEMPLATE)
-        self.write(".github/ISSUE_TEMPLATE/odd.yml", 'body:\n  - type: input\n    attributes: {label: "\\UFFFFFFFF"}\n')
+        self.write(".github/ISSUE_TEMPLATE/odd.yml", 'name: Odd\nbody:\n  - type: input\n    attributes: {label: "\\UFFFFFFFF"}\n')
         code, result = self.run_check(
             "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "Issue", stdin=body(*FULL)
         )
@@ -817,6 +708,23 @@ class CommandTests(unittest.TestCase):
                     stdin="## Summary\n\nText.\n",
                 )
                 self.assertEqual((code, result["state"]), (2, "operational-error"))
+
+    def test_a_failing_form_whose_name_cannot_be_read_blocks_a_named_check(self):
+        self.write(".github/ISSUE_TEMPLATE/report.yml", "body:\n  - type: input\n    attributes: [odd]\n")
+        self.write(".github/ISSUE_TEMPLATE/bug.md", "---\nname: Bug report\n---\n## Summary\n\n-\n")
+        code, result = self.run_check(
+            "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "Bug report",
+            stdin="## Summary\n\nText.\n",
+        )
+        self.assertEqual((code, result["state"]), (2, "operational-error"))
+        self.assertIn("report.yml", result["reason"])
+
+    def test_a_body_github_cannot_render_is_an_operational_error(self):
+        self.scenario.write_text(json.dumps({"render-error": "gh: Bad credentials (HTTP 401)"}), encoding="utf-8")
+        template = self.write("template.md", ISSUE_TEMPLATE)
+        code, result = self.run_check("--template", str(template), "--body", "-", stdin=body(*FULL))
+        self.assertEqual((code, result["state"]), (2, "operational-error"))
+        self.assertIn("401", result["reason"])
 
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "owner/project"
