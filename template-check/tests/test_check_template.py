@@ -210,8 +210,17 @@ class RenderedHeadingTests(unittest.TestCase):
         self.assertEqual(self.read("image_heading"), [("Release production", True)])
 
     def test_only_a_closing_edit_line_naming_a_head_is_the_review_note(self):
-        found = md_headings("## A\n\nx\n\n---\n\nEdit: plain words\n\n## B\n\ny\n", "pr")
-        self.assertEqual([(h.text, h.has_content) for h in found], [("A", True), ("B", True)])
+        for line in ("Edit: plain words", "Edit: `config.yml` changed"):
+            with self.subTest(line=line):
+                found = md_headings(f"## A\n\nx\n\n---\n\n{line}\n\n## B\n\ny\n", "pr")
+                self.assertEqual([(h.text, h.has_content) for h in found], [("A", True), ("B", True)])
+
+    def test_an_attribution_naming_a_versioned_model_is_dropped(self):
+        note = (
+            '<h2>Related</h2><div class="markdown-alert markdown-alert-note"><p class="markdown-alert-title">Note</p>'
+            "<p>Created on behalf of @someone using GPT-5.4 High.</p></div>"
+        )
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(note, "issue")], [False])
 
     def test_a_checkout_whose_host_cannot_be_resolved_is_an_error(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -677,10 +686,10 @@ class CommandTests(unittest.TestCase):
         path.write_text(text, encoding="utf-8")
         return path
 
-    def run_check(self, *args, stdin=None):
+    def run_check(self, *args, stdin=None, cwd=None):
         result = subprocess.run(
             [sys.executable, str(SCRIPT_PATH), *args, "--json"],
-            cwd=self.root,
+            cwd=cwd or self.root,
             env=self.env,
             input=stdin,
             capture_output=True,
@@ -820,7 +829,7 @@ class CommandTests(unittest.TestCase):
                 self.assertEqual((code, result["state"]), (2, "operational-error"))
 
     def test_a_failing_form_whose_name_cannot_be_read_blocks_a_named_check(self):
-        self.write(".github/ISSUE_TEMPLATE/report.yml", "body:\n  - type: input\n    attributes: [odd]\n")
+        self.write(".github/ISSUE_TEMPLATE/report.yml", 'name: "\\U00110000"\nbody:\n  - type: input\n    attributes: [odd]\n')
         self.write(".github/ISSUE_TEMPLATE/bug.md", "---\nname: Bug report\n---\n## Summary\n\n-\n")
         code, result = self.run_check(
             "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "Bug report",
@@ -912,6 +921,38 @@ class CommandTests(unittest.TestCase):
         self.env.pop("PYTHONIOENCODING", None)
         code, result = self.run_check("--template", str(template), "--body", str(draft))
         self.assertEqual((code, result["state"]), (0, "match"))
+
+    def test_checkout_templates_render_on_the_checkouts_host_whatever_gh_repo_names(self):
+        log = self.root / "gh.log"
+        self.env.update({"FAKE_GH_LOG": str(log), "GH_REPO": "ghe.example.com/cli/cli"})
+        subprocess.run(["git", "init", "-q", str(self.checkout)], check=True)
+        self.write(".github/pull_request_template.md", "## Summary\n")
+        self.scenario.write_text(json.dumps({
+            f"{self.checkout} :: repo view --json url --jq .url": "https://github.com/cli/cli\n",
+        }), encoding="utf-8")
+        code, result = self.run_check("--kind", "pr", "--body", "-", stdin="## Summary\n\nDone.\n", cwd=self.checkout)
+        self.assertEqual((code, result["state"]), (0, "match"))
+        renders = [call[:3] for call in map(json.loads, log.read_text().splitlines()) if call[-3:] == ["markdown", "--input", "-"]]
+        self.assertEqual(renders, [["api", "--hostname", "github.com"], ["api", "--hostname", "ghe.example.com"]])
+
+    def test_a_named_check_renders_only_the_templates_it_can_select(self):
+        log = self.root / "gh.log"
+        self.env["FAKE_GH_LOG"] = str(log)
+        self.write(".github/ISSUE_TEMPLATE/default.md", ISSUE_TEMPLATE)
+        self.write(".github/ISSUE_TEMPLATE/other.md", "---\nname: Other\n---\n## Elsewhere\n")
+        code, result = self.run_check(
+            "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "Issue", stdin=body(*FULL)
+        )
+        self.assertEqual((code, result["state"]), (0, "match"))
+        rendered = [json.loads(line) for line in log.read_text().splitlines() if '"markdown"' in line]
+        self.assertEqual(len(rendered), 2)  # The named template and the body.
+
+    def test_a_blank_template_needs_no_host(self):
+        subprocess.run(["git", "init", "-q", str(self.checkout)], check=True)
+        subprocess.run(["git", "-C", str(self.checkout), "remote", "add", "origin", "https://ghe.example.com/cli/cli"], check=True)
+        template = self.write("blank.md", "---\nname: Blank\n---\n")
+        code, result = self.run_check("--template", str(template), "--body", "-", stdin="## Summary\n", cwd=self.checkout)
+        self.assertEqual((code, result["state"]), (0, "no-template"))
 
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "owner/project"

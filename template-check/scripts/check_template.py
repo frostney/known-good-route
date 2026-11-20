@@ -35,7 +35,7 @@ NESTING = {"li", "blockquote", "table", "pre", "code", "summary"}
 MEDIA = {"img", "video", "audio", "picture", "iframe", "object", "embed"}
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 # The attribution note `create-issue` ends every issue with, as rendered text.
-ATTRIBUTION = re.compile(r"Created on behalf of @[\w-]+ using [^.]+(?:\.[^.\s]+)*\.")
+ATTRIBUTION = re.compile(r"Created on behalf of @[\w-]+ using .+\.")
 YAML_KEY = re.compile(r"""(?:[A-Za-z0-9_][\w .-]*|"[^"]*"|'[^']*')[ \t]*:(?:[ \t]|$)""")
 BLOCK_SCALAR = re.compile(r"[|>](?:[+-]([0-9])?|([0-9])[+-]?)?(?:\s+#.*)?$")
 # A renamed heading still resembles the template's wording this closely.
@@ -174,6 +174,7 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
                 and opening.strip() == "Edit:"
                 and first_element is not None
                 and first_element.tag == "code"
+                and re.fullmatch(r"[0-9a-f]{7,40}", words(first_element))
             ):
                 top = top[: next(index for index, node in enumerate(top) if node is rule)]
                 break
@@ -445,7 +446,7 @@ def form_template(path: str, text: str) -> Template:
             error = CheckError(
                 f"{path}: cannot read the label of the field on line {item['start']}; pass --template PATH"
             )
-            error.name = declared
+            error.name = name
             raise error
         found.append(Heading(3, " ".join(item["label"].split()), item["line"]))
 
@@ -471,7 +472,7 @@ def form_template(path: str, text: str) -> Template:
             in_body = scalar(key) == "body"
             if in_body and value.strip() and not value.strip().startswith("#"):
                 error = CheckError(f"{path}: cannot read the issue form's body on line {number}; pass --template PATH")
-                error.name = declared
+                error.name = name
                 raise error
             continue
         if not in_body:
@@ -489,7 +490,7 @@ def form_template(path: str, text: str) -> Template:
             # Only a field's attributes may be a flow mapping, not the field.
             if content.startswith(("{", "[")):
                 error = CheckError(f"{path}: cannot read the field on line {number}; pass --template PATH")
-                error.name = declared
+                error.name = name
                 raise error
         if item_indent is None:
             continue
@@ -501,7 +502,7 @@ def form_template(path: str, text: str) -> Template:
             and content.startswith(("{", "["))
         ):
             error = CheckError(f"{path}: cannot read the attributes on line {number}; pass --template PATH")
-            error.name = declared
+            error.name = name
             raise error
         key, separator, value = content.partition(":")
         if not separator or not (value[:1].isspace() or not value):
@@ -530,7 +531,7 @@ def form_template(path: str, text: str) -> Template:
                     error = CheckError(
                         f"{path}: cannot read the attributes on line {number}; pass --template PATH"
                     )
-                    error.name = declared
+                    error.name = name
                     raise error
                 if mapping.get("label"):
                     item["line"], item["label"] = number, mapping["label"]
@@ -553,7 +554,7 @@ def form_template(path: str, text: str) -> Template:
     finish()
     if not found and re.search(r"""\b["']?label["']?\s*:""", text):
         error = CheckError(f"{path}: cannot read the issue form's field labels; pass --template PATH")
-        error.name = declared
+        error.name = name
         raise error
     return Template(path, name, found)
 
@@ -626,7 +627,25 @@ class Source:
         return output
 
 
-def discover(source: Source, kind: str, renderer: Callable[[str], str] | None = None) -> list[Template | CheckError]:
+def may_be_named(path: str, text: str, name: str) -> bool:
+    """Whether a template can be the one named; one whose name cannot be read may be."""
+    wanted = name.casefold()
+    if wanted in {Path(path).name.casefold(), Path(path).stem.casefold()}:
+        return True
+    try:
+        text = text.removeprefix("\ufeff")
+        if path.lower().endswith((".yml", ".yaml")):
+            declared = declared_name(text)
+        else:
+            declared = front_matter(text)[0].get("name", "")
+    except ValueError:
+        return True
+    return (declared or Path(path).stem).casefold() == wanted
+
+
+def discover(
+    source: Source, kind: str, renderer: Callable[[str], str] | None = None, wanted: str | None = None
+) -> list[Template | CheckError]:
     """Every template GitHub would offer for a new issue or pull request.
 
     A template that cannot be read is returned as its error, so it blocks only
@@ -651,12 +670,16 @@ def discover(source: Source, kind: str, renderer: Callable[[str], str] | None = 
                     and child.lower() not in {"config.yml", "config.yaml"}
                 )
     found: list[Template | CheckError] = []
+    skipped: list[str] = []
     for path in paths:
         try:
             try:
                 text = source.read(path)
             except (OSError, ValueError) as error:
                 raise CheckError(f"cannot read template {path}: {error}") from error
+            if wanted and not may_be_named(path, text, wanted):
+                skipped.append(path)
+                continue  # Never rendered: it cannot be the template named.
             try:
                 found.append(parse_template(path, text, renderer))
             except CheckError as error:
@@ -683,6 +706,8 @@ def discover(source: Source, kind: str, renderer: Callable[[str], str] | None = 
         except CheckError as error:
             error.path = path
             found.append(error)
+    if wanted and skipped and not found:
+        raise CheckError(f"no template named {wanted!r}; found: {', '.join(skipped)}")
     return found
 
 
@@ -951,21 +976,33 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         except (OSError, ValueError) as error:
             raise CheckError(f"cannot read body: {error}") from error
     kind = "pr" if args.pr is not None else "issue" if args.issue is not None else args.kind
-    # The body belongs to the repository named or checked out here; templates
-    # found through --root belong to that checkout. Each host is resolved only
-    # when a render needs it.
+    # The body belongs to the repository named or checked out here. A template
+    # belongs to where it was found: a checkout on disk, whatever --repo,
+    # GH_REPO or GH_HOST say, or the repository it was read from. Each host is
+    # resolved only when a render needs it.
     hosts: dict[str, str | None] = {}
 
-    def host_for(source: str) -> str | None:
-        if source not in hosts:
-            hosts[source] = checkout_host(args.root) if source == "root" else target_host(args.repo, None)
-        return hosts[source]
+    def host_of(key: str, resolve: Callable[[], str | None]) -> str | None:
+        if key not in hosts:
+            hosts[key] = resolve()
+        return hosts[key]
 
-    def renderer(markdown: str) -> str:
-        return render(markdown, host_for("root" if args.root and not args.template else "body"))
+    def body_host() -> str | None:
+        return host_of("body", lambda: target_host(args.repo, None))
+
+    def renderer_for(root: Path | None) -> Callable[[str], str]:
+        def renderer(markdown: str) -> str:
+            if not markdown.strip():
+                return ""
+            if root is None:
+                return render(markdown, host_of("repo", lambda: target_host(args.repo, None)))
+            return render(markdown, host_of(str(root), lambda: checkout_host(root)))
+
+        return renderer
 
     if args.template:
         try:
+            renderer = renderer_for(args.template.resolve().parent)
             templates = [parse_template(str(args.template), args.template.read_text(encoding="utf-8"), renderer)]
         except (OSError, ValueError) as error:
             raise CheckError(f"cannot read template: {error}") from error
@@ -979,14 +1016,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             source = Source(root=args.root or checkout_root())
         else:
             source = Source(repo=args.repo, run=gh_runner)
-        templates = readable(discover(source, kind, renderer), args.template_name)
+        templates = readable(discover(source, kind, renderer_for(source.root), args.template_name), args.template_name)
         absent = f"no {kind} template with headings found"
     templates = [template for template in templates if template.headings]
     if not templates:
         return {"state": "no-template", "body": source_label, "problems": [], "reason": absent}
 
     # Without a kind, as with --template alone, the body reads as a pull request's.
-    body = headings(render(text.removeprefix("\ufeff"), host_for("body")), kind or "pr")
+    text = text.removeprefix("\ufeff")
+    body = headings(render(text, body_host()) if text.strip() else "", kind or "pr")
     template, problems = select(templates, body, args.template_name)
     return {
         "state": "mismatch" if problems else "match",
