@@ -163,6 +163,53 @@ class HeadingTests(unittest.TestCase):
             ],
         )
 
+    def test_bare_list_markers_and_empty_task_boxes_are_not_content(self):
+        found = CHECK_TEMPLATE.headings(
+            "\n".join(["## Dash", "-", "## Numbered", "1.", "2)", "## Box", "- [ ]", "## Filled", "- Done", "- [x]"])
+        )
+        self.assertEqual(
+            [(h.text, h.has_content) for h in found],
+            [("Dash", False), ("Numbered", False), ("Box", False), ("Filled", True)],
+        )
+
+    def test_issue_attribution_note_is_not_content_and_a_rule_is(self):
+        text = "\n".join(["## Related", "", "> [!NOTE]", "> Created on behalf of @someone using Some Model.", ""])
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(text, "issue")], [False])
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(text, "pr")], [True])
+        note = "\n".join(["## Testing", "", "---", "", "Edit: reviewed", ""])
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(note, "issue")], [True])
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(note, "pr")], [False])
+
+    def test_fences_open_with_at_most_three_spaces_of_indentation(self):
+        found = CHECK_TEMPLATE.headings(
+            "\n".join(["## A", "    ```", "    indented code", "## B", "   ```", "## In a fence", "    ```", "## Still in it", "```", "## C"])
+        )
+        self.assertEqual([str(h) for h in found], ["## A", "## B", "## C"])
+
+    def test_text_after_a_comment_that_opens_a_line_is_not_a_heading(self):
+        found = CHECK_TEMPLATE.headings(
+            "\n".join(["## A", "<!-- note -->## Not a heading", "<!--", "--> ## Nor this", "## B <!-- trailing -->", "Text."])
+        )
+        self.assertEqual([(h.text, h.has_content) for h in found], [("A", True), ("B", True)])
+
+    def test_issue_form_reads_flow_attributes_and_rejects_an_unreadable_field(self):
+        form = "\n".join([
+            "body:",
+            "  - type: textarea",
+            "    attributes:",
+            "      label: What happened",
+            "  - type: textarea",
+            "    attributes: {label: 'Steps to reproduce', description: How}",
+        ])
+        template = CHECK_TEMPLATE.parse_template("form.yml", form)
+        self.assertEqual([str(h) for h in template.headings], ["### What happened", "### Steps to reproduce"])
+        with self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, "line 5"):
+            CHECK_TEMPLATE.parse_template("form.yml", form.replace("{label: 'Steps to reproduce', description: How}", "[odd]"))
+
+    def test_an_opening_rule_over_markdown_is_not_front_matter(self):
+        template = CHECK_TEMPLATE.parse_template("pull_request_template.md", "---\n\n## Summary\n\n-\n\n---\n\nMore.\n")
+        self.assertEqual([str(h) for h in template.headings], ["## Summary"])
+
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 
@@ -299,6 +346,16 @@ class CompareTests(unittest.TestCase):
             [("empty", "## Scope notes", "## Scope notes")],
         )
 
+    def test_subsection_named_like_a_later_section_does_not_take_its_place(self):
+        self.assertEqual(
+            self.compare([*FULL[:4], ("### Scope notes", "A subsection."), FULL[4]]),
+            [],
+        )
+        self.assertEqual(
+            self.compare([*FULL[:4], ("### Scope notes", "None.")]),
+            [("renamed", "## Scope notes", "### Scope notes")],
+        )
+
 
 class SelectTests(unittest.TestCase):
     def test_body_missing_a_heading_still_selects_the_template_it_follows(self):
@@ -402,6 +459,26 @@ class CommandTests(unittest.TestCase):
         ):
             with self.subTest(name):
                 code, result = self.run_check(*args, stdin="## Summary\n")
+                self.assertEqual((code, result["state"]), (2, "operational-error"))
+
+    def test_a_named_template_is_checked_when_another_cannot_be_read(self):
+        self.write(".github/ISSUE_TEMPLATE/default.md", ISSUE_TEMPLATE)
+        self.write(".github/ISSUE_TEMPLATE/odd.yml", "name: Odd\nbody: [{type: input, attributes: {label: A}}]\n")
+        common = ("--root", str(self.checkout), "--kind", "issue", "--body", "-")
+
+        code, result = self.run_check(*common, "--template-name", "Issue", stdin=body(*FULL))
+        self.assertEqual((code, result["state"]), (0, "match"))
+
+        for name in ((), ("--template-name", "odd")):
+            with self.subTest(name=name):
+                code, result = self.run_check(*common, *name, stdin=body(*FULL))
+                self.assertEqual((code, result["state"]), (2, "operational-error"))
+                self.assertIn("odd.yml", result["reason"])
+
+    def test_a_root_that_is_not_a_directory_is_an_operational_error(self):
+        for root in (self.checkout / "absent", self.write("file.md", "## Summary\n")):
+            with self.subTest(root=root.name):
+                code, result = self.run_check("--root", str(root), "--kind", "pr", "--body", "-", stdin="## Summary\n")
                 self.assertEqual((code, result["state"]), (2, "operational-error"))
 
     def test_live_pull_request_body_against_its_repository_template(self):

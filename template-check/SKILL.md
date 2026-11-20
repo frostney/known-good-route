@@ -55,6 +55,11 @@ belongs to.
   says, and never treat it as a pass.
 
 It reads Markdown headings in ATX form (`## Title`). Setext headings and
-headings inside list items are not recognized. Reading stops at a pull
-request's review note, a `---` rule after a blank line followed by an `Edit:`
-line, so the note is not content of the last template section.
+headings inside list items are not recognized. A template heading pairs with a
+body heading at the same level before one at another level, so a subsection
+that shares a section's name does not stand in for it. A bare list marker or
+an empty task box, such as a template's `-` placeholder, is not content.
+Reading stops at a pull request's review note, a `---` rule after a blank line
+followed by an `Edit:` line, so the note is not content of the last template
+section. For an issue, the attribution note `create-issue` closes it with is
+not content either.
