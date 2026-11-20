@@ -144,15 +144,18 @@ requires its own identity flags:
     and blocks merging, although the older run passed. The wait marks such a
     newest run with `cancelledDuplicate` instead of counting it as a failure
     when it raced the older run: both come from the same branch, the older
-    run had started before the newer one was cancelled and was still running
-    then, and no job of the cancelled run failed another way. While that
-    older run has not finished, the wait waits for it. Once it has passed,
-    the wait reports `recoverable`, unless another run, job or named check
-    failed, which is `changed`. A cancelled newest run beside only failed
-    older runs is an ordinary failure, and so is one cancelled after the
-    older run finished, one with a failed job and one cancelled again after
-    its rerun. A named check from a run that has not finished, such as a
-    rerun, waits for that run.
+    run, on its first attempt, had started before the newer one was
+    cancelled and was still running then, and no job of the cancelled run
+    failed another way. While that older run has not finished, the wait
+    waits for it. Once it has passed and every other run on the head has
+    finished, so that a rerun cannot cancel a workflow sharing its
+    concurrency group, the wait reports `recoverable`, unless another run,
+    job or named check failed, which is `changed`. A cancelled newest run
+    beside only failed older runs is an ordinary failure, and so is one
+    cancelled after the older run finished, one with a failed job and one
+    cancelled again after its rerun. A cancelled named check from a run
+    that has not finished, such as one left from before a rerun, waits for
+    that run.
   - `--all-workflows` does not cover commit statuses or check runs from other
     apps, such as CodeRabbit or Vercel. Add a `--check` for each one the caller
     needs; the wait then also requires those contexts to succeed.
@@ -198,8 +201,8 @@ an existing wait can resume with a different REST page size.
 establishes the awaited fact. `changed` means a check or workflow reached a
 non-success terminal result or other relevant state moved; inspect it before
 deciding. `recoverable`, from `checks-terminal --all-workflows`, means a run
-is a cancelled duplicate whose older run passed, and nothing else has failed;
-other runs may still be running. Each such run's `cancelledDuplicate.rerun`
+is a cancelled duplicate whose older run passed, nothing else has failed and
+no other run is still running. Each such run's `cancelledDuplicate.rerun`
 holds the `gh run rerun` command that replaces its result. Run each, then
 wait again on the same head. A rerun retries the same commit; it is never a
 reason to bypass a required check or merge protection. `invalidated` means the

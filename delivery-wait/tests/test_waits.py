@@ -1289,6 +1289,40 @@ class WaitCommandsTest(unittest.TestCase):
                 self.assertEqual(output["state"], "changed")
                 self.assertFalse(any(run.get("cancelledDuplicate") for run in output["observation"]["runs"]))
 
+    def test_an_older_run_that_was_rerun_cannot_show_the_race(self) -> None:
+        # Its creation and its latest update span two attempts.
+        older = workflow_run(101, [workflow_job(1000, "build")], workflow_id=9, check_suite_id=501, attempt=2, updated_at="2026-08-12T09:30:00Z")
+        self.write_scenario(census=[census(*self.cancelled_duplicate(older, updated_at="2026-08-12T09:00:00Z"))])
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "changed")
+
+    def test_a_current_named_check_failure_beside_a_cancelled_duplicate_is_changed(self) -> None:
+        # A running workflow's check failed before its job census shows it.
+        running = workflow_run(103, [workflow_job(1002, "lint", "in_progress", None, run_id=103)], status="in_progress", conclusion=None, workflow_id=10, name="Lint", check_suite_id=503)
+        self.write_scenario(
+            pull=pull("head-1", [check("lint", "COMPLETED", "FAILURE", app="github-actions", event="pull_request", suite_id=503, workflow=10)]),
+            census=[census(*self.cancelled_duplicate(), running)],
+        )
+        _, output = self.census_wait("--check", "lint")
+        self.assertEqual(output["state"], "changed")
+        self.assertIn("check lint: failure", output["reason"])
+
+    def test_a_cancelled_duplicate_is_recoverable_only_once_other_runs_have_finished(self) -> None:
+        # Its rerun could join a concurrency group the running workflow shares.
+        running = workflow_run(103, [workflow_job(1002, "lint", "in_progress", None, run_id=103)], status="in_progress", conclusion=None, workflow_id=10, name="Lint")
+        finished = workflow_run(103, [workflow_job(1002, "lint", run_id=103)], workflow_id=10, name="Lint")
+        self.write_scenario(census=[census(*self.cancelled_duplicate(), running)])
+        _, output = self.run_json(
+            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
+            "--pr", "7", "--head", "head-1", "--all-workflows",
+        )
+        self.assertEqual(output["state"], "waiting")
+        self.assertIn("can be rerun once the other 1 workflow runs", output["reason"])
+        self.reset_census()
+        self.write_scenario(census=[census(*self.cancelled_duplicate(), running), census(*self.cancelled_duplicate(), finished)])
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "recoverable")
+
     def test_a_named_check_waits_for_a_rerun_that_has_no_check_runs_yet(self) -> None:
         # Until the new attempt creates its check runs, the rollup still shows
         # the first attempt's cancelled ones.

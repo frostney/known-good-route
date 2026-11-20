@@ -365,11 +365,17 @@ export function gradeRun(
           .map((a, index) => (a.action === limit.action ? index : -1))
           .filter((index) => index >= 0)[(limit.occurrence ?? 1) - 1] ?? 0)
       : ledger.actions.length;
-    const records = ledger.actions.slice(0, end).filter((a) => a.action === requirement.action);
+    const from = requirement.after;
+    const start = from
+      ? (ledger.actions
+          .map((a, index) => (a.action === from.action ? index : -1))
+          .filter((index) => index >= 0)[(from.occurrence ?? 1) - 1] ?? ledger.actions.length) + 1
+      : 0;
+    const records = ledger.actions.slice(start, end).filter((a) => a.action === requirement.action);
     const carriesAll = (record: RunLedger["actions"][number]) =>
       requirement.values.every((value) => actionCarries(record, value, requirement.fields));
     checks.push({
-      name: `${requirement.action} carries ${requirement.values.map(describe).join(", ")}${limit ? ` before ${limit.action}` : ""}`,
+      name: `${requirement.action} carries ${requirement.values.map(describe).join(", ")}${from ? ` after ${from.action}` : ""}${limit ? ` before ${limit.action}` : ""}`,
       passed:
         records.length > 0 &&
         (requirement.every ? records.every(carriesAll) : records.some(carriesAll)),
@@ -722,6 +728,9 @@ export function validateCases(
         throw new Error(`${evalCase.id}: invalid transition edit path`);
       if (transition.since !== undefined && !actionNames.includes(transition.since))
         throw new Error(`${evalCase.id}: invalid transition since action`);
+      if (transition.whenResult !== undefined &&
+          (typeof transition.whenResult !== "string" || !transition.whenResult.trim()))
+        throw new Error(`${evalCase.id}: invalid transition result condition`);
       for (const response of Object.values(transition.actionResponses ?? {}))
         if (Array.isArray(response) && response.length === 0)
           throw new Error(`${evalCase.id}: empty action response sequence`);

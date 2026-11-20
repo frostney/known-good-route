@@ -445,12 +445,19 @@ test("a stack merge blocked by a cancelled duplicate run is retried after that r
   expect(await failed(s.actions)).toEqual([]);
   // Seeing the duplicate before the first merge attempt and rerunning it first is as good.
   expect(await failed([duplicateWait, duplicateRerun, duplicateWait, refusedStackMerge])).toEqual([]);
-  // The merge succeeds only once the rerun passed: retrying without awaiting it is refused again.
+  // The merge succeeds only once the rerun passed: retrying without awaiting it
+  // is refused again and leaves the stack open.
   const fixture = createFixtureState(c.fixture);
+  const open = fixture.evidence.stackTopology;
   for (const step of [refusedStackMerge, duplicateRerun]) fixture.record(step.action, step.data);
   expect(fixture.record("git.stackMerge")).toContain("refused");
+  expect(fixture.evidence.stackTopology).toBe(open);
   fixture.record("monitor.wait");
   expect(fixture.record("git.stackMerge")).toContain("squash-merged");
+  expect(fixture.evidence.stackTopology).toContain("Stack 35 is merged");
+  // A wait on the rerun layer before the rerun does not stand in for one after it.
+  const lowerWait = { ...duplicateWait, data: { head: "c1c1c1c7d0d632e3b438d4ec80a33536673ba1d4", kind: "checks-terminal" } };
+  expect(await failed([refusedStackMerge, duplicateWait, duplicateRerun, lowerWait, refusedStackMerge])).toEqual(["monitor.wait carries c2c2c2ceea303cffdf47026cc3a74be44d511410 after ci.rerunRun"]);
   // Rerunning the run that passed, or the failed check that is not counted, does not recover it.
   for (const runId of [9101, 9105])
     expect(await failed([refusedStackMerge, duplicateWait, { ...duplicateRerun, details: `gh run rerun ${runId}`, data: { runId } }, duplicateWait, refusedStackMerge])).toEqual(expect.arrayContaining(["ci.rerunRun carries 9102"]));

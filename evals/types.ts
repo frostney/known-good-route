@@ -83,6 +83,10 @@ export interface EvalFixture {
     since?: ActionName;
     // For file.edit, match this exact data.path; only matching edits count.
     editPath?: string;
+    // Fire only when this call's scripted result contains this text, so a
+    // refused attempt does not apply what only a successful one changes.
+    // Without an occurrence, every matching call fires it.
+    whenResult?: string;
     evidence: Record<string, string>;
     // Overrides affect subsequent calls. A sequence starts at its first
     // response on the next call; a scalar replaces whatever was there.
@@ -126,6 +130,9 @@ export interface EvalExpectations {
     // Only actions recorded before this occurrence (default 1) of the named
     // action count; the check fails when that occurrence is absent.
     before?: { action: ActionName; occurrence?: number };
+    // Only actions recorded after this occurrence (default 1) of the named
+    // action count; the check fails when that occurrence is absent.
+    after?: { action: ActionName; occurrence?: number };
   }>;
   // No recorded action of that kind may carry any of the values, matched as
   // for requiredActionValues. With before, only actions recorded before that

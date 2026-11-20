@@ -31,10 +31,12 @@ export function createFixtureState(fixture: EvalFixture) {
         if (transition.after !== action ||
             (transition.editPath !== undefined &&
              (action !== "file.edit" || data?.path !== transition.editPath))) continue;
+        if (transition.whenResult !== undefined && !String(result ?? "").includes(transition.whenResult)) continue;
         const since = transition.since === undefined ? -1 :
           recorded.findIndex((r) => r.action === transition.since);
         if (transition.since !== undefined && since < 0) continue;
-        if ((transition.occurrence ?? 1) !== count(since + 1, action, transition.editPath)) continue;
+        if ((transition.whenResult === undefined || transition.occurrence !== undefined) &&
+            (transition.occurrence ?? 1) !== count(since + 1, action, transition.editPath)) continue;
         Object.assign(evidence, transition.evidence);
         for (const [name, value] of Object.entries(transition.actionResponses ?? {}) as Array<[ActionName, string | string[]]>) {
           responses[name] = value;

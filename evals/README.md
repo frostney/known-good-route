@@ -246,7 +246,9 @@ them (it confused a 40-character revision with a 42-character one):
   as a whole token in its details or data. `every` applies it to every such
   action. `before` counts only actions recorded before a given occurrence of
   another action, such as a wait on the default-branch tip that must precede
-  a merge, and fails when that occurrence is missing.
+  a merge, and fails when that occurrence is missing. `after` counts only
+  actions recorded after a given occurrence, such as a wait that must follow
+  a rerun, and fails the same way.
   A named field is also read from a recorded `command`: `--head SHA` or
   `--head=SHA` there carries the `head` field, as long as the command gives
   that flag no other value. The `performAction` tool's `data` description

@@ -436,8 +436,12 @@ def mark_cancelled_duplicates(runs: list[dict[str, Any]], repo: str) -> None:
 
 
 def raced(older: dict[str, Any], cancelled: dict[str, Any]) -> bool:
-    """Whether the older run was running from the same branch when the newer one was cancelled."""
-    if older.get("headBranch") != cancelled.get("headBranch"):
+    """Whether the older run was running from the same branch when the newer one was cancelled.
+
+    A rerun older run reports its first creation and its latest update, which
+    span attempts, so its overlap cannot be shown and it does not count.
+    """
+    if older.get("headBranch") != cancelled.get("headBranch") or (older.get("attempt") or 1) > 1:
         return False
     try:
         cancelled_at = parse_time(str(cancelled.get("updatedAt")))
@@ -492,16 +496,24 @@ class WorkflowCensusGate:
 
     def failures(self, observation: dict[str, Any]) -> list[str]:
         failures = workflow_failures(observation)
-        # A named check from a cancelled duplicate run fails with that run. One
-        # from a run that has not finished, such as a rerun whose new attempt
-        # has no check runs yet, waits for it: its jobs decide once they end.
+        # A named check from a cancelled duplicate run fails with that run. A
+        # cancelled one from a run that has not finished is left from an
+        # earlier attempt, such as before a rerun whose new attempt has no
+        # check runs yet; the run's jobs decide once they end.
         duplicate_suites = {
             run.get("checkSuiteId") for run in deciding_runs(observation)
-            if (run.get("cancelledDuplicate") or run.get("status") != "completed")
-            and run.get("checkSuiteId") is not None
+            if run.get("cancelledDuplicate") and run.get("checkSuiteId") is not None
+        }
+        running_suites = {
+            run.get("checkSuiteId") for run in deciding_runs(observation)
+            if run.get("status") != "completed" and run.get("checkSuiteId") is not None
         }
         observed = {
-            name: [check for check in checks if check.get("suite") not in duplicate_suites]
+            name: [
+                check for check in checks
+                if check.get("suite") not in duplicate_suites
+                and not (check.get("suite") in running_suites and str(check.get("conclusion", "")).upper() == "CANCELLED")
+            ]
             for name, checks in checks_by_name(observation).items()
         }
         failures += [
@@ -520,7 +532,17 @@ class WorkflowCensusGate:
         if failures:
             self.previous = None
             return "changed", "a workflow run, job or check reached a non-success terminal result: " + "; ".join(failures)
+        runs = deciding_runs(observation)
+        others_running = [run for run in runs if run.get("status") != "completed" or not run.get("conclusion")]
         recoverable = cancelled_duplicates(observation, "passed")
+        if recoverable and others_running:
+            # A rerun can join a concurrency group another workflow shares and
+            # cancel it, so it waits until every other run has finished.
+            self.previous = None
+            return "waiting", (
+                f"{len(recoverable)} cancelled duplicate runs can be rerun once the other "
+                f"{len(others_running)} workflow runs on the head have finished"
+            )
         if recoverable:
             self.previous = None
             return "recoverable", "; ".join(

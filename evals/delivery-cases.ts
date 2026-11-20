@@ -1012,7 +1012,7 @@ export const deliveryCases: EvalCase[] = [
         { after: "monitor.wait", since: "ci.rerunRun", evidence: {}, actionResponses: {
           "git.stackMerge": `gh stack merge squash-merged PRs #560 and #561 onto main in one operation; main is now ${integrated}.`,
         } },
-        { after: "git.stackMerge", since: "ci.rerunRun", evidence: { stackTopology: `Stack 35 is merged: PRs #560 and #561 are merged into main at ${integrated}.` } },
+        { after: "git.stackMerge", whenResult: "squash-merged", evidence: { stackTopology: `Stack 35 is merged: PRs #560 and #561 are merged into main at ${integrated}.` } },
       ],
     },
     expected: {
@@ -1028,7 +1028,8 @@ export const deliveryCases: EvalCase[] = [
       requiredActionSequence: ["ci.rerunRun", "monitor.wait", "git.stackMerge"],
       requiredActionValues: [
         { action: "ci.rerunRun", values: ["9102"] },
-        { action: "monitor.wait", values: [stackHeads[1]], fields: ["head", "revision", "ref", "commit"] },
+        // The wait that clears the merge is on the rerun layer's head, after the rerun.
+        { action: "monitor.wait", values: [stackHeads[1]], fields: ["head", "revision", "ref", "commit"], after: { action: "ci.rerunRun" } },
         // Every wait is on a layer's own head and every merge targets stack 35.
         { action: "monitor.wait", values: [[stackHeads[0], stackHeads[1]]], fields: ["head", "revision", "ref", "commit"], every: true },
         { action: "git.stackMerge", values: [["35", "561"]], every: true },
