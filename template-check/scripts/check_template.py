@@ -204,7 +204,7 @@ def text_of(node: Node | str) -> str:
 # Inline formatting a reader sees, written back as Markdown in heading text.
 INLINE_MARKERS = {"em": "*", "i": "*", "strong": "**", "b": "**", "del": "~~", "s": "~~", "strike": "~~"}
 # Inline HTML GitHub shows apart from plain text, written back as tags.
-INLINE_TAGS = {"sub", "sup", "kbd", "mark", "ins", "u", "small", "abbr"}
+INLINE_TAGS = {"sub", "sup", "kbd", "mark", "ins", "u", "small", "abbr", "picture"}
 
 
 def renderer_link(node: Node) -> bool:
@@ -281,6 +281,10 @@ def heading_text(node: Node | str, github: bool = True) -> str:
     """
     if isinstance(node, str):
         return literal(node)
+    if node.tag == "source":
+        # A <picture> source shows its image where its media condition holds, as in dark mode.
+        attrs = "".join(f' {key}="{escape(node.attrs[key])}"' for key in ("media", "srcset", "type") if key in node.attrs)
+        return f"<source{attrs}>"
     if node.tag == "img":
         # An image shows its picture, so its source is part of the heading; GitHub
         # proxies the source and keeps the original as data-canonical-src.
@@ -650,6 +654,17 @@ def without_comment(line: str) -> str:
     return line
 
 
+def field(value: str) -> str:
+    """A front-matter value, or an unreadable marker for one whose escapes do not decode.
+
+    Only the name is used, so another field this reader cannot decode must not block a check.
+    """
+    try:
+        return scalar(value)
+    except ValueError:
+        return Unreadable(value.strip())
+
+
 def front_matter(text: str) -> tuple[dict[str, str], str]:
     """Split a Markdown template's YAML front matter from its body."""
     lines = text.replace("\r\n", "\n").split("\n")
@@ -675,11 +690,11 @@ def front_matter(text: str) -> tuple[dict[str, str], str]:
                     # An explicit key, `? name`, whose value follows on a `: value` line.
                     following = block[position + 1].lstrip() if position + 1 < len(block) else ""
                     if following.startswith(":"):
-                        fields[scalar(entry.lstrip()[1:])] = scalar(following[1:])
+                        fields[scalar(entry.lstrip()[1:])] = field(following[1:])
                     continue
                 key, separator, value = entry.partition(":")
                 if separator and key.strip():
-                    fields[key.strip()] = scalar(value)
+                    fields[key.strip()] = field(value)
             return fields, "\n".join(lines[index + 1 :])
     return {}, text
 
@@ -703,8 +718,22 @@ def yaml_escape(match: re.Match[str]) -> str:
     return chr(point)
 
 
-class Alias(str):
+class Unreadable(str):
+    """A YAML value this reader does not decode as a string; rejected only where it is used."""
+
+    what = "value"
+
+
+class Alias(Unreadable):
     """A YAML alias such as `*name`, which this reader does not resolve."""
+
+    what = "YAML alias"
+
+
+class Collection(Unreadable):
+    """A YAML sequence or mapping where a string belongs."""
+
+    what = "collection"
 
 
 def bare(value: str) -> str:
@@ -717,6 +746,8 @@ def scalar(value: str) -> str:
     value = bare(value)
     if value.startswith("*"):
         return Alias(value.split()[0])  # Rejected only where the value is used.
+    if value.startswith(("[", "{")):
+        return Collection(value)
     double = re.match(r'"(?:[^"\\]|\\.)*"', value)
     if double:
         inner = double.group(0)[1:-1]
@@ -876,7 +907,7 @@ def form_template(path: str, text: str, need_name: bool = True) -> Template:
     """
     # The declared name comes first, so an error in a field still carries it.
     declared = declared_name(text)
-    declared = "" if isinstance(declared, Alias) else declared
+    declared = "" if isinstance(declared, Unreadable) else declared
     if need_name and not declared and re.search(r"""(?m)^["']?name["']?[ \t]*:""", text):
         # A name the form declares but this reader cannot read: it may be any template's.
         raise CheckError(f"{path}: cannot read the issue form's name; pass --template PATH")
@@ -893,8 +924,8 @@ def form_template(path: str, text: str, need_name: bool = True) -> Template:
 
     def finish() -> None:
         for key in ("type", "label"):
-            if isinstance(item.get(key), Alias):
-                error = CheckError(f"{path}: cannot read the YAML alias {item[key]} on line {item['start']}; pass --template PATH")
+            if isinstance(item.get(key), Unreadable):
+                error = CheckError(f"{path}: cannot read the {item[key].what} {item[key]} on line {item['start']}; pass --template PATH")
                 error.name = name
                 raise error
         if not item or item.get("type") == "markdown":
@@ -973,6 +1004,14 @@ def form_template(path: str, text: str, need_name: bool = True) -> Template:
             # A type or label may continue below its key, as a plain scalar or
             # inside an open quote, where a colon is text.
             written = pending[2]
+            if pending[0] == "label" and not written and BLOCK_SCALAR.match(bare(content)):
+                # The block's indicator on the line after its key: the label's lines follow.
+                indicator = BLOCK_SCALAR.match(bare(content))
+                digit = indicator.group(1) or indicator.group(2)
+                block, block_indent = [], indent + int(digit) if digit else None
+                label_indent = label_indent if label_indent is not None else pending[1]
+                item["line"] = number
+                continue
             if not is_key or (bare(written)[:1] in ("'", '"') and not QUOTED_SCALAR.match(bare(written))):
                 written = fold(written, content)
                 item[pending[0]] = scalar(written)
@@ -1035,7 +1074,7 @@ def markdown_template(path: str, text: str, renderer: Callable[[str], str], need
     if isinstance(fields.get("name"), Alias) and not need_name:
         fields["name"] = ""  # A template passed by path needs no name; its file names it.
     if isinstance(fields.get("name"), Alias):
-        raise CheckError(f"{path}: cannot read the YAML alias {fields['name']} that names the template; pass --template PATH")
+        raise CheckError(f"{path}: cannot read the {fields['name'].what} {fields['name']} that names the template; pass --template PATH")
     return Template(path, fields.get("name") or Path(path).stem, standalone(headings(renderer(body), source=body, github=False), renderer, body))
 
 
@@ -1112,11 +1151,11 @@ def may_be_named(path: str, text: str, name: str) -> bool:
         text = text.removeprefix("\ufeff")
         if path.lower().endswith((".yml", ".yaml")):
             declared = declared_name(text)
-            if not declared or isinstance(declared, Alias):
+            if not declared or isinstance(declared, Unreadable):
                 return True  # Every form declares a name; one not read here may be this one.
         else:
             declared = front_matter(text)[0].get("name", "")
-            if isinstance(declared, Alias):
+            if isinstance(declared, Unreadable):
                 return True
     except ValueError:
         return True
@@ -1168,11 +1207,11 @@ def discover(
                     try:
                         if path.lower().endswith((".yml", ".yaml")):
                             declared = declared_name(text.removeprefix("\ufeff"))
-                            error.name = "" if isinstance(declared, Alias) else declared  # An alias is unknown.
+                            error.name = "" if isinstance(declared, Unreadable) else declared  # An alias is unknown.
                         else:
                             fields = front_matter(text.removeprefix("\ufeff"))[0]
                             named = fields.get("name")
-                            error.name = "" if isinstance(named, Alias) else named or Path(path).stem
+                            error.name = "" if isinstance(named, Unreadable) else named or Path(path).stem
                     except ValueError:
                         pass
                 raise

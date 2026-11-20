@@ -767,6 +767,15 @@ class RendererParityTests(unittest.TestCase):
         template = CHECK_TEMPLATE.parse_template("t.md", "---\nname: *display\n---\n## A\n", REAL_RENDER, need_name=False)
         self.assertEqual((template.name, [str(h) for h in template.headings]), ("t", ["## A"]))
 
+    def test_a_picture_heading_compares_its_responsive_sources(self):
+        texts = {
+            CHECK_TEMPLATE.headings(REAL_RENDER(
+                f'## <picture><source media="(prefers-color-scheme: dark)" srcset="/{dark}.svg"><img src="/light.svg" alt="Build"></picture>\n'
+            ))[0].text
+            for dark in ("dark", "other")
+        }
+        self.assertEqual(len(texts), 2)
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
@@ -876,6 +885,15 @@ class TemplateParsingTests(unittest.TestCase):
 
     def test_an_ssh_clone_url_names_its_repository(self):
         self.assertEqual(CHECK_TEMPLATE.repository("git@github.com:cli/cli.git"), "github.com/cli/cli")
+
+    def test_a_block_indicator_may_follow_the_label_key_on_its_own_line(self):
+        form = "body:\n  - type: input\n    attributes:\n      label:\n        |-\n          Steps\n      description: x\n"
+        self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["Steps"])
+
+    def test_a_collection_label_is_an_error(self):
+        form = "body:\n  - type: input\n    attributes: {label: [Expected, Actual]}\n"
+        with self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, "collection"):
+            CHECK_TEMPLATE.form_template("f.yml", form)
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):
@@ -1355,6 +1373,14 @@ class CommandTests(unittest.TestCase):
         )
         self.assertEqual((code, result["state"]), (2, "operational-error"))
 
+    def test_an_undecodable_field_the_check_does_not_use_blocks_nothing(self):
+        self.write(".github/ISSUE_TEMPLATE/other.md", '---\n  name: Other\n  about: "\\UFFFFFFFF"\n---\n## Other\n')
+        self.write(".github/ISSUE_TEMPLATE/bug.md", "---\nname: Bug\n---\n## Summary\n\n-\n")
+        code, result = self.run_check(
+            "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "Bug", stdin="## Summary\n\nText.\n"
+        )
+        self.assertEqual((code, result["state"]), (0, "match"))
+
     def test_a_check_that_cannot_run_is_an_operational_error(self):
         undecodable = self.root / "latin1.md"
         undecodable.write_bytes("## Caf\xe9\n".encode("latin-1"))
@@ -1432,10 +1458,9 @@ class CommandTests(unittest.TestCase):
         self.assertEqual((code, result["state"]), (2, "operational-error"))
         self.assertIn("form.yml", result["reason"])
 
-    def test_a_failing_template_keeps_its_declared_name_in_either_format(self):
+    def test_a_failing_template_keeps_its_declared_name(self):
         for failing in (
             (".github/ISSUE_TEMPLATE/form.yml", '\ufeffname: Bug report\nbody:\n  - type: input\n    attributes: {label: "\\UFFFFFFFF"}\n'),
-            (".github/ISSUE_TEMPLATE/other.md", '---\nname: Bug report\nabout: "\\UFFFFFFFF"\n---\n## Summary\n'),
         ):
             with self.subTest(failing=failing[0]):
                 self.directory.cleanup()
