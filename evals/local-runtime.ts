@@ -82,21 +82,37 @@ export async function codexProxyConfig(
     throw new Error(
       "Codex provider proxy does not pass provider keys from the environment.",
     );
+  // Codex reads query parameters from its arguments only.
+  if (Object.keys(provider.query_params ?? {}).length)
+    throw new Error(
+      "Codex provider proxy does not pass query_params: they would show in the process list.",
+    );
   const {
     experimental_bearer_token: token,
-    http_headers: headers,
+    http_headers: headers = {},
     ...table
   } = provider;
   const env: Record<string, string> = {};
-  if (token !== undefined) {
+  // Codex rejects an empty variable, so an empty value stays where it was.
+  if (token === "") table.experimental_bearer_token = token;
+  else if (token !== undefined) {
     table.env_key = `${proxyVariable}TOKEN`;
     env[table.env_key] = String(token);
   }
-  Object.entries(headers ?? {}).forEach(([header, value], index) => {
-    const variable = `${proxyVariable}HEADER_${index}`;
-    (table.env_http_headers ??= {})[header] = variable;
-    env[variable] = String(value);
-  });
+  const blank = Object.entries(headers).filter(([, value]) => value === "");
+  const moved = Object.entries(headers)
+    .filter(([, value]) => value !== "")
+    .map(([header, value], index) => ({
+      header,
+      value: String(value),
+      variable: `${proxyVariable}HEADER_${index}`,
+    }));
+  if (blank.length) table.http_headers = Object.fromEntries(blank);
+  if (moved.length)
+    table.env_http_headers = Object.fromEntries(
+      moved.map(({ header, variable }) => [header, variable]),
+    );
+  for (const { variable, value } of moved) env[variable] = value;
   return {
     // One whole-table override: Codex's -c key path does not read TOML quoting.
     args: [
