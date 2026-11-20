@@ -574,6 +574,22 @@ class RendererParityTests(unittest.TestCase):
         found = CHECK_TEMPLATE.headings(REAL_RENDER('<h2 data-sourcepos="2-4">Testing</h2>\n'))
         self.assertEqual([(h.text, h.line) for h in found], [("Testing", None)])
 
+    def test_a_non_ascii_footnote_label_compares_in_any_case(self):
+        texts = {
+            CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^résumé]\n\n[^{label}]: r\n"))[0].text for label in ("résumé", "RÉSUMÉ")
+        }
+        self.assertEqual(texts, {"Rollout [^résumé]"})
+
+    def test_adjacent_emphasis_reads_back_as_written(self):
+        for heading in ("## _Risk:_**Critical**", "## **Risk:**_Critical_", "## *a* *b*"):
+            with self.subTest(heading=heading):
+                reported = CHECK_TEMPLATE.headings(REAL_RENDER(heading + "\n"))[0]
+                self.assertEqual(str(CHECK_TEMPLATE.headings(REAL_RENDER(f"{reported}\n"))[0]), str(reported))
+
+    def test_an_empty_link_destination_is_still_a_link(self):
+        texts = {CHECK_TEMPLATE.headings(REAL_RENDER(heading))[0].text for heading in ("## [Summary]()\n", "## Summary\n")}
+        self.assertEqual(len(texts), 2)
+
     def test_every_captured_case_reads_as_github_rendered_it(self):
         for case, fixture in RENDERED.items():
             for kind in (None, "pr", "issue"):
@@ -612,6 +628,10 @@ class TemplateParsingTests(unittest.TestCase):
     def test_a_label_may_start_below_a_comment_after_its_key(self):
         form = "body:\n  - type: input\n    attributes:\n      label: # Shown in the issue\n        Steps to reproduce\n"
         self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["Steps to reproduce"])
+
+    def test_an_anchored_body_list_is_read(self):
+        form = "body: &fields\n  - type: input\n    attributes:\n      label: A\n"
+        self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["A"])
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):

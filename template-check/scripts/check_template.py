@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Callable
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__.
 
@@ -177,8 +177,8 @@ def footnote_label(href: str) -> str:
     label = re.sub(r"^#(?:user-content-)?fn-", "", href)
     if href.startswith("#user-content-"):
         label = re.sub(r"-[0-9a-f]{32}$", "", label)
-    # The target carries the definition's spelling; a reference matches it in any case.
-    return label.casefold()
+    # The target carries the definition's spelling, percent-encoded; a reference matches it in any case.
+    return unquote(label).casefold()
 
 
 def literal(text: str) -> str:
@@ -188,7 +188,7 @@ def literal(text: str) -> str:
     return re.sub(r"(?i)\b(?:https?|ftp)(?=://)|\bwww(?=\.)", lambda match: match.group(0) + "\\", text)
 
 
-def heading_text(node: Node | str) -> str:
+def heading_text(node: Node | str, underscore: bool = False) -> str:
     """A heading's words, with its inline code in backticks.
 
     GitHub turns `:warning:` into an emoji in text but not in code, so a
@@ -211,8 +211,18 @@ def heading_text(node: Node | str) -> str:
         fence = "`" * (max((len(run) for run in re.findall(r"`+", code)), default=0) + 1)
         padded = code[:1] == "`" or code[-1:] == "`" or (code[:1] == code[-1:] == " " and code.strip())
         return f"{fence} {code} {fence}" if padded else f"{fence}{code}{fence}"
-    inner = "".join(heading_text(child) for child in node.children)
-    if node.tag == "a" and node.attrs.get("href") and not renderer_link(node):
+    parts = [heading_text(child) for child in node.children]
+    for index in range(len(parts) - 1):
+        if parts[index].endswith("*") and parts[index + 1].startswith("*"):
+            # Two runs of `*` side by side would merge; write one with `_` instead.
+            for side in (index, index + 1):
+                child = node.children[side]
+                if isinstance(child, Node) and INLINE_MARKERS.get(child.tag, "").startswith("*"):
+                    parts[side] = heading_text(child, underscore=True)
+                    break
+    inner = "".join(parts)
+    # An empty destination is still a link, to the page itself.
+    if node.tag == "a" and "href" in node.attrs and not renderer_link(node):
         # In angle brackets, so no text after the link can read as part of its destination.
         # An ampersand as an entity, since an entity-shaped destination would otherwise decode.
         destination = re.sub(r"([\\<>])", r"\\\1", node.attrs["href"]).replace("&", "&amp;")
@@ -220,7 +230,7 @@ def heading_text(node: Node | str) -> str:
     if node.tag in INLINE_TAGS:
         return f"<{node.tag}>{inner}</{node.tag}>"
     marker = INLINE_MARKERS.get(node.tag, "")
-    if marker.startswith("*") and (inner.startswith("*") or inner.endswith("*")):
+    if marker.startswith("*") and (underscore or inner.startswith("*") or inner.endswith("*")):
         # Around emphasis written with `*`, so `*_x_*` and `**x**` stay apart and read back as written.
         marker = marker.replace("*", "_")
     return f"{marker}{inner}{marker}"
@@ -680,7 +690,9 @@ def form_template(path: str, text: str) -> Template:
         if indent == 0 and not (in_body and starts_item):
             key, _, value = content.partition(":")
             in_body = scalar(key) == "body"
-            if in_body and value.strip() and not value.strip().startswith("#"):
+            # An anchor or tag may name the block list that follows.
+            inline = re.sub(r"^(?:[&!]\S*[ \t]*)+", "", value.strip())
+            if in_body and inline and not inline.startswith("#"):
                 error = CheckError(f"{path}: cannot read the issue form's body on line {number}; pass --template PATH")
                 error.name = name
                 raise error
