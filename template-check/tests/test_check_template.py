@@ -240,6 +240,13 @@ class RenderedHeadingTests(unittest.TestCase):
         )
         self.assertNotEqual(literal, code)
 
+    def test_literal_markers_in_image_alt_text_never_pass_for_formatting(self):
+        image, emphasis = (
+            CHECK_TEMPLATE.headings(html)[0].text
+            for html in ('<h2><img src="https://example.org/r.svg" alt="*Ready*"></h2>', "<h2><em>Ready</em></h2>")
+        )
+        self.assertNotEqual(image, emphasis)
+
     def test_struck_out_and_emphasized_words_are_part_of_a_heading(self):
         texts = [
             CHECK_TEMPLATE.headings(html)[0].text
@@ -463,6 +470,30 @@ class RendererParityTests(unittest.TestCase):
         )
         found = CHECK_TEMPLATE.headings(REAL_RENDER(body), "pr", body)
         self.assertEqual([(h.text, h.has_content) for h in found], [("Summary", True), ("Testing", True)])
+
+    def test_only_a_plain_edit_opening_starts_the_review_note(self):
+        for line in ("**Edit:** `abc1234` is how a note reads", "*Edit*: `abc1234` is how a note reads"):
+            with self.subTest(line=line):
+                body = f"## Summary\n\nAn example:\n\n---\n\n{line}\n\n## Testing\n\nRan it.\n"
+                found = CHECK_TEMPLATE.headings(REAL_RENDER(body), "pr", body)
+                self.assertEqual([(h.text, h.has_content) for h in found], [("Summary", True), ("Testing", True)])
+
+    def test_a_raw_rule_naming_a_source_position_is_no_separator(self):
+        for position in ("x", "9:1-9:3"):
+            with self.subTest(position=position):
+                body = (
+                    f'## Summary\n\nAn example:\n\n<hr data-sourcepos="{position}">\n\n'
+                    "Edit: `abc1234` is how a note reads\n\n---\n\n## Testing\n\nRan it.\n"
+                )
+                found = CHECK_TEMPLATE.headings(REAL_RENDER(body), "pr", body)
+                self.assertEqual([(h.text, h.has_content) for h in found], [("Summary", True), ("Testing", True)])
+
+    def test_a_reported_code_heading_reads_back_as_the_same_heading(self):
+        for heading in ("## `` a`b ``", "## ``` ``a`` ```", "## `x` and ``y`z``"):
+            with self.subTest(heading=heading):
+                reported = CHECK_TEMPLATE.headings(REAL_RENDER(heading + "\n"))[0]
+                again = CHECK_TEMPLATE.headings(REAL_RENDER(f"{reported}\n"))[0]
+                self.assertEqual(str(again), str(reported))
 
     def test_every_captured_case_reads_as_github_rendered_it(self):
         for case, fixture in RENDERED.items():

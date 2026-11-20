@@ -152,7 +152,7 @@ def text_of(node: Node | str) -> str:
 
 
 # Inline formatting a reader sees, written back as Markdown in heading text.
-INLINE_MARKERS = {"code": "`", "em": "*", "i": "*", "strong": "**", "b": "**", "del": "~~", "s": "~~", "strike": "~~"}
+INLINE_MARKERS = {"em": "*", "i": "*", "strong": "**", "b": "**", "del": "~~", "s": "~~", "strike": "~~"}
 # Inline HTML GitHub shows apart from plain text, written back as tags.
 INLINE_TAGS = {"sub", "sup", "kbd", "mark", "ins", "u", "small", "abbr"}
 
@@ -168,6 +168,11 @@ def renderer_link(node: Node) -> bool:
     return only_images and not own_text and node.attrs.get("href") in sources
 
 
+def literal(text: str) -> str:
+    """Text with each inline marker character escaped, as Markdown writes it literally."""
+    return re.sub(r"([`*~<\[])", r"\\\1", text)
+
+
 def heading_text(node: Node | str) -> str:
     """A heading's words, with its inline code in backticks.
 
@@ -175,11 +180,18 @@ def heading_text(node: Node | str) -> str:
     heading with the shortcode in code differs from one without, and a
     struck-out or emphasized word differs from plain text. A literal marker
     character reads escaped, as it is written, so it never passes for one.
+    Inline code is written between backticks longer than any run inside it,
+    so a reported heading can be pasted back as it is.
     """
     if isinstance(node, str):
-        return re.sub(r"([`*~<\[])", r"\\\1", node)
+        return literal(node)
     if node.tag == "img":
-        return node.attrs.get("alt", "")
+        return literal(node.attrs.get("alt", ""))
+    if node.tag == "code":
+        code = text_of(node)
+        fence = "`" * (max((len(run) for run in re.findall(r"`+", code)), default=0) + 1)
+        padded = code[:1] == "`" or code[-1:] == "`" or (code[:1] == code[-1:] == " " and code.strip())
+        return f"{fence} {code} {fence}" if padded else f"{fence}{code}{fence}"
     inner = "".join(heading_text(child) for child in node.children)
     if node.tag == "a" and node.attrs.get("href") and not renderer_link(node):
         return f"[{inner}]({node.attrs['href']})"
@@ -206,8 +218,9 @@ def is_alert(node: Node) -> bool:
 
 
 def names_head(paragraph: Node) -> bool:
-    """Whether a paragraph's first line opens with `Edit:` and names a commit in code."""
-    if not words(paragraph).startswith("Edit:"):
+    """Whether a paragraph's first line opens with a plain `Edit:` and names a commit in code."""
+    opening = paragraph.children[0] if paragraph.children else None
+    if not isinstance(opening, str) or not opening.lstrip().startswith("Edit:"):
         return False
 
     def first_line(node: Node) -> bool | None:
@@ -246,39 +259,55 @@ def has_checked(node: Node) -> bool:
 NOTE_SOURCE = re.compile(r"(?:\A|\n)[ \t]*\n[ \t]{0,3}(?:-[ \t]*){3,}\n[ \t]*\n[ \t]{0,3}Edit:")
 
 
-def spaced_rule(rule: Node, source: str | None, positioned: bool = False) -> bool:
-    """Whether a rendered rule is a `---` line with a blank line before and after it.
+def source_line(node: Node) -> int | None:
+    """The source line the renderer marked a block with, if the mark is its own.
 
-    The local renderer marks each rule with its source line; HTML without that
-    mark, such as GitHub's, is checked against the source as a whole.
+    Raw HTML keeps any `data-sourcepos` an author wrote, so only a well-formed
+    mark is read; the caller checks the line it names.
+    """
+    position = re.fullmatch(r"([1-9][0-9]*):[0-9]+-[0-9]+:[0-9]+", node.attrs.get("data-sourcepos", ""))
+    return int(position.group(1)) if position else None
+
+
+def spaced_rule(rule: Node, note: Node, source: str | None, positioned: bool = False) -> bool:
+    """Whether a rendered rule is a `---` line with a blank line before and after it, then the note.
+
+    The local renderer marks each block with its source line; HTML without
+    those marks, such as GitHub's, is checked against the source as a whole.
     """
     if source is None:
         return True
     source = source.replace("\r\n", "\n")
-    position = rule.attrs.get("data-sourcepos", "")
-    if not position:
-        # A raw <hr> among positioned Markdown is no separator; HTML with no
-        # positions at all, such as GitHub's, is checked against the source.
-        return not positioned and bool(NOTE_SOURCE.search(source))
+    if not positioned:
+        # HTML with no positions at all, such as GitHub's, is checked against the source.
+        return bool(NOTE_SOURCE.search(source))
     lines = source.split("\n")
-    line = int(position.split(":")[0])
+    line, note_line = source_line(rule), source_line(note)
+    # A raw <hr>, or one whose mark names another line, is no separator.
+    if line is None or note_line is None or not line < note_line <= len(lines):
+        return False
     before = lines[line - 2] if line >= 2 else ""
-    after = lines[line] if line < len(lines) else ""
-    rule_line = lines[line - 1] if line <= len(lines) else ""
-    return bool(re.fullmatch(r" {0,3}(?:-[ \t]*){3,}", rule_line)) and not before.strip() and not after.strip()
+    between = lines[line : note_line - 1]
+    return (
+        bool(re.fullmatch(r" {0,3}(?:-[ \t]*){3,}", lines[line - 1]))
+        and not before.strip()
+        and bool(between)
+        and not any(entry.strip() for entry in between)
+        and lines[note_line - 1].lstrip().startswith("Edit:")
+    )
 
 
 class EndOfBody(Exception):
     """Reading reached the review note, where the body ends."""
 
 
-def note_rule(children: list[Node | str], valid: Callable[[Node], bool]) -> Node | None:
+def note_rule(children: list[Node | str], valid: Callable[[Node, Node], bool]) -> Node | None:
     """The rule that opens the last review note, also inside wrapper elements."""
     found = None
     blocks = elements(children)
     for index, block in enumerate(blocks):
         following = blocks[index + 1] if index + 1 < len(blocks) else None
-        if block.tag == "hr" and following is not None and following.tag == "p" and names_head(following) and valid(block):
+        if block.tag == "hr" and following is not None and following.tag == "p" and names_head(following) and valid(block, following):
             found = block
         elif block.tag == "div" and not is_alert(block):
             found = note_rule(block.children, valid) or found  # Later in the document than any before it.
@@ -306,7 +335,7 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
         # before and after it, then a line that opens with `Edit:` and names
         # the head it covers in code, such as ``Edit: `1a2b3c4` reviewed``.
         positioned = "data-sourcepos" in html
-        end = note_rule(top, lambda rule: spaced_rule(rule, source, positioned))
+        end = note_rule(top, lambda rule, note: spaced_rule(rule, note, source, positioned))
     if kind == "issue" and blocks:
         last = blocks[-1]
         paragraphs = [node for node in elements(last.children) if "markdown-alert-title" not in node.attrs.get("class", "")]

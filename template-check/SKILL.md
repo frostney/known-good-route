@@ -78,7 +78,7 @@ heading at the same level before one at another level, so a subsection that shar
 section's name does not stand in for it. A list item that shows nothing, or only `[ ]`, such as a
 template's `-` placeholder, is not content. Reading stops at a pull request's
 review note, the last `---` rule with a blank line before and after it,
-followed by a line that opens with `Edit:` and names the head it covers in
+followed by a plain line that opens with `Edit:` and names the head it covers in
 code, such as ``Edit: `1a2b3c4` reviewed``, so the note is not content of the
 last template section. For an issue, the
 attribution note `create-issue` closes it with is not content either.
