@@ -92,26 +92,31 @@ export async function codexProxyConfig(
     http_headers: headers = {},
     ...table
   } = provider;
-  // Codex names a malformed value at startup; turning one into text would hide it.
+  // Codex names a malformed value at startup; turning one into text would hide
+  // it. A null byte fails the spawn with an error that quotes the whole value.
+  const usable = (value: unknown) =>
+    typeof value === "string" && !value.includes("\0");
   if (
-    (token !== undefined && typeof token !== "string") ||
+    (token !== undefined && !usable(token)) ||
     typeof headers !== "object" ||
     Array.isArray(headers) ||
-    Object.values(headers).some((value) => typeof value !== "string")
+    !Object.values(headers).every(usable)
   )
     throw new Error(
-      "Codex provider proxy needs experimental_bearer_token to be a string and http_headers a table of strings.",
+      "Codex provider proxy needs experimental_bearer_token to be a string and http_headers a table of strings, without null bytes.",
     );
   const env: Record<string, string> = {};
-  // Codex rejects an empty variable, so an empty value stays where it was.
-  if (token === "") table.experimental_bearer_token = token;
+  // Codex treats a blank variable as missing, so a blank value stays where it was.
+  const blankValue = (value: unknown) => (value as string).trim() === "";
+  if (token !== undefined && blankValue(token))
+    table.experimental_bearer_token = token;
   else if (token !== undefined) {
     table.env_key = `${proxyVariable}TOKEN`;
     env[table.env_key] = token;
   }
-  const blank = Object.entries(headers).filter(([, value]) => value === "");
+  const blank = Object.entries(headers).filter(([, value]) => blankValue(value));
   const moved = Object.entries(headers)
-    .filter(([, value]) => value !== "")
+    .filter(([, value]) => !blankValue(value))
     .map(([header, value], index) => ({
       header,
       value: value as string,

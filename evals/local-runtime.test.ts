@@ -197,9 +197,9 @@ describe("local authenticated evaluations", () => {
         args: ["-c", 'model_provider="proxy.with dot"', "-c", 'model_providers={"proxy.with dot"={base_url="https://proxy.example.test/v1"}}'],
         env: {},
       });
-      await Bun.write(path, ['model_provider = "proxy"', "[model_providers.proxy]", 'base_url = "https://proxy.example.test/v1"', 'experimental_bearer_token = ""', "[model_providers.proxy.http_headers]", '"X-Empty" = ""', '"__proto__" = "odd-name"'].join("\n"));
+      await Bun.write(path, ['model_provider = "proxy"', "[model_providers.proxy]", 'base_url = "https://proxy.example.test/v1"', 'experimental_bearer_token = " "', "[model_providers.proxy.http_headers]", '"X-Empty" = ""', '"__proto__" = "odd-name"'].join("\n"));
       expect(await codexProxyConfig(path)).toEqual({
-        args: ["-c", 'model_provider="proxy"', "-c", 'model_providers={proxy={base_url="https://proxy.example.test/v1",experimental_bearer_token="",http_headers={X-Empty=""},env_http_headers={__proto__="KGR_CODEX_PROVIDER_HEADER_0"}}}'],
+        args: ["-c", 'model_provider="proxy"', "-c", 'model_providers={proxy={base_url="https://proxy.example.test/v1",experimental_bearer_token=" ",http_headers={X-Empty=""},env_http_headers={__proto__="KGR_CODEX_PROVIDER_HEADER_0"}}}'],
         env: { KGR_CODEX_PROVIDER_HEADER_0: "odd-name" },
       });
       await Bun.write(path, ['model_provider = "proxy"', "[model_providers.proxy]", 'base_url = "https://proxy.example.test/v1"', "[model_providers.proxy.query_params]", 'api_key = "query-sentinel"'].join("\n"));
@@ -210,6 +210,10 @@ describe("local authenticated evaluations", () => {
       await expect(codexProxyConfig(path)).rejects.toThrow("string");
       await Bun.write(path, ['model_provider = "proxy"', "[model_providers.proxy]", 'base_url = "https://proxy.example.test/v1"', 'http_headers = "header-sentinel"'].join("\n"));
       await expect(codexProxyConfig(path)).rejects.toThrow("table of strings");
+      await Bun.write(path, ['model_provider = "proxy"', "[model_providers.proxy]", 'base_url = "https://proxy.example.test/v1"', 'experimental_bearer_token = "token-\\u0000-sentinel"'].join("\n"));
+      const refusal = await codexProxyConfig(path).catch((error) => String(error));
+      expect(refusal).toContain("null bytes");
+      expect(refusal).not.toContain("sentinel");
       await Bun.write(path, 'model_provider = "missing"\n');
       await expect(codexProxyConfig(path)).rejects.toThrow("base_url");
       await Bun.write(path, ['model_provider = "keyed"', "[model_providers.keyed]", 'base_url = "https://proxy.example.test/v1"', 'env_key = "PROXY_KEY"'].join("\n"));
@@ -237,7 +241,7 @@ describe("local authenticated evaluations", () => {
       );
       await Bun.write(
         fake,
-        `#!/usr/bin/env bun\nawait Bun.write(new URL("started.json", import.meta.url), JSON.stringify({ args: Bun.argv, env: process.env }));\nprocess.stdout.write(JSON.stringify({type:"turn.completed",usage:{input_tokens:0,output_tokens:0}})+"\\n");\n`,
+        `#!/usr/bin/env bun\nawait Bun.write(new URL("started.json", import.meta.url), JSON.stringify({ args: Bun.argv, env: { KGR_CODEX_PROVIDER_TOKEN: process.env.KGR_CODEX_PROVIDER_TOKEN, KGR_CODEX_PROVIDER_HEADER_0: process.env.KGR_CODEX_PROVIDER_HEADER_0 } }));\nprocess.stdout.write(JSON.stringify({type:"turn.completed",usage:{input_tokens:0,output_tokens:0}})+"\\n");\n`,
       );
       await chmod(fake, 0o755);
       process.env.KGR_CODEX_BIN = fake;
