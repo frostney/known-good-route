@@ -97,7 +97,7 @@ test("final communication is a report but cannot execute a mutation or reorder a
 });
 test("discovery diagnostics do not replace explicit skill contracts", () => {
   const result = gradeRun(
-    scenario({ discoverySkills: ["software-engineering-excellence"] }),
+    scenario({ discoverySkills: ["deep-dive"] }),
     empty(),
     "Analysis complete",
   );

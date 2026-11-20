@@ -56,11 +56,19 @@
       "status": "retained",
       "rationale": [
         "Retained task, fixture, and assertions; no demonstrated contract mismatch in calibration.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement. The prompt no longer tells the model to use it and the case no longer requires it; the task, evidence and other expectations are unchanged. Prompt changed: fresh native runs required."
       ],
       "beforeSha256": "bcf0cb89663c3b2688bd311a396aa5a184338a80aef0cd7068b0cf0a489ae9d9",
-      "afterSha256": "513b9a053fb52584f7d9cf9aa5155483e6d3c46afd39d26745e1dba38e2d8f7d",
-      "frozenCaseSha256": "c38a705f44f8a008f87fafa9e9e858d03beafd5c5e0eb0149ad102d661618ccc"
+      "afterSha256": "9ffe8fba3c446624e38418b830e3c302cb7a4568c0732d6a61e061542b80face",
+      "frozenCaseSha256": "c38a705f44f8a008f87fafa9e9e858d03beafd5c5e0eb0149ad102d661618ccc",
+      "revisions": [
+        {
+          "previousAfterSha256": "513b9a053fb52584f7d9cf9aa5155483e6d3c46afd39d26745e1dba38e2d8f7d",
+          "afterSha256": "9ffe8fba3c446624e38418b830e3c302cb7a4568c0732d6a61e061542b80face",
+          "rationale": "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement. The prompt no longer tells the model to use it and the case no longer requires it; the task, evidence and other expectations are unchanged. Prompt changed: fresh native runs required."
+        }
+      ]
     },
     {
       "caseId": "prompting-native-worker-delivery",
@@ -68,11 +76,19 @@
       "rationale": [
         "Retained task, fixture, and assertions; no demonstrated contract mismatch in calibration.",
         "September 27 model refresh: the configured worker moved from claude-opus-5 to claude-opus-5-5 with the default matrix. Task, fixture and assertions are unchanged; fresh native run required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement. The prompt no longer tells the model to use it and the case no longer requires it; the task, evidence and other expectations are unchanged. Prompt changed: fresh native runs required."
       ],
       "beforeSha256": "584179a23339844751bdf0515d0d966a35ce0214cef28636ad0fb8c8d1383d6e",
-      "afterSha256": "616111497e28c792adcf30a1843e8ce58d3f4d879fac911ed0000168a31237d1",
-      "frozenCaseSha256": "92dcc631b2bb1ef3921d71ffd1e56aa1f96de965f1150491eb650656ee65def1"
+      "afterSha256": "f33889f25bfa148fae511fa6b5630b08a572b46bc77fc5c693cf561b0053044e",
+      "frozenCaseSha256": "92dcc631b2bb1ef3921d71ffd1e56aa1f96de965f1150491eb650656ee65def1",
+      "revisions": [
+        {
+          "previousAfterSha256": "616111497e28c792adcf30a1843e8ce58d3f4d879fac911ed0000168a31237d1",
+          "afterSha256": "f33889f25bfa148fae511fa6b5630b08a572b46bc77fc5c693cf561b0053044e",
+          "rationale": "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement. The prompt no longer tells the model to use it and the case no longer requires it; the task, evidence and other expectations are unchanged. Prompt changed: fresh native runs required."
+        }
+      ]
     },
     {
       "caseId": "prompting-native-worker-pr",
@@ -1248,14 +1264,22 @@
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Separate ambient standards discovery from task outcome and authority contracts.",
         "Check isolation and terminal return contract in each worker packet; accept status, result, outcome and summary equivalents without requiring duplicate final-report text.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement, so the case no longer lists it as a discovery skill. Prompt, evidence and expectations are unchanged."
       ],
       "beforeSha256": "24f1f956c80c5e961d99fad0daef67d812ab45695198128231b8b96e8aa619ec",
-      "afterSha256": "0232d332f676fb171478cf9ed9d377e938cafba127539f970c866c7c3f12e52d",
+      "afterSha256": "18a13ede9d6d9c7d6fe2c7da13917c16510f25798b443cd9de60fc7e5815431f",
       "postFreezeChangedFields": [
         "expected"
       ],
-      "frozenCaseSha256": "18205a64d1fc1fbdb8d2d2f60b2290a506a533a21d5091d34653d593514e00ba"
+      "frozenCaseSha256": "18205a64d1fc1fbdb8d2d2f60b2290a506a533a21d5091d34653d593514e00ba",
+      "revisions": [
+        {
+          "previousAfterSha256": "0232d332f676fb171478cf9ed9d377e938cafba127539f970c866c7c3f12e52d",
+          "afterSha256": "18a13ede9d6d9c7d6fe2c7da13917c16510f25798b443cd9de60fc7e5815431f",
+          "rationale": "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement, so the case no longer lists it as a discovery skill. Prompt, evidence and expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "small-change-no-verifier",
@@ -1281,14 +1305,22 @@
         "Expose the local-only authority constraint in the task rather than keeping it secret in the grader.",
         "Recorded baseline and post-change measurements already exist; do not require duplicate aggregate runs.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement, so the case no longer lists it as a discovery skill. Prompt, evidence and expectations are unchanged."
       ],
       "beforeSha256": "ab2b1540c7b23f8e3d9b25dc0325b5cbe239138d9d277dd2047e92d6a921dff8",
-      "afterSha256": "d0e7965d33838960ff152a7f0c8dd9c7b808f8fb2180c744d3a899cb6e0bcfaf",
+      "afterSha256": "3e56a98e39506b226e9f1fef5b212a5d5106632e4be5ee5490d9fbf4b49d07cc",
       "postFreezeChangedFields": [
         "expected"
       ],
-      "frozenCaseSha256": "4eb8a6aa1ffcf7f3e592b605e8bf509f22788576b2b148c4fd0d89d95355b04e"
+      "frozenCaseSha256": "4eb8a6aa1ffcf7f3e592b605e8bf509f22788576b2b148c4fd0d89d95355b04e",
+      "revisions": [
+        {
+          "previousAfterSha256": "d0e7965d33838960ff152a7f0c8dd9c7b808f8fb2180c744d3a899cb6e0bcfaf",
+          "afterSha256": "3e56a98e39506b226e9f1fef5b212a5d5106632e4be5ee5490d9fbf4b49d07cc",
+          "rationale": "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement, so the case no longer lists it as a discovery skill. Prompt, evidence and expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "follow-local-code-conventions",
@@ -1298,10 +1330,11 @@
         "Separate ambient standards discovery from task outcome and authority contracts.",
         "Original Astra trace paused solely for unconditional web research. Supply the settled local wrapper contract, explicitly simulated results and source/gate checks; require implementation and reject an unrelated permission question. Fresh native evidence required.",
         "Fresh v1 traces completed the wrapper. Fable reasonably chose only a language skill for the implicit request; explicitly invoke /implement to test its research rule. Astra used equivalent documented/documentation-lint wording; accept that while retaining source, ordering and gate requirements. Preserve v1 failures; fresh native rerun required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement, so the case no longer lists it as a discovery skill. Prompt, evidence and expectations are unchanged."
       ],
       "beforeSha256": "553f265ec9649c816e261760eb0f3faaa68ade291ed2bce6393c4226060ae44c",
-      "afterSha256": "1fab12912658ce16dd0b2d67fcbef41054959eeb582d203c1c6df9a0fd6bf9f0",
+      "afterSha256": "041a0a224edc2cafbaaa341b42d2a7d84adee5315e42ce76f69f8f0a5a7b7d89",
       "frozenCaseSha256": "79a74ab38a48a613c19b355f8f736bf1212ba490c23f5873188257453f6ac75c",
       "revisions": [
         {
@@ -1313,6 +1346,11 @@
           "previousAfterSha256": "a3e1be3225e3db8dddc32c8ad926cbbf2a54b6e964fe8cecca2d721514d8640c",
           "afterSha256": "b8d80cfbe5219513d8602fd4626ac52bae41e495736eb563be4b35ea00ad5f59",
           "rationale": "Fresh v1 traces completed the wrapper. Fable reasonably chose only a language skill for the implicit request; explicitly invoke /implement to test its research rule. Astra used equivalent documented/documentation-lint wording; accept that while retaining source, ordering and gate requirements. Preserve v1 failures; fresh native rerun required."
+        },
+        {
+          "previousAfterSha256": "1fab12912658ce16dd0b2d67fcbef41054959eeb582d203c1c6df9a0fd6bf9f0",
+          "afterSha256": "041a0a224edc2cafbaaa341b42d2a7d84adee5315e42ce76f69f8f0a5a7b7d89",
+          "rationale": "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement, so the case no longer lists it as a discovery skill. Prompt, evidence and expectations are unchanged."
         }
       ]
     },
@@ -1948,11 +1986,19 @@
         "Separate ambient standards discovery from task outcome and authority contracts.",
         "Optional ambient continuity discovery is measured separately; preserve observable remaining-scope obligations.",
         "Remove pre-edit completion and supply the actual prevention artifact scope.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement, so the case no longer lists it as a discovery skill. Prompt, evidence and expectations are unchanged."
       ],
       "beforeSha256": "dff4149596cb9858063c5b3d8e0210e55a72d731a0bfe31b3e98d36b178531a8",
-      "afterSha256": "e0be7b405ff10f67fafcf3aaeb94c95954d42343b088efeda982b0e83a8b6132",
-      "frozenCaseSha256": "bbdee94c5b5eb9f63751692488d36b44b03db32ad6a96ff96b7fec044190807f"
+      "afterSha256": "0ec113b879f2fe2d6bc0ae22045498ef36b362e3e554b51fd3bb2f7ee01a2d4f",
+      "frozenCaseSha256": "bbdee94c5b5eb9f63751692488d36b44b03db32ad6a96ff96b7fec044190807f",
+      "revisions": [
+        {
+          "previousAfterSha256": "e0be7b405ff10f67fafcf3aaeb94c95954d42343b088efeda982b0e83a8b6132",
+          "afterSha256": "0ec113b879f2fe2d6bc0ae22045498ef36b362e3e554b51fd3bb2f7ee01a2d4f",
+          "rationale": "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement, so the case no longer lists it as a discovery skill. Prompt, evidence and expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "engineering-excellence-host-limit-does-not-terminalize",
@@ -1962,13 +2008,21 @@
         "Separate ambient standards discovery from task outcome and authority contracts.",
         "Continuing through an external wait requires reconciliation, not rerunning unchanged local checks.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
-        "Grade the reported outcome, not its wording: accept any description of a blocking or foreground wait (delivery-wait now names host capabilities instead of a foreground child), and a report that the checks passed or succeeded as well as one that says complete or verified."
+        "Grade the reported outcome, not its wording: accept any description of a blocking or foreground wait (delivery-wait now names host capabilities instead of a foreground child), and a report that the checks passed or succeeded as well as one that says complete or verified.",
+        "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement, so the case no longer lists it as a discovery skill. Prompt, evidence and expectations are unchanged."
       ],
       "beforeSha256": "0f973117b2a39fcfc07c9cd037a2368b5bf53c021ddc68592a34b549aaa4b3dc",
-      "afterSha256": "2ef6df31d585e79ab510002f42491fedc57702bcb5027d4310cdc2cff77b6334",
+      "afterSha256": "229148a1e909c108f299e85eb1990955c256ce821839e7eeab1b7603c018f387",
       "frozenCaseSha256": "3e48a99774b3ece99d83557f5a9dd6e6abd2ef722100b580782e091cade7c2f1",
       "postFreezeChangedFields": [
         "expected"
+      ],
+      "revisions": [
+        {
+          "previousAfterSha256": "2ef6df31d585e79ab510002f42491fedc57702bcb5027d4310cdc2cff77b6334",
+          "afterSha256": "229148a1e909c108f299e85eb1990955c256ce821839e7eeab1b7603c018f387",
+          "rationale": "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement, so the case no longer lists it as a discovery skill. Prompt, evidence and expectations are unchanged."
+        }
       ]
     },
     {
@@ -1979,11 +2033,19 @@
         "Separate ambient standards discovery from task outcome and authority contracts.",
         "Optional ambient continuity discovery is measured separately; preserve observable remaining-scope obligations.",
         "Supply actual remaining retrospective evidence and require the report, not arbitrary source edits or an engineering gate.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement, so the case no longer lists it as a discovery skill. Prompt, evidence and expectations are unchanged."
       ],
       "beforeSha256": "97efa8052146b7f8fd3df148f120281449451659457172c4c2d9b8c54086f75d",
-      "afterSha256": "feaa1af2f7e2492a42275347e7a4a87464be4d51b78ca1b58aa13436ed5c6d6c",
-      "frozenCaseSha256": "615401cba23beae09a763a9ba09ef4a18fe92ebca12fd8d4376a6b9064b0f458"
+      "afterSha256": "07003cf4aca9737d1e0e6d495e78d4542f45d4367d3c903e5529d13e2fd842dd",
+      "frozenCaseSha256": "615401cba23beae09a763a9ba09ef4a18fe92ebca12fd8d4376a6b9064b0f458",
+      "revisions": [
+        {
+          "previousAfterSha256": "feaa1af2f7e2492a42275347e7a4a87464be4d51b78ca1b58aa13436ed5c6d6c",
+          "afterSha256": "07003cf4aca9737d1e0e6d495e78d4542f45d4367d3c903e5529d13e2fd842dd",
+          "rationale": "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement, so the case no longer lists it as a discovery skill. Prompt, evidence and expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "engineering-excellence-unrelated-request-forks",
@@ -1993,13 +2055,21 @@
         "Separate ambient standards discovery from task outcome and authority contracts.",
         "Supply concrete independent task packets and editable parent evidence instead of asking models to invent a PR repair.",
         "Post-freeze trajectory review calibrated equivalent reporting language, structured action evidence, or explicit contract requirements. Original grades and immutable traces are preserved; no new model success is inferred from regrading.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement, so the case no longer lists it as a discovery skill. Prompt, evidence and expectations are unchanged."
       ],
       "beforeSha256": "07ca0f11fe8a8b33e2c500aef92444ab3d440ca46d660dc2246876eb2b6f90c5",
-      "afterSha256": "347680fab11a95981f12a92a8afab1c419635aaa33d292a0b2aef5049db00619",
+      "afterSha256": "b4bd4df342947f2bbdec12b9021d2bdabb973dd157f1403bd90abb3d86e9ae3a",
       "frozenCaseSha256": "d99262a05326c8bc8574bfbe5d9f9223aca223c4fa2aacc14bf2b4cbf45cae9a",
       "postFreezeChangedFields": [
         "expected"
+      ],
+      "revisions": [
+        {
+          "previousAfterSha256": "347680fab11a95981f12a92a8afab1c419635aaa33d292a0b2aef5049db00619",
+          "afterSha256": "b4bd4df342947f2bbdec12b9021d2bdabb973dd157f1403bd90abb3d86e9ae3a",
+          "rationale": "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement, so the case no longer lists it as a discovery skill. Prompt, evidence and expectations are unchanged."
+        }
       ]
     },
     {
@@ -2009,11 +2079,19 @@
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Separate ambient standards discovery from task outcome and authority contracts.",
         "Do not reject truthful negative statements such as no repair was implemented; still reject affirmative completion claims.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement, so the case no longer lists it as a discovery skill. Prompt, evidence and expectations are unchanged."
       ],
       "beforeSha256": "2ff94e707690f291e198c98e21f22d45b08cd90ec3042372d7ec612180a4b841",
-      "afterSha256": "e82b337ad87e000ca14cba5aeb49e9f679d06e4de7d163c7a056aee8d7d9c9e8",
-      "frozenCaseSha256": "8663e66d41b8b58aa9349dfe4f5c91f714b9361131edb6da29f8b8c87eb45d24"
+      "afterSha256": "7f17f54ea52c8ff811e87ddfa79ddfb664fa02a17eba34ad75ac4a4896cee2c7",
+      "frozenCaseSha256": "8663e66d41b8b58aa9349dfe4f5c91f714b9361131edb6da29f8b8c87eb45d24",
+      "revisions": [
+        {
+          "previousAfterSha256": "e82b337ad87e000ca14cba5aeb49e9f679d06e4de7d163c7a056aee8d7d9c9e8",
+          "afterSha256": "7f17f54ea52c8ff811e87ddfa79ddfb664fa02a17eba34ad75ac4a4896cee2c7",
+          "rationale": "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement, so the case no longer lists it as a discovery skill. Prompt, evidence and expectations are unchanged."
+        }
+      ]
     },
     {
       "caseId": "agent-writing-concise-status",
@@ -2191,16 +2269,22 @@
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Add the new deliver entrypoint to the explicitly forbidden skill inventory for an unrelated translation request; retain the original task and behavior contract.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "software-engineering-excellence was removed, so it leaves the list of skills this prompt must not load. Prompt, evidence and the other expectations are unchanged."
       ],
       "beforeSha256": "7392229307507c5e62642c1e943a25a9909556fd8ec17af83e1030906aa54b26",
-      "afterSha256": "955131b83ec92e2ca125607fd70ae20c80caff4c9afc29181bc904e978936af2",
+      "afterSha256": "f557babe6fd6dcf0bebacee9cb0bdc0fcfcae98225a659e5e3bebb459af6fba2",
       "frozenCaseSha256": "b4acb34e99f4b4b1776b88fca5a90b492839a07fa97d2f5988bb723989e7377b",
       "revisions": [
         {
           "previousAfterSha256": "b4acb34e99f4b4b1776b88fca5a90b492839a07fa97d2f5988bb723989e7377b",
           "afterSha256": "b5e499719c0015f13a9971de4c2c0cfaedad6c5d143ad4ac1c47df79157a6de5",
           "rationale": "Add the new deliver entrypoint to the explicitly forbidden skill inventory for an unrelated translation request; retain the original task and behavior contract."
+        },
+        {
+          "previousAfterSha256": "955131b83ec92e2ca125607fd70ae20c80caff4c9afc29181bc904e978936af2",
+          "afterSha256": "f557babe6fd6dcf0bebacee9cb0bdc0fcfcae98225a659e5e3bebb459af6fba2",
+          "rationale": "software-engineering-excellence was removed, so it leaves the list of skills this prompt must not load. Prompt, evidence and the other expectations are unchanged."
         }
       ]
     },
@@ -2210,10 +2294,18 @@
       "rationale": [
         "Actual native Claude Agent handoff with separate worker tools and observed child response metadata.",
         "September 27 model refresh: the configured worker moved from claude-opus-5 to claude-opus-5-5 with the default matrix. Task, fixture and assertions are unchanged; fresh native run required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement. The prompt no longer tells the model to use it and the case no longer requires it; the task, evidence and other expectations are unchanged. Prompt changed: fresh native runs required."
       ],
-      "afterSha256": "b2b3e7b539d7ab014f86ba3c3350636e127d47532da9a60163f2fcb908b49000",
-      "frozenCaseSha256": "bf210ffd1a0dc9aa2bda35fb64e980944ebef58c92272c91063888405ec73a8b"
+      "afterSha256": "3aed21a3cea254293aadfdd3ff18f1272c5c7397ab9f5a829e0c240c054facf0",
+      "frozenCaseSha256": "bf210ffd1a0dc9aa2bda35fb64e980944ebef58c92272c91063888405ec73a8b",
+      "revisions": [
+        {
+          "previousAfterSha256": "b2b3e7b539d7ab014f86ba3c3350636e127d47532da9a60163f2fcb908b49000",
+          "afterSha256": "3aed21a3cea254293aadfdd3ff18f1272c5c7397ab9f5a829e0c240c054facf0",
+          "rationale": "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement. The prompt no longer tells the model to use it and the case no longer requires it; the task, evidence and other expectations are unchanged. Prompt changed: fresh native runs required."
+        }
+      ]
     },
     {
       "caseId": "execution-cache-cli",
@@ -2242,9 +2334,17 @@
         "Exercise unavailable current-head checks through an actual native Agent and standalone worker; old-head green evidence must not establish readiness.",
         "Accept pending as well as blocked under the shared readiness contract; worker completion and exact-model checks remain required.",
         "September 27 model refresh: the configured worker moved from claude-opus-5 to claude-opus-5-5 with the default matrix. Task, fixture and assertions are unchanged; fresh native run required.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement. The prompt no longer tells the model to use it and the case no longer requires it; the task, evidence and other expectations are unchanged. Prompt changed: fresh native runs required."
       ],
-      "afterSha256": "6115bce9c468b775b55dca4125719119983bea1b0bb8a585c14835f7b889ddb4"
+      "afterSha256": "a79075539ff436c29760bd531f2a6bcb36b5bc1a47ead96597bb9704ba368be7",
+      "revisions": [
+        {
+          "previousAfterSha256": "6115bce9c468b775b55dca4125719119983bea1b0bb8a585c14835f7b889ddb4",
+          "afterSha256": "a79075539ff436c29760bd531f2a6bcb36b5bc1a47ead96597bb9704ba368be7",
+          "rationale": "software-engineering-excellence was removed and the rules that still change behavior were folded into deliver and implement. The prompt no longer tells the model to use it and the case no longer requires it; the task, evidence and other expectations are unchanged. Prompt changed: fresh native runs required."
+        }
+      ]
     },
     {
       "caseId": "prompting-native-worker-blocked",
@@ -4418,6 +4518,46 @@
           "rationale": "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged."
         }
       ]
+    },
+    {
+      "caseId": "implement-checks-access-before-handing-to-person",
+      "status": "new",
+      "rationale": [
+        "Credentials missing from the local environment are looked for where the repository documents them: /implement runs the live proof through the documented secret-store route and leaves the person nothing to do. Asking the person for credentials or access the run already has fails. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "9c62b5f2594c623b532d1ce24dd4af9abf1274942a1d5aba55ae284cfc4356ac",
+      "frozenCaseSha256": "9c62b5f2594c623b532d1ce24dd4af9abf1274942a1d5aba55ae284cfc4356ac"
+    },
+    {
+      "caseId": "deliver-tries-documented-route-before-asking",
+      "status": "new",
+      "rationale": [
+        "Before handing a step to the person, /deliver runs the check the repository documents for it and then asks only for what that check shows is missing. Asking before the check, or for more than is missing, fails. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "e978257e4e03ec3a8d15e6f04022a2555d1646ffe25fe1f1e08856c5ce121caf",
+      "frozenCaseSha256": "e978257e4e03ec3a8d15e6f04022a2555d1646ffe25fe1f1e08856c5ce121caf"
+    },
+    {
+      "caseId": "implement-keeps-the-stated-reach",
+      "status": "new",
+      "rationale": [
+        "A request to rename an option everywhere is carried to every file that names it: source, tests, docs and examples. A rubric item reads each submitted file for the new name. Leaving a surface out, or asking whether to narrow the reach, fails. A commit, which the request forbids, fails. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "8b82773d9055cbb1809d24e7cddaf91f35618c325666cf26f91df8a8241a6ced",
+      "frozenCaseSha256": "8b82773d9055cbb1809d24e7cddaf91f35618c325666cf26f91df8a8241a6ced"
+    },
+    {
+      "caseId": "implement-reads-all-the-data",
+      "status": "new",
+      "rationale": [
+        "The defect's evidence is a 260-row rejection log in which three rows use other date formats. The fix must accept every format the log holds, which only reading the whole log shows; fixing only the common format fails. A commit, which the request forbids, fails. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "f5ecd3809236790e8fc30d0d9624b68495bb403e3f8e9e3e0028c6d30171ec47",
+      "frozenCaseSha256": "f5ecd3809236790e8fc30d0d9624b68495bb403e3f8e9e3e0028c6d30171ec47"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

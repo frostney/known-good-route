@@ -59,9 +59,8 @@ output. Include a small recent-turn slice only when immediately relevant.
 Full-history inheritance requires a recorded, scoped exception. Publication and
 merge in a packet follow the delegation rule in
 [deliver](../../deliver/SKILL.md). When a lane hands back, settle its result as
-[Coordinating
-deliverables](../../software-engineering-excellence/SKILL.md#coordinating-deliverables)
-describes before integrating it.
+[deliver's coordination rules](../../deliver/SKILL.md#coordinate-the-existing-workflows)
+describe before integrating it.
 
 Before starting a worker, identify its actual model from host metadata. Deliver
 the applicable role, scope, authority, completion condition, and required skill

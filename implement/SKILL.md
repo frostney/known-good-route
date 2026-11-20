@@ -20,7 +20,7 @@ metadata:
 Develop the smallest complete change that satisfies the agreed requirements.
 Reuse settled scope, approach and authorization. A failed check, diagnosis or
 available fix does not end implementation. Only a
-[material](../software-engineering-excellence/SKILL.md#blockers-and-decisions)
+[material](../deliver/SKILL.md#decisions-that-belong-to-the-person)
 unresolved decision, new authority or an external blocker after safe
 alternatives are exhausted can stop dependent work; complete independent work before asking. If
 a skill requires a pause, link its loaded file as a Markdown link and quote the
@@ -100,8 +100,9 @@ Finish when every verified requirement gap is resolved, the binding-guide
 ledger covers the final diff with no broken rule left, and applicable gates
 pass; unrelated improvements do not extend the task. A different defect found,
 one the change neither caused nor addresses, does not extend it either: it is
-[filed and fixed](../software-engineering-excellence/SKILL.md#defects-the-work-did-not-cause)
-as its own work item. Return the implemented
+[filed and fixed](../deliver/SKILL.md#defects-the-work-did-not-cause)
+as its own work item, unless its fix needs the person's decision: then report
+it, with that decision, without filing it. Return the implemented
 result, observed requirement evidence, the ledger and any route that replaced
 a failed source to the caller, or continue under the
 [delivery settings](../deliver/SKILL.md#delivery-settings) when started

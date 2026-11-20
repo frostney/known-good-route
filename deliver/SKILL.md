@@ -49,7 +49,7 @@ Preserve explicit limits,
 repository protections and existing authorization. An earlier endpoint does not
 authorize later operations. Complete independent work before asking for a
 specific unresolved destination, provider, new infrastructure, spending or other
-[material](../software-engineering-excellence/SKILL.md#blockers-and-decisions)
+[material](#decisions-that-belong-to-the-person)
 choice. Repair an existing integration workflow when an established
 in-scope defect blocks delivery; do not replace its provider or invent a new
 service as an incidental fix.
@@ -146,11 +146,16 @@ it hands over through the skill that owns it, such as `/implement`,
 `/create-pr`, `/update-pr` or `/address-feedback`. It never prescribes raw
 publication or merge commands such as `gh pr create` or `gh pr merge`; those
 bypass the skill's gates, native stack detection and readiness checks. Each
-packet records the capability tier its lane runs on. Read
+packet names who repairs what the lane's change breaks outside its own scope:
+by default the lane itself, with the smallest edit called out in its result.
+Each packet records the capability tier its lane runs on. Read
 [capability tiers](../milestone-rush/references/orchestration.md#capability-tiers)
 when you write a packet, run one, or receive a lane's escalation. Include the
 [long-command and lane rules](../delivery-wait/SKILL.md#long-commands-and-delegated-lanes)
-and the owner that resumes pending work in every packet.
+and the owner that resumes pending work in every packet. When a lane hands
+back, read its change or evidence and check its main claim against it before
+integrating or reporting it: a lane's report is a lead, not evidence. Give each
+item it left an owner and a next action.
 
 Use required companion skills when available; when one is unavailable, follow
 its reachable documented contract directly or report the specific missing
@@ -174,6 +179,41 @@ project with only a release path and no integration destination configures no
 deployment: `merged` ends at the confirmed merge, and the release stays with
 its milestone. Ask for a delivery decision only when the repository's
 configuration names a destination and leaves it ambiguous or unusable.
+
+## Decisions and defects
+
+### Decisions that belong to the person
+
+A decision belongs to the person, and is what other skills call material, only
+when both hold:
+
+1. Nothing settles it: not the request, the issue, the repository's docs and
+   recorded decisions, `ORCHESTRATION.md`, existing code or a conventional
+   default.
+2. It matters if wrong: it changes product or user-facing behavior beyond the
+   request, or it is hard to reverse or outward-facing, such as deleting data,
+   publishing, spending money or changing access.
+
+A fact that a lookup or an available action can establish is not such a
+decision, and neither is a choice between equivalent implementations, a retry
+or a re-run. Only such a decision, a secret, or a paid or account action stops
+the work. Before asking, finish the work that does not depend on the answer,
+then bring one recommendation.
+
+### Defects the work did not cause
+
+A defect is something wrong now, such as failing behavior, a broken check, or
+a document or rule that contradicts the code; an improvement to something that
+works is not one. When you find a defect that the work neither caused nor
+addresses, file it through `/create-issue` in the repository that owns it, or
+reuse the open issue that tracks it, and deliver its fix as its own work item
+without asking. It stays outside this work's completion bar unless it blocks
+the requested result.
+
+Report the defect without filing it only when its fix needs the person's
+[decision](#decisions-that-belong-to-the-person), or when the work may not
+write to the repository that owns it. Name that decision or the missing
+authority, and do not leave it as a follow-up.
 
 ## Continue or finish
 
@@ -219,5 +259,6 @@ failure as flaky or transient only after its failing log shows it is
 intermittent. Blaming something other than the change, or leaving the failure
 out of the required repair, needs its own evidence; a flaky failure the change
 introduced is in scope. A failure the change neither caused nor addresses is
-[filed and fixed](../software-engineering-excellence/SKILL.md#defects-the-work-did-not-cause)
-as its own work item.
+[filed and fixed](#defects-the-work-did-not-cause)
+as its own work item, unless its fix needs the person's decision: then report
+it, with that decision, without filing it.

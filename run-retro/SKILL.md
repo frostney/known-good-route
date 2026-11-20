@@ -88,7 +88,7 @@ retrospective is not this final selection.
   is needed for an improvement. Offer more detail, further grilling,
   `create-issue` (with a draft first if the user wants one), or skip; the
   delegated workflow retains its own gates. Never offer a
-  [defect](../software-engineering-excellence/SKILL.md#defects-the-work-did-not-cause)
+  [defect](../deliver/SKILL.md#defects-the-work-did-not-cause)
   as a ticket alone: offer its issue together with its fix through the next
   route.
 - **Implement before next cycle:** recommend this route when a selected

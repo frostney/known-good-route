@@ -111,8 +111,9 @@ endpoint; with `stop`, each ends after its own step. Other skills, such as
 milestone versioning, changelog, tagging or release publication.
 
 Use `project-structure` and applicable stack skills when establishing a project.
-`software-engineering-excellence` and `agent-writing` supply relevant shared
-standards. `/roadmap-review`, `/run-retro` and `/codebase-audit` remain deliberate
+`agent-writing` supplies the shared writing standards. `deliver` defines the
+decisions that belong to the person and how a defect the work did not cause is
+handled; the other workflow skills link there. `/roadmap-review`, `/run-retro` and `/codebase-audit` remain deliberate
 planning or assessment work, not mandatory stages for every delivery.
 Delivery and milestone reports apply `agent-writing` to each completion claim:
 confirmation of the main operation does not establish its requested side effects.
@@ -151,7 +152,6 @@ confirmation of the main operation does not establish its requested side effects
 | [`convex-conventions`](convex-conventions/SKILL.md) | Applies the user's Convex backend conventions while deferring mechanics to upstream Convex skills and current APIs to the live Convex docs. Use when scaffolding, reviewing, or refactoring Convex functions, schemas, or auth. |
 | [`codebase-audit`](codebase-audit/SKILL.md) | Audits a repository or subsystem for systemic engineering risks and actionable improvements; assessment only unless follow-up fixes are selected. Use when asked to audit a codebase, assess its health or technical debt, or find systemic risks. |
 | [`agent-behavior-audit`](agent-behavior-audit/SKILL.md) | Audits agent execution records for instruction compliance, outcome quality, and wasted work using source-backed evidence. Use when asked to audit or analyze how an agent behaved in past sessions, transcripts, or logs. |
-| [`software-engineering-excellence`](software-engineering-excellence/SKILL.md) | Applies the user's engineering standards during substantial technical work: preserve scope, use current evidence, delegate independent parts, and complete authorized outcomes. Use during substantial implementation, debugging, refactoring, or multi-part delivery work. |
 | [`agent-writing`](agent-writing/SKILL.md) | Writes clear, concise agent replies and engineering artifacts while preserving evidence, decisions, and required detail. Use when drafting a final response or report for engineering work, PR or issue text, or documentation. |
 | [`bleeding-edge`](bleeding-edge/SKILL.md) | Biases technology choices toward the newest viable option while preserving maintainability, live verification, reversibility, and decided constraints. Use when selecting or upgrading a dependency, runtime, tool, language feature, or AI model. |
 

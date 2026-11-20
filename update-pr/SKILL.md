@@ -22,7 +22,7 @@ and current metadata. The request includes resolving routine conflicts and
 running the declared PR gate; merging belongs to `/deliver` under the
 [delivery settings](../deliver/SKILL.md#delivery-settings). Reuse the selected target
 and prior authorization. Ask only when the intended PR, a
-[material](../software-engineering-excellence/SKILL.md#blockers-and-decisions)
+[material](../deliver/SKILL.md#decisions-that-belong-to-the-person)
 conflict-resolution choice or another material choice within this update
 remains unclear.
 

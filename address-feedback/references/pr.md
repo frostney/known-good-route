@@ -100,7 +100,7 @@ it is no gate and its adapter posts no trigger.
    out of scope, not selected by policy, or a material decision, with
    evidence. A valid finding about a different defect, one this PR neither
    caused nor addresses, is out of scope here and is still
-   [filed and fixed](../../software-engineering-excellence/SKILL.md#defects-the-work-did-not-cause)
+   [filed and fixed](../../deliver/SKILL.md#defects-the-work-did-not-cause)
    as its own work item; its reply names that issue, or the decision or
    missing authority that keeps it unfiled. Reply inline to every automation
    thread through the helper's idempotent `reply` operation; resolve completed
@@ -160,7 +160,7 @@ it is no gate and its adapter posts no trigger.
    unsafe or divergent PR, unavailable terminal external dependency, or
    unresolved required finding. Report the exact blocker. An unrelated
    failure is also
-   [filed and fixed](../../software-engineering-excellence/SKILL.md#defects-the-work-did-not-cause)
+   [filed and fixed](../../deliver/SKILL.md#defects-the-work-did-not-cause)
    as its own work item.
 11. In `automatic-merge` mode, squash-merge through `git-workflow` only when the
     ordinary PR is `ready` under the exact final-head contract and

@@ -3990,7 +3990,6 @@ export const evalCases: EvalCase[] = [
         "git.push",
         "user.ask",
       ],
-      discoverySkills: ["software-engineering-excellence"],
     },
   },
   {
@@ -4079,7 +4078,6 @@ export const evalCases: EvalCase[] = [
         "git.push",
         "forge.openDraftPr",
       ],
-      discoverySkills: ["software-engineering-excellence"],
       maxActionCounts: {
         "validation.run": 1,
       },
@@ -4132,7 +4130,6 @@ export const evalCases: EvalCase[] = [
       maxActionCounts: {
         "validation.run": 1,
       },
-      discoverySkills: ["software-engineering-excellence"],
     },
   },
   {
@@ -6103,7 +6100,6 @@ export const evalCases: EvalCase[] = [
       ],
       requiredActionSequence: ["file.edit", "validation.run", "report"],
       forbiddenActions: ["user.ask", "delegate"],
-      discoverySkills: ["software-engineering-excellence"],
     },
   },
   {
@@ -6159,7 +6155,6 @@ export const evalCases: EvalCase[] = [
       ],
       requiredActionSequence: ["monitor.wait", "report"],
       forbiddenActions: ["user.ask"],
-      discoverySkills: ["software-engineering-excellence"],
     },
   },
   {
@@ -6200,7 +6195,6 @@ export const evalCases: EvalCase[] = [
       ],
       requiredActionSequence: ["report"],
       forbiddenActions: ["user.ask", "file.edit", "forge.createIssue"],
-      discoverySkills: ["software-engineering-excellence"],
     },
   },
   {
@@ -6258,7 +6252,6 @@ export const evalCases: EvalCase[] = [
         "report",
       ],
       forbiddenActions: ["user.ask"],
-      discoverySkills: ["software-engineering-excellence"],
     },
   },
   {
@@ -6301,7 +6294,6 @@ export const evalCases: EvalCase[] = [
         "validation.run",
         "user.ask",
       ],
-      discoverySkills: ["software-engineering-excellence"],
     },
   },
   {
@@ -6706,7 +6698,6 @@ export const evalCases: EvalCase[] = [
         "address-feedback",
         "roadmap-review",
         "run-retro",
-        "software-engineering-excellence",
         "status-report",
         "test-against-spec",
         "typescript-stack",
