@@ -169,8 +169,8 @@ def renderer_link(node: Node) -> bool:
 
 
 def literal(text: str) -> str:
-    """Text with each inline marker character escaped, as Markdown writes it literally."""
-    return re.sub(r"([`*~<\[])", r"\\\1", text)
+    """Text with each character Markdown could read as markup escaped, so it reads back as written."""
+    return re.sub(r"([\\`*_~<\[&])", r"\\\1", text)
 
 
 def heading_text(node: Node | str) -> str:
@@ -194,7 +194,9 @@ def heading_text(node: Node | str) -> str:
         return f"{fence} {code} {fence}" if padded else f"{fence}{code}{fence}"
     inner = "".join(heading_text(child) for child in node.children)
     if node.tag == "a" and node.attrs.get("href") and not renderer_link(node):
-        return f"[{inner}]({node.attrs['href']})"
+        # In angle brackets, so no text after the link can read as part of its destination.
+        destination = re.sub(r"([\\<>])", r"\\\1", node.attrs["href"])
+        return f"[{inner}](<{destination}>)"
     if node.tag in INLINE_TAGS:
         return f"<{node.tag}>{inner}</{node.tag}>"
     marker = INLINE_MARKERS.get(node.tag, "")
@@ -256,7 +258,7 @@ def has_checked(node: Node) -> bool:
 
 
 # The review note's rule in the source: `---` with a blank line before and after.
-NOTE_SOURCE = re.compile(r"(?:\A|\n)[ \t]*\n[ \t]{0,3}(?:-[ \t]*){3,}\n[ \t]*\n[ \t]{0,3}Edit:")
+NOTE_SOURCE = re.compile(r"(?:\A|\n)[ \t]*\n[ \t]{0,3}-{3,}[ \t]*\n[ \t]*\n[ \t]{0,3}Edit:")
 
 
 def source_line(node: Node) -> int | None:
@@ -289,7 +291,7 @@ def spaced_rule(rule: Node, note: Node, source: str | None, positioned: bool = F
     before = lines[line - 2] if line >= 2 else ""
     between = lines[line : note_line - 1]
     return (
-        bool(re.fullmatch(r" {0,3}(?:-[ \t]*){3,}", lines[line - 1]))
+        bool(re.fullmatch(r" {0,3}-{3,}[ \t]*", lines[line - 1]))
         and not before.strip()
         and bool(between)
         and not any(entry.strip() for entry in between)
@@ -345,7 +347,8 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
             lines = lines[1:]  # cmark-gfm leaves the alert a quote that opens with its marker.
         elif "markdown-alert-note" not in last.attrs.get("class", "").split():
             lines = []
-        if len(lines) == 1 and ATTRIBUTION.fullmatch(" ".join(lines[0].split())) and not has_media(last):
+        loose_text = any(isinstance(child, str) and child.strip() for child in last.children)
+        if len(lines) == 1 and ATTRIBUTION.fullmatch(" ".join(lines[0].split())) and not has_media(last) and not loose_text:
             top = [node for node in top if node is not last]
 
     found: list[Heading] = []
@@ -367,7 +370,10 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
             if level and not nested:
                 position = child.attrs.get("data-sourcepos", "")
                 line = int(position.split(":")[0]) if position[:1].isdigit() else None
-                heading = Heading(int(level.group(1)), " ".join(heading_text(child).split()), line)
+                text = " ".join(heading_text(child).split())
+                # A closing run of `#` would end the heading where it is written back.
+                text = re.sub(r"(^|\s)(#+)$", r"\1\\\2", text)
+                heading = Heading(int(level.group(1)), text, line)
                 while open_sections and open_sections[-1].level >= heading.level:
                     open_sections.pop()
                 content()  # A subsection is content of the sections around it.
@@ -557,6 +563,9 @@ def flow_mapping(text: str) -> dict[str, str]:
     return found
 
 
+QUOTED_SCALAR = re.compile(r"""(?:"(?:[^"\\]|\\.)*"|'(?:[^']|'')*')""")
+
+
 def declared_name(text: str) -> str:
     """A form's top-level `name`, plain, quoted or as a folded or literal block."""
     lines = text.replace("\r\n", "\n").split("\n")
@@ -564,9 +573,16 @@ def declared_name(text: str) -> str:
         key, separator, value = line.partition(":")
         if not separator or line.startswith((" ", "\t", "-")) or scalar(key) != "name":
             continue
-        opened = value.strip()[:1]
-        if opened in ("'", '"') and not re.match(r"""(?:"(?:[^"\\]|\\.)*"|'(?:[^']|'')*')""", value.strip()):
-            return ""  # A quoted name continued on later lines is not read here: unknown.
+        if value.strip()[:1] in ("'", '"') and not QUOTED_SCALAR.match(value.strip()):
+            # A quoted name continued on the lines below: YAML folds each line break into a space.
+            joined = value.strip()
+            for following in lines[index + 1 :]:
+                if following.strip() and not following.startswith((" ", "\t")):
+                    break  # The next key: the quote never closed.
+                joined = f"{joined} {following.strip()}"
+                if QUOTED_SCALAR.match(joined):
+                    return " ".join(scalar(joined).split())
+            return ""  # A quote that never closes: unknown.
         if scalar(value) and not BLOCK_SCALAR.match(value.strip()):
             return scalar(value)
         # A block scalar, or a plain one continued on the lines below the key.
@@ -1186,7 +1202,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         else:
             source = Source(repo=args.repo, run=gh_runner)
         templates = readable(discover(source, kind, None, args.template_name), args.template_name)
-        absent = f"no {kind} template with headings found"
+        absent = (
+            f"the {kind} template named {args.template_name} has no headings"
+            if args.template_name
+            else f"no {kind} template with headings found"
+        )
     templates = [template for template in templates if template.headings]
     if not templates:
         return {"state": "no-template", "body": source_label, "problems": [], "reason": absent}

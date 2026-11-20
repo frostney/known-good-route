@@ -47,8 +47,9 @@ belongs to.
 
 - Exit 0 with `match`: every template heading is present, verbatim, in order
   and has content.
-- Exit 0 with `no-template`: the repository has no template with headings, so
-  there is nothing to compare.
+- Exit 0 with `no-template`: the repository has no template with headings, or
+  the template `--template-name` names has none, so there is nothing to
+  compare.
 - Exit 1 with `mismatch`: fix each reported heading in the body and run the
   check again.
 - Exit 2 with `operational-error`: the check could not compare, for example

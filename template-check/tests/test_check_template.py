@@ -495,6 +495,30 @@ class RendererParityTests(unittest.TestCase):
                 again = CHECK_TEMPLATE.headings(REAL_RENDER(f"{reported}\n"))[0]
                 self.assertEqual(str(again), str(reported))
 
+    def test_only_a_contiguous_dash_rule_opens_the_review_note(self):
+        body = "## Summary\n\nSee below.\n\n- - -\n\nEdit: introduced in `abc1234`.\n\n## Testing\n\nRan it.\n"
+        found = CHECK_TEMPLATE.headings(REAL_RENDER(body), "pr", body)
+        self.assertEqual([(h.text, h.has_content) for h in found], [("Summary", True), ("Testing", True)])
+
+    def test_links_differing_in_destination_never_compare_equal(self):
+        inside, after = (
+            CHECK_TEMPLATE.headings(REAL_RENDER(heading))[0].text
+            for heading in ("## [read](<https://example.org/page)>)\n", "## [read](https://example.org/page))\n")
+        )
+        self.assertNotEqual(inside, after)
+
+    def test_a_reported_heading_with_literal_markup_reads_back_as_the_same_heading(self):
+        for heading in ("## Version \\#", "## snake\\_case", "## Fish &amp;amp; chips", "## C:\\\\temp", "## [a](<x>y>)"):
+            with self.subTest(heading=heading):
+                reported = CHECK_TEMPLATE.headings(REAL_RENDER(heading + "\n"))[0]
+                again = CHECK_TEMPLATE.headings(REAL_RENDER(f"{reported}\n"))[0]
+                self.assertEqual(str(again), str(reported))
+
+    def test_text_beside_the_attribution_note_is_content(self):
+        body = "## Related\n\n> [!NOTE]\n> Created on behalf of @someone using Some Model.\n>\n> <!-- details -->Reproduced on Linux.\n"
+        found = CHECK_TEMPLATE.headings(REAL_RENDER(body), "issue", body)
+        self.assertEqual([h.has_content for h in found], [True])
+
     def test_every_captured_case_reads_as_github_rendered_it(self):
         for case, fixture in RENDERED.items():
             for kind in (None, "pr", "issue"):
@@ -518,8 +542,14 @@ class TemplateParsingTests(unittest.TestCase):
 
     def test_a_form_name_this_reader_cannot_read_is_an_error(self):
         with self.assertRaises(CHECK_TEMPLATE.CheckError) as raised:
-            CHECK_TEMPLATE.parse_template("f.yml", 'name: "Bug\n  report"\nbody:\n  - type: input\n    attributes:\n      label: A\n')
+            CHECK_TEMPLATE.parse_template("f.yml", 'name: "Bug\nbody:\n  - type: input\n    attributes:\n      label: "A"\n')
         self.assertEqual(raised.exception.name, "")
+
+    def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
+        for quote in ('"', "'"):
+            with self.subTest(quote=quote):
+                form = f"name: {quote}Bug\n  report{quote}\nbody:\n  - type: input\n    attributes:\n      label: A\n"
+                self.assertEqual(CHECK_TEMPLATE.parse_template("f.yml", form).name, "Bug report")
 
     def test_a_type_given_as_a_block_scalar_is_read(self):
         template = CHECK_TEMPLATE.parse_template(
@@ -970,6 +1000,14 @@ class CommandTests(unittest.TestCase):
         prose = self.write("prose.md", "A template without headings.\n")
         code, result = self.run_check("--template", str(prose), "--body", "-", stdin="Prose.\n")
         self.assertEqual((code, result["state"]), (0, "no-template"))
+
+    def test_a_named_template_without_headings_says_so(self):
+        self.write(".github/ISSUE_TEMPLATE/default.md", ISSUE_TEMPLATE)
+        self.write(".github/ISSUE_TEMPLATE/plain.md", "---\nname: Plain\nabout: x\n---\nWrite anything.\n")
+        code, result = self.run_check(
+            "--root", str(self.checkout), "--kind", "issue", "--template-name", "Plain", "--body", "-", stdin="Prose.\n"
+        )
+        self.assertEqual((code, result["state"], result["reason"]), (0, "no-template", "the issue template named Plain has no headings"))
 
     def test_a_check_that_cannot_run_is_an_operational_error(self):
         undecodable = self.root / "latin1.md"
