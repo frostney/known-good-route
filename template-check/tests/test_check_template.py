@@ -198,8 +198,17 @@ class RenderedHeadingTests(unittest.TestCase):
         nested = "<h2>A</h2><ul><li>[ ]<ul><li>[ ]</li></ul></li></ul>"
         self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(nested)], [False])
 
-    def test_an_image_in_a_heading_reads_as_its_alt_text(self):
-        self.assertEqual(self.read("image_heading"), [("Release production", True)])
+    def test_an_image_in_a_heading_compares_by_its_label_and_source(self):
+        self.assertEqual(self.read("image_heading"), [("Release ![production](<https://example.org/production.svg>)", True)])
+        texts = {
+            CHECK_TEMPLATE.headings(html)[0].text
+            for html in (
+                '<h2>Release <img src="https://example.org/production.svg" alt="production"></h2>',
+                '<h2>Release <img src="https://example.org/staging.svg" alt="production"></h2>',
+                "<h2>Release production</h2>",
+            )
+        }
+        self.assertEqual(len(texts), 3)
 
     def test_a_review_note_may_name_a_short_commit_after_other_words(self):
         for line in ("Edit: `41c14b` reviewed", "Edit: reviewed `41c14b4`"):
@@ -741,6 +750,10 @@ class RendererParityTests(unittest.TestCase):
         texts = {CHECK_TEMPLATE.headings(REAL_RENDER(h))[0].text for h in ("## **A**<em>B</em>\n", "## <span>**A**</span><em>B</em>\n")}
         self.assertEqual(len(texts), 1)
 
+    def test_explicit_yaml_keys_are_front_matter(self):
+        template = CHECK_TEMPLATE.parse_template("t.md", "---\n? name\n: Bug Report\n---\n## A\n", REAL_RENDER)
+        self.assertEqual((template.name, [str(h) for h in template.headings]), ("Bug Report", ["## A"]))
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
@@ -840,6 +853,10 @@ class TemplateParsingTests(unittest.TestCase):
     def test_an_escaped_line_break_in_a_quoted_label_joins_its_lines(self):
         form = 'body:\n  - type: input\n    attributes:\n      label: "Steps to re\\\n        produce"\n'
         self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["Steps to reproduce"])
+
+    def test_a_quoted_type_may_continue_past_an_escaped_line_break(self):
+        form = 'body:\n  - type: "mark\\\n      down"\n    attributes:\n      value: Hi\n  - type: input\n    attributes:\n      label: A\n'
+        self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["A"])
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):

@@ -72,7 +72,7 @@ are read.
 Text in code, comments and other HTML GitHub does not show is no heading. A
 heading inside a list item, quote, table or alert is its section's content,
 not a section of its own. A heading compares with its inline code, emphasis,
-strikethrough, link destinations and inline HTML such as subscript, as GitHub
+strikethrough, link destinations, images by their source and inline HTML such as subscript, as GitHub
 shows them, and a footnote reference by its label, not the number GitHub
 shows. Emoji
 shortcodes such as `:bug:` compare as written, not as the emoji GitHub shows,

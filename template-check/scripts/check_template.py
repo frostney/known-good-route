@@ -240,6 +240,18 @@ def literal(text: str) -> str:
     return re.sub(r"(?i)\b(?:https?|ftp)(?=://)|\bwww(?=\.)", lambda match: match.group(0) + "\\", text)
 
 
+def destination(url: str) -> str:
+    """A link or image destination written so it reads back as the same URL.
+
+    In angle brackets, so no text after it can read as part of it; an
+    ampersand as an entity, since an entity-shaped destination would
+    otherwise decode; whitespace encoded, since it is part of the URL and
+    must survive the heading's whitespace folding.
+    """
+    written = re.sub(r"([\\<>])", r"\\\1", url).replace("&", "&amp;")
+    return re.sub(r"\s", lambda match: quote(match.group(0)), written)
+
+
 def flattened(children: list[Node | str]) -> list[Node | str]:
     """Children with plain wrappers such as <span> replaced by what they hold, as they show."""
     shown: list[Node | str] = []
@@ -266,7 +278,10 @@ def heading_text(node: Node | str, github: bool = True) -> str:
     if isinstance(node, str):
         return literal(node)
     if node.tag == "img":
-        return literal(node.attrs.get("alt", ""))
+        # An image shows its picture, so its source is part of the heading; GitHub
+        # proxies the source and keeps the original as data-canonical-src.
+        source = node.attrs.get("data-canonical-src") or node.attrs.get("src", "")
+        return f"![{literal(node.attrs.get('alt', ''))}](<{destination(source)}>)"
     references = elements(node.children)
     if node.tag == "sup" and references and all("data-footnote-ref" in child.attrs for child in references):
         # A footnote reference shows a number that depends on the footnotes before it; compare its label.
@@ -293,12 +308,7 @@ def heading_text(node: Node | str, github: bool = True) -> str:
     # An empty destination is still a link, to the page itself.
     # Only GitHub's HTML has links it added itself; the local renderer adds none.
     if node.tag == "a" and "href" in node.attrs and not (github and renderer_link(node)):
-        # In angle brackets, so no text after the link can read as part of its destination.
-        # An ampersand as an entity, since an entity-shaped destination would otherwise decode.
-        destination = re.sub(r"([\\<>])", r"\\\1", node.attrs["href"]).replace("&", "&amp;")
-        # Whitespace in a destination is part of the URL, so it is kept through the heading's folding.
-        destination = re.sub(r"\s", lambda match: quote(match.group(0)), destination)
-        return f"[{inner}](<{destination}>)"
+        return f"[{inner}](<{destination(node.attrs['href'])}>)"
     if node.tag in INLINE_TAGS:
         return f"<{node.tag}>{inner}</{node.tag}>"
     marker = INLINE_MARKERS.get(node.tag, "")
@@ -649,13 +659,22 @@ def front_matter(text: str) -> tuple[dict[str, str], str]:
             joined = " ".join(without_comment(entry).strip() for entry in block)
             if joined.startswith("{"):
                 return flow_mapping(joined), "\n".join(lines[index + 1 :])
-            if not any(YAML_KEY.match(entry.lstrip()) for entry in block):
+            explicit = [entry for entry in block if re.match(r"\?(?:[ \t]|$)", entry.lstrip())]
+            if not explicit and not any(YAML_KEY.match(entry.lstrip()) for entry in block):
                 return {}, text
             margin = min(len(entry) - len(entry.lstrip()) for entry in block)
             fields = {}
-            for entry in block:
+            for position, entry in enumerate(block):
+                if len(entry) - len(entry.lstrip()) != margin:
+                    continue
+                if entry.lstrip().startswith("?"):
+                    # An explicit key, `? name`, whose value follows on a `: value` line.
+                    following = block[position + 1].lstrip() if position + 1 < len(block) else ""
+                    if following.startswith(":"):
+                        fields[scalar(entry.lstrip()[1:])] = scalar(following[1:])
+                    continue
                 key, separator, value = entry.partition(":")
-                if separator and len(entry) - len(entry.lstrip()) == margin:
+                if separator and key.strip():
                     fields[key.strip()] = scalar(value)
             return fields, "\n".join(lines[index + 1 :])
     return {}, text
@@ -959,6 +978,8 @@ def form_template(path: str, text: str) -> Template:
                 item["type"] = "" if BLOCK_SCALAR.match(bare(value)) else scalar(value)
                 if not item["type"]:
                     item["pending"] = ("type", indent, "")
+                elif not QUOTED_SCALAR.fullmatch(bare(value)):
+                    item["pending"] = ("type", indent, value.strip())  # A plain or open quoted type may continue.
             elif key == "attributes" and bare(value).startswith("{"):
                 attributes_indent = None
                 mapping = flow_mapping(bare(value))
