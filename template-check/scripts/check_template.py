@@ -186,7 +186,7 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
         paragraphs = [node for node in elements(last.children) if "markdown-alert-title" not in node.attrs.get("class", "")]
         lines = [line for line in text_of(paragraphs[0]).splitlines() if line.strip()] if len(paragraphs) == 1 else []
         if (
-            (is_alert(last) or last.tag == "blockquote")
+            "markdown-alert-note" in last.attrs.get("class", "").split()
             and len(lines) == 1
             and ATTRIBUTION.fullmatch(" ".join(lines[0].split()))
         ):
@@ -240,7 +240,7 @@ def target_host(repo: str | None) -> str:
     on gh's default host, and otherwise it is the host of the repository gh
     resolves for the current checkout.
     """
-    named = repo or os.environ.get("GH_REPO", "")
+    named = repository(repo or os.environ.get("GH_REPO")) or ""
     if named.count("/") == 2:
         return named.split("/")[0]
     if named:
@@ -638,7 +638,11 @@ class Source:
 
     def read(self, path: str) -> str:
         if self.root is not None:
-            return (self.root / path).read_text(encoding="utf-8")
+            resolved = (self.root / path).resolve()
+            # A symlink may point anywhere; only the checkout's own files are read.
+            if not resolved.is_relative_to(self.root.resolve()):
+                raise CheckError(f"template {path} resolves outside the checkout")
+            return resolved.read_text(encoding="utf-8")
         assert self.run is not None
         output = self.run(
             ["api", *self.route, "-H", "Accept: application/vnd.github.raw", f"repos/{self.slug}/contents/{path}"]
@@ -946,17 +950,22 @@ def gh_runner(
     return completed.stdout
 
 
-def live_body(kind: str, number: int, repo: str | None) -> str:
-    args = [kind, "view", str(number), "--json", "body"]
+def live_body(kind: str, number: int, repo: str | None) -> tuple[str, str]:
+    """A live body and the host gh fetched it from, by the URL gh returns."""
+    args = [kind, "view", str(number), "--json", "body,url"]
     if repo:
         args.extend(["--repo", repo])
     output = gh_runner(args)
     if output is None:
         raise CheckError(f"{kind} #{number} was not found")
     try:
-        return str(json.loads(output)["body"] or "")
+        data = json.loads(output)
+        host = urlparse(data["url"]).hostname
+        if not host:
+            raise ValueError("no host")
+        return str(data["body"] or ""), host
     except (ValueError, KeyError, TypeError) as error:
-        raise CheckError(f"gh returned no body for {kind} #{number}") from error
+        raise CheckError(f"gh returned no body or URL for {kind} #{number}") from error
 
 
 def checkout_root() -> Path:
@@ -996,10 +1005,11 @@ def repository(name: str | None) -> str | None:
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
     args.repo = repository(args.repo)
+    live_host: str | None = None
     if args.pr is not None:
-        source_label, text = f"pr #{args.pr}", live_body("pr", args.pr, args.repo)
+        source_label, (text, live_host) = f"pr #{args.pr}", live_body("pr", args.pr, args.repo)
     elif args.issue is not None:
-        source_label, text = f"issue #{args.issue}", live_body("issue", args.issue, args.repo)
+        source_label, (text, live_host) = f"issue #{args.issue}", live_body("issue", args.issue, args.repo)
     elif args.body == "-":
         source_label, text = "stdin", sys.stdin.read()
     else:
@@ -1017,7 +1027,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     def host() -> str:
         if "host" not in hosts:
-            hosts["host"] = target_host(args.repo)
+            hosts["host"] = live_host or target_host(args.repo)
         return hosts["host"]
 
     def renderer_for(root: Path | None) -> Callable[[str], str]:

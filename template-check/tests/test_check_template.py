@@ -249,6 +249,22 @@ class RenderedHeadingTests(unittest.TestCase):
             ["ghe.example.com/cli/cli", "cli/cli", None],
         )
 
+    def test_an_attribution_in_another_kind_of_alert_is_content(self):
+        warning = (
+            '<h2>Related</h2><div class="markdown-alert markdown-alert-warning"><p class="markdown-alert-title">Warning</p>'
+            "<p>Created on behalf of @someone using an expired token.</p></div>"
+        )
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(warning, "issue")], [True])
+
+    def test_gh_repo_given_as_a_url_names_its_host(self):
+        environment = {key: os.environ.pop(key) for key in ("GH_REPO", "GH_HOST") if key in os.environ}
+        os.environ["GH_REPO"] = "https://ghe.example.com/cli/cli"
+        try:
+            self.assertEqual(CHECK_TEMPLATE.target_host(None), "ghe.example.com")
+        finally:
+            os.environ.pop("GH_REPO", None)
+            os.environ.update(environment)
+
     def test_an_attribution_naming_a_versioned_model_is_dropped(self):
         note = (
             '<h2>Related</h2><div class="markdown-alert markdown-alert-note"><p class="markdown-alert-title">Note</p>'
@@ -954,7 +970,8 @@ class CommandTests(unittest.TestCase):
         self.assertEqual((code, result["state"]), (0, "no-template"))
 
     def renders(self, log):
-        return [call[:3] for call in map(json.loads, log.read_text().splitlines()) if call[-3:] == ["markdown", "--input", "-"]]
+        calls = log.read_text().splitlines() if log.exists() else []  # No log: gh never ran.
+        return [call[:3] for call in map(json.loads, calls) if call[-3:] == ["markdown", "--input", "-"]]
 
     def test_templates_from_a_checkout_on_another_host_are_refused_unrendered(self):
         log = self.root / "gh.log"
@@ -1008,11 +1025,38 @@ class CommandTests(unittest.TestCase):
         self.assertEqual((code, result["state"]), (0, "match"))
         self.assertEqual(self.renders(log), [["api", "--hostname", "ghe.example.com"]] * 2)
 
+    def test_a_live_body_renders_on_the_host_gh_fetched_it_from(self):
+        log = self.root / "gh.log"
+        self.env["FAKE_GH_LOG"] = str(log)
+        template = self.write("template.md", "## Summary\n")
+        self.scenario.write_text(json.dumps({
+            "issue view 7 --json body,url": json.dumps(
+                {"body": "## Summary\n\nDone.\n", "url": "https://ghe.example.com/cli/cli/issues/7"}
+            ),
+        }), encoding="utf-8")
+        code, result = self.run_check("--issue", "7", "--template", str(template))
+        self.assertEqual((code, result["state"]), (0, "match"))
+        self.assertEqual(self.renders(log), [["api", "--hostname", "ghe.example.com"]] * 2)
+
+    def test_a_template_linked_from_outside_the_checkout_is_never_read(self):
+        outside = self.root / "elsewhere.md"
+        outside.write_text("## Private\n", encoding="utf-8")
+        (self.checkout / ".github").mkdir(parents=True)
+        (self.checkout / ".github" / "pull_request_template.md").symlink_to(outside)
+        log = self.root / "gh.log"
+        self.env["FAKE_GH_LOG"] = str(log)
+        code, result = self.run_check("--root", str(self.checkout), "--kind", "pr", "--body", "-", stdin="## Private\n\nx\n")
+        self.assertEqual((code, result["state"]), (2, "operational-error"))
+        self.assertIn("outside the checkout", result["reason"])
+        self.assertEqual(self.renders(log), [])
+
     def test_live_pull_request_body_against_its_repository_template(self):
-        repo = "owner/project"
+        repo = "cli/cli"
         listing = lambda *names: json.dumps([{"name": name, "type": kind} for name, kind in names])
         self.scenario.write_text(json.dumps({
-            f"pr view 7 --json body --repo {repo}": json.dumps({"body": "## Summary\r\n\r\nDone.\r\n"}),
+            f"pr view 7 --json body,url --repo {repo}": json.dumps(
+                {"body": "## Summary\r\n\r\nDone.\r\n", "url": "https://github.com/cli/cli/pull/7"}
+            ),
             f"api repos/{repo}/contents": listing(("README.md", "file"), (".github", "dir")),
             f"api repos/{repo}/contents/.github": listing(("PULL_REQUEST_TEMPLATE.md", "file")),
             f"api -H Accept: application/vnd.github.raw repos/{repo}/contents/.github/PULL_REQUEST_TEMPLATE.md":
