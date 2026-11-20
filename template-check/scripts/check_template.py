@@ -23,6 +23,7 @@ import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass, field
+from html import escape
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Callable
@@ -100,6 +101,7 @@ class Heading:
     written: str = ""
     # Whether it shows a link or footnote whose definition is elsewhere in its document.
     defined_elsewhere: bool = False
+    html: str = ""  # Its rendered content, which shows as it is wherever it is pasted.
 
     def __str__(self) -> str:
         if self.written:
@@ -156,6 +158,18 @@ class TreeBuilder(HTMLParser):
 
     def handle_data(self, data: str) -> None:
         self.stack[-1].children.append(data)
+
+
+def inner_html(node: Node) -> str:
+    """A node's content as HTML, without the renderer's source positions."""
+
+    def write(child: Node | str) -> str:
+        if isinstance(child, str):
+            return "<br>" if child == "\n" else escape(child, quote=False)
+        attrs = "".join(f' {key}="{escape(value)}"' for key, value in child.attrs.items() if key != "data-sourcepos")
+        return f"<{child.tag}{attrs}>" if child.tag in VOID else f"<{child.tag}{attrs}>{inner_html(child)}</{child.tag}>"
+
+    return "".join(write(child) for child in node.children)
 
 
 def text_of(node: Node | str) -> str:
@@ -350,21 +364,31 @@ def written_heading(lines: list[str], node: Node, level: int) -> str:
 
 
 def standalone(found: list[Heading], renderer: Callable[[str], str]) -> list[Heading]:
-    """Mark each heading whose written Markdown shows a different heading on its own.
+    """Report each heading in a form that shows the same heading where it is pasted.
 
-    A reference link or footnote resolves through a definition elsewhere in
-    its document, so pasted alone it would read differently; such a heading
-    is reported as written, with a note to copy that definition too.
+    Tried in turn: as written in the source, as compared, then as HTML, which
+    shows as it is. A reference link or footnote resolves through a
+    definition elsewhere in its document, so pasted alone it reads
+    differently; such a heading is reported as written, with a note to copy
+    that definition too.
     """
-    written = [heading for heading in found if heading.written]
-    if written:
-        alone = headings(renderer("\n\n".join(heading.written for heading in written)))
-        same = len(alone) == len(written)
-        for heading, shown in zip(written, alone):
-            if not same:
-                heading.written = ""
-            elif (shown.level, shown.text) != (heading.level, heading.text):
-                heading.defined_elsewhere = True  # Its written form still reads right with that definition.
+
+    def failing(candidates: list[tuple[Heading, str]]) -> list[Heading]:
+        """The headings whose form shows a different heading on its own."""
+        if not candidates:
+            return []
+        alone = headings(renderer("\n\n".join(form for _, form in candidates)))
+        if len(alone) != len(candidates):  # A form that is not one heading: try each alone.
+            alone = [(headings(renderer(form)) or [Heading(0, "")])[0] for _, form in candidates]
+        return [heading for (heading, _), shown in zip(candidates, alone) if (shown.level, shown.text) != (heading.level, heading.text)]
+
+    for heading in failing([(heading, heading.written) for heading in found if heading.written]):
+        if "<a " in heading.html or "data-footnote-ref" in heading.html:
+            heading.defined_elsewhere = True  # Its written form reads right with that definition.
+        else:
+            heading.written = ""
+    for heading in failing([(heading, str(heading)) for heading in found if not heading.written]):
+        heading.written = f"<h{heading.level}>{heading.html}</h{heading.level}>"
     return found
 
 
@@ -436,8 +460,10 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
         # before and after it, then a line that opens with `Edit:` and names
         # the head it covers in code, such as ``Edit: `1a2b3c4` reviewed``.
         end = note_rule(top, lambda rule, note: spaced_rule(rule, note, source, positioned))
-    if kind == "issue" and blocks:
-        last = blocks[-1]
+    # A rule or an empty element after the attribution shows nothing, so it does not hide it.
+    shown = [block for block in blocks if block.tag != "hr" and (words(block) or has_media(block) or has_checked(block))]
+    if kind == "issue" and shown:
+        last = shown[-1]
         paragraphs = [node for node in elements(last.children) if "markdown-alert-title" not in node.attrs.get("class", "")]
         lines = [line.strip() for line in text_of(paragraphs[0]).splitlines() if line.strip()] if len(paragraphs) == 1 else []
         opening = paragraphs[0].children[0] if len(paragraphs) == 1 and paragraphs[0].children else None
@@ -472,7 +498,7 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
                 text = " ".join(heading_text(child, github=not positioned).split()).replace(CODE_SPACE, " ")
                 # A closing run of `#` would end the heading where it is written back.
                 text = re.sub(r"(^|\s)(#+)$", r"\1\\\2", text)
-                heading = Heading(int(level.group(1)), text, line, written=written)
+                heading = Heading(int(level.group(1)), text, line, written=written, html=inner_html(child))
                 while open_sections and open_sections[-1].level >= heading.level:
                     open_sections.pop()
                 content()  # A subsection is content of the sections around it.
@@ -766,8 +792,10 @@ def form_template(path: str, text: str) -> Template:
                 block.append(content)
                 continue
             item["label"], block = " ".join(block), None
-        if content.startswith("#"):
-            continue
+        pending = item.get("pending") if item else None
+        in_quote = bool(pending) and pending[2][:1] in ("'", '"') and not QUOTED_SCALAR.match(pending[2])
+        if content.startswith("#") and not (in_quote and indent > pending[1]):
+            continue  # A comment, unless it continues a quoted value.
         # A list item under `body:` may start at the same indent as the key.
         starts_item = bool(re.match(r"-(?:[ \t]|$)", content))
         if indent == 0 and not (in_body and starts_item):

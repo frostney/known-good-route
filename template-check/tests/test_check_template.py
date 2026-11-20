@@ -628,7 +628,12 @@ class RendererParityTests(unittest.TestCase):
         self.assertEqual(CHECK_TEMPLATE.headings(REAL_RENDER(f"{heading}\n"))[0].text, heading.text)
 
     def test_reported_headings_read_back_as_the_same_heading(self):
-        for template in ("Rollout\\\nplan\n=======\n", "<h2>Contact helpful@example.com</h2>\n"):
+        for template in (
+            "Rollout\\\nplan\n=======\n",
+            "<h2>Contact helpful@example.com</h2>\n",
+            "Run `x  \ny`\n=========\n",
+            "<h2>Check<em>!</em></h2>\n",
+        ):
             with self.subTest(template=template):
                 [heading] = CHECK_TEMPLATE.parse_template("t.md", template, REAL_RENDER).headings
                 self.assertFalse(heading.defined_elsewhere)
@@ -638,6 +643,12 @@ class RendererParityTests(unittest.TestCase):
         form = "body:\n  - type: input\n    attributes:\n      label: Run `cmd  arg`\n"
         [label] = CHECK_TEMPLATE.parse_template("f.yml", form, REAL_RENDER).headings
         self.assertEqual(label.text, CHECK_TEMPLATE.headings(REAL_RENDER("### Run `cmd  arg`\n"))[0].text)
+
+    def test_an_attribution_followed_by_blank_blocks_is_no_content(self):
+        for after in ("---\n", "<div></div>\n"):
+            with self.subTest(after=after):
+                body = f"## Related\n\n> [!NOTE]\n> Created on behalf of @someone using Some Model.\n\n{after}"
+                self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(REAL_RENDER(body), "issue", body)], [False])
 
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
@@ -650,6 +661,13 @@ class RendererParityTests(unittest.TestCase):
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("ref%41", "refA")
         }
         self.assertEqual(len(texts), 2)
+
+    def test_every_reported_heading_reads_back_unless_it_needs_a_definition(self):
+        for case, fixture in RENDERED.items():
+            for heading in CHECK_TEMPLATE.parse_template("t.md", fixture["markdown"], REAL_RENDER).headings:
+                with self.subTest(case=case, heading=str(heading)):
+                    shown = CHECK_TEMPLATE.headings(REAL_RENDER(f"{heading}\n"))
+                    self.assertTrue(heading.defined_elsewhere or [(h.level, h.text) for h in shown] == [(heading.level, heading.text)])
 
     def test_every_captured_case_reads_as_github_rendered_it(self):
         for case, fixture in RENDERED.items():
@@ -707,6 +725,10 @@ class TemplateParsingTests(unittest.TestCase):
             with self.subTest(attributes=attributes):
                 form = f"body:\n  - type: input\n    attributes:{attributes}"
                 self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["Steps to reproduce"])
+
+    def test_a_quoted_label_may_continue_on_a_line_starting_with_a_hash(self):
+        form = 'body:\n  - type: input\n    attributes:\n      label: "Error seen in the\n        #general channel"\n'
+        self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["Error seen in the #general channel"])
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):
