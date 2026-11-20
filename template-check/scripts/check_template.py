@@ -45,7 +45,7 @@ COMMENT_BLOCK = re.compile(r" {0,3}<!--")
 # `Edit:` line; it belongs to no template section.
 NOTE_RULE = re.compile(r" {0,3}-{3,}[ \t]*$")
 NOTE_OPENING = re.compile(r" {0,3}Edit:")
-YAML_KEY = re.compile(r"""(?:[A-Za-z0-9_][\w.-]*|"[^"]*"|'[^']*')[ \t]*:(?:[ \t]|$)""")
+YAML_KEY = re.compile(r"""(?:[A-Za-z0-9_][\w .-]*|"[^"]*"|'[^']*')[ \t]*:(?:[ \t]|$)""")
 BLOCK_SCALAR = re.compile(r"[|>](?:[+-]([0-9])?|([0-9])[+-]?)?(?:\s+#.*)?$")
 # A renamed heading still resembles the template's wording this closely.
 RENAME_SIMILARITY = 0.6
@@ -154,9 +154,9 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
             for section in open_sections:
                 section.has_content = True
             continue
-        if PLACEHOLDER.match(line[container:] if indent >= container else line):
+        if PLACEHOLDER.match((line[container:] if indent >= container else line).expandtabs(4)):
             continue
-        match = ATX.match(line)
+        match = None if container and indent >= container else ATX.match(line)
         if match:
             level = len(match.group(1))
             title = " ".join(CLOSING_HASHES.sub("", match.group(2) or "").split())
@@ -235,14 +235,15 @@ def scalar(value: str) -> str:
     return re.sub(r"(?:^|\s+)#.*$", "", value)
 
 
-def top_level(text: str, separator: str) -> list[str]:
+def scan(text: str, separator: str) -> tuple[list[str], bool]:
     """Split text at each separator outside quotes and nested brackets.
 
-    A quote opens a quoted scalar only where a scalar starts, so the
+    Also returns whether every bracket and quote that opens in text closes in
+    it. A quote opens a quoted scalar only where a scalar starts, so the
     apostrophe in a plain `What's wrong?` is text. Inside quotes, `\\"` and
     `''` escape the closing quote.
     """
-    parts, current, depth, quote, escaped = [], "", 0, "", False
+    parts, current, depth, quote, escaped, closed = [], "", 0, "", False, True
     for index, char in enumerate(text):
         if escaped:
             escaped = False
@@ -258,12 +259,17 @@ def top_level(text: str, separator: str) -> list[str]:
             depth += 1
         elif char in "}]":
             depth -= 1
+            closed = closed and depth >= 0
         elif char == separator and depth == 0:
             parts.append(current)
             current = ""
             continue
         current += char
-    return [*parts, current]
+    return [*parts, current], closed and depth == 0 and not quote
+
+
+def top_level(text: str, separator: str) -> list[str]:
+    return scan(text, separator)[0]
 
 
 def flow_mapping(text: str) -> dict[str, str]:
@@ -274,7 +280,7 @@ def flow_mapping(text: str) -> dict[str, str]:
     closed flow mapping reads as empty.
     """
     text = top_level(text, "#")[0].strip()
-    if not (text.startswith("{") and text.endswith("}")):
+    if not (text.startswith("{") and text.endswith("}")) or not scan(text[1:-1], ",")[1]:
         return {}
     found = {}
     for entry in top_level(text[1:-1], ","):

@@ -326,6 +326,27 @@ class HeadingTests(unittest.TestCase):
             [True, False],
         )
 
+    def test_inline_attributes_whose_outer_mapping_stays_open_are_an_error(self):
+        with self.assertRaises(CHECK_TEMPLATE.CheckError):
+            CHECK_TEMPLATE.parse_template(
+                "form.yml",
+                "body:\n  - type: checkboxes\n    attributes: {label: Terms, options: [{label: I agree}\n      ]}\n",
+            )
+
+    def test_a_heading_inside_a_list_item_is_content_not_a_section(self):
+        found = CHECK_TEMPLATE.headings("## Summary\n\n-\n  ## Environments\n  text\n")
+        self.assertEqual([(h.text, h.has_content) for h in found], [("Summary", True)])
+
+    def test_front_matter_keys_may_contain_spaces(self):
+        template = CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug Report\ncustom display: ignored\n---\n## A\n")
+        self.assertEqual(template.name, "Bug Report")
+
+    def test_a_tab_before_an_empty_box_is_measured_in_columns(self):
+        self.assertEqual(
+            [CHECK_TEMPLATE.headings(f"## A\n\n-{gap}[ ]\n")[0].has_content for gap in ("\t", "\t  ")],
+            [False, True],
+        )
+
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 
