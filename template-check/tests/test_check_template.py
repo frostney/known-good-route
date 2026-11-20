@@ -43,7 +43,7 @@ def mini_render(text):
         elif item:
             out.append(f"<ul><li>{html.escape(item.group(1) or '')}</li></ul>")
         else:
-            out.append(f"<p>{html.escape(line)}</p>")
+            out.append("<p>" + re.sub(r"`([^`]+)`", r"<code>\1</code>", html.escape(line)) + "</p>")
     return "\n".join(out)
 
 
@@ -116,6 +116,9 @@ FAKE_GH = r"""#!/usr/bin/env python3
 import json, os, pathlib, sys
 """ + MINI_RENDER + r"""
 responses = json.loads(pathlib.Path(os.environ["FAKE_GH_SCENARIO"]).read_text())
+if os.environ.get("FAKE_GH_LOG"):
+    with open(os.environ["FAKE_GH_LOG"], "a") as log:
+        log.write(json.dumps(sys.argv[1:]) + "\n")
 if sys.argv[1:2] == ["api"] and sys.argv[-3:] == ["markdown", "--input", "-"]:
     text = json.load(sys.stdin)["text"]
     if "render-error" in responses or responses.get("render-error-for", "\0") in text:
@@ -123,7 +126,7 @@ if sys.argv[1:2] == ["api"] and sys.argv[-3:] == ["markdown", "--input", "-"]:
         sys.exit(1)
     print(mini_render(text), end="")
     sys.exit(0)
-answer = responses.get(" ".join(sys.argv[1:]))
+answer = responses.get(f"{os.getcwd()} :: " + " ".join(sys.argv[1:]), responses.get(" ".join(sys.argv[1:])))
 if answer is None:
     print("gh: Not Found (HTTP 404)", file=sys.stderr)
     sys.exit(1)
@@ -200,6 +203,31 @@ class RenderedHeadingTests(unittest.TestCase):
         nested = "<h2>A</h2><ul><li>[ ]<ul><li>[ ]</li></ul></li></ul>"
         self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(nested)], [False])
 
+    def test_an_image_in_a_heading_reads_as_its_alt_text(self):
+        self.assertEqual(self.read("image_heading"), [("Release production", True)])
+
+    def test_only_a_closing_edit_line_naming_a_head_is_the_review_note(self):
+        found = md_headings("## A\n\nx\n\n---\n\nEdit: plain words\n\n## B\n\ny\n", "pr")
+        self.assertEqual([(h.text, h.has_content) for h in found], [("A", True), ("B", True)])
+
+    def test_a_checkout_whose_host_cannot_be_resolved_is_an_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            subprocess.run(["git", "init", "-q", directory], check=True)
+            subprocess.run(["git", "-C", directory, "remote", "add", "origin", "https://ghe.example.com/cli/cli"], check=True)
+            original = CHECK_TEMPLATE.gh_runner
+            environment = {key: os.environ.pop(key) for key in ("GH_REPO", "GH_HOST") if key in os.environ}
+
+            def unresolved(args, stdin=None, cwd=None):
+                raise CHECK_TEMPLATE.CheckError("no repository")
+
+            CHECK_TEMPLATE.gh_runner = unresolved
+            try:
+                with self.assertRaises(CHECK_TEMPLATE.CheckError):
+                    CHECK_TEMPLATE.target_host(None, Path(directory))
+            finally:
+                CHECK_TEMPLATE.gh_runner = original
+                os.environ.update(environment)
+
     def test_a_line_break_in_a_heading_separates_its_words(self):
         self.assertEqual(self.read("line_break_heading"), [("Rollout plan", True)])
 
@@ -253,6 +281,14 @@ class TemplateParsingTests(unittest.TestCase):
             lambda markdown: mini_render(markdown.replace("`", "")),
         )
         self.assertEqual([str(h) for h in template.headings], ["### Run --help"])
+
+    def test_a_type_given_as_a_block_scalar_is_read(self):
+        template = CHECK_TEMPLATE.parse_template(
+            "f.yml",
+            "body:\n  - type: >-\n      markdown\n    attributes:\n      value: hi\n"
+            "  - type: input\n    attributes:\n      label: A\n",
+        )
+        self.assertEqual([str(h) for h in template.headings], ["### A"])
 
     def test_a_comment_after_a_type_key_leaves_it_to_continue_below(self):
         template = CHECK_TEMPLATE.parse_template(
@@ -722,7 +758,7 @@ class CommandTests(unittest.TestCase):
 
     def test_an_explicit_template_without_a_kind_reads_the_body_as_a_pull_request(self):
         template = self.write("template.md", "## Testing\n\nx\n")
-        code, result = self.run_check("--template", str(template), "--body", "-", stdin="## Testing\n\n---\n\nEdit: reviewed\n")
+        code, result = self.run_check("--template", str(template), "--body", "-", stdin="## Testing\n\n---\n\nEdit: `abc1234` reviewed\n")
         self.assertEqual((code, result["state"]), (1, "mismatch"))
 
     def test_an_unreadable_form_is_needed_when_its_declared_name_is_chosen(self):
@@ -832,6 +868,18 @@ class CommandTests(unittest.TestCase):
             "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "Issue", stdin=body(*FULL)
         )
         self.assertEqual((code, result["state"]), (0, "match"))
+
+    def test_a_body_renders_on_its_own_host_and_root_templates_on_theirs(self):
+        log = self.root / "gh.log"
+        self.env["FAKE_GH_LOG"] = str(log)
+        self.write(".github/pull_request_template.md", "## Summary\n")
+        self.scenario.write_text(json.dumps({
+            f"{self.checkout} :: repo view --json url --jq .url": "https://ghe.example.com/cli/cli\n",
+        }), encoding="utf-8")
+        code, result = self.run_check("--root", str(self.checkout), "--kind", "pr", "--body", "-", stdin="## Summary\n\nDone.\n")
+        self.assertEqual((code, result["state"]), (0, "match"))
+        renders = [call for call in map(json.loads, log.read_text().splitlines()) if call[-3:] == ["markdown", "--input", "-"]]
+        self.assertEqual(renders, [["api", "--hostname", "ghe.example.com", "markdown", "--input", "-"], ["api", "markdown", "--input", "-"]])
 
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "owner/project"

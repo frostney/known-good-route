@@ -70,5 +70,9 @@
  "line_break_heading": {
   "markdown": "## Rollout<br>plan\n\nText.\n",
   "html": "<h2>Rollout<br>plan</h2>\n<p>Text.</p>"
+ },
+ "image_heading": {
+  "markdown": "## Release ![production](https://example.org/production.svg)\n\nText.\n",
+  "html": "<h2>Release <a target=\"_blank\" rel=\"noopener noreferrer nofollow\" href=\"https://camo.githubusercontent.com/55a0d3423b57df531cad67f0131adf1c02dd98fdd864e4db1f75510df590e217/68747470733a2f2f6578616d706c652e6f72672f70726f64756374696f6e2e737667\"><img src=\"https://camo.githubusercontent.com/55a0d3423b57df531cad67f0131adf1c02dd98fdd864e4db1f75510df590e217/68747470733a2f2f6578616d706c652e6f72672f70726f64756374696f6e2e737667\" alt=\"production\" data-canonical-src=\"https://example.org/production.svg\" style=\"max-width: 100%;\"></a></h2>\n<p>Text.</p>"
  }
 }

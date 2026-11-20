@@ -112,6 +112,8 @@ class TreeBuilder(HTMLParser):
 def text_of(node: Node | str) -> str:
     if isinstance(node, str):
         return node
+    if node.tag == "img":
+        return node.attrs.get("alt", "")  # A badge or image reads as its label.
     return "".join(text_of(child) for child in node.children)
 
 
@@ -160,8 +162,19 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
     top = [node for node in builder.root.children if not (isinstance(node, Node) and is_footnotes(node))]
     blocks = elements(top)
     if kind == "pr":
-        for rule, following in zip(blocks, blocks[1:]):
-            if rule.tag == "hr" and following.tag == "p" and words(following).startswith("Edit:"):
+        # The review note closes the body: a rule, then `Edit:` and the head it
+        # covers in code, such as ``Edit: `1a2b3c4` reviewed``.
+        for rule, following in reversed(list(zip(blocks, blocks[1:]))):
+            opening = next((node for node in following.children if not (isinstance(node, str) and not node.strip())), None)
+            first_element = next(iter(elements(following.children)), None)
+            if (
+                rule.tag == "hr"
+                and following.tag == "p"
+                and isinstance(opening, str)
+                and opening.strip() == "Edit:"
+                and first_element is not None
+                and first_element.tag == "code"
+            ):
                 top = top[: next(index for index, node in enumerate(top) if node is rule)]
                 break
     if kind == "issue" and blocks:
@@ -222,8 +235,16 @@ def target_host(repo: str | None, root: Path | None) -> str | None:
     try:
         url = gh_runner(["repo", "view", "--json", "url", "--jq", ".url"], cwd=root)
     except CheckError:
-        return None  # No repository gh can resolve; gh's default host applies.
-    return urlparse(url.strip()).hostname if url else None
+        url = None
+    if url and urlparse(url.strip()).hostname:
+        return urlparse(url.strip()).hostname
+    # A checkout with remotes belongs to some host; never guess which.
+    remotes = subprocess.run(
+        ["git", *(["-C", str(root)] if root else []), "remote"], text=True, capture_output=True, check=False
+    )
+    if remotes.returncode == 0 and remotes.stdout.strip():
+        raise CheckError("cannot tell which GitHub host this checkout belongs to; pass --repo HOST/OWNER/REPO")
+    return None  # No repository at all: gh's default host applies.
 
 
 def render(markdown: str, host: str | None = None) -> str:
@@ -488,8 +509,8 @@ def form_template(path: str, text: str) -> Template:
             attributes_indent = indent if key == "attributes" else None
             label_indent = None
             if key == "type":
-                item["type"] = scalar(value)
-                if not scalar(value):
+                item["type"] = "" if BLOCK_SCALAR.match(value.strip()) else scalar(value)
+                if not item["type"]:
                     item["pending"] = ("type", indent)
             elif key == "attributes" and value.strip().startswith("{"):
                 attributes_indent = None
@@ -916,10 +937,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         except (OSError, ValueError) as error:
             raise CheckError(f"cannot read body: {error}") from error
     kind = "pr" if args.pr is not None else "issue" if args.issue is not None else args.kind
-    host = target_host(args.repo, args.root)
+    # The body belongs to the repository named or checked out here; templates
+    # may come from another checkout through --root.
+    body_host = target_host(args.repo, None)
+    template_host = target_host(args.repo, args.root) if args.root and not args.repo else body_host
 
     def renderer(markdown: str) -> str:
-        return render(markdown, host)
+        return render(markdown, template_host)
 
     if args.template:
         try:
@@ -943,7 +967,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         return {"state": "no-template", "body": source_label, "problems": [], "reason": absent}
 
     # Without a kind, as with --template alone, the body reads as a pull request's.
-    body = headings(renderer(text.removeprefix("\ufeff")), kind or "pr")
+    body = headings(render(text.removeprefix("\ufeff"), body_host), kind or "pr")
     template, problems = select(templates, body, args.template_name)
     return {
         "state": "mismatch" if problems else "match",

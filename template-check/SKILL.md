@@ -58,17 +58,22 @@ belongs to.
 
 It reads a Markdown body or template as GitHub renders it, through the
 Markdown API of the repository's own GitHub host, so a heading counts exactly
-where GitHub shows one. The host comes from a host-qualified `--repo` or
-`GH_REPO`, then `GH_HOST`, then the checkout's `origin` remote. A body is
-rendered only when there is a template to compare it with. Text in code,
+where GitHub shows one. The body renders on the host of the repository it
+belongs to, and templates found through `--root` on the host of that
+checkout's repository. The host comes from a host-qualified `--repo` or
+`GH_REPO`, then `GH_HOST`, then the repository gh resolves for the checkout. A
+checkout whose host cannot be resolved is an operational error, never a
+render on another host. A body is rendered only when there is a template to
+compare it with. Text in code,
 comments and other HTML GitHub does not show is no heading. A heading inside a
 list item, quote, table or alert is its section's content, not a section of
 its own. A template heading pairs with a body heading at the same level before
 one at another level, so a subsection that shares a section's name does not
 stand in for it. A list item that shows nothing, or only `[ ]`, such as a
 template's `-` placeholder, is not content. Reading stops at a pull request's
-review note, a rule followed by a paragraph that opens with `Edit:`, so the
-note is not content of the last template section. For an issue, the
+review note, the last rule followed by `Edit:` and the head it covers in code,
+such as ``Edit: `1a2b3c4` reviewed``, so the note is not content of the last
+template section. For an issue, the
 attribution note `create-issue` closes it with is not content either.
 
 Issue forms are YAML that GitHub does not render here, so the check reads them
