@@ -30,7 +30,7 @@ jobs:
 
       # template-check renders Markdown with GitHub's cmark-gfm; its tests need it.
       - name: Install the Markdown renderer
-        run: python3 -m pip install cmarkgfm==2025.10.22
+        run: python3 -m pip install cmarkgfm==2025.10.22 pyyaml==6.0.3
 
       - name: Install dependencies
         run: bun install --frozen-lockfile

@@ -7,8 +7,8 @@ description: >-
 license: Unlicense OR MIT
 compatibility: >-
   Requires Python 3.11 or newer, git and the cmarkgfm package, GitHub's
-  cmark-gfm renderer, which the script runs through uv when it is not
-  installed. Reading a live body or a remote repository's templates also
+  cmark-gfm renderer, and PyYAML, which the script runs through uv when they
+  are not installed. Reading a live body or a remote repository's templates also
   requires the GitHub CLI (gh) authenticated to that repository, and network
   access.
 ---
@@ -64,9 +64,10 @@ belongs to.
 It reads a Markdown body or template as GitHub renders it: with cmark-gfm,
 the engine behind GitHub's Markdown, run locally, so a heading counts exactly
 where GitHub shows one and nothing is sent anywhere to be rendered. Without
-the `cmarkgfm` package, it renders through uv with a pinned version from PyPI
-alone, outside the checkout and ignoring uv configuration and index settings; without uv, it is an
-operational error that names the install command. A check with no template
+the `cmarkgfm` package, or PyYAML for issue forms and front matter, it runs
+that package through uv with a pinned version from PyPI alone, outside the
+checkout and ignoring uv configuration and index settings; without uv, it is
+an operational error that names the install command. A check with no template
 needs no renderer. With `--template-name`, only the templates that can be the one named
 are read.
 
@@ -88,8 +89,8 @@ code, such as ``Edit: `1a2b3c4` reviewed``, so the note is not content of the
 last template section. For an issue, the
 attribution note `create-issue` closes it with is not content either.
 
-Issue forms are YAML that GitHub does not render here, so the check reads them
-itself: in GitHub's block layout, where a field's `attributes` may be a
-one-line flow mapping. A form written in any other flow style, or that uses a
-YAML alias such as `*name`, is an
-operational error, never a partial check.
+Issue forms and front matter are YAML, read with PyYAML's safe loader as
+GitHub reads them, in any YAML style. A form that does not load, or a field
+whose label is not text, is an operational error, never a partial check; its
+`name` entry, read on its own, still keeps it from blocking a check that names
+another template.

@@ -36,9 +36,15 @@ try:
     from cmarkgfm.cmark import Options
 except ImportError:  # render() runs it through uv instead.
     cmarkgfm = None
+try:
+    import yaml
+except ImportError:  # load_yaml() runs it through uv instead.
+    yaml = None
 
-# GitHub's cmark-gfm for Python, pinned to a release over a year old.
+# GitHub's cmark-gfm for Python, and PyYAML for issue forms and front matter,
+# each pinned to a release over a year old.
 CMARKGFM = "cmarkgfm==2025.10.22"
+PYYAML = "pyyaml==6.0.3"
 # uv settings that name a package source or a directory; the fallback clears them so
 # PyPI is the only source and the temporary directory the only working directory.
 UV_SOURCES = {
@@ -53,6 +59,21 @@ RENDER = (
     "html = cmarkgfm.github_flavored_markdown_to_html(markdown, "
     "options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES | Options.CMARK_OPT_SOURCEPOS)\n"
     "sys.stdout.buffer.write(html.encode('utf-8'))"
+)
+# PyYAML's safe loader as plain JSON, as jsonable() makes it in this process.
+LOAD = (
+    "import json, sys, yaml\n"
+    "def plain(value):\n"
+    "    if isinstance(value, dict):\n"
+    "        return {str(key): plain(item) for key, item in value.items()}\n"
+    "    if isinstance(value, list):\n"
+    "        return [plain(item) for item in value]\n"
+    "    return value if value is None or isinstance(value, (str, int, float, bool)) else str(value)\n"
+    "try:\n"
+    "    result = {'value': plain(yaml.safe_load(sys.stdin.buffer.read().decode('utf-8')))}\n"
+    "except (yaml.YAMLError, ValueError, OverflowError) as error:\n"
+    "    result = {'error': str(error)}\n"
+    "sys.stdout.buffer.write(json.dumps(result).encode('utf-8'))"
 )
 
 
@@ -78,8 +99,6 @@ CLOSES_PARAGRAPH = {
 }
 # The attribution note `create-issue` ends every issue with, as rendered text.
 ATTRIBUTION = re.compile(r"Created on behalf of @[\w-]+ using (?:(?!\.\s).)+\.")
-YAML_KEY = re.compile(r"""(?:\w[\w .-]*|"[^"]*"|'[^']*')[ \t]*:(?:[ \t]|$)""")
-BLOCK_SCALAR = re.compile(r"[|>](?:[+-]([0-9])?|([0-9])[+-]?)?(?:\s+#.*)?$")
 # A renamed heading still resembles the template's wording this closely.
 RENAME_SIMILARITY = 0.6
 # GitHub looks for pull request templates in these directories, and for
@@ -349,6 +368,24 @@ def plain(node: Node) -> bool:
     )
 
 
+def apart(item: Node) -> tuple[Node, list[Node]]:
+    """A list item's own content, and the lists and quotes nested in it, also inside plain wrappers."""
+    nested: list[Node] = []
+
+    def own(node: Node) -> Node:
+        kept: list[Node | str] = []
+        for child in node.children:
+            if isinstance(child, Node) and child.tag in ("ul", "ol", "blockquote"):
+                nested.append(child)
+            elif isinstance(child, Node) and child.tag in ("div", "p", "span"):
+                kept.append(own(child))
+            else:
+                kept.append(child)
+        return Node(node.tag, node.attrs, kept)
+
+    return own(item), nested
+
+
 def is_alert(node: Node, github: bool = True) -> bool:
     """A GitHub alert; cmark-gfm leaves alerts as quotes, so locally a div with the class is the author's."""
     return github and node.tag == "div" and "markdown-alert" in node.attrs.get("class", "").split()
@@ -533,7 +570,13 @@ def headings(html: str, kind: str | None = None, source: str | None = None, gith
     # A rule or an empty element after the attribution shows nothing, so it does not hide it.
     shown = [block for block in blocks if block.tag != "hr" and (words(block) or has_media(block) or has_checked(block))]
     if kind == "issue" and shown:
-        last = shown[-1]
+        last, holder = shown[-1], builder.root
+        # Through plain wrappers to the last block that shows anything.
+        while last.tag in ("div", "section") and not is_alert(last, github):
+            inner = [block for block in elements(last.children) if block.tag != "hr" and (words(block) or has_media(block) or has_checked(block))]
+            if not inner:
+                break
+            last, holder = inner[-1], last
         paragraphs = [node for node in elements(last.children) if "markdown-alert-title" not in node.attrs.get("class", "")]
         lines = [line.strip() for line in text_of(paragraphs[0]).splitlines() if line.strip()] if len(paragraphs) == 1 else []
         opening = paragraphs[0].children[0] if len(paragraphs) == 1 and paragraphs[0].children else None
@@ -543,6 +586,7 @@ def headings(html: str, kind: str | None = None, source: str | None = None, gith
             lines = []
         loose_text = any(isinstance(child, str) and child.strip() for child in last.children)
         if len(lines) == 1 and ATTRIBUTION.fullmatch(" ".join(lines[0].split())) and not has_media(last) and not loose_text:
+            holder.children = [node for node in holder.children if node is not last]
             top = [node for node in top if node is not last]
 
     found: list[Heading] = []
@@ -577,9 +621,9 @@ def headings(html: str, kind: str | None = None, source: str | None = None, gith
                 open_sections.append(heading)
                 continue
             if child.tag == "li":
-                # Nested lists and quotes are read on their own, apart from the item's own text.
-                lists = [node for node in elements(child.children) if node.tag in ("ul", "ol", "blockquote")]
-                own = Node("li", {}, [node for node in child.children if not any(node is nested_list for nested_list in lists)])
+                # Nested lists and quotes, also inside plain wrappers, are read on their own,
+                # apart from the item's own text.
+                own, lists = apart(child)
                 placeholder = not words(own) or (words(own) == "[ ]" and plain(own))
                 if placeholder and not has_media(own) and not has_checked(own):
                     visit(lists, True)
@@ -613,482 +657,184 @@ def render(markdown: str) -> str:
         return cmarkgfm.github_flavored_markdown_to_html(
             markdown, options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES | Options.CMARK_OPT_SOURCEPOS
         )
+    return isolated(RENDER, markdown, CMARKGFM, "the Markdown renderer")
+
+
+def isolated(program: str, text: str, package: str, what: str) -> str:
+    """A pinned package's program run through uv on text, for a package that is not installed."""
     uv = shutil.which("uv")
     if not uv:
-        raise CheckError(f"the Markdown renderer is not installed: pip install {CMARKGFM}")
+        raise CheckError(f"{what} is not installed: pip install {package}")
     # Outside the checkout, with uv's configuration files ignored and PyPI named,
-    # so no checkout can choose where the renderer comes from; Python runs
+    # so no checkout can choose where the package comes from; Python runs
     # isolated (-I), so no file in that directory can stand in for it.
     command = [
         uv, "run", "--quiet", "--no-config", "--no-project", "--isolated",
         "--default-index", "https://pypi.org/simple", "--python", sys.executable,
-        "--with", CMARKGFM, "python", "-I", "-c", RENDER,
+        "--with", package, "python", "-I", "-c", program,
     ]
     # Index settings inherited from the environment could still add or prefer another source.
     environment = {key: value for key, value in os.environ.items() if key not in UV_SOURCES}
     try:
         completed = subprocess.run(
-            command, input=markdown, cwd=tempfile.gettempdir(), env=environment, text=True, encoding="utf-8",
+            command, input=text, cwd=tempfile.gettempdir(), env=environment, text=True, encoding="utf-8",
             capture_output=True, timeout=300, check=False,
         )
     except subprocess.TimeoutExpired as error:
-        raise CheckError("the Markdown renderer did not start through uv within 300s") from error
+        raise CheckError(f"{what} did not start through uv within 300s") from error
     if completed.returncode != 0:
         detail = (completed.stderr or completed.stdout).strip()[-500:]
-        raise CheckError(f"cannot run the Markdown renderer through uv ({detail}); pip install {CMARKGFM}")
+        raise CheckError(f"cannot run {what} through uv ({detail}); pip install {package}")
     return completed.stdout
 
 
-def without_comment(line: str) -> str:
-    """A YAML line without its comment: a `#` after whitespace, outside quotes, to the line's end.
+def jsonable(value: Any) -> Any:
+    """A loaded YAML value as plain data: mappings with string keys, lists and scalars."""
+    if isinstance(value, dict):
+        return {str(key): jsonable(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [jsonable(item) for item in value]
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    return str(value)  # A date or another YAML type, as text.
 
-    Brackets may open on one line and close on another, so only quotes are tracked.
+
+def load_yaml(text: str) -> Any:
+    """YAML read with PyYAML's safe loader, locally or through uv; ValueError for text that is not YAML."""
+    if yaml is not None:
+        try:
+            return jsonable(yaml.safe_load(text))
+        except (yaml.YAMLError, ValueError, OverflowError) as error:  # An escape past the last code point raises the others.
+            raise ValueError(f"not valid YAML: {error}") from error
+    result = json.loads(isolated(LOAD, text, PYYAML, "the YAML reader"))
+    if "error" in result:
+        raise ValueError(f"not valid YAML: {result['error']}")
+    return result["value"]
+
+
+class BrokenYaml(ValueError):
+    """YAML that does not load, with the name its own `name:` entry still declares, if any."""
+
+    def __init__(self, message: str, name: str | None) -> None:
+        super().__init__(message)
+        self.name = name
+
+
+def name_alone(text: str) -> str | None:
+    """The top-level `name` read on its own, from YAML that does not load as a whole.
+
+    Its entry runs from its key to the next line at the margin, so a name
+    continued on indented lines is read whole; None when even that fails.
     """
-    quote, escaped = "", False
-    for index, char in enumerate(line):
-        if escaped:
-            escaped = False
-        elif quote == '"' and char == "\\":
-            escaped = True
-        elif quote == "'" and char == "'" and line[index + 1 : index + 2] == "'":
-            escaped = True
-        elif quote:
-            quote = "" if char == quote else quote
-        elif char in "\"'" and (scalar_starts(line[:index]) or scalar_starts(PROPERTIES.sub("", line[:index]))):
-            quote = char
-        elif char == "#" and (index == 0 or line[index - 1].isspace()):
-            return line[:index]
-    return line
+    lines = text.split("\n")
+    for index, line in enumerate(lines):
+        if re.match(r"""["']?name["']?[ \t]*:""", line):
+            end = next((n for n in range(index + 1, len(lines)) if lines[n].strip() and lines[n][:1] not in " \t"), len(lines))
+            try:
+                return name_in(load_yaml("\n".join(lines[index:end]))) or None
+            except ValueError:
+                return None
+    return None
 
 
-def field(value: str) -> str:
-    """A front-matter value, or an unreadable marker for one whose escapes do not decode.
+def name_in(data: Any) -> str | None:
+    """The `name` a template's YAML declares: "" when it declares none, None when it is not text."""
+    if not isinstance(data, dict) or data.get("name") is None:
+        return ""
+    return data["name"] if isinstance(data["name"], str) else None
 
-    Only the name is used, so another field this reader cannot decode must not block a check.
+
+def front_matter(text: str) -> tuple[dict[str, Any], str]:
+    """Split a Markdown template's YAML front matter from its body.
+
+    Front matter opens with a `---` line and closes at the next `---` line at
+    the margin, so an indented `---` inside a YAML block is its text; what it
+    holds must be a YAML mapping, so an opening `---` rule over Markdown stays
+    part of the body.
     """
-    try:
-        return scalar(value)
-    except ValueError:
-        return Unreadable(value.strip())
-
-
-def front_matter(text: str) -> tuple[dict[str, str], str]:
-    """Split a Markdown template's YAML front matter from its body."""
-    lines = text.replace("\r\n", "\n").split("\n")
+    lines = lines_of(text).split("\n")
     if not lines or lines[0].strip() != "---":
         return {}, text
     for index, line in enumerate(lines[1:], start=1):
-        if line.strip() == "---":
-            block = [entry for entry in lines[1:index] if entry.strip() and not re.match(r"\.\.\.(?:[ \t]+#.*)?[ \t]*$", entry)]
-            # Front matter is a YAML mapping, in block or flow style, at any
-            # indent; an opening `---` rule over Markdown is part of the body.
-            joined = " ".join(without_comment(entry).strip() for entry in block)
-            if joined.startswith("{"):
-                return flow_mapping(joined), "\n".join(lines[index + 1 :])
-            explicit = [entry for entry in block if re.match(r"\?(?:[ \t]|$)", entry.lstrip())]
-            if not explicit and not any(YAML_KEY.match(entry.lstrip()) for entry in block):
+        if re.fullmatch(r"---[ \t]*", line):
+            block = "\n".join(lines[1:index])
+            try:
+                data = load_yaml(block)
+            except ValueError as error:
+                # Markdown between two rules is often not YAML; a key at the margin says it was meant to be.
+                if re.search(r"(?m)^[^\s#:-][^:\n]*:(?:[ \t]|$)", block):
+                    raise BrokenYaml(f"cannot read the front matter: {error}", name_alone(block)) from error
                 return {}, text
-            margin = min(len(entry) - len(entry.lstrip()) for entry in block)
-            fields = {}
-            for position, entry in enumerate(block):
-                if len(entry) - len(entry.lstrip()) != margin:
-                    continue
-                if entry.lstrip().startswith("?"):
-                    # An explicit key, `? name`, whose value follows on a `: value` line.
-                    following = block[position + 1].lstrip() if position + 1 < len(block) else ""
-                    if following.startswith(":"):
-                        fields[scalar(entry.lstrip()[1:])] = field(following[1:])
-                    continue
-                key, separator, value = entry.partition(":")
-                if separator and key.strip():
-                    fields[key.strip()] = field(value)
-            return fields, "\n".join(lines[index + 1 :])
+            if isinstance(data, dict):
+                return data, "\n".join(lines[index + 1 :])
+            return {}, text
     return {}, text
 
 
-# YAML's double-quoted escapes: a character, or a code point in hex.
-YAML_ESCAPE = re.compile(r"\\(x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8}|.)")
-YAML_ESCAPES = {
-    "0": "\0", "a": "\a", "b": "\b", "t": "\t", "\t": "\t", "n": "\n", "v": "\v", "f": "\f",
-    "r": "\r", "e": "\x1b", " ": " ", '"': '"', "/": "/", "\\": "\\", "N": "\x85",
-    "_": "\xa0", "L": "\u2028", "P": "\u2029",
-}
-
-
-def yaml_escape(match: re.Match[str]) -> str:
-    code = match.group(1)
-    if len(code) == 1:
-        return YAML_ESCAPES[code]
-    point = int(code[1:], 16)
-    if point > sys.maxunicode:
-        raise ValueError(f"escape \\{code} is past the last Unicode code point")
-    return chr(point)
-
-
-class Unreadable(str):
-    """A YAML value this reader does not decode as a string; rejected only where it is used."""
-
-    what = "value"
-
-
-class Alias(Unreadable):
-    """A YAML alias such as `*name`, which this reader does not resolve."""
-
-    what = "YAML alias"
-
-
-class Collection(Unreadable):
-    """A YAML sequence or mapping where a string belongs."""
-
-    what = "collection"
-
-
-def bare(value: str) -> str:
-    """A YAML value without the anchors and tags before it; no plain scalar starts with `&` or `!`."""
-    return re.sub(r"^(?:[&!]\S*(?:[ \t]+|$))+", "", value.strip())
-
-
-def scalar(value: str) -> str:
-    """A plain or quoted single-line YAML scalar without a trailing comment."""
-    value = bare(value)
-    if value.startswith("*"):
-        return Alias(value.split()[0])  # Rejected only where the value is used.
-    if value.startswith(("[", "{")):
-        return Collection(value)
-    double = re.match(r'"(?:[^"\\]|\\.)*"', value)
-    if double:
-        inner = double.group(0)[1:-1]
-        try:
-            return YAML_ESCAPE.sub(yaml_escape, inner)
-        except KeyError:
-            return inner  # An escape YAML does not define; compare the text as written.
-    single = re.match(r"'(?:[^']|'')*'", value)
-    if single:
-        return single.group(0)[1:-1].replace("''", "'")
-    return re.sub(r"(?:^|\s+)#.*$", "", value)
-
-
-# A quoted key and its colon, which a quoted value may follow with no space.
-QUOTED_KEY = re.compile(r"""(?:^|[\[{,\s])(?:"(?:[^"\\]|\\.)*"|'(?:[^']|'')*')[ \t]*:$""")
-
-
-# An anchor or tag, which may stand between a key and its quoted value.
-PROPERTIES = re.compile(r"(?:(?<=[\s\[{,])|^)(?:[&!]\S*[ \t]+)+$")
-
-
-def scalar_starts(current: str) -> bool:
-    """Whether a scalar may start after this text in a flow collection."""
-    stripped = current.rstrip()
-    return (
-        not stripped
-        or stripped[-1] in "[{,"
-        or stripped[-1] == ":" and (current[-1].isspace() or bool(QUOTED_KEY.search(current)))
-    )
-
-
-def scan(text: str, separator: str) -> tuple[list[str], bool]:
-    """Split text at each separator outside quotes and nested brackets.
-
-    Also returns whether every bracket and quote that opens in text closes in
-    it. A quote opens a quoted scalar only where a scalar starts, so the
-    apostrophe in a plain `What's wrong?` is text. Inside quotes, `\\"` and
-    `''` escape the closing quote.
-    """
-    parts, current, opened, quote, escaped, closed = [], "", "", "", False, True
-    for index, char in enumerate(text):
-        if escaped:
-            escaped = False
-        elif quote == '"' and char == "\\":
-            escaped = True
-        elif quote == "'" and char == "'" and text[index + 1 : index + 2] == "'":
-            escaped = True
-        elif quote:
-            quote = "" if char == quote else quote
-        elif char in "\"'" and (scalar_starts(current) or scalar_starts(PROPERTIES.sub("", current))):
-            quote = char
-        elif char in "{[":
-            opened += char
-        elif char in "}]":
-            closed = closed and opened[-1:] == ("{" if char == "}" else "[")
-            opened = opened[:-1]
-        elif char == separator and not opened:
-            parts.append(current)
-            current = ""
-            continue
-        current += char
-    return [*parts, current], closed and not opened and not quote
-
-
-def top_level(text: str, separator: str) -> list[str]:
-    return scan(text, separator)[0]
-
-
-def flow_mapping(text: str) -> dict[str, str]:
-    """The entries of a one-line YAML flow mapping such as `{label: Steps}`.
-
-    A comma or colon inside a quoted value or a nested bracket belongs to that
-    value. A comment may follow the closing brace. Anything that is not a
-    closed flow mapping reads as empty.
-    """
-    text = top_level(text, "#")[0].strip()
-    if not (text.startswith("{") and text.endswith("}")) or not scan(text[1:-1], ",")[1]:
-        return {}
-    found = {}
-    for entry in top_level(text[1:-1], ","):
-        # A key ends where YAML ends one: at a colon followed by a space, or
-        # straight after a quoted key.
-        parts = top_level(entry, ":")
-        for index in range(1, len(parts)):
-            key = ":".join(parts[:index])
-            if not parts[index] or parts[index][0].isspace() or QUOTED_KEY.search(key + ":"):
-                found[scalar(key)] = scalar(":".join(parts[index:]))
-                break
-    return found
-
-
-def fold(written: str, line: str) -> str:
-    """A multi-line scalar continued by its next line: YAML folds the break into a space,
-    except after a backslash in double quotes, which removes the break."""
-    if bare(written)[:1] == '"' and re.search(r"(?<!\\)(?:\\\\)*\\$", written):
-        return written[:-1] + line
-    return f"{written} {line}".strip()
-
-
-QUOTED_SCALAR = re.compile(r"""(?:"(?:[^"\\]|\\.)*"|'(?:[^']|'')*')""")
-
-
-def declared_name(text: str) -> str:
-    """A form's top-level `name`, plain, quoted or as a folded or literal block."""
-    lines = text.replace("\r\n", "\n").split("\n")
-    for index, line in enumerate(lines):
-        key, separator, value = line.partition(":")
-        if not separator or line.startswith((" ", "\t", "-")) or scalar(key) != "name":
-            continue
-        if value.strip()[:1] in ("'", '"') and not QUOTED_SCALAR.match(value.strip()):
-            # A quoted name continued on the lines below: YAML folds each line break into a space.
-            joined = value.strip()
-            for following in lines[index + 1 :]:
-                if following.strip() and not following.startswith((" ", "\t")):
-                    break  # The next key: the quote never closed.
-                joined = fold(joined, following.strip())
-                if QUOTED_SCALAR.match(joined):
-                    return " ".join(scalar(joined).split())
-            return ""  # A quote that never closes: unknown.
-        if scalar(value) and not BLOCK_SCALAR.match(bare(value)):
-            if QUOTED_SCALAR.match(bare(value)) or re.search(r"\s#", value):
-                return scalar(value)  # A quoted name, or one a comment ends, is complete.
-            # A plain name continues on more indented lines, folded into spaces.
-            words_below = []
-            for following in lines[index + 1 :]:
-                if not following.strip():
-                    continue
-                if not following.startswith((" ", "\t")) or following.strip().startswith("#"):
-                    break
-                words_below.append(following.strip())
-            return scalar(" ".join([value.strip(), *words_below]))
-        # A block scalar, or a plain one continued on the lines below the key.
-        block = []
-        for following in lines[index + 1 :]:
-            if following.strip() and not following.startswith((" ", "\t")):
-                break
-            block.append(following.strip())
-        joined = " ".join(" ".join(block).split())
-        return joined if BLOCK_SCALAR.match(bare(value)) else scalar(joined)
-    content = [line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")]
-    if content[:1] == ["---"]:
-        content = content[1:]  # A YAML document marker before the mapping.
-    if content and content[0].startswith("{"):
-        return flow_mapping(" ".join(content)).get("name", "")
-    return ""
+def declared_name(text: str) -> str | None:
+    """A form's top-level `name`: "" when it declares none, None when it cannot be read."""
+    try:
+        return name_in(load_yaml(text))
+    except ValueError:
+        return name_alone(text)
 
 
 def form_template(path: str, text: str, need_name: bool = True) -> Template:
-    """Headings of a GitHub issue form: one `###` per non-Markdown field label.
+    """Headings of a GitHub issue form: one `###` per field that is not Markdown.
 
     GitHub renders each answered or empty field as `### <label>` followed by
-    the answer or `_No response_`. This reads the block layout issue forms
-    use, including folded and literal labels and a field's `attributes`
-    written as a flow mapping. Any other flow-style YAML is not supported: a
-    form with a field whose label cannot be read is an error, so a body is
-    never checked against part of a form.
+    the answer or `_No response_`. The form is read with PyYAML's safe
+    loader; a form it cannot read, or a field without a text label, is an
+    error, so a body is never checked against part of a form.
     """
-    # The declared name comes first, so an error in a field still carries it.
-    try:
-        declared = declared_name(text)
-    except ValueError:
-        if need_name:
-            raise
-        declared = ""  # A form passed by path needs no name; its file names it.
-    declared = "" if isinstance(declared, Unreadable) else declared
-    if need_name and not declared and re.search(r"""(?m)^["']?name["']?[ \t]*:""", text):
-        # A name the form declares but this reader cannot read: it may be any template's.
-        raise CheckError(f"{path}: cannot read the issue form's name; pass --template PATH")
-    name = declared or Path(path).stem
-    found: list[Heading] = []
-    in_body = False
-    item_indent: int | None = None
-    key_indent: int | None = None  # Column of the current field's keys.
-    item: dict[str, Any] = {}
-    attributes_indent: int | None = None
-    label_indent: int | None = None
-    block: list[str] | None = None  # Lines of a folded or literal label.
-    block_indent: int | None = None  # Set by the block's first line.
 
-    def finish() -> None:
-        for key in ("type", "label"):
-            if isinstance(item.get(key), Unreadable):
-                error = CheckError(f"{path}: cannot read the {item[key].what} {item[key]} on line {item['start']}; pass --template PATH")
-                error.name = name
-                raise error
-        if not item or item.get("type") == "markdown":
-            return
-        if not item.get("label"):
-            error = CheckError(
-                f"{path}: cannot read the label of the field on line {item['start']}; pass --template PATH"
-            )
-            error.name = name
-            raise error
-        # Rendered later as a heading, which folds whitespace outside inline code itself.
-        found.append(Heading(3, re.sub(r"[\r\n]+", " ", item["label"]).strip(), item["line"]))
-
-    for number, raw in enumerate(text.replace("\r\n", "\n").split("\n"), start=1):
-        if not raw.strip():
-            continue
-        indent = len(raw) - len(raw.lstrip(" "))
-        content = raw.strip()
-        if block is not None:
-            if block_indent is None and label_indent is not None and indent > label_indent:
-                block_indent = indent
-            # Inside the block a `#` line is text; a less indented line ends it.
-            if block_indent is not None and indent >= block_indent:
-                block.append(content)
-                continue
-            item["label"], block = " ".join(block), None
-        pending = item.get("pending") if item else None
-        in_quote = bool(pending) and bare(pending[2])[:1] in ("'", '"') and not QUOTED_SCALAR.match(bare(pending[2]))
-        if content.startswith("#") and not (in_quote and indent > pending[1]):
-            continue  # A comment, unless it continues a quoted value.
-        # A list item under `body:` may start at the same indent as the key.
-        starts_item = bool(re.match(r"-(?:[ \t]|$)", content))
-        if indent == 0 and not (in_body and starts_item):
-            key, _, value = content.partition(":")
-            in_body = scalar(key) == "body"
-            # An anchor or tag may name the block list that follows.
-            inline = re.sub(r"^(?:[&!]\S*[ \t]*)+", "", value.strip())
-            if in_body and inline and not inline.startswith("#"):
-                error = CheckError(f"{path}: cannot read the issue form's body on line {number}; pass --template PATH")
-                error.name = name
-                raise error
-            continue
-        if not in_body:
-            continue
-        if starts_item and (item_indent is None or indent == item_indent):
-            finish()
-            item_indent, item = indent, {"start": number}
-            attributes_indent = label_indent = None
-            pad = 1 + len(content[1:]) - len(content[1:].lstrip())
-            # After a bare or comment-only dash, the first key sets the column.
-            key_indent = None if content[1:].strip().startswith("#") or not content[1:].strip() else indent + pad
-            content, indent = content[1:].lstrip(), indent + pad
-            if content.startswith("#"):
-                continue
-            # Only a field's attributes may be a flow mapping, not the field.
-            if content.startswith(("{", "[")):
-                error = CheckError(f"{path}: cannot read the field on line {number}; pass --template PATH")
-                error.name = name
-                raise error
-        if item_indent is None:
-            continue
-        # Flow-style attributes that open on a later line are unsupported.
-        if (
-            attributes_indent is not None
-            and label_indent is None
-            and indent > attributes_indent
-            and content.startswith(("{", "["))
-        ):
-            error = CheckError(f"{path}: cannot read the attributes on line {number}; pass --template PATH")
-            error.name = name
-            raise error
-        key, separator, value = content.partition(":")
-        is_key = bool(separator) and (value[:1].isspace() or not value)
-        pending = item.pop("pending", None)
-        if pending and indent > pending[1]:
-            # A type or label may continue below its key, as a plain scalar or
-            # inside an open quote, where a colon is text.
-            written = pending[2]
-            if pending[0] == "label" and not written and BLOCK_SCALAR.match(bare(content)):
-                # The block's indicator on the line after its key: the label's lines follow.
-                indicator = BLOCK_SCALAR.match(bare(content))
-                digit = indicator.group(1) or indicator.group(2)
-                # An indentation indicator counts from the key, as on the key's own line.
-                block, block_indent = [], pending[1] + int(digit) if digit else None
-                label_indent = label_indent if label_indent is not None else pending[1]
-                item["line"] = number
-                continue
-            if not is_key or (bare(written)[:1] in ("'", '"') and not QUOTED_SCALAR.match(bare(written))):
-                written = fold(written, content)
-                item[pending[0]] = scalar(written)
-                item["pending"] = (pending[0], pending[1], written)
-                if pending[0] == "label" and not pending[2]:
-                    item["line"] = number
-                continue
-        if not is_key:
-            continue
-        key = scalar(key)
-        if key_indent is None and indent > item_indent:
-            key_indent = indent
-        if indent == key_indent:
-            attributes_indent = indent if key == "attributes" else None
-            label_indent = None
-            if key == "type":
-                item["type"] = "" if BLOCK_SCALAR.match(bare(value)) else scalar(value)
-                if not item["type"]:
-                    item["pending"] = ("type", indent, "")
-                elif not QUOTED_SCALAR.fullmatch(bare(value)):
-                    item["pending"] = ("type", indent, value.strip())  # A plain or open quoted type may continue.
-            elif key == "attributes" and bare(value).startswith("{"):
-                attributes_indent = None
-                mapping = flow_mapping(bare(value))
-                if not mapping:
-                    error = CheckError(
-                        f"{path}: cannot read the attributes on line {number}; pass --template PATH"
-                    )
-                    error.name = name
-                    raise error
-                if mapping.get("label"):
-                    item["line"], item["label"] = number, mapping["label"]
-        elif attributes_indent is not None and indent > attributes_indent:
-            label_indent = label_indent or indent
-            if indent == label_indent and key == "label":
-                item["line"] = number
-                indicator = BLOCK_SCALAR.match(bare(value))
-                if indicator:
-                    # An explicit indentation indicator sets the block's indent;
-                    # otherwise its first line does.
-                    digit = indicator.group(1) or indicator.group(2)
-                    block, block_indent = [], indent + int(digit) if digit else None
-                else:
-                    item["label"] = scalar(value)
-                    if not QUOTED_SCALAR.fullmatch(bare(value)):
-                        # A comment-only value is empty: the label starts on the next line.
-                        item["pending"] = ("label", indent, value.strip() if scalar(value) else "")
-    if block is not None:
-        item["label"] = " ".join(block)
-    finish()
-    if not found and re.search(r"""\b["']?label["']?\s*:""", text):
-        error = CheckError(f"{path}: cannot read the issue form's field labels; pass --template PATH")
+    def failure(message: str, name: str = "") -> CheckError:
+        error = CheckError(f"{path}: {message}; pass --template PATH")
         error.name = name
-        raise error
+        return error
+
+    try:
+        data = load_yaml(text)
+    except ValueError as error:
+        # Its name, read on its own, keeps the error from blocking a check that names another template.
+        raise failure(f"cannot read the issue form: {error}", name_alone(text) or "") from error
+    if not isinstance(data, dict):
+        raise failure("the issue form is not a YAML mapping")
+    declared = name_in(data)
+    if declared is None and need_name:
+        # A name the form declares but that is not text: it may be any template's.
+        raise failure("cannot read the issue form's name")
+    name = declared or Path(path).stem
+    body = data.get("body") or []
+    if not isinstance(body, list):
+        raise failure("the issue form's body is not a list of fields", name)
+    found: list[Heading] = []
+    for number, item in enumerate(body, start=1):
+        if not isinstance(item, dict) or not isinstance(item.get("type"), str):
+            raise failure(f"cannot read the type of field {number}", name)
+        if item["type"] == "markdown":
+            continue
+        attributes = item.get("attributes")
+        label = attributes.get("label") if isinstance(attributes, dict) else None
+        if not isinstance(label, str) or not label.strip():
+            raise failure(f"cannot read the label of field {number}", name)
+        # Rendered later as a heading, which folds whitespace outside inline code itself.
+        found.append(Heading(3, re.sub(r"[\r\n]+", " ", label).strip()))
     return Template(path, name, found)
 
 
 def markdown_template(path: str, text: str, renderer: Callable[[str], str], need_name: bool = True) -> Template:
-    fields, body = front_matter(text)
-    if isinstance(fields.get("name"), Alias) and not need_name:
-        fields["name"] = ""  # A template passed by path needs no name; its file names it.
-    if isinstance(fields.get("name"), Alias):
-        raise CheckError(f"{path}: cannot read the {fields['name'].what} {fields['name']} that names the template; pass --template PATH")
-    return Template(path, fields.get("name") or Path(path).stem, standalone(headings(renderer(body), source=body, github=False), renderer, body))
+    try:
+        fields, body = front_matter(text)
+    except BrokenYaml as error:
+        failure = CheckError(f"{path}: {error}; pass --template PATH")
+        failure.name = error.name or ""
+        raise failure from error
+    declared = name_in(fields)
+    if declared is None and need_name:
+        # A name that is not text may be any template's; a template passed by path needs none.
+        raise CheckError(f"{path}: cannot read the template's name; pass --template PATH")
+    return Template(path, declared or Path(path).stem, standalone(headings(renderer(body), source=body, github=False), renderer, body))
 
 
 def parse_template(path: str, text: str, renderer: Callable[[str], str] | None = None, need_name: bool = True) -> Template:
@@ -1160,18 +906,18 @@ def may_be_named(path: str, text: str, name: str) -> bool:
     wanted = name.casefold()
     if wanted in {Path(path).name.casefold(), Path(path).stem.casefold()}:
         return True
-    try:
-        text = text.removeprefix("\ufeff")
-        if path.lower().endswith((".yml", ".yaml")):
-            declared = declared_name(text)
-            if not declared or isinstance(declared, Unreadable):
-                return True  # Every form declares a name; one not read here may be this one.
-        else:
-            declared = front_matter(text)[0].get("name", "")
-            if isinstance(declared, Unreadable):
-                return True
-    except ValueError:
-        return True
+    text = text.removeprefix("\ufeff")
+    if path.lower().endswith((".yml", ".yaml")):
+        declared = declared_name(text)
+        if not declared:
+            return True  # Every form declares a name; one not read here may be this one.
+    else:
+        try:
+            declared = name_in(front_matter(text)[0])
+        except BrokenYaml as error:
+            declared = error.name
+        if declared is None:
+            return True
     return (declared or Path(path).stem).casefold() == wanted
 
 
@@ -1217,25 +963,20 @@ def discover(
             except CheckError as error:
                 # Keep the declared name, so a check naming another template ignores it.
                 if not error.name:
-                    try:
-                        if path.lower().endswith((".yml", ".yaml")):
-                            declared = declared_name(text.removeprefix("\ufeff"))
-                            error.name = "" if isinstance(declared, Unreadable) else declared  # An alias is unknown.
-                        else:
-                            fields = front_matter(text.removeprefix("\ufeff"))[0]
-                            named = fields.get("name")
-                            error.name = "" if isinstance(named, Unreadable) else named or Path(path).stem
-                    except ValueError:
-                        pass
+                    if path.lower().endswith((".yml", ".yaml")):
+                        error.name = declared_name(text.removeprefix("\ufeff")) or ""  # Unknown blocks a named check.
+                    else:
+                        try:
+                            declared = name_in(front_matter(text.removeprefix("\ufeff"))[0])
+                        except BrokenYaml as broken:
+                            declared = broken.name
+                        error.name = "" if declared is None else declared or Path(path).stem
                 raise
             except ValueError as error:
                 failure = CheckError(f"cannot read template {path}: {error}")
                 # Keep the form's declared name, so a check that names it still sees the error.
                 # Only the name line is read, so the field that failed cannot fail it too.
-                try:
-                    failure.name = declared_name(text.removeprefix("\ufeff"))
-                except ValueError:
-                    failure.name = ""
+                failure.name = declared_name(text.removeprefix("\ufeff")) or ""
                 raise failure from error
         except CheckError as error:
             error.path = path

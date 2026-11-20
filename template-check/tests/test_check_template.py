@@ -49,11 +49,11 @@ def mini_render(text):
 
 # Parsing and comparison tests read Markdown through the stand-in; the real
 # renderer, cmark-gfm, is tested against GitHub's own output below.
-HAS_RENDERER = importlib.util.find_spec("cmarkgfm") is not None
+HAS_RENDERER = all(importlib.util.find_spec(package) is not None for package in ("cmarkgfm", "yaml"))
 REAL_RENDER = CHECK_TEMPLATE.render
 CHECK_TEMPLATE.render = mini_render
 # CI installs the renderer, so its tests never skip there.
-needs_renderer = unittest.skipUnless(HAS_RENDERER or os.environ.get("CI"), "cmarkgfm is not installed")
+needs_renderer = unittest.skipUnless(HAS_RENDERER or os.environ.get("CI"), "cmarkgfm or PyYAML is not installed")
 RENDERED = json.loads((Path(__file__).parent / "github_rendered.json").read_text(encoding="utf-8"))
 
 
@@ -705,10 +705,14 @@ class RendererParityTests(unittest.TestCase):
         found = CHECK_TEMPLATE.headings(REAL_RENDER("## Steps\n\n- [ ]\n\n  ```\n  ```\n"))
         self.assertEqual([h.has_content for h in found], [False])
 
-    def test_an_alias_in_metadata_the_check_does_not_use_is_ignored(self):
-        template = CHECK_TEMPLATE.parse_template("t.md", "---\nname: Bug\ntitle: *description\n---\n## A\n", REAL_RENDER)
+    def test_an_alias_in_front_matter_reads_as_its_value(self):
+        template = CHECK_TEMPLATE.parse_template("t.md", "---\nname: &n Bug\ntitle: *n\n---\n## A\n", REAL_RENDER)
         self.assertEqual((template.name, [str(h) for h in template.headings]), ("Bug", ["## A"]))
 
+    def test_front_matter_that_does_not_load_is_an_error_naming_its_template(self):
+        with self.assertRaises(CHECK_TEMPLATE.CheckError) as raised:
+            CHECK_TEMPLATE.parse_template("t.md", "---\nname: Bug\ntitle: *missing\n---\n## A\n", REAL_RENDER)
+        self.assertEqual(raised.exception.name, "Bug")
     def test_an_authored_alert_class_wrapper_keeps_its_heading(self):
         template = '<div class="markdown-alert">\n\n## Summary\n\n</div>\n'
         self.assertEqual([str(h) for h in CHECK_TEMPLATE.parse_template("t.md", template, REAL_RENDER).headings], ["## Summary"])
@@ -763,10 +767,9 @@ class RendererParityTests(unittest.TestCase):
         texts = {CHECK_TEMPLATE.headings(REAL_RENDER(h))[0].text for h in ("## https<span>://example.org</span>\n", "## https:&#47;/example.org\n")}
         self.assertEqual(len(texts), 1)
 
-    def test_a_template_passed_by_path_needs_no_readable_name(self):
-        template = CHECK_TEMPLATE.parse_template("t.md", "---\nname: *display\n---\n## A\n", REAL_RENDER, need_name=False)
+    def test_a_template_passed_by_path_needs_no_text_name(self):
+        template = CHECK_TEMPLATE.parse_template("t.md", "---\nname: [a, b]\n---\n## A\n", REAL_RENDER, need_name=False)
         self.assertEqual((template.name, [str(h) for h in template.headings]), ("t", ["## A"]))
-
     def test_a_picture_heading_compares_its_responsive_sources(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(
@@ -805,6 +808,19 @@ class RendererParityTests(unittest.TestCase):
         template = CHECK_TEMPLATE.parse_template("t.md", "---\n版本: 2\n---\n## A\n", REAL_RENDER)
         self.assertEqual([str(h) for h in template.headings], ["## A"])
 
+    def test_an_indented_rule_inside_a_front_matter_block_is_its_text(self):
+        template = "---\nname: Bug\nabout: |\n  Top\n  ---\n  More detail\n---\n## A\n"
+        parsed = CHECK_TEMPLATE.parse_template("t.md", template, REAL_RENDER)
+        self.assertEqual((parsed.name, [str(h) for h in parsed.headings]), ("Bug", ["## A"]))
+
+    def test_a_placeholder_list_inside_a_wrapper_is_no_content(self):
+        html = "<h2>Steps</h2><ul><li>[ ]<div><ul><li>[ ]</li></ul></div></li></ul>"
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(html)], [False])
+
+    def test_the_attribution_inside_a_wrapper_is_no_content(self):
+        body = "## Related\n\n<div>\n\n> [!NOTE]\n> Created on behalf of @someone using Some Model.\n\n</div>\n"
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(REAL_RENDER(body), "issue", body, github=False)], [False])
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
@@ -833,6 +849,7 @@ class RendererParityTests(unittest.TestCase):
                     self.assertEqual(local, expected)
 
 
+@needs_renderer
 class TemplateParsingTests(unittest.TestCase):
     def test_form_labels_compare_as_github_renders_them(self):
         template = CHECK_TEMPLATE.parse_template(
@@ -889,11 +906,9 @@ class TemplateParsingTests(unittest.TestCase):
         form = 'body:\n  - type: input\n    attributes:\n      label: &title "First line\n        continuation: more"\n'
         self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["First line continuation: more"])
 
-    def test_a_yaml_alias_in_a_form_is_an_error(self):
-        form = "body:\n  - type: input\n    attributes: {label: &steps Steps}\n  - type: input\n    attributes: {label: *steps}\n"
-        with self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, r"f\.yml: .*alias \*steps"):
-            CHECK_TEMPLATE.parse_template("f.yml", form, REAL_RENDER)
-
+    def test_a_yaml_alias_in_a_form_reads_as_its_value(self):
+        form = "body:\n  - type: input\n    attributes: {label: &steps Steps}\n  - type: textarea\n    attributes: {label: *steps}\n"
+        self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["Steps", "Steps"])
     def test_a_markdown_bullet_inside_a_form_value_is_text(self):
         form = (
             "body:\n  - type: markdown\n    attributes:\n      value: |\n        * Note: read this first\n"
@@ -919,19 +934,28 @@ class TemplateParsingTests(unittest.TestCase):
         form = "body:\n  - type: input\n    attributes:\n      label:\n        |-\n          Steps\n      description: x\n"
         self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["Steps"])
 
-    def test_a_collection_label_is_an_error(self):
-        form = "body:\n  - type: input\n    attributes: {label: [Expected, Actual]}\n"
-        with self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, "collection"):
-            CHECK_TEMPLATE.form_template("f.yml", form)
-
-    def test_a_form_passed_by_path_needs_no_decodable_name(self):
-        form = 'name: "\\UFFFFFFFF"\nbody:\n  - type: input\n    attributes:\n      label: A\n'
+    def test_a_label_that_is_not_text_is_an_error(self):
+        for label in ("[Expected, Actual]", "{a: b}", "''"):
+            with self.subTest(label=label):
+                with self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, "label of field 1"):
+                    CHECK_TEMPLATE.form_template("f.yml", f"body:\n  - type: input\n    attributes: {{label: {label}}}\n")
+    def test_a_form_passed_by_path_needs_no_text_name(self):
+        form = "name: [Bug, Report]\nbody:\n  - type: input\n    attributes:\n      label: A\n"
         template = CHECK_TEMPLATE.form_template("f.yml", form, need_name=False)
         self.assertEqual((template.name, [h.text for h in template.headings]), ("f", ["A"]))
-
+        with self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, "name"):
+            CHECK_TEMPLATE.form_template("f.yml", form)
     def test_an_indentation_indicator_below_the_label_key_counts_from_the_key(self):
         form = "body:\n  - type: input\n    attributes:\n      label:\n        >2\n        Summary\n"
         self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["Summary"])
+
+    def test_a_block_type_below_its_key_and_a_spaced_name_read_as_yaml_reads_them(self):
+        form = (
+            'name: "Bug  Report\n  again"\nbody:\n  - type:\n      >-\n      markdown\n    attributes:\n      value: x\n'
+            "  - type: input\n    attributes:\n      label: A\n"
+        )
+        template = CHECK_TEMPLATE.form_template("f.yml", form)
+        self.assertEqual((template.name, [h.text for h in template.headings]), ("Bug  Report again", ["A"]))
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):
@@ -965,10 +989,6 @@ class TemplateParsingTests(unittest.TestCase):
         with self.assertRaises(CHECK_TEMPLATE.CheckError):
             CHECK_TEMPLATE.parse_template("f.yml", "body:\n  - type: input\n    attributes: {label:Summary}\n")
 
-    def test_a_field_written_as_a_flow_mapping_is_an_error(self):
-        with self.assertRaises(CHECK_TEMPLATE.CheckError):
-            CHECK_TEMPLATE.parse_template("f.yml", "body:\n  - {type: input,\n    attributes: {label: Summary}\n    }\n")
-
     def test_a_name_type_or_label_may_continue_below_its_key(self):
         template = CHECK_TEMPLATE.parse_template(
             "f.yml",
@@ -988,9 +1008,8 @@ class TemplateParsingTests(unittest.TestCase):
         ])
         template = CHECK_TEMPLATE.parse_template("form.yml", form)
         self.assertEqual([str(h) for h in template.headings], ["### What happened", "### Steps to reproduce"])
-        with self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, "line 5"):
+        with self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, "field 2"):
             CHECK_TEMPLATE.parse_template("form.yml", form.replace("{label: 'Steps to reproduce', description: How}", "[odd]"))
-
     def test_an_opening_rule_over_markdown_is_not_front_matter(self):
         template = CHECK_TEMPLATE.parse_template("pull_request_template.md", "---\n\n## Summary\n\n-\n\n---\n\nMore.\n")
         self.assertEqual([str(h) for h in template.headings], ["## Summary"])
@@ -1002,19 +1021,6 @@ class TemplateParsingTests(unittest.TestCase):
         )
         self.assertEqual([str(h) for h in template.headings], ["### Steps"])
 
-    def test_flow_mapping_quotes_open_only_where_a_scalar_starts(self):
-        self.assertEqual(
-            [
-                CHECK_TEMPLATE.flow_mapping(text)["label"]
-                for text in (
-                    "{label: What's wrong?, description: Details}",
-                    "{label: 'It''s, ok', description: x}",
-                    '{label: "a \\" b, c", description: x}',
-                )
-            ],
-            ["What's wrong?", "It's, ok", 'a " b, c'],
-        )
-
     def test_issue_form_keys_may_be_quoted_and_its_name_may_follow_the_body(self):
         form = 'body:\n  - "type": markdown\n    attributes:\n      value: hi\n  - type: input\n    attributes:\n      label: A\nname: Late\n'
         template = CHECK_TEMPLATE.parse_template("form.yml", form)
@@ -1025,10 +1031,6 @@ class TemplateParsingTests(unittest.TestCase):
 
     def test_front_matter_may_end_its_yaml_document_with_dots(self):
         self.assertEqual(CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug\n...\n---\n## A\n").name, "Bug")
-
-    def test_brackets_and_commas_inside_a_nested_quoted_value_are_text(self):
-        mapping = CHECK_TEMPLATE.flow_mapping('{options: ["] , label: Wrong, ]"], label: Correct}')
-        self.assertEqual(mapping["label"], "Correct")
 
     def test_front_matter_may_close_a_flow_list_at_the_margin(self):
         self.assertEqual(CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug\nlabels: [\n  bug,\n]\n---\n## A\n").name, "Bug")
@@ -1054,21 +1056,8 @@ class TemplateParsingTests(unittest.TestCase):
             CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug Report\nlabels:\n-\n  bug\n---\n## A\n").name, "Bug Report"
         )
 
-    def test_an_inline_mapping_that_does_not_close_is_an_error(self):
-        with self.assertRaises(CHECK_TEMPLATE.CheckError):
-            CHECK_TEMPLATE.parse_template(
-                "form.yml", 'body:\n  - type: textarea\n    "attributes": {\n      label: Steps to\n      reproduce }\n'
-            )
-
     def test_the_yaml_end_marker_may_carry_a_comment(self):
         self.assertEqual(CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug\n... # end\n---\n## A\n").name, "Bug")
-
-    def test_inline_attributes_whose_outer_mapping_stays_open_are_an_error(self):
-        with self.assertRaises(CHECK_TEMPLATE.CheckError):
-            CHECK_TEMPLATE.parse_template(
-                "form.yml",
-                "body:\n  - type: checkboxes\n    attributes: {label: Terms, options: [{label: I agree}\n      ]}\n",
-            )
 
     def test_front_matter_keys_may_contain_spaces(self):
         template = CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug Report\ncustom display: ignored\n---\n## A\n")
@@ -1079,15 +1068,9 @@ class TemplateParsingTests(unittest.TestCase):
             CHECK_TEMPLATE.parse_template("report.yml", "name: >-\n  Bug\nbody:\n  - type: input\n    attributes: [odd]\n")
         self.assertEqual(raised.exception.name, "Bug")
 
-    def test_a_quote_after_a_colon_inside_a_plain_value_is_text(self):
-        self.assertEqual(CHECK_TEMPLATE.flow_mapping("{label: Use ':' in code}"), {"label": "Use ':' in code"})
-
     def test_front_matter_with_a_wrapped_value_keeps_its_name(self):
         template = CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug Report\nabout: 'Tell us\nwhat broke'\n---\n## A\n")
         self.assertEqual(template.name, "Bug Report")
-
-    def test_a_quoted_value_may_follow_a_quoted_key_with_no_space(self):
-        self.assertEqual(CHECK_TEMPLATE.flow_mapping('{"label":"Steps, logs"}'), {"label": "Steps, logs"})
 
     def test_a_form_written_as_one_flow_mapping_keeps_its_name(self):
         self.assertEqual(
@@ -1097,9 +1080,6 @@ class TemplateParsingTests(unittest.TestCase):
     def test_a_field_key_column_follows_the_padding_after_its_dash(self):
         template = CHECK_TEMPLATE.parse_template("f.yml", "body:\n  -   type: input\n      attributes:\n        label: A\n")
         self.assertEqual([str(h) for h in template.headings], ["### A"])
-
-    def test_yaml_escapes_in_a_double_quoted_label_decode(self):
-        self.assertEqual(CHECK_TEMPLATE.flow_mapping('{label: "OS \\x28optional\\x29"}'), {"label": "OS (optional)"})
 
     def test_a_field_whose_dash_is_followed_by_a_tab_is_never_skipped(self):
         with self.assertRaises(CHECK_TEMPLATE.CheckError):
@@ -1111,33 +1091,36 @@ class TemplateParsingTests(unittest.TestCase):
         form = "body:\n  -  # instructions\n    type: markdown\n    attributes:\n      value: hi\n  - type: input\n    attributes:\n      label: A\n"
         self.assertEqual([str(h) for h in CHECK_TEMPLATE.parse_template("f.yml", form).headings], ["### A"])
 
-    def test_double_quoted_values_decode_yaml_escapes(self):
-        self.assertEqual(
-            [CHECK_TEMPLATE.scalar(value) for value in ('"Before\\_after"', '"OS \\x28optional\\x29"', '"\\"q\\" \\\\"')],
-            ["Before\xa0after", "OS (optional)", '"q" \\'],
-        )
-
-    def test_an_inline_form_body_is_an_error_whatever_its_quoting(self):
-        with self.assertRaises(CHECK_TEMPLATE.CheckError):
-            CHECK_TEMPLATE.parse_template("f.yml", 'body: [{"type": "input", "attributes": {"label": "Report"}}]\n')
-
     def test_a_comment_with_a_colon_on_a_dash_line_is_not_a_key(self):
         form = "body:\n  -  # Overview: context\n    type: input\n    attributes:\n      label: A\n"
         self.assertEqual([str(h) for h in CHECK_TEMPLATE.parse_template("f.yml", form).headings], ["### A"])
 
-    def test_escapes_past_the_last_code_point_are_value_errors(self):
-        with self.assertRaises(ValueError):
-            CHECK_TEMPLATE.scalar('"\\UFFFFFFFF"')
+    def test_yaml_that_does_not_load_is_an_error(self):
+        for attributes in ("{label: Steps, description: [unfinished}}", '{label: "\\UFFFFFFFF"}'):
+            with self.subTest(attributes=attributes):
+                with self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, "cannot read the issue form"):
+                    CHECK_TEMPLATE.form_template("f.yml", f"body:\n  - type: input\n    attributes: {attributes}\n")
 
-    def test_inline_attributes_with_mismatched_brackets_are_an_error(self):
-        self.assertEqual(CHECK_TEMPLATE.flow_mapping("{label: Steps, description: [unfinished}}"), {})
-
-    def test_flow_attributes_opening_on_a_later_line_are_an_error(self):
-        with self.assertRaises(CHECK_TEMPLATE.CheckError):
-            CHECK_TEMPLATE.parse_template(
-                "f.yml", "body:\n  - type: input\n    attributes:\n      {\n        label: Version,\n        description: x }\n"
-            )
-
+    def test_labels_read_as_yaml_reads_them_in_any_style(self):
+        cases = {
+            "{label: Use ':' in code}": "Use ':' in code",
+            '{"label":"Steps, logs"}': "Steps, logs",
+            '{options: ["] , label: Wrong, ]"], label: Correct}': "Correct",
+            "{label: What's wrong, description: Details}": "What's wrong",
+            "{label: 'It''s, ok', description: x}": "It's, ok",
+            '{label: "OS \\x28optional\\x29"}': "OS (optional)",
+            '{label: "Before\\_after"}': "Before\xa0after",
+            "{\n      label: Steps to\n      reproduce }": "Steps to reproduce",
+            "\n      {\n        label: Version,\n        description: x }": "Version",
+            "{label: Terms, options: [{label: I agree}\n      ]}": "Terms",
+        }
+        for attributes, label in cases.items():
+            with self.subTest(attributes=attributes):
+                form = f"body:\n  - type: input\n    attributes: {attributes}\n"
+                self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], [label])
+        for form in ('body: [{"type": "input", "attributes": {"label": "Report"}}]\n', "body:\n  - {type: input,\n    attributes: {label: Report}\n    }\n"):
+            with self.subTest(form=form):
+                self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["Report"])
     def test_a_bracket_line_inside_a_block_value_is_text(self):
         form = "body:\n  - type: markdown\n    attributes:\n      value: |\n        [Read the guide](https://example.org/guide)\n  - type: input\n    attributes:\n      label: A\n"
         self.assertEqual([str(h) for h in CHECK_TEMPLATE.parse_template("f.yml", form).headings], ["### A"])
@@ -1186,12 +1169,6 @@ class TemplateParsingTests(unittest.TestCase):
             [str(heading) for heading in template.headings],
             ['### Version: "exact"', "### Steps to reproduce", "### Logs", "### # Hash line", "### After the comment"],
         )
-
-    def test_issue_form_whose_labels_cannot_be_read_is_an_error(self):
-        with self.assertRaises(CHECK_TEMPLATE.CheckError):
-            CHECK_TEMPLATE.parse_template(
-                "flow.yml", "body: [{type: input, attributes: {label: Version}}]\n"
-            )
 
     def test_byte_order_mark_does_not_hide_the_first_heading(self):
         template = CHECK_TEMPLATE.parse_template("bom.md", "\ufeff## Summary\n")
@@ -1440,7 +1417,7 @@ class CommandTests(unittest.TestCase):
 
     def test_a_named_template_is_checked_when_another_cannot_be_read(self):
         self.write(".github/ISSUE_TEMPLATE/default.md", ISSUE_TEMPLATE)
-        self.write(".github/ISSUE_TEMPLATE/odd.yml", "name: Odd\nbody: [{type: input, attributes: {label: A}}]\n")
+        self.write(".github/ISSUE_TEMPLATE/odd.yml", "name: Odd\nbody: [{type: input, attributes: {label: A}}\n")
         common = ("--root", str(self.checkout), "--kind", "issue", "--body", "-")
 
         code, result = self.run_check(*common, "--template-name", "Issue", stdin=body(*FULL))
@@ -1539,16 +1516,13 @@ class CommandTests(unittest.TestCase):
         code, result = self.run_check("--repo", "ghe.example.com/cli/cli", "--kind", "pr", "--body", "-", stdin="## Summary\n\nDone.\n")
         self.assertEqual((code, [p["expected"] for p in result["problems"]]), (1, ["## Testing"]))
 
-    def test_a_flow_style_form_after_a_document_marker_blocks_a_named_check(self):
+    def test_a_flow_style_form_after_a_document_marker_is_read(self):
         self.write(".github/ISSUE_TEMPLATE/form.yml", "---\n{name: Bug report, body: [{type: input, attributes: {label: A}}]}\n")
-        self.write(".github/ISSUE_TEMPLATE/bug.md", "---\nname: Bug report\n---\n## Summary\n\n-\n")
         code, result = self.run_check(
             "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "Bug report",
-            stdin="## Summary\n\nText.\n",
+            stdin="### A\n\nText.\n",
         )
-        self.assertEqual((code, result["state"]), (2, "operational-error"))
-        self.assertIn("form.yml", result["reason"])
-
+        self.assertEqual((code, result["state"], result["template"]["path"]), (0, "match", ".github/ISSUE_TEMPLATE/form.yml"))
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "cli/cli"
         listing = lambda *names: json.dumps([{"name": name, "type": kind} for name, kind in names])
