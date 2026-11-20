@@ -173,7 +173,10 @@ def renderer_link(node: Node) -> bool:
 def footnote_label(href: str) -> str:
     """A footnote's own label from its reference's target: `#fn-ref` locally, `#user-content-fn-ref-<hash>` on GitHub."""
     label = re.sub(r"^#(?:user-content-)?fn-", "", href)
-    return re.sub(r"-[0-9a-f]{32}$", "", label) if href.startswith("#user-content-") else label
+    if href.startswith("#user-content-"):
+        label = re.sub(r"-[0-9a-f]{32}$", "", label)
+    # The target carries the definition's spelling; a reference matches it in any case.
+    return label.casefold()
 
 
 def literal(text: str) -> str:
@@ -207,11 +210,15 @@ def heading_text(node: Node | str) -> str:
     inner = "".join(heading_text(child) for child in node.children)
     if node.tag == "a" and node.attrs.get("href") and not renderer_link(node):
         # In angle brackets, so no text after the link can read as part of its destination.
-        destination = re.sub(r"([\\<>])", r"\\\1", node.attrs["href"])
+        # An ampersand as an entity, since an entity-shaped destination would otherwise decode.
+        destination = re.sub(r"([\\<>])", r"\\\1", node.attrs["href"]).replace("&", "&amp;")
         return f"[{inner}](<{destination}>)"
     if node.tag in INLINE_TAGS:
         return f"<{node.tag}>{inner}</{node.tag}>"
     marker = INLINE_MARKERS.get(node.tag, "")
+    if marker.startswith("*") and (inner.startswith("*") or inner.endswith("*")):
+        # Around emphasis written with `*`, so `*_x_*` and `**x**` stay apart and read back as written.
+        marker = marker.replace("*", "_")
     return f"{marker}{inner}{marker}"
 
 

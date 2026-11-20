@@ -542,6 +542,24 @@ class RendererParityTests(unittest.TestCase):
         reported = CHECK_TEMPLATE.headings(REAL_RENDER("## [Flags \\]](/reference)\n"))[0]
         self.assertEqual(str(CHECK_TEMPLATE.headings(REAL_RENDER(f"{reported}\n"))[0]), str(reported))
 
+    def test_nested_emphasis_stays_apart_from_bold_and_reads_back(self):
+        headings = ("## *_Important_*", "## **Important**", "## ***Important***", "## **_Important_**")
+        reported = [CHECK_TEMPLATE.headings(REAL_RENDER(heading + "\n"))[0] for heading in headings]
+        self.assertEqual(len({h.text for h in reported}), len(headings))
+        for heading in reported:
+            with self.subTest(heading=str(heading)):
+                self.assertEqual(str(CHECK_TEMPLATE.headings(REAL_RENDER(f"{heading}\n"))[0]), str(heading))
+
+    def test_a_footnote_label_compares_in_any_case(self):
+        texts = [
+            CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^ref]\n\n[^{label}]: r\n"))[0].text for label in ("ref", "Ref")
+        ]
+        self.assertEqual(texts[0], texts[1])
+
+    def test_a_reported_link_with_an_entity_shaped_destination_reads_back(self):
+        reported = CHECK_TEMPLATE.headings(REAL_RENDER("## [Notice](https://example.org/?a=1&amp;copy;)\n"))[0]
+        self.assertEqual(str(CHECK_TEMPLATE.headings(REAL_RENDER(f"{reported}\n"))[0]), str(reported))
+
     def test_every_captured_case_reads_as_github_rendered_it(self):
         for case, fixture in RENDERED.items():
             for kind in (None, "pr", "issue"):

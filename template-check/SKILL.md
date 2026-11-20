@@ -75,7 +75,8 @@ strikethrough, link destinations and inline HTML such as subscript, as GitHub
 shows them, and a footnote reference by its label, not the number GitHub
 shows. Emoji
 shortcodes such as `:bug:` compare as written, not as the emoji GitHub shows,
-so write them as the template does. A template heading pairs with a body
+and so does math in dollar signs, which cmark-gfm does not render, so write
+them as the template does. A template heading pairs with a body
 heading at the same level before one at another level, so a subsection that shares a
 section's name does not stand in for it. A list item that shows nothing, or only `[ ]`, such as a
 template's `-` placeholder, is not content. Reading stops at a pull request's
