@@ -56,7 +56,31 @@ function tomlKey(key: string) {
   return /^[A-Za-z0-9_-]+$/.test(key) ? key : JSON.stringify(key);
 }
 // The runner ignores the user's Codex config, so under the opt-in it passes
-// only the selected model provider's table back as explicit overrides.
+// only the selected model provider's table back as explicit overrides. Any user
+// can list a process's arguments, so the table's bearer token and header values
+// travel in the child's environment and the arguments name their variables.
+const proxyVariable = "KGR_CODEX_PROVIDER_";
+// Codex treats these settings as secret and has no environment form for them.
+const argumentOnlySecrets = new Set(["query_params", "model_catalog_url", "args"]);
+function refuseArgumentSecrets(value: unknown, path: string): void {
+  if (typeof value === "string") {
+    const url = URL.canParse(value) ? new URL(value) : undefined;
+    if (url?.username || url?.password || url?.search)
+      throw new Error(
+        `Codex provider proxy does not pass a URL with credentials or a query string (${path}): they would show in the process list.`,
+      );
+  }
+  if (!value || typeof value !== "object") return;
+  for (const [key, item] of Object.entries(value)) {
+    const set =
+      typeof item === "object" && item ? Object.keys(item).length : item !== "";
+    if (argumentOnlySecrets.has(key) && set)
+      throw new Error(
+        `Codex provider proxy does not pass ${path}.${key}: it would show in the process list.`,
+      );
+    refuseArgumentSecrets(item, `${path}.${key}`);
+  }
+}
 export async function codexProxyConfig(
   path = join(
     process.env.CODEX_HOME || join(homedir(), ".codex"),
@@ -79,13 +103,66 @@ export async function codexProxyConfig(
     throw new Error(
       "Codex provider proxy does not pass provider keys from the environment.",
     );
-  // One whole-table override: Codex's -c key path does not read TOML quoting.
-  return [
-    "-c",
-    `model_provider=${JSON.stringify(id)}`,
-    "-c",
-    `model_providers=${tomlValue({ [id]: provider })}`,
-  ];
+  const {
+    experimental_bearer_token: token,
+    http_headers: headers = {},
+    ...table
+  } = provider;
+  refuseArgumentSecrets(table, `model_providers.${id}`);
+  // Codex names a malformed value at startup; turning one into text would hide
+  // it. A null byte fails the spawn with an error that quotes the whole value.
+  const usable = (value: unknown) =>
+    typeof value === "string" && !value.includes("\0");
+  if (
+    (token !== undefined && !usable(token)) ||
+    typeof headers !== "object" ||
+    Array.isArray(headers) ||
+    !Object.values(headers).every(usable)
+  )
+    throw new Error(
+      "Codex provider proxy needs experimental_bearer_token to be a string and http_headers a table of strings, without null bytes.",
+    );
+  const env: Record<string, string> = {};
+  // Codex treats a blank variable as missing, so a blank value stays where it was.
+  // Unicode White_Space is what Codex trims; JavaScript's trim() differs.
+  const blankValue = (value: unknown) =>
+    /^\p{White_Space}*$/u.test(value as string);
+  if (token !== undefined && blankValue(token))
+    table.experimental_bearer_token = token;
+  else if (token !== undefined) {
+    table.env_key = `${proxyVariable}TOKEN`;
+    env[table.env_key] = token;
+  }
+  const blank = Object.entries(headers).filter(([, value]) => blankValue(value));
+  const moved = Object.entries(headers)
+    .filter(([, value]) => !blankValue(value))
+    .map(([header, value], index) => ({
+      header,
+      value: value as string,
+      variable: `${proxyVariable}HEADER_${index}`,
+    }));
+  // Codex lets its built-in cloud providers change only a few fields, and
+  // env_http_headers is not among them.
+  if (moved.length && ["amazon-bedrock", "amazon-bedrock-runtime", "gcp"].includes(id))
+    throw new Error(
+      `Codex provider proxy does not pass http_headers for the built-in ${id} provider: they would show in the process list.`,
+    );
+  if (blank.length) table.http_headers = Object.fromEntries(blank);
+  if (moved.length)
+    table.env_http_headers = Object.fromEntries(
+      moved.map(({ header, variable }) => [header, variable]),
+    );
+  for (const { variable, value } of moved) env[variable] = value;
+  return {
+    // One whole-table override: Codex's -c key path does not read TOML quoting.
+    args: [
+      "-c",
+      `model_provider=${JSON.stringify(id)}`,
+      "-c",
+      `model_providers=${tomlValue({ [id]: table })}`,
+    ],
+    env,
+  };
 }
 export function executable(cli: "codex" | "claude") {
   return (
@@ -471,8 +548,9 @@ export async function runLocal(options: {
     cli === "codex" ? codexConfig : configPath,
     options.instructions,
   );
-  if (cli === "codex" && providerProxy())
-    cmd.splice(cmd.length - 1, 0, ...(await codexProxyConfig()));
+  const proxy =
+    cli === "codex" && providerProxy() ? await codexProxyConfig() : undefined;
+  if (proxy) cmd.splice(cmd.length - 1, 0, ...proxy.args);
   if (options.responseSchema) {
     if (cli === "codex") {
       const schemaPath = join(work, "response-schema.json");
@@ -495,7 +573,7 @@ export async function runLocal(options: {
       ? options.evalCase.worker
       : undefined;
   const workerLedgerPath = join(work, "worker-ledger.json");
-  const env = loginEnvironment();
+  const env = { ...loginEnvironment(), ...proxy?.env };
   if (nativeWorker) {
     if (cli !== "claude")
       throw new Error("The native Agent case requires Claude Code");
