@@ -246,8 +246,8 @@ def heading_text(node: Node | str, underscore: bool = False, github: bool = True
         code = text_of(node)
         fence = "`" * (max((len(run) for run in re.findall(r"`+", code)), default=0) + 1)
         padded = code[:1] == "`" or code[-1:] == "`" or (code[:1] == code[-1:] == " " and code.strip())
-        # Spaces in code are literal; CODE_SPACE keeps them through the heading's whitespace folding.
-        code = code.replace(" ", CODE_SPACE)
+        # Whitespace in code is literal; CODE_SPACE keeps each character through the heading's folding.
+        code = re.sub(r"\s", lambda match: f"{CODE_SPACE}{ord(match.group(0)):x}{CODE_SPACE}", code)
         return f"{fence} {code} {fence}" if padded else f"{fence}{code}{fence}"
     parts = [heading_text(child, github=github) for child in node.children]
     for index in range(len(parts) - 1):
@@ -377,9 +377,9 @@ def standalone(found: list[Heading], renderer: Callable[[str], str]) -> list[Hea
         """The headings whose form shows a different heading on its own."""
         if not candidates:
             return []
-        alone = headings(renderer("\n\n".join(form for _, form in candidates)))
+        alone = headings(renderer("\n\n".join(form for _, form in candidates)), github=False)
         if len(alone) != len(candidates):  # A form that is not one heading: try each alone.
-            alone = [(headings(renderer(form)) or [Heading(0, "")])[0] for _, form in candidates]
+            alone = [(headings(renderer(form), github=False) or [Heading(0, "")])[0] for _, form in candidates]
         return [heading for (heading, _), shown in zip(candidates, alone) if (shown.level, shown.text) != (heading.level, heading.text)]
 
     for heading in failing([(heading, heading.written) for heading in found if heading.written]):
@@ -437,7 +437,7 @@ def note_rule(children: list[Node | str], valid: Callable[[Node, Node], bool]) -
     return found
 
 
-def headings(html: str, kind: str | None = None, source: str | None = None) -> list[Heading]:
+def headings(html: str, kind: str | None = None, source: str | None = None, github: bool | None = None) -> list[Heading]:
     """Headings of rendered HTML, each with whether its section shows anything.
 
     A section runs to the next heading of the same or a higher level. A list
@@ -454,6 +454,9 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
     blocks = elements(top)
     # The local renderer marks every block with its source position; GitHub's HTML has none.
     positioned = "data-sourcepos" in html
+    # Whether GitHub rendered this HTML, which only then holds links GitHub added
+    # itself; a caller that rendered it says so, since raw HTML carries no positions.
+    github = not positioned if github is None else github
     end = None
     if kind == "pr":
         # The review note closes the body: a `---` rule with a blank line
@@ -495,7 +498,8 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
             if level and not nested:
                 line = source_line(child)
                 written = written_heading(source_lines, child, int(level.group(1))) if source is not None else ""
-                text = " ".join(heading_text(child, github=not positioned).split()).replace(CODE_SPACE, " ")
+                text = " ".join(heading_text(child, github=github).split())
+                text = re.sub(f"{CODE_SPACE}([0-9a-f]+){CODE_SPACE}", lambda match: chr(int(match.group(1), 16)), text)
                 # A closing run of `#` would end the heading where it is written back.
                 text = re.sub(r"(^|\s)(#+)$", r"\1\\\2", text)
                 heading = Heading(int(level.group(1)), text, line, written=written, html=inner_html(child))
@@ -793,7 +797,7 @@ def form_template(path: str, text: str) -> Template:
                 continue
             item["label"], block = " ".join(block), None
         pending = item.get("pending") if item else None
-        in_quote = bool(pending) and pending[2][:1] in ("'", '"') and not QUOTED_SCALAR.match(pending[2])
+        in_quote = bool(pending) and bare(pending[2])[:1] in ("'", '"') and not QUOTED_SCALAR.match(bare(pending[2]))
         if content.startswith("#") and not (in_quote and indent > pending[1]):
             continue  # A comment, unless it continues a quoted value.
         # A list item under `body:` may start at the same indent as the key.
@@ -844,7 +848,7 @@ def form_template(path: str, text: str) -> Template:
             # A type or label may continue below its key, as a plain scalar or
             # inside an open quote, where a colon is text.
             written = pending[2]
-            if not is_key or (written[:1] in ("'", '"') and not QUOTED_SCALAR.match(written)):
+            if not is_key or (bare(written)[:1] in ("'", '"') and not QUOTED_SCALAR.match(bare(written))):
                 written = f"{written} {content}".strip()
                 item[pending[0]] = scalar(written)
                 item["pending"] = (pending[0], pending[1], written)
@@ -886,7 +890,7 @@ def form_template(path: str, text: str) -> Template:
                     block, block_indent = [], indent + int(digit) if digit else None
                 else:
                     item["label"] = scalar(value)
-                    if not QUOTED_SCALAR.fullmatch(value.strip()):
+                    if not QUOTED_SCALAR.fullmatch(bare(value)):
                         # A comment-only value is empty: the label starts on the next line.
                         item["pending"] = ("label", indent, value.strip() if scalar(value) else "")
     if block is not None:
@@ -901,7 +905,7 @@ def form_template(path: str, text: str) -> Template:
 
 def markdown_template(path: str, text: str, renderer: Callable[[str], str]) -> Template:
     fields, body = front_matter(text)
-    return Template(path, fields.get("name") or Path(path).stem, standalone(headings(renderer(body), source=body), renderer))
+    return Template(path, fields.get("name") or Path(path).stem, standalone(headings(renderer(body), source=body, github=False), renderer))
 
 
 def parse_template(path: str, text: str, renderer: Callable[[str], str] | None = None) -> Template:
@@ -911,7 +915,7 @@ def parse_template(path: str, text: str, renderer: Callable[[str], str] | None =
         template = form_template(path, text)
         # GitHub shows each label as a rendered heading, so compare it as one.
         if template.headings:
-            shown = headings(renderer("\n\n".join(f"### {heading.text}" for heading in template.headings)))
+            shown = headings(renderer("\n\n".join(f"### {heading.text}" for heading in template.headings)), github=False)
             if len(shown) == len(template.headings):
                 for heading, rendered in zip(template.headings, shown):
                     heading.text = rendered.text
@@ -1367,7 +1371,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     # Without a kind, as with --template alone, the body reads as a pull request's.
     text = text.removeprefix("\ufeff")
-    body = standalone(headings(render(text), kind or "pr", text), render)
+    body = standalone(headings(render(text), kind or "pr", text, github=False), render)
     template, problems = select(templates, body, args.template_name)
     return {
         "state": "mismatch" if problems else "match",

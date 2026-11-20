@@ -650,6 +650,12 @@ class RendererParityTests(unittest.TestCase):
                 body = f"## Related\n\n> [!NOTE]\n> Created on behalf of @someone using Some Model.\n\n{after}"
                 self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(REAL_RENDER(body), "issue", body)], [False])
 
+    def test_non_ascii_whitespace_inside_inline_code_is_compared_as_written(self):
+        texts = {
+            CHECK_TEMPLATE.headings(REAL_RENDER(f"<h2><code>foo{space}bar</code></h2>\n"))[0].text for space in ("&nbsp;", " ")
+        }
+        self.assertEqual(len(texts), 2)
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
@@ -729,6 +735,10 @@ class TemplateParsingTests(unittest.TestCase):
     def test_a_quoted_label_may_continue_on_a_line_starting_with_a_hash(self):
         form = 'body:\n  - type: input\n    attributes:\n      label: "Error seen in the\n        #general channel"\n'
         self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["Error seen in the #general channel"])
+
+    def test_an_anchored_quoted_label_may_continue_past_a_colon(self):
+        form = 'body:\n  - type: input\n    attributes:\n      label: &title "First line\n        continuation: more"\n'
+        self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["First line continuation: more"])
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):
@@ -1193,6 +1203,12 @@ class CommandTests(unittest.TestCase):
             "--root", str(self.checkout), "--kind", "issue", "--template-name", "Plain", "--body", "-", stdin="Prose.\n"
         )
         self.assertEqual((code, result["state"], result["reason"]), (0, "no-template", "the issue template named Plain has no headings"))
+
+    def test_a_raw_html_template_heading_compares_as_rendered_locally(self):
+        heading = '<h2><a target="_blank" href="/build.svg"><img src="/build.svg" alt="Build"></a></h2>\n'
+        template = self.write("template.md", heading)
+        code, result = self.run_check("--template", str(template), "--body", "-", stdin=f"{heading}\nIt builds.\n")
+        self.assertEqual((code, result["state"]), (0, "match"))
 
     def test_a_check_that_cannot_run_is_an_operational_error(self):
         undecodable = self.root / "latin1.md"
