@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,9 +19,24 @@ async function project(orchestration?: string) {
   return root;
 }
 
-function read(root: string) {
-  const run = spawnSync("node", [script, root], { encoding: "utf8" });
-  return { status: run.status, stderr: run.stderr, settings: run.status === 0 ? JSON.parse(run.stdout) : null };
+// A consumer repository installs the skills into `.agents/skills` and links
+// `.claude/skills -> ../.agents/skills`, so agents reach the script through
+// that symlink. The installed copy also gets a symlinked file beside it.
+async function installedThroughSymlinks() {
+  const root = await project();
+  const scripts = join(root, ".agents", "skills", "deliver", "scripts");
+  await mkdir(scripts, { recursive: true });
+  await copyFile(script, join(scripts, "delivery-settings.mjs"));
+  await symlink("delivery-settings.mjs", join(scripts, "linked-settings.mjs"));
+  await mkdir(join(root, ".claude"));
+  await symlink(join("..", ".agents", "skills"), join(root, ".claude", "skills"));
+  const linked = join(root, ".claude", "skills", "deliver", "scripts");
+  return { directory: join(linked, "delivery-settings.mjs"), file: join(linked, "linked-settings.mjs") };
+}
+
+function read(root: string, path = script) {
+  const run = spawnSync("node", [path, root], { encoding: "utf8" });
+  return { status: run.status, stderr: run.stderr, settings: run.status === 0 && run.stdout ? JSON.parse(run.stdout) : null };
 }
 
 test("a project without ORCHESTRATION.md continues entry points to merged", async () => {
@@ -69,4 +84,19 @@ test("an unknown value or unterminated frontmatter fails instead of guessing", a
   const unterminated = read(await project("---\nentry-points: stop\n"));
   expect(unterminated.status).toBe(1);
   expect(unterminated.stderr).toContain("no closing ---");
+});
+
+test("the script reads settings when reached through a symlinked skills directory or file", async () => {
+  const paths = await installedThroughSymlinks();
+  const root = await project("---\nendpoint: ready-to-merge\n---\n");
+  const expected = {
+    status: 0,
+    stderr: "",
+    settings: { endpoint: "ready-to-merge", "entry-points": "deliver", file: "ORCHESTRATION.md", defaulted: ["entry-points"] },
+  };
+  expect(read(root, paths.directory)).toEqual(expected);
+  expect(read(root, paths.file)).toEqual(expected);
+  const invalid = read(await project("---\nendpoint: production\n---\n"), paths.directory);
+  expect(invalid.status).toBe(1);
+  expect(invalid.stderr).toContain('sets endpoint to "production"');
 });

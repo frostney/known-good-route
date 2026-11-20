@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Reads a project's delivery settings from the frontmatter of ORCHESTRATION.md.
 // Usage: node delivery-settings.mjs [project-root]
+import { realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -58,7 +59,21 @@ export async function readDeliverySettings(projectRoot) {
   return parseDeliverySettings(source);
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Node loads the main module from its real path, while argv[1] keeps the path
+// as given, such as one through a `.claude/skills -> ../.agents/skills`
+// symlink. Compare real paths so the script runs whichever path reached it.
+// `import.meta.main` would do this, but it needs Node 22.18 or 24.2, and this
+// skill supports Node 20.
+function isMainModule() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+
+if (isMainModule()) {
   try {
     const settings = await readDeliverySettings(resolve(process.argv[2] ?? "."));
     process.stdout.write(`${JSON.stringify(settings)}\n`);
