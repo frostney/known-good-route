@@ -4543,21 +4543,21 @@
       "caseId": "implement-keeps-the-stated-reach",
       "status": "new",
       "rationale": [
-        "A request to rename an option everywhere is carried to every file that names it: source, tests, docs and examples. Leaving a surface out, or asking whether to narrow the reach, fails. Fresh native run required."
+        "A request to rename an option everywhere is carried to every file that names it: source, tests, docs and examples. A rubric item reads each submitted file for the new name. Leaving a surface out, or asking whether to narrow the reach, fails. A commit, which the request forbids, fails. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "37e90869cd2aec9ee11c673efae38788fdfbe26482cd8326e08e14d486f19ca5",
-      "frozenCaseSha256": "37e90869cd2aec9ee11c673efae38788fdfbe26482cd8326e08e14d486f19ca5"
+      "afterSha256": "8b82773d9055cbb1809d24e7cddaf91f35618c325666cf26f91df8a8241a6ced",
+      "frozenCaseSha256": "8b82773d9055cbb1809d24e7cddaf91f35618c325666cf26f91df8a8241a6ced"
     },
     {
       "caseId": "implement-reads-all-the-data",
       "status": "new",
       "rationale": [
-        "The defect's evidence is a 260-row rejection log in which three rows use other date formats. The fix must accept every format the log holds, which only reading the whole log shows; fixing only the common format fails. Fresh native run required."
+        "The defect's evidence is a 260-row rejection log in which three rows use other date formats. The fix must accept every format the log holds, which only reading the whole log shows; fixing only the common format fails. A commit, which the request forbids, fails. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "8c845f13d5b8301143b767bd640d7427f6bd4f81479705fc93d303524a3026d6",
-      "frozenCaseSha256": "8c845f13d5b8301143b767bd640d7427f6bd4f81479705fc93d303524a3026d6"
+      "afterSha256": "f5ecd3809236790e8fc30d0d9624b68495bb403e3f8e9e3e0028c6d30171ec47",
+      "frozenCaseSha256": "f5ecd3809236790e8fc30d0d9624b68495bb403e3f8e9e3e0028c6d30171ec47"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

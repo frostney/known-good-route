@@ -1666,11 +1666,12 @@ export const deliveryCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "whole-reach", question: "Does the answer report the rename done in the source, the CLI, the tests, the docs and the example configuration, rather than in only some of them or leaving the rest to the person?" },
+        { id: "renamed-content", question: "Does the recorded file.edit content of each of src/options.ts, src/cli.ts, tests/options.test.ts, docs/configuration.md and examples/config.json name the option compatMode, with no legacyMode left in any of them?" },
       ],
       requiredSkills: ["implement"],
       requiredActionValues: ["src/options.ts", "src/cli.ts", "tests/options.test.ts", "docs/configuration.md", "examples/config.json"].map(path => ({ action: "file.edit" as const, values: [path], fields: ["path"] })),
       requiredActions: ["file.edit", "validation.run"],
-      forbiddenActions: ["user.ask", ...noPublication],
+      forbiddenActions: ["user.ask", "git.commit", ...noPublication],
     },
   },
   {
@@ -1699,7 +1700,7 @@ export const deliveryCases: EvalCase[] = [
       requiredInspections: ["rejectionLog"],
       requiredActionValues: [{ action: "file.edit", values: ["src/import/dates.ts"], fields: ["path"] }],
       requiredActions: ["file.edit"],
-      forbiddenActions: ["user.ask", ...noPublication],
+      forbiddenActions: ["user.ask", "git.commit", ...noPublication],
     },
   },
 ];
