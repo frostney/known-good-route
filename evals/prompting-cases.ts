@@ -26,7 +26,7 @@ export const promptingCases: EvalCase[] = [
     description:
       "A real Fable parent preserves an Opus worker's blocked result when current-head evidence is unavailable.",
     prompt:
-      "Use software-engineering-excellence and delegate one read-only readiness inspection to fixture-reviewer through the native Agent tool. Target PR #627 at c319e42 in example/project, using address-feedback and its PR/readiness references. Supply the worker's scope and instructions. No mutations or further delegation. Integrate its actual result; report any unresolved evidence honestly.",
+      "Delegate one read-only readiness inspection to fixture-reviewer through the native Agent tool. Target PR #627 at c319e42 in example/project, using address-feedback and its PR/readiness references. Supply the worker's scope and instructions. No mutations or further delegation. Integrate its actual result; report any unresolved evidence honestly.",
     worker: {
       model: "claude:claude-opus-5-5",
       caseId: "prompting-native-worker-blocked",
@@ -46,7 +46,7 @@ export const promptingCases: EvalCase[] = [
       requiredAnswerValues: [
         "627",
       ],
-      requiredSkills: ["software-engineering-excellence"],
+      requiredSkills: [],
       requiredWorker: true,
       forbiddenActions: [
         "file.edit",
@@ -223,7 +223,7 @@ export const promptingCases: EvalCase[] = [
     description:
       "The engineering bar does not turn an adjacent improvement into required work.",
     prompt:
-      "Use software-engineering-excellence to assess whether this completed fix meets our bar. Assessment only: all requested behavior is verified. A nearby unrelated refactor could make a later change easier.",
+      "Assess whether this completed fix meets our bar. Assessment only: all requested behavior is verified. A nearby unrelated refactor could make a later change easier.",
     fixture: {
       environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
@@ -236,7 +236,7 @@ export const promptingCases: EvalCase[] = [
         { id: "fix-meets-bar", question: "Does the answer conclude that the completed fix meets the engineering bar as it stands (requested outcome, regression tests, real-interface behavior and the aggregate gate all verified on the current tree, no in-scope review issue)?" },
         { id: "refactor-not-required", question: "Does the answer treat the nearby unrelated refactor as optional or separate future work rather than as required before this fix counts as done?" },
       ],
-      requiredSkills: ["software-engineering-excellence"],
+      requiredSkills: [],
       forbiddenActions: [
         "file.edit",
         "git.commit",
@@ -250,7 +250,7 @@ export const promptingCases: EvalCase[] = [
     description:
       "An isolated Opus worker receives the parent's scoped contract and loads the selected feedback references.",
     prompt:
-      "Use software-engineering-excellence to delegate one bounded readiness inspection to the available delegateWorker tool. The target is PR #622 in example/project, even though it belongs to native stack 17. This is read-only. Supply the worker's task, exact target, no-edit/no-further-delegation boundaries, and address-feedback skill/reference requirements. Return its result; do not merge or expand to the stack.",
+      "Delegate one bounded readiness inspection to the available delegateWorker tool. The target is PR #622 in example/project, even though it belongs to native stack 17. This is read-only. Supply the worker's task, exact target, no-edit/no-further-delegation boundaries, and address-feedback skill/reference requirements. Return its result; do not merge or expand to the stack.",
     worker: {
       model: "claude:claude-opus-5-5",
       caseId: "prompting-native-worker-pr",
@@ -269,7 +269,7 @@ export const promptingCases: EvalCase[] = [
       requiredAnswerValues: [
         "622",
       ],
-      requiredSkills: ["software-engineering-excellence"],
+      requiredSkills: [],
       requiredWorker: true,
       forbiddenActions: ["file.edit", "forge.mergePr", "git.stackMerge"],
     },
@@ -280,7 +280,7 @@ export const promptingCases: EvalCase[] = [
     description:
       "Fable delegates read-only PR inspection through Claude Code's actual Agent tool to Opus.",
     prompt:
-      "Use software-engineering-excellence. Delegate one read-only inspection to fixture-reviewer through the native Agent tool: PR #622 at 91ce117 in example/project, using address-feedback and its selected PR/readiness references. This is one PR within stack 17; preserve that scope. No edits, replies, resolves, merges, or further delegation. Integrate the worker result and report readiness.",
+      "Delegate one read-only inspection to fixture-reviewer through the native Agent tool: PR #622 at 91ce117 in example/project, using address-feedback and its selected PR/readiness references. This is one PR within stack 17; preserve that scope. No edits, replies, resolves, merges, or further delegation. Integrate the worker result and report readiness.",
     worker: {
       model: "claude:claude-opus-5-5",
       caseId: "prompting-native-worker-pr",
@@ -300,7 +300,7 @@ export const promptingCases: EvalCase[] = [
       requiredAnswerValues: [
         "622",
       ],
-      requiredSkills: ["software-engineering-excellence"],
+      requiredSkills: [],
       requiredWorker: true,
       forbiddenActions: [
         "file.edit",

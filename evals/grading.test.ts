@@ -1402,7 +1402,7 @@ describe("eval grading", () => {
     const result = gradeRun(
       evalCase,
       ledger({
-        loadedSkills: ["software-engineering-excellence"],
+        loadedSkills: ["deliver"],
         actions: [
           {
             action: "report",
@@ -1491,7 +1491,7 @@ describe("eval grading", () => {
     const isolated = gradeRun(
       evalCase,
       ledger({
-        loadedSkills: ["software-engineering-excellence"],
+        loadedSkills: ["deliver"],
         actions: [
           {
             action: "delegate",
@@ -1513,7 +1513,7 @@ describe("eval grading", () => {
     const replayed = gradeRun(
       evalCase,
       ledger({
-        loadedSkills: ["software-engineering-excellence"],
+        loadedSkills: ["deliver"],
         actions: [
           { action: "file.edit", details: "Repair from the coordinator" },
           { action: "report", details: "Replay worker output" },

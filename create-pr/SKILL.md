@@ -30,7 +30,7 @@ unrelated changes.
 
 A failed check, review or CI run routes to repair, not a stop. Stop only when
 there is nothing to publish, a
-[material](../software-engineering-excellence/SKILL.md#blockers-and-decisions)
+[material](../deliver/SKILL.md#decisions-that-belong-to-the-person)
 unresolved choice or new authority is needed, or an external blocker remains
 after safe alternatives are exhausted.
 A material choice that publication depends on stops before any push or draft

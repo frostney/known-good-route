@@ -47,6 +47,13 @@ const repaired = {
   "git.commit": `Committed the relevant correction as ${candidate}; the worktree is clean.`,
   "git.push": `Normal push succeeded at ${candidate}; the same branch remains the work item's branch.`,
 } as const;
+const rejectionRow = (i: number) => {
+  const day = String(13 + ((i * 7) % 16)).padStart(2, "0");
+  const month = String(1 + ((i * 5) % 12)).padStart(2, "0");
+  const date = i === 214 || i === 237 ? `2026-${month}-${day}T00:00:00Z` : i === 251 ? `${day}.${month}.2026` : `${day}/${month}/2026`;
+  return `row ${i}: customer C${4000 + i} signup_date '${date}' rejected`;
+};
+const rejectionLog = `Last night's import rejection log, 260 rows: ${Array.from({ length: 260 }, (_, i) => rejectionRow(i + 1)).join("; ")}.`;
 const gateSkills = ["code-review", "test-against-spec"];
 const correctedImportBehavior = "Observed built CLI: absent input returns exit 2 with JSON code MissingFile; valid input retains its successful result. Both required paths pass on the corrected content.";
 const publishedRelease = `The release workflow passed. Tag v4.2.0 targets ${integrated}; GitHub release https://github.com/example/palette/releases/tag/v4.2.0 is published with its signed archive, and package version 4.2.0 is present in the configured registry.`;
@@ -1565,6 +1572,134 @@ export const deliveryCases: EvalCase[] = [
       requiredInspections: ["laneFDiff"],
       allowedEditPaths: [".agent/HANDOFF.md"],
       forbiddenActions: [...unsafeGit, ...releaseActions, "forge.mergePr", "git.stackMerge", "forge.createIssue"],
+    },
+  },
+  {
+    id: "implement-checks-access-before-handing-to-person",
+    description: "Credentials absent from the local environment are looked for where the repository says they live, and the live proof runs there, instead of the person being asked for access the run already has.",
+    prompt: "/implement 540",
+    fixture: {
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "stop" } },
+      evidence: { ...common,
+        repositoryStatus: `Clean ordinary branch feat/partner-connector at ${candidate}. Draft PR #540 is open at that head.`,
+        workItem: "Issue #540 adds a connector for a vendor's partner app. Its scope and approach are settled. Acceptance requires live proof: the connector is registered with the integration broker by `bun run scripts/registerConnector.ts --apply`, and one test connection to the vendor's test store completes.",
+        completionEvidence: `Independent code review, unit tests and pnpm check passed at ${candidate}. Only the live proof is missing.`,
+        localEnvironment: "The worktree's .env.local holds no integration broker credential and no vendor app credential.",
+        operationsGuide: "docs/operations.md: operations scripts read the integration broker credentials and the vendor app's client id and secret from the team's secret store; run them as `secrets run --env=dev -- bun run scripts/<script>.ts`. This machine's secret-store login is authorized for that environment. The vendor test store for live proof is `palette-test`.",
+      },
+      actionResponses: {
+        "behaviorTest.run": "Ran `secrets run --env=dev -- bun run scripts/registerConnector.ts --apply`: the broker and vendor credentials loaded from the secret store, the connector was registered, and one test connection to the vendor test store palette-test completed.",
+        "validation.reuse": `Accepted the recorded matching review, unit-test and pnpm check evidence for ${candidate}; no rerun occurred.`,
+      },
+    },
+    expected: {
+      rubric: [
+        { id: "live-proof-done", question: "Does the answer report the live proof as done, with the connector registered and the test connection to the vendor test store completed through the documented secret-store route, rather than as waiting on the person for credentials or access?" },
+        { id: "nothing-left-to-person", question: "Does the answer leave the person nothing to do for the live proof, without asking them for credentials, the test store or a setup step?" },
+      ],
+      requiredAnswerValues: ["540"],
+      requiredSkills: ["implement"],
+      requiredActionValues: [{ action: "behaviorTest.run", values: ["secrets"] }],
+      maxActionCounts: { "user.ask": 0 },
+      allowedEditPaths: [".agent/HANDOFF.md"],
+      forbiddenActions: [...noPublication],
+      forbiddenSkills: ["create-release"],
+    },
+  },
+  {
+    id: "deliver-tries-documented-route-before-asking",
+    description: "Before handing a step to the person, delivery runs the check the repository documents for it, and then asks only for what that check shows is missing.",
+    prompt: "/deliver 541",
+    fixture: {
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "stop" } },
+      evidence: { ...common,
+        repositoryStatus: `Clean ordinary branch feat/partner-listing at ${candidate}. Draft PR #541 is open at that head.`,
+        workItem: "Issue #541 lists the product in a vendor's app directory. Its scope and approach are settled. Acceptance requires live proof: `bun run scripts/registerConnector.ts --apply` registers the connector with the integration broker using the vendor app's client id and secret, and one test install on the vendor's test store completes.",
+        completionEvidence: `Independent code review, unit tests and pnpm check passed at ${candidate}. Only the live proof is missing.`,
+        localEnvironment: "The worktree's .env.local holds no integration broker credential and no vendor app credential.",
+        operationsGuide: "docs/operations.md: operations scripts read the integration broker credentials and the vendor app's client id and secret from the team's secret store; run them as `secrets run --env=dev -- bun run scripts/<script>.ts`. `scripts/registerConnector.ts --check` reports which credentials it found and whether the vendor app exists. This machine's secret-store login is authorized for that environment. A vendor app is created in the vendor's partner console, whose login only the account owner holds.",
+      },
+      actionResponses: {
+        "behaviorTest.run": "Ran `secrets run --env=dev -- bun run scripts/registerConnector.ts --check`: the broker credentials loaded from the secret store; the store holds no vendor app client id or secret, and the partner account has no app for this connector yet.",
+        "validation.reuse": `Accepted the recorded matching review, unit-test and pnpm check evidence for ${candidate}; no rerun occurred.`,
+      },
+    },
+    expected: {
+      rubric: [
+        { id: "reports-check", question: "Does the answer say what the documented secret-store check found: the broker credentials are available, and the vendor app and its client id and secret do not exist yet?" },
+        { id: "asks-only-missing", question: "Does the answer ask the person only for the vendor app to be created in the partner console, or for that console access, without asking for broker credentials, secret-store access or anything else the check showed the run already has?" },
+      ],
+      requiredAnswerValues: ["541"],
+      requiredSkills: ["deliver"],
+      requiredActionValues: [{ action: "behaviorTest.run", values: ["secrets"] }],
+      requiredActionsBeforeActions: [{ before: "behaviorTest.run", after: "user.ask" }],
+      allowedEditPaths: [".agent/HANDOFF.md"],
+      forbiddenActions: [...noPublication],
+      forbiddenSkills: ["create-release"],
+    },
+  },
+  {
+    id: "implement-keeps-the-stated-reach",
+    description: "A request that names its reach, such as everywhere, is carried to every place that reach covers, not narrowed to some of them.",
+    prompt: "/implement: Rename the `legacyMode` option to `compatMode` everywhere. Keep changes local: no commit, push or PR.",
+    fixture: {
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "stop" } },
+      evidence: {
+        request: "Settled: a rename only, with no behavior change and no deprecation alias, because the option has not been released. Submit each changed file's content in file.edit data.content with its data.path.",
+        projectContext: "The focused branch is clean and synchronized with the freshly fetched remote default. Tracker search found no matching issue.",
+        search: "`rg -n legacyMode` finds: src/options.ts (the Options type field and its default), src/cli.ts (reads options.legacyMode), tests/options.test.ts (two tests), docs/configuration.md (the option's section) and examples/config.json (the sample configuration).",
+        projectGate: "bun run check runs the tests, lint, typecheck and the docs link check.",
+        sourceFiles: [
+          "src/options.ts:\nexport type Options = { input: string; legacyMode: boolean };\nexport const defaultOptions: Options = { input: \"-\", legacyMode: false };",
+          "src/cli.ts:\nimport { defaultOptions, type Options } from \"./options.ts\";\nexport function describe(options: Options = defaultOptions) {\n  return options.legacyMode ? \"legacy output\" : \"standard output\";\n}",
+          "tests/options.test.ts:\nimport { expect, test } from \"bun:test\";\nimport { defaultOptions } from \"../src/options.ts\";\nimport { describe } from \"../src/cli.ts\";\ntest(\"legacyMode is off by default\", () => expect(defaultOptions.legacyMode).toBe(false));\ntest(\"legacyMode switches the output\", () => expect(describe({ input: \"-\", legacyMode: true })).toBe(\"legacy output\"));",
+          "docs/configuration.md:\n# Configuration\n\n## legacyMode\n\nSet `legacyMode: true` to keep the legacy output format. Off by default.",
+          "examples/config.json:\n{ \"input\": \"-\", \"legacyMode\": false }",
+        ].join("\n\n"),
+      },
+      actionResponses: {
+        "file.edit": "Fixture edit recorded; the simulated working tree now contains the submitted file.",
+        "codeReview.run": "Simulated review result: the rename is consistent across the submitted files. No in-scope findings.",
+        "validation.run": "Simulated result on the submitted revision: bun run check passed.",
+      },
+    },
+    expected: {
+      rubric: [
+        { id: "whole-reach", question: "Does the answer report the rename done in the source, the CLI, the tests, the docs and the example configuration, rather than in only some of them or leaving the rest to the person?" },
+      ],
+      requiredSkills: ["implement"],
+      requiredActionValues: ["src/options.ts", "src/cli.ts", "tests/options.test.ts", "docs/configuration.md", "examples/config.json"].map(path => ({ action: "file.edit" as const, values: [path], fields: ["path"] })),
+      requiredActions: ["file.edit", "validation.run"],
+      forbiddenActions: ["user.ask", ...noPublication],
+    },
+  },
+  {
+    id: "implement-reads-all-the-data",
+    description: "A fix that must cover every row of a log reads the whole log, not a sample of it.",
+    prompt: "/implement 612",
+    fixture: {
+      environment: { orchestration: { endpoint: "ready-to-merge", entryPoints: "stop" } },
+      evidence: {
+        workItem: "Issue #612: the nightly import rejects some customer rows because of their signup_date. Fix parseDate in src/import/dates.ts so that every row in last night's rejection log imports. Scope and approach are settled: extend parseDate only, returning the same Date for each accepted form. Submit the file's content in file.edit data.content with its data.path. Keep changes local: no commit, push or PR.",
+        projectContext: "The focused branch is clean and synchronized with the freshly fetched remote default. parseDate currently accepts only YYYY-MM-DD.",
+        rejectionLog,
+        projectGate: "bun run check:import runs the import unit tests, lint and typecheck. The log replay is not part of it.",
+      },
+      actionResponses: {
+        "file.edit": "Fixture edit recorded; the simulated working tree now contains the submitted file.",
+        "codeReview.run": "Simulated review result: no findings beyond what the change states it handles.",
+        "validation.run": "Simulated result on the submitted revision: bun run check:import passed.",
+      },
+    },
+    expected: {
+      rubric: [
+        { id: "every-format", question: "Does a recorded file.edit of src/import/dates.ts make parseDate accept all three forms in the rejection log: DD/MM/YYYY, an ISO 8601 date with a time such as 2026-01-02T00:00:00Z, and DD.MM.YYYY with dots?" },
+      ],
+      requiredSkills: ["implement"],
+      requiredInspections: ["rejectionLog"],
+      requiredActionValues: [{ action: "file.edit", values: ["src/import/dates.ts"], fields: ["path"] }],
+      requiredActions: ["file.edit"],
+      forbiddenActions: ["user.ask", ...noPublication],
     },
   },
 ];

@@ -29,7 +29,7 @@ changes, failures, or unresolved concerns.
 - Derive expected behavior only from the user request, issue, confirmed
   mini-spec, product documentation, ADR, or another explicit decision. Never
   infer it from the implementation. Stop for a
-  [material](../software-engineering-excellence/SKILL.md#blockers-and-decisions)
+  [material](../deliver/SKILL.md#decisions-that-belong-to-the-person)
   conflict or ambiguity.
 - Test externally observable outcomes. Use the rendered product for user-facing
   behavior and the real API, CLI, library entry point, job, package, migration,

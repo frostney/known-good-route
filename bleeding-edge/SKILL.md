@@ -12,8 +12,7 @@ license: Unlicense OR MIT
 
 Prefer the newest viable technology inside the requested work. This is a bias,
 not permission for an unrelated upgrade sweep or novel architecture.
-`software-engineering-excellence` remains the governor; maintainability wins
-ties.
+Maintainability wins ties.
 
 ## Stability ladder
 

@@ -66,7 +66,7 @@ describe("prompting regression evidence", () => {
     )!;
     const parent: RunLedger = {
       ...empty(),
-      loadedSkills: ["software-engineering-excellence"],
+      loadedSkills: ["deliver"],
       actions: [{ action: "delegate", details: "Claimed worker result" }],
     };
     expect(gradeRun(scenario, parent, "PR #622 ready").passed).toBeFalse();

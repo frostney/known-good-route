@@ -36,7 +36,7 @@ its behalf.
   required by an existing requirement, dependency, regression, or Definition of
   Done. Keep tightly coupled fixes in the current PR; create an issue for
   independently trackable required work.
-  [File and fix](../../software-engineering-excellence/SKILL.md#defects-the-work-did-not-cause)
+  [File and fix](../../deliver/SKILL.md#defects-the-work-did-not-cause)
   any other defect found as its own work item outside the milestone; never
   record it as a follow-up. Record desirable improvements as follow-ups without
   expanding the milestone.
@@ -45,5 +45,5 @@ its behalf.
 - When a milestone merge causes an integrated regression, create and implement
   the required repair. Treat unrelated or materially ambiguous failures as
   blockers; an unrelated failure is also
-  [filed and fixed](../../software-engineering-excellence/SKILL.md#defects-the-work-did-not-cause)
+  [filed and fixed](../../deliver/SKILL.md#defects-the-work-did-not-cause)
   as its own work item.

@@ -57,7 +57,7 @@ test("a run whose installed skills declare no role carries no AGENTS.md block", 
 test("the repository's own skills produce the block the generator writes for them", async () => {
   const file = await agentsFileFor(await loadSkills(resolve(import.meta.dir, "..")));
   expect(file).toContain("- Start with `/deliver`:");
-  expect(file).toContain("- Always apply `software-engineering-excellence`:");
+  expect(file).toContain("- Always apply `agent-writing`:");
 });
 
 test("a frozen snapshot carries every file the harness imports from outside evals/", async () => {

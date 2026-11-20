@@ -44,7 +44,7 @@ Remediation is independent of the operation:
 - Fix modes authorize local edits and validation, not commits, pushes, PR
   comments, review-thread changes, deployments, publication, or shared-state
   mutation. Stop remediation for a
-  [material](../software-engineering-excellence/SKILL.md#blockers-and-decisions)
+  [material](../deliver/SKILL.md#decisions-that-belong-to-the-person)
   product, architecture, security, compatibility, or scope decision.
 - A request to save JSON authorizes only the named findings artifact; it does
   not authorize remediation.
