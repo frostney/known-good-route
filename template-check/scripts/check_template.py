@@ -133,6 +133,18 @@ def is_alert(node: Node) -> bool:
     return node.tag == "div" and "markdown-alert" in node.attrs.get("class", "").split()
 
 
+def names_head(paragraph: Node) -> bool:
+    """Whether a paragraph's first line opens with `Edit:` and names a commit in code."""
+    if not words(paragraph).startswith("Edit:"):
+        return False
+    for child in paragraph.children:
+        if isinstance(child, str) and "\n" in child:
+            return False  # The first line ended without naming a commit.
+        if isinstance(child, Node) and child.tag == "code" and re.fullmatch(r"[0-9a-f]{4,40}", words(child)):
+            return True
+    return False
+
+
 def is_footnotes(node: Node) -> bool:
     """The footnotes section GitHub appends, with its generated heading."""
     return node.tag == "section" and ("data-footnotes" in node.attrs or "footnotes" in node.attrs.get("class", "").split())
@@ -162,20 +174,11 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
     top = [node for node in builder.root.children if not (isinstance(node, Node) and is_footnotes(node))]
     blocks = elements(top)
     if kind == "pr":
-        # The review note closes the body: a rule, then `Edit:` and the head it
-        # covers in code, such as ``Edit: `1a2b3c4` reviewed``.
+        # The review note closes the body: a rule, then a line that opens with
+        # `Edit:` and names the head it covers in code, such as
+        # ``Edit: `1a2b3c4` reviewed``.
         for rule, following in reversed(list(zip(blocks, blocks[1:]))):
-            opening = next((node for node in following.children if not (isinstance(node, str) and not node.strip())), None)
-            first_element = next(iter(elements(following.children)), None)
-            if (
-                rule.tag == "hr"
-                and following.tag == "p"
-                and isinstance(opening, str)
-                and opening.strip() == "Edit:"
-                and first_element is not None
-                and first_element.tag == "code"
-                and re.fullmatch(r"[0-9a-f]{7,40}", words(first_element))
-            ):
+            if rule.tag == "hr" and following.tag == "p" and names_head(following):
                 top = top[: next(index for index, node in enumerate(top) if node is rule)]
                 break
     if kind == "issue" and blocks:
@@ -225,40 +228,56 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
     return found
 
 
-def target_host(repo: str | None, root: Path | None) -> str | None:
-    """The GitHub host the body belongs to, so its Markdown is rendered nowhere else.
+def default_host() -> str:
+    """The host gh uses for a repository named without one."""
+    return os.environ.get("GH_HOST") or "github.com"
 
-    A host-qualified `--repo` or `GH_REPO` names it; otherwise `GH_HOST`, which
-    gh applies to a repository named without a host, and then the repository gh
-    resolves for the checkout. None leaves gh's own default.
+
+def target_host(repo: str | None) -> str:
+    """The host of the repository the check is about, resolved the way gh resolves it.
+
+    A host-qualified `--repo` or `GH_REPO` names it, a plain OWNER/REPO lives
+    on gh's default host, and otherwise it is the host of the repository gh
+    resolves for the current checkout.
     """
     named = repo or os.environ.get("GH_REPO", "")
     if named.count("/") == 2:
         return named.split("/")[0]
-    if os.environ.get("GH_HOST"):
-        return os.environ["GH_HOST"]
     if named:
-        return None
-    return checkout_host(root)
+        return default_host()
+    return checkout_host(None, os.environ) or default_host()
 
 
-def checkout_host(root: Path | None) -> str | None:
-    """The host of the repository gh resolves for a checkout, from its own remotes."""
-    own = {key: value for key, value in os.environ.items() if key not in ("GH_REPO", "GH_HOST")}
+def checkout_host(root: Path | None, env: dict[str, str] | os._Environ[str]) -> str | None:
+    """The host of the repository gh resolves for a checkout; None outside any checkout.
+
+    A git checkout gh cannot place is an operational error: it belongs to some
+    host, or to none yet, and Markdown is never sent to a guessed one.
+    """
     try:
-        url = gh_runner(["repo", "view", "--json", "url", "--jq", ".url"], cwd=root, env=own)
+        url = gh_runner(["repo", "view", "--json", "url", "--jq", ".url"], cwd=root, env=dict(env))
     except CheckError:
         url = None
     if url and urlparse(url.strip()).hostname:
         return urlparse(url.strip()).hostname
-    # A git checkout belongs to some host, or to none yet; never guess which.
     inside = subprocess.run(
         ["git", *(["-C", str(root)] if root else []), "rev-parse", "--is-inside-work-tree"],
         text=True, capture_output=True, check=False,
     )
     if inside.returncode == 0 and inside.stdout.strip() == "true":
         raise CheckError("cannot tell which GitHub host this checkout belongs to; pass --repo HOST/OWNER/REPO")
-    return None  # Not a checkout at all: gh's default host applies.
+    return None
+
+
+def same_host(root: Path, host: str) -> None:
+    """Refuse templates from a checkout that belongs to another host than the body's."""
+    # The checkout's own repository: GH_REPO may name another, GH_HOST still applies.
+    own = checkout_host(root, {key: value for key, value in os.environ.items() if key != "GH_REPO"})
+    if own is not None and own != host:
+        raise CheckError(
+            f"the templates in {root} belong to {own}, but the body belongs to {host}; "
+            "check them against a body on the same host"
+        )
 
 
 def render(markdown: str, host: str | None = None) -> str:
@@ -990,27 +1009,25 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         except (OSError, ValueError) as error:
             raise CheckError(f"cannot read body: {error}") from error
     kind = "pr" if args.pr is not None else "issue" if args.issue is not None else args.kind
-    # The body belongs to the repository named or checked out here. A template
-    # belongs to where it was found: a checkout on disk, whatever --repo,
-    # GH_REPO or GH_HOST say, or the repository it was read from. Each host is
-    # resolved only when a render needs it.
-    hosts: dict[str, str | None] = {}
+    # Everything renders on one host: that of the repository the check is about.
+    # A template from a checkout must belong to that host too. The host is
+    # resolved only when something is rendered.
+    hosts: dict[str, str] = {}
+    checked: set[Path] = set()
 
-    def host_of(key: str, resolve: Callable[[], str | None]) -> str | None:
-        if key not in hosts:
-            hosts[key] = resolve()
-        return hosts[key]
-
-    def body_host() -> str | None:
-        return host_of("body:", lambda: target_host(args.repo, None))
+    def host() -> str:
+        if "host" not in hosts:
+            hosts["host"] = target_host(args.repo)
+        return hosts["host"]
 
     def renderer_for(root: Path | None) -> Callable[[str], str]:
         def renderer(markdown: str) -> str:
             if not markdown.strip():
                 return ""
-            if root is None:
-                return render(markdown, host_of("repo:", lambda: target_host(args.repo, None)))
-            return render(markdown, host_of(f"checkout:{root.resolve()}", lambda: checkout_host(root)))
+            if root is not None and root.resolve() not in checked:
+                same_host(root, host())
+                checked.add(root.resolve())
+            return render(markdown, host())
 
         return renderer
 
@@ -1038,7 +1055,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     # Without a kind, as with --template alone, the body reads as a pull request's.
     text = text.removeprefix("\ufeff")
-    body = headings(render(text, body_host()) if text.strip() else "", kind or "pr")
+    body = headings(render(text, host()) if text.strip() else "", kind or "pr")
     template, problems = select(templates, body, args.template_name)
     return {
         "state": "mismatch" if problems else "match",

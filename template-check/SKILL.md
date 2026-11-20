@@ -58,25 +58,26 @@ belongs to.
   says, and never treat it as a pass.
 
 It reads a Markdown body or template as GitHub renders it, through the
-Markdown API of the repository's own GitHub host, so a heading counts exactly
-where GitHub shows one. The body renders on the host of the repository it
-belongs to: a host-qualified `--repo` or `GH_REPO`, then `GH_HOST`, then the
-repository gh resolves for the current checkout. A template found in a
-checkout, the current one or `--root`, renders on the host of that checkout's
-own repository, whatever `--repo`, `GH_REPO` or `GH_HOST` name. A checkout
-whose host cannot be resolved is an operational error, never a render on
-another host. A host is resolved, and Markdown rendered, only when there is
-something to compare. With `--template-name`, only the templates that can be
-the one named are rendered. Text in code,
-comments and other HTML GitHub does not show is no heading. A heading inside a
-list item, quote, table or alert is its section's content, not a section of
-its own. A template heading pairs with a body heading at the same level before
+Markdown API, so a heading counts exactly where GitHub shows one. Everything
+renders on one host: that of the repository the check is about, resolved as gh
+resolves it, from a host-qualified `--repo` or `GH_REPO`, then `GH_HOST` for a
+repository named without a host, then the repository gh resolves for the
+current checkout. A
+template found in a checkout must belong to that same host, and a checkout gh
+cannot place is an operational error: Markdown is never sent to another host.
+A standalone template file renders on the body's host. The host is resolved,
+and Markdown rendered, only when there is something to compare. With
+`--template-name`, only the templates that can be the one named are rendered.
+
+Text in code, comments and other HTML GitHub does not show is no heading. A
+heading inside a list item, quote, table or alert is its section's content,
+not a section of its own. A template heading pairs with a body heading at the same level before
 one at another level, so a subsection that shares a section's name does not
 stand in for it. A list item that shows nothing, or only `[ ]`, such as a
 template's `-` placeholder, is not content. Reading stops at a pull request's
-review note, the last rule followed by `Edit:` and the head it covers in code,
-such as ``Edit: `1a2b3c4` reviewed``, so the note is not content of the last
-template section. For an issue, the
+review note, the last rule followed by a line that opens with `Edit:` and
+names the head it covers in code, such as ``Edit: `1a2b3c4` reviewed``, so the
+note is not content of the last template section. For an issue, the
 attribution note `create-issue` closes it with is not content either.
 
 Issue forms are YAML that GitHub does not render here, so the check reads them

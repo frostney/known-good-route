@@ -209,6 +209,12 @@ class RenderedHeadingTests(unittest.TestCase):
     def test_an_image_in_a_heading_reads_as_its_alt_text(self):
         self.assertEqual(self.read("image_heading"), [("Release production", True)])
 
+    def test_a_review_note_may_name_a_short_commit_after_other_words(self):
+        for line in ("Edit: `41c14b` reviewed", "Edit: reviewed `41c14b4`"):
+            with self.subTest(line=line):
+                found = md_headings(f"## A\n\n-\n\n---\n\n{line}\n", "pr")
+                self.assertEqual([(h.text, h.has_content) for h in found], [("A", False)])
+
     def test_only_a_closing_edit_line_naming_a_head_is_the_review_note(self):
         for line in ("Edit: plain words", "Edit: `config.yml` changed"):
             with self.subTest(line=line):
@@ -233,7 +239,7 @@ class RenderedHeadingTests(unittest.TestCase):
             CHECK_TEMPLATE.gh_runner = unresolved
             try:
                 with self.assertRaises(CHECK_TEMPLATE.CheckError):
-                    CHECK_TEMPLATE.checkout_host(Path(directory))
+                    CHECK_TEMPLATE.checkout_host(Path(directory), os.environ)
             finally:
                 CHECK_TEMPLATE.gh_runner = original
 
@@ -263,7 +269,7 @@ class RenderedHeadingTests(unittest.TestCase):
             CHECK_TEMPLATE.gh_runner = unresolved
             try:
                 with self.assertRaises(CHECK_TEMPLATE.CheckError):
-                    CHECK_TEMPLATE.target_host(None, Path(directory))
+                    CHECK_TEMPLATE.checkout_host(Path(directory), os.environ)
             finally:
                 CHECK_TEMPLATE.gh_runner = original
                 os.environ.update(environment)
@@ -292,11 +298,11 @@ class RenderedHeadingTests(unittest.TestCase):
     def test_the_target_host_follows_the_repository(self):
         environment = {key: os.environ.pop(key) for key in ("GH_REPO", "GH_HOST") if key in os.environ}
         try:
-            self.assertEqual(CHECK_TEMPLATE.target_host("ghe.example.com/cli/cli", None), "ghe.example.com")
+            self.assertEqual(CHECK_TEMPLATE.target_host("ghe.example.com/cli/cli"), "ghe.example.com")
             os.environ["GH_HOST"] = "ghe.example.com"
-            self.assertEqual(CHECK_TEMPLATE.target_host("cli/cli", None), "ghe.example.com")
+            self.assertEqual(CHECK_TEMPLATE.target_host("cli/cli"), "ghe.example.com")
             del os.environ["GH_HOST"]
-            self.assertIsNone(CHECK_TEMPLATE.target_host("cli/cli", None))
+            self.assertEqual(CHECK_TEMPLATE.target_host("cli/cli"), "github.com")
         finally:
             os.environ.pop("GH_HOST", None)
             os.environ.update(environment)
@@ -307,7 +313,7 @@ class RenderedHeadingTests(unittest.TestCase):
         environment = {key: os.environ.pop(key) for key in ("GH_REPO", "GH_HOST") if key in os.environ}
         CHECK_TEMPLATE.gh_runner = lambda args, **options: "https://github.com/cli/cli\n"
         try:
-            self.assertEqual(CHECK_TEMPLATE.target_host(None, None), "github.com")
+            self.assertEqual(CHECK_TEMPLATE.target_host(None), "github.com")
         finally:
             CHECK_TEMPLATE.gh_runner = original
             os.environ.update(environment)
@@ -705,6 +711,8 @@ class CommandTests(unittest.TestCase):
             # Keep git from finding a checkout above a temporary directory.
             "GIT_CEILING_DIRECTORIES": str(self.root.parent),
         }
+        for key in ("GH_HOST", "GH_REPO"):
+            self.env.pop(key, None)
         self.checkout = self.root / "checkout"
         self.checkout.mkdir()
 
@@ -912,33 +920,6 @@ class CommandTests(unittest.TestCase):
         )
         self.assertEqual((code, result["state"]), (0, "match"))
 
-    def test_a_body_renders_on_its_own_host_and_root_templates_on_theirs(self):
-        log = self.root / "gh.log"
-        self.env["FAKE_GH_LOG"] = str(log)
-        self.write(".github/pull_request_template.md", "## Summary\n")
-        self.scenario.write_text(json.dumps({
-            f"{self.checkout} :: repo view --json url --jq .url": "https://ghe.example.com/cli/cli\n",
-        }), encoding="utf-8")
-        code, result = self.run_check("--root", str(self.checkout), "--kind", "pr", "--body", "-", stdin="## Summary\n\nDone.\n")
-        self.assertEqual((code, result["state"]), (0, "match"))
-        renders = [call for call in map(json.loads, log.read_text().splitlines()) if call[-3:] == ["markdown", "--input", "-"]]
-        self.assertEqual(renders, [["api", "--hostname", "ghe.example.com", "markdown", "--input", "-"], ["api", "markdown", "--input", "-"]])
-
-    def test_root_templates_render_on_the_root_checkouts_host_whatever_repo_names(self):
-        log = self.root / "gh.log"
-        self.env["FAKE_GH_LOG"] = str(log)
-        self.write(".github/pull_request_template.md", "## Summary\n")
-        self.scenario.write_text(json.dumps({
-            f"{self.checkout} :: repo view --json url --jq .url": "https://ghe.example.com/cli/cli\n",
-        }), encoding="utf-8")
-        code, result = self.run_check(
-            "--repo", "cli/cli", "--root", str(self.checkout), "--kind", "pr", "--body", "-", stdin="## Summary\n\nDone.\n"
-        )
-        self.assertEqual((code, result["state"]), (0, "match"))
-        renders = [call for call in map(json.loads, log.read_text().splitlines()) if call[-3:] == ["markdown", "--input", "-"]]
-        self.assertEqual(renders[0], ["api", "--hostname", "ghe.example.com", "markdown", "--input", "-"])
-        self.assertEqual(renders[1], ["api", "markdown", "--input", "-"])
-
     def test_a_checkout_without_templates_needs_no_host(self):
         subprocess.run(["git", "init", "-q", str(self.checkout)], check=True)
         subprocess.run(["git", "-C", str(self.checkout), "remote", "add", "origin", "https://ghe.example.com/cli/cli"], check=True)
@@ -952,19 +933,6 @@ class CommandTests(unittest.TestCase):
         self.env.pop("PYTHONIOENCODING", None)
         code, result = self.run_check("--template", str(template), "--body", str(draft))
         self.assertEqual((code, result["state"]), (0, "match"))
-
-    def test_checkout_templates_render_on_the_checkouts_host_whatever_gh_repo_names(self):
-        log = self.root / "gh.log"
-        self.env.update({"FAKE_GH_LOG": str(log), "GH_REPO": "ghe.example.com/cli/cli"})
-        subprocess.run(["git", "init", "-q", str(self.checkout)], check=True)
-        self.write(".github/pull_request_template.md", "## Summary\n")
-        self.scenario.write_text(json.dumps({
-            f"{self.checkout} :: repo view --json url --jq .url": "https://github.com/cli/cli\n",
-        }), encoding="utf-8")
-        code, result = self.run_check("--kind", "pr", "--body", "-", stdin="## Summary\n\nDone.\n", cwd=self.checkout)
-        self.assertEqual((code, result["state"]), (0, "match"))
-        renders = [call[:3] for call in map(json.loads, log.read_text().splitlines()) if call[-3:] == ["markdown", "--input", "-"]]
-        self.assertEqual(renders, [["api", "--hostname", "github.com"], ["api", "--hostname", "ghe.example.com"]])
 
     def test_a_named_check_renders_only_the_templates_it_can_select(self):
         log = self.root / "gh.log"
@@ -985,22 +953,60 @@ class CommandTests(unittest.TestCase):
         code, result = self.run_check("--template", str(template), "--body", "-", stdin="## Summary\n", cwd=self.checkout)
         self.assertEqual((code, result["state"]), (0, "no-template"))
 
-    def test_a_root_named_like_a_cache_key_keeps_body_and_template_hosts_apart(self):
+    def renders(self, log):
+        return [call[:3] for call in map(json.loads, log.read_text().splitlines()) if call[-3:] == ["markdown", "--input", "-"]]
+
+    def test_templates_from_a_checkout_on_another_host_are_refused_unrendered(self):
+        log = self.root / "gh.log"
+        self.env["FAKE_GH_LOG"] = str(log)
+        self.write(".github/pull_request_template.md", "## Summary\n")
+        self.scenario.write_text(json.dumps({
+            f"{self.checkout} :: repo view --json url --jq .url": "https://ghe.example.com/cli/cli\n",
+        }), encoding="utf-8")
+        for repo in ((), ("--repo", "cli/cli")):
+            with self.subTest(repo=repo):
+                code, result = self.run_check(*repo, "--root", str(self.checkout), "--kind", "pr", "--body", "-", stdin="## Summary\n\nDone.\n")
+                self.assertEqual((code, result["state"]), (2, "operational-error"))
+                self.assertIn("ghe.example.com", result["reason"])
+        self.assertEqual(self.renders(log), [])
+
+    def test_gh_repo_on_another_host_refuses_the_checkouts_templates(self):
+        log = self.root / "gh.log"
+        self.env.update({"FAKE_GH_LOG": str(log), "GH_REPO": "ghe.example.com/cli/cli"})
+        subprocess.run(["git", "init", "-q", str(self.checkout)], check=True)
+        self.write(".github/pull_request_template.md", "## Summary\n")
+        self.scenario.write_text(json.dumps({
+            f"{self.checkout} :: repo view --json url --jq .url": "https://github.com/cli/cli\n",
+        }), encoding="utf-8")
+        code, result = self.run_check("--kind", "pr", "--body", "-", stdin="## Summary\n\nDone.\n", cwd=self.checkout)
+        self.assertEqual((code, result["state"]), (2, "operational-error"))
+        self.assertEqual(self.renders(log), [])
+
+    def test_a_checkout_on_the_bodys_host_renders_everything_there(self):
         log = self.root / "gh.log"
         self.env["FAKE_GH_LOG"] = str(log)
         checkout = self.root / "body"
         (checkout / ".github").mkdir(parents=True)
         (checkout / ".github" / "pull_request_template.md").write_text("## Summary\n", encoding="utf-8")
         self.scenario.write_text(json.dumps({
-            f"{checkout} :: repo view --json url --jq .url": "https://github.com/cli/cli\n",
+            f"{checkout} :: repo view --json url --jq .url": "https://ghe.example.com/cli/cli\n",
         }), encoding="utf-8")
         code, result = self.run_check(
             "--root", "body", "--repo", "https://ghe.example.com/cli/cli", "--kind", "pr", "--body", "-",
             stdin="## Summary\n\nDone.\n",
         )
         self.assertEqual((code, result["state"]), (0, "match"))
-        renders = [call[:3] for call in map(json.loads, log.read_text().splitlines()) if call[-3:] == ["markdown", "--input", "-"]]
-        self.assertEqual(renders, [["api", "--hostname", "github.com"], ["api", "--hostname", "ghe.example.com"]])
+        self.assertEqual(self.renders(log), [["api", "--hostname", "ghe.example.com"]] * 2)
+
+    def test_a_standalone_template_renders_on_the_bodys_host(self):
+        log = self.root / "gh.log"
+        self.env["FAKE_GH_LOG"] = str(log)
+        template = self.write("template.md", "## Summary\n")
+        code, result = self.run_check(
+            "--repo", "ghe.example.com/cli/cli", "--template", str(template), "--body", "-", stdin="## Summary\n\nDone.\n"
+        )
+        self.assertEqual((code, result["state"]), (0, "match"))
+        self.assertEqual(self.renders(log), [["api", "--hostname", "ghe.example.com"]] * 2)
 
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "owner/project"
