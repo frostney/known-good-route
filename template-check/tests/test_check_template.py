@@ -215,18 +215,18 @@ class RenderedHeadingTests(unittest.TestCase):
     def test_the_target_host_follows_the_repository(self):
         environment = {key: os.environ.pop(key) for key in ("GH_REPO", "GH_HOST") if key in os.environ}
         try:
-            self.assertEqual(CHECK_TEMPLATE.target_host("ghe.example.com/owner/repo", None), "ghe.example.com")
+            self.assertEqual(CHECK_TEMPLATE.target_host("ghe.example.com/cli/cli", None), "ghe.example.com")
             os.environ["GH_HOST"] = "ghe.example.com"
-            self.assertEqual(CHECK_TEMPLATE.target_host("a private repository", None), "ghe.example.com")
+            self.assertEqual(CHECK_TEMPLATE.target_host("cli/cli", None), "ghe.example.com")
             del os.environ["GH_HOST"]
-            self.assertIsNone(CHECK_TEMPLATE.target_host("a private repository", None))
+            self.assertIsNone(CHECK_TEMPLATE.target_host("cli/cli", None))
         finally:
             os.environ.pop("GH_HOST", None)
             os.environ.update(environment)
         self.assertEqual(
             [
                 CHECK_TEMPLATE.remote_host(url)
-                for url in ("git@ghe.example.com:owner/repo.git", "a private repository", "ssh://git@ghe.example.com/owner/repo")
+                for url in ("git@ghe.example.com:cli/cli.git", "https://github.com/cli/cli", "ssh://git@ghe.example.com/cli/cli")
             ],
             ["ghe.example.com", "github.com", "ghe.example.com"],
         )

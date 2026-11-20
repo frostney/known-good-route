@@ -206,7 +206,8 @@ def target_host(repo: str | None, root: Path | None) -> str | None:
     """The GitHub host the body belongs to, so its Markdown is rendered nowhere else.
 
     A host-qualified `--repo` or `GH_REPO` names it; otherwise `GH_HOST`, which
-    gh applies to a plain a private repository, and then the checkout's `origin` remote.
+    gh applies to a repository named without a host, and then the checkout's
+    `origin` remote.
     None leaves gh's own default.
     """
     named = repo or os.environ.get("GH_REPO", "")
