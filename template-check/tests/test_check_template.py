@@ -265,7 +265,7 @@ class RenderedHeadingTests(unittest.TestCase):
     def test_the_uv_fallback_clears_inherited_package_sources(self):
         seen = {}
         saved = (CHECK_TEMPLATE.cmarkgfm, CHECK_TEMPLATE.shutil.which, CHECK_TEMPLATE.subprocess.run)
-        os.environ["UV_INDEX"] = "private=https://packages.example.invalid/simple"
+        os.environ.update({"UV_INDEX": "private=https://packages.example.invalid/simple", "UV_WORKING_DIR": "/nowhere", "UV_PROJECT": "/nowhere"})
 
         def run(command, **options):
             seen.update(command=command, env=options["env"])
@@ -276,8 +276,9 @@ class RenderedHeadingTests(unittest.TestCase):
             REAL_RENDER("## A\n")
         finally:
             CHECK_TEMPLATE.cmarkgfm, CHECK_TEMPLATE.shutil.which, CHECK_TEMPLATE.subprocess.run = saved
-            os.environ.pop("UV_INDEX", None)
-        self.assertNotIn("UV_INDEX", seen["env"])
+            for key in ("UV_INDEX", "UV_WORKING_DIR", "UV_PROJECT"):
+                os.environ.pop(key, None)
+        self.assertFalse({"UV_INDEX", "UV_WORKING_DIR", "UV_PROJECT"} & set(seen["env"]))
         self.assertIn("https://pypi.org/simple", seen["command"])
 
     def test_github_host_aliases_resolve_to_github_com(self):
@@ -306,6 +307,15 @@ class RenderedHeadingTests(unittest.TestCase):
             for html in ('<h2><a href="https://example.org/a">Testing</a></h2>', '<h2><a href="https://example.org/b">Testing</a></h2>', "<h2>Testing</h2>")
         }
         self.assertEqual(len(texts), 3)
+
+    def test_a_partly_formatted_alert_marker_is_no_attribution_note(self):
+        quote = "<h2>Related</h2><blockquote><p>[!<em>NOTE</em>]\nCreated on behalf of @someone using Some Model.</p></blockquote>"
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(quote, "issue")], [True])
+
+    def test_a_link_around_a_badge_and_text_is_the_authors(self):
+        linked = '<h2><a href="https://example.org/b.svg"><img src="https://example.org/b.svg" alt="badge"> <em>Status</em></a></h2>'
+        plain = '<h2><img src="https://example.org/b.svg" alt="badge"> <em>Status</em></h2>'
+        self.assertNotEqual(*(CHECK_TEMPLATE.headings(html)[0].text for html in (linked, plain)))
 
     def test_a_quoted_attribution_example_is_content(self):
         quote = "<h2>Related</h2><blockquote><p><code>[!NOTE]</code>\nCreated on behalf of @someone using Some Model.</p></blockquote>"
@@ -410,7 +420,7 @@ class RendererParityTests(unittest.TestCase):
             [sys.executable, "-I", "-c", cp1252 + CHECK_TEMPLATE.RENDER],
             input="## \U0001F4C1 Files\n".encode("utf-8"), capture_output=True, check=True,
         )
-        self.assertEqual(completed.stdout.decode("utf-8").strip(), "<h2>\U0001F4C1 Files</h2>")
+        self.assertEqual([h.text for h in CHECK_TEMPLATE.headings(completed.stdout.decode("utf-8"))], ["\U0001F4C1 Files"])
 
     def test_the_fallback_program_never_imports_from_the_directory_it_runs_in(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -419,7 +429,7 @@ class RendererParityTests(unittest.TestCase):
                 [sys.executable, "-I", "-c", CHECK_TEMPLATE.RENDER],
                 input=b"## A\n", cwd=directory, capture_output=True, check=True,
             )
-        self.assertEqual(completed.stdout.decode("utf-8").strip(), "<h2>A</h2>")
+        self.assertEqual([h.text for h in CHECK_TEMPLATE.headings(completed.stdout.decode("utf-8"))], ["A"])
 
     # Resolves cmarkgfm from PyPI through uv, so it runs only when asked for.
     @unittest.skipUnless(shutil.which("uv") and os.environ.get("TEMPLATE_CHECK_UV_TESTS"), "set TEMPLATE_CHECK_UV_TESTS=1")
@@ -429,9 +439,17 @@ class RendererParityTests(unittest.TestCase):
             saved = (CHECK_TEMPLATE.cmarkgfm, CHECK_TEMPLATE.tempfile.gettempdir)
             CHECK_TEMPLATE.cmarkgfm, CHECK_TEMPLATE.tempfile.gettempdir = None, lambda: directory
             try:
-                self.assertEqual(REAL_RENDER("## A\n").strip(), "<h2>A</h2>")
+                self.assertEqual([h.text for h in CHECK_TEMPLATE.headings(REAL_RENDER("## A\n"))], ["A"])
             finally:
                 CHECK_TEMPLATE.cmarkgfm, CHECK_TEMPLATE.tempfile.gettempdir = saved
+
+    def test_only_a_blank_lined_dash_rule_opens_the_review_note(self):
+        body = (
+            "## Summary\n\nAn example:\n\n```\n\n---\n\nEdit: `abc1234` reviewed\n```\n\n"
+            "***\nEdit: `def5678` is how a note reads\n\n## Testing\n\nRan it.\n"
+        )
+        found = CHECK_TEMPLATE.headings(REAL_RENDER(body), "pr", body)
+        self.assertEqual([(h.text, h.has_content) for h in found], [("Summary", True), ("Testing", True)])
 
     def test_every_captured_case_reads_as_github_rendered_it(self):
         for case, fixture in RENDERED.items():

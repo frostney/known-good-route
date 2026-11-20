@@ -38,10 +38,11 @@ except ImportError:  # render() runs it through uv instead.
 
 # GitHub's cmark-gfm for Python, pinned to a release over a year old.
 CMARKGFM = "cmarkgfm==2025.10.22"
-# uv settings that name a package source; the fallback clears them so PyPI is the only one.
+# uv settings that name a package source or a directory; the fallback clears them so
+# PyPI is the only source and the temporary directory the only working directory.
 UV_SOURCES = {
     "UV_INDEX", "UV_INDEX_URL", "UV_DEFAULT_INDEX", "UV_EXTRA_INDEX_URL", "UV_FIND_LINKS", "UV_NO_INDEX",
-    "UV_INDEX_STRATEGY", "UV_CONFIG_FILE", "UV_KEYRING_PROVIDER",
+    "UV_INDEX_STRATEGY", "UV_CONFIG_FILE", "UV_KEYRING_PROVIDER", "UV_WORKING_DIR", "UV_PROJECT",
 }
 # Raw HTML is kept, as GitHub keeps it before filtering the tags it never shows.
 RENDER = (
@@ -49,7 +50,7 @@ RENDER = (
     "from cmarkgfm.cmark import Options\n"
     "markdown = sys.stdin.buffer.read().decode('utf-8')\n"
     "html = cmarkgfm.github_flavored_markdown_to_html(markdown, "
-    "options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES)\n"
+    "options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES | Options.CMARK_OPT_SOURCEPOS)\n"
     "sys.stdout.buffer.write(html.encode('utf-8'))"
 )
 
@@ -160,10 +161,11 @@ def renderer_link(node: Node) -> bool:
     """A link GitHub adds, not the author: a heading anchor, or one to the image it wraps."""
     if "anchor" in node.attrs.get("class", "").split():
         return True
-    images = [child for child in elements(node.children) if child.tag == "img"]
-    sources = {image.attrs.get(key) for image in images for key in ("src", "data-canonical-src")}
+    children = elements(node.children)
+    sources = {child.attrs.get(key) for child in children for key in ("src", "data-canonical-src")}
     own_text = "".join(child for child in node.children if isinstance(child, str)).strip()
-    return bool(images) and not own_text and node.attrs.get("href") in sources
+    only_images = bool(children) and all(child.tag == "img" for child in children)
+    return only_images and not own_text and node.attrs.get("href") in sources
 
 
 def heading_text(node: Node | str) -> str:
@@ -244,20 +246,40 @@ def has_checked(node: Node) -> bool:
 NOTE_SOURCE = re.compile(r"(?:\A|\n)[ \t]*\n[ \t]{0,3}(?:-[ \t]*){3,}\n[ \t]*\n[ \t]{0,3}Edit:")
 
 
+def spaced_rule(rule: Node, source: str | None) -> bool:
+    """Whether a rendered rule is a `---` line with a blank line before and after it.
+
+    The local renderer marks each rule with its source line; HTML without that
+    mark, such as GitHub's, is checked against the source as a whole.
+    """
+    if source is None:
+        return True
+    source = source.replace("\r\n", "\n")
+    position = rule.attrs.get("data-sourcepos", "")
+    if not position:
+        return bool(NOTE_SOURCE.search(source))
+    lines = source.split("\n")
+    line = int(position.split(":")[0])
+    before = lines[line - 2] if line >= 2 else ""
+    after = lines[line] if line < len(lines) else ""
+    rule_line = lines[line - 1] if line <= len(lines) else ""
+    return bool(re.fullmatch(r" {0,3}(?:-[ \t]*){3,}", rule_line)) and not before.strip() and not after.strip()
+
+
 class EndOfBody(Exception):
     """Reading reached the review note, where the body ends."""
 
 
-def note_rule(children: list[Node | str]) -> Node | None:
+def note_rule(children: list[Node | str], valid: Callable[[Node], bool]) -> Node | None:
     """The rule that opens the last review note, also inside wrapper elements."""
     found = None
     blocks = elements(children)
     for index, block in enumerate(blocks):
         following = blocks[index + 1] if index + 1 < len(blocks) else None
-        if block.tag == "hr" and following is not None and following.tag == "p" and names_head(following):
+        if block.tag == "hr" and following is not None and following.tag == "p" and names_head(following) and valid(block):
             found = block
         elif block.tag == "div" and not is_alert(block):
-            found = note_rule(block.children) or found  # Later in the document than any before it.
+            found = note_rule(block.children, valid) or found  # Later in the document than any before it.
     return found
 
 
@@ -277,17 +299,17 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
     top = [node for node in builder.root.children if not (isinstance(node, Node) and is_footnotes(node))]
     blocks = elements(top)
     end = None
-    if kind == "pr" and (source is None or NOTE_SOURCE.search(source.replace("\r\n", "\n"))):
-        # The review note closes the body: a rule, then a line that opens with
-        # `Edit:` and names the head it covers in code, such as
-        # ``Edit: `1a2b3c4` reviewed``.
-        end = note_rule(top)
+    if kind == "pr":
+        # The review note closes the body: a `---` rule with a blank line
+        # before and after it, then a line that opens with `Edit:` and names
+        # the head it covers in code, such as ``Edit: `1a2b3c4` reviewed``.
+        end = note_rule(top, lambda rule: spaced_rule(rule, source))
     if kind == "issue" and blocks:
         last = blocks[-1]
         paragraphs = [node for node in elements(last.children) if "markdown-alert-title" not in node.attrs.get("class", "")]
         lines = [line.strip() for line in text_of(paragraphs[0]).splitlines() if line.strip()] if len(paragraphs) == 1 else []
         opening = paragraphs[0].children[0] if len(paragraphs) == 1 and paragraphs[0].children else None
-        if last.tag == "blockquote" and lines[:1] == ["[!NOTE]"] and isinstance(opening, str):
+        if last.tag == "blockquote" and isinstance(opening, str) and opening.strip().split("\n")[0] == "[!NOTE]":
             lines = lines[1:]  # cmark-gfm leaves the alert a quote that opens with its marker.
         elif "markdown-alert-note" not in last.attrs.get("class", "").split():
             lines = []
@@ -345,7 +367,7 @@ def render(markdown: str) -> str:
         return ""
     if cmarkgfm is not None:
         return cmarkgfm.github_flavored_markdown_to_html(
-            markdown, options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES
+            markdown, options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES | Options.CMARK_OPT_SOURCEPOS
         )
     uv = shutil.which("uv")
     if not uv:
