@@ -210,6 +210,25 @@ class HeadingTests(unittest.TestCase):
         template = CHECK_TEMPLATE.parse_template("pull_request_template.md", "---\n\n## Summary\n\n-\n\n---\n\nMore.\n")
         self.assertEqual([str(h) for h in template.headings], ["## Summary"])
 
+    def test_fences_in_a_list_item_are_measured_from_its_content(self):
+        found = CHECK_TEMPLATE.headings("\n".join(["- item", "", "  ```", "  ## In code", "    ```", "", "## Next"]))
+        self.assertEqual([str(h) for h in found], ["## Next"])
+
+    def test_indented_code_is_content_and_a_nested_placeholder_is_not(self):
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings("## A\n\n    -\n")], [True])
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings("## A\n\n-\n  -\n")], [False])
+
+    def test_a_comment_opened_after_one_closes_hides_what_follows(self):
+        found = CHECK_TEMPLATE.headings("## A\n<!-- hint --> <!--\n## Hidden\n-->\n## B\n")
+        self.assertEqual([str(h) for h in found], ["## A", "## B"])
+
+    def test_flow_attributes_read_the_label_key_not_text_inside_another_value(self):
+        template = CHECK_TEMPLATE.parse_template(
+            "form.yml",
+            'body:\n  - type: textarea\n    attributes: {description: "Choose a value, label: example", label: Steps}\n',
+        )
+        self.assertEqual([str(h) for h in template.headings], ["### Steps"])
+
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 
@@ -369,6 +388,17 @@ class SelectTests(unittest.TestCase):
         self.assertEqual([(problem["kind"], problem["expected"]) for problem in problems], [("missing", "## Notes")])
 
 
+    def test_a_same_level_preference_does_not_shrink_the_kept_headings(self):
+        larger = CHECK_TEMPLATE.Template("larger.md", "larger", CHECK_TEMPLATE.headings("## Summary\n## Rationale\n## Testing\n## Scope\n"))
+        smaller = CHECK_TEMPLATE.Template("smaller.md", "smaller", CHECK_TEMPLATE.headings("## Testing\n## Scope\n"))
+        found = CHECK_TEMPLATE.headings("## Testing\nx\n## Scope\nx\n### Summary\nx\n### Rationale\nx\n### Testing\nx\n")
+
+        template, problems = CHECK_TEMPLATE.select([larger, smaller], found, None)
+
+        self.assertEqual(template.name, "larger")
+        self.assertTrue(problems)
+
+
 class CommandTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
@@ -480,6 +510,21 @@ class CommandTests(unittest.TestCase):
             with self.subTest(root=root.name):
                 code, result = self.run_check("--root", str(root), "--kind", "pr", "--body", "-", stdin="## Summary\n")
                 self.assertEqual((code, result["state"]), (2, "operational-error"))
+
+    def test_an_explicit_template_without_a_kind_reads_the_body_as_a_pull_request(self):
+        template = self.write("template.md", "## Testing\n\nx\n")
+        code, result = self.run_check("--template", str(template), "--body", "-", stdin="## Testing\n\n---\n\nEdit: reviewed\n")
+        self.assertEqual((code, result["state"]), (1, "mismatch"))
+
+    def test_an_unreadable_form_is_needed_when_its_declared_name_is_chosen(self):
+        self.write(".github/ISSUE_TEMPLATE/report.yml", "name: bug-report\nbody:\n  - type: textarea\n    attributes: [odd]\n")
+        self.write(".github/ISSUE_TEMPLATE/bug-report.md", "---\nname: Other\n---\n## Summary\n\n-\n")
+        code, result = self.run_check(
+            "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "bug-report",
+            stdin="## Summary\n\nText.\n",
+        )
+        self.assertEqual((code, result["state"]), (2, "operational-error"))
+        self.assertIn("report.yml", result["reason"])
 
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "owner/project"

@@ -24,12 +24,15 @@ from typing import Any, Callable
 sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__.
 
 
-# A fence may be indented by up to three spaces; four make an indented code line.
+# A fence may be indented by up to three spaces past its container; four make
+# an indented code line.
 FENCE = re.compile(r" {0,3}(`{3,}|~{3,})(.*)")
+# A list item's marker; its content, and what nests in it, starts after it.
+LIST_ITEM = re.compile(r" *(?:[-*+]|[0-9]{1,9}[.)])(?:[ \t]+|$)")
 ATX = re.compile(r" {0,3}(#{1,6})(?:[ \t]+(.*))?$")
 # A list marker or an unchecked task box with nothing after it is a template
 # placeholder, not content.
-PLACEHOLDER = re.compile(r" *(?:[-*+]|[0-9]{1,9}[.)])(?:[ \t]+\[ ?\])?[ \t]*$")
+PLACEHOLDER = re.compile(r" {0,3}(?:[-*+]|[0-9]{1,9}[.)])(?:[ \t]+\[ ?\])?[ \t]*$")
 # The attribution note `create-issue` ends every issue with.
 ATTRIBUTION = re.compile(r"\n> \[!NOTE\][ \t]*\n> Created on behalf of [^\n]*\s*$")
 CLOSING_HASHES = re.compile(r"(?:^|[ \t]+)#+[ \t]*$")
@@ -42,8 +45,6 @@ COMMENT_BLOCK = re.compile(r" {0,3}<!--")
 NOTE_RULE = re.compile(r" {0,3}-{3,}[ \t]*$")
 NOTE_OPENING = re.compile(r" {0,3}Edit:")
 YAML_KEY = re.compile(r"""(?:[A-Za-z0-9_][\w.-]*|"[^"]*"|'[^']*')[ \t]*:(?:[ \t]|$)""")
-# A label inside a flow mapping, such as `attributes: {label: Steps}`.
-FLOW_LABEL = re.compile(r"""[{,][ \t]*label[ \t]*:[ \t]*("(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[^,}]*)""")
 BLOCK_SCALAR = re.compile(r"[|>](?:[+-]([0-9])?|([0-9])[+-]?)?(?:\s+#.*)?$")
 # A renamed heading still resembles the template's wording this closely.
 RENAME_SIMILARITY = 0.6
@@ -56,6 +57,7 @@ class CheckError(Exception):
     """An input or GitHub problem that prevents the comparison."""
 
     path = ""  # The template file the problem is in, when there is one.
+    name = ""  # That template's declared name, when it was read.
 
 
 @dataclass
@@ -94,6 +96,8 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
         text = ATTRIBUTION.sub("\n", text)
     lines = text.split("\n")
     after_blank = True
+    list_indent = 0  # Content column of the list item the line may belong to.
+    fence_indent = 0  # The open code block's container column.
     for number, line in enumerate(lines, start=1):
         if not fence:
             # A line that starts a comment, or closes one, belongs to an HTML
@@ -104,6 +108,10 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
                     in_comment = True
                     continue
                 line, in_comment = line.split("-->", 1)[1], False
+                # A comment opened after the closing one hides what follows.
+                line = COMMENT.sub("", line)
+                if "<!--" in line:
+                    line, in_comment = line.split("<!--", 1)[0], True
             line = COMMENT.sub("", line)
             if not line.strip():
                 after_blank = True
@@ -118,10 +126,24 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
                     section.has_content = True
                 continue
         after_blank = False
-        fence, in_code = code_fence(fence, line)
-        if not in_code and PLACEHOLDER.match(line):
+        indent = len(line) - len(line.lstrip(" "))
+        container = list_indent  # Before this line can start a nested item.
+        if not fence:
+            item = LIST_ITEM.match(line)
+            if item:
+                list_indent = len(item.group(0))
+            elif indent < list_indent:
+                list_indent = 0
+            fence_indent = list_indent if indent >= list_indent else 0
+        inner = line[fence_indent:] if indent >= fence_indent else line.lstrip(" ")
+        fence, in_code = code_fence(fence, inner)
+        if in_code:
+            for section in open_sections:
+                section.has_content = True
             continue
-        match = None if in_code else ATX.match(line)
+        if PLACEHOLDER.match(line[container:] if indent >= container else line):
+            continue
+        match = ATX.match(line)
         if match:
             level = len(match.group(1))
             title = " ".join(CLOSING_HASHES.sub("", match.group(2) or "").split())
@@ -197,6 +219,43 @@ def scalar(value: str) -> str:
     return re.sub(r"(?:^|\s+)#.*$", "", value)
 
 
+def top_level(text: str, separator: str) -> list[str]:
+    """Split text at each separator outside quotes and nested brackets."""
+    parts, current, depth, quote = [], "", 0, ""
+    for char in text:
+        if quote:
+            quote = "" if char == quote else quote
+        elif char in "\"'":
+            quote = char
+        elif char in "{[":
+            depth += 1
+        elif char in "}]":
+            depth -= 1
+        elif char == separator and depth == 0:
+            parts.append(current)
+            current = ""
+            continue
+        current += char
+    return [*parts, current]
+
+
+def flow_mapping(text: str) -> dict[str, str]:
+    """The entries of a one-line YAML flow mapping such as `{label: Steps}`.
+
+    A comma or colon inside a quoted value or a nested bracket belongs to that
+    value. Anything that is not a closed flow mapping reads as empty.
+    """
+    text = text.strip()
+    if not (text.startswith("{") and text.endswith("}")):
+        return {}
+    found = {}
+    for entry in top_level(text[1:-1], ","):
+        key, *value = top_level(entry, ":")
+        if value:
+            found[scalar(key)] = scalar(":".join(value))
+    return found
+
+
 def form_template(path: str, text: str) -> Template:
     """Headings of a GitHub issue form: one `###` per non-Markdown field label.
 
@@ -221,9 +280,11 @@ def form_template(path: str, text: str) -> Template:
         if not item or item.get("type") == "markdown":
             return
         if not item.get("label"):
-            raise CheckError(
+            error = CheckError(
                 f"{path}: cannot read the label of the field on line {item['start']}; pass --template PATH"
             )
+            error.name = name
+            raise error
         found.append(Heading(3, " ".join(item["label"].split()), item["line"]))
 
     for number, raw in enumerate(text.replace("\r\n", "\n").split("\n"), start=1):
@@ -267,9 +328,9 @@ def form_template(path: str, text: str) -> Template:
             if key == "type":
                 item["type"] = scalar(value)
             elif key == "attributes" and value.strip().startswith("{"):
-                flow = FLOW_LABEL.search(value.strip())
-                if flow:
-                    item["line"], item["label"] = number, scalar(flow.group(1))
+                label = flow_mapping(value.strip()).get("label")
+                if label:
+                    item["line"], item["label"] = number, label
         elif attributes_indent is not None and indent > attributes_indent:
             label_indent = label_indent or indent
             if indent == label_indent and key == "label":
@@ -286,7 +347,9 @@ def form_template(path: str, text: str) -> Template:
         item["label"] = " ".join(block)
     finish()
     if not found and re.search(r"\blabel\s*:", text):
-        raise CheckError(f"{path}: cannot read the issue form's field labels; pass --template PATH")
+        error = CheckError(f"{path}: cannot read the issue form's field labels; pass --template PATH")
+        error.name = name
+        raise error
     return Template(path, name, found)
 
 
@@ -389,8 +452,8 @@ def readable(found: list[Template | CheckError], name: str | None) -> list[Templ
     """The templates a check can use, raising the error of one it needs.
 
     Without a name every template competes, so any unreadable one is needed.
-    With a name, an unreadable template is needed when its file has that name
-    or when no readable template does.
+    With a name, an unreadable template is needed when its file or declared
+    name is that name, or when no readable template has it.
     """
     templates = [entry for entry in found if isinstance(entry, Template)]
     failures = [entry for entry in found if isinstance(entry, CheckError)]
@@ -400,7 +463,7 @@ def readable(found: list[Template | CheckError], name: str | None) -> list[Templ
         raise failures[0]
     for failure in failures:
         path = Path(failure.path)
-        if name.casefold() in {path.name.casefold(), path.stem.casefold()}:
+        if name.casefold() in {failure.name.casefold(), path.name.casefold(), path.stem.casefold()}:
             raise failure
     if not any(named(template, name) for template in templates):
         raise failures[0]
@@ -408,19 +471,22 @@ def readable(found: list[Template | CheckError], name: str | None) -> list[Templ
 
 
 def in_order_pairs(expected: list[Heading], actual: list[Heading]) -> list[tuple[int, int]]:
-    """The template headings the body keeps by text and in order.
+    """The longest run of template headings the body keeps, by text and in order.
 
-    A pairing at the same level outweighs one at another level, so a subsection
-    that shares a section's name does not take that section's place; text
-    alone still pairs a heading whose level changed.
+    Among runs of that length, the one with the most headings at their
+    template level wins, so a subsection that shares a section's name does not
+    take that section's place; text alone still pairs a heading whose level
+    changed.
     """
+    rows, cols = len(expected), len(actual)
+    # One more pair always outweighs every same-level bonus together.
+    pair_weight = min(rows, cols) + 1
 
     def weight(i: int, j: int) -> int:
         if expected[i].text != actual[j].text:
             return 0
-        return 2 if expected[i].level == actual[j].level else 1
+        return pair_weight + (expected[i].level == actual[j].level)
 
-    rows, cols = len(expected), len(actual)
     lengths = [[0] * (cols + 1) for _ in range(rows + 1)]
     for i in range(rows - 1, -1, -1):
         for j in range(cols - 1, -1, -1):
@@ -635,7 +701,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         except (OSError, ValueError) as error:
             raise CheckError(f"cannot read body: {error}") from error
     kind = "pr" if args.pr is not None else "issue" if args.issue is not None else args.kind
-    body = headings(text.removeprefix("\ufeff"), kind)
+    # Without a kind, as with --template alone, the body reads as a pull request's.
+    body = headings(text.removeprefix("\ufeff"), kind or "pr")
 
     if args.template:
         try:
