@@ -58,7 +58,9 @@ ignores the user's Codex config, so each CLI must use its own saved login. With
 the opt-in, Claude keeps `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN`, and
 Codex receives the `model_provider` its config selects, with only that provider's
 `model_providers` table, as `-c` overrides; the rest of the user config stays
-ignored. API keys, `CLAUDE_CODE_OAUTH_TOKEN`, cloud-provider switches and a
+ignored. The table's `experimental_bearer_token` and `http_headers` values are
+passed in Codex's environment, as `env_key` and `env_http_headers`, because a
+process's arguments are visible to every user on the machine. API keys, `CLAUDE_CODE_OAUTH_TOKEN`, cloud-provider switches and a
 Codex provider that takes its key from the environment are still refused.
 Preflight then requires the proxy settings instead of a saved login, and the
 recorded CLI version ends in `via provider proxy` and the result's

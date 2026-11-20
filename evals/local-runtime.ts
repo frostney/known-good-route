@@ -56,7 +56,10 @@ function tomlKey(key: string) {
   return /^[A-Za-z0-9_-]+$/.test(key) ? key : JSON.stringify(key);
 }
 // The runner ignores the user's Codex config, so under the opt-in it passes
-// only the selected model provider's table back as explicit overrides.
+// only the selected model provider's table back as explicit overrides. Any user
+// can list a process's arguments, so the table's bearer token and header values
+// travel in the child's environment and the arguments name their variables.
+const proxyVariable = "KGR_CODEX_PROVIDER_";
 export async function codexProxyConfig(
   path = join(
     process.env.CODEX_HOME || join(homedir(), ".codex"),
@@ -79,13 +82,31 @@ export async function codexProxyConfig(
     throw new Error(
       "Codex provider proxy does not pass provider keys from the environment.",
     );
-  // One whole-table override: Codex's -c key path does not read TOML quoting.
-  return [
-    "-c",
-    `model_provider=${JSON.stringify(id)}`,
-    "-c",
-    `model_providers=${tomlValue({ [id]: provider })}`,
-  ];
+  const {
+    experimental_bearer_token: token,
+    http_headers: headers,
+    ...table
+  } = provider;
+  const env: Record<string, string> = {};
+  if (token !== undefined) {
+    table.env_key = `${proxyVariable}TOKEN`;
+    env[table.env_key] = String(token);
+  }
+  Object.entries(headers ?? {}).forEach(([header, value], index) => {
+    const variable = `${proxyVariable}HEADER_${index}`;
+    (table.env_http_headers ??= {})[header] = variable;
+    env[variable] = String(value);
+  });
+  return {
+    // One whole-table override: Codex's -c key path does not read TOML quoting.
+    args: [
+      "-c",
+      `model_provider=${JSON.stringify(id)}`,
+      "-c",
+      `model_providers=${tomlValue({ [id]: table })}`,
+    ],
+    env,
+  };
 }
 export function executable(cli: "codex" | "claude") {
   return (
@@ -471,8 +492,9 @@ export async function runLocal(options: {
     cli === "codex" ? codexConfig : configPath,
     options.instructions,
   );
-  if (cli === "codex" && providerProxy())
-    cmd.splice(cmd.length - 1, 0, ...(await codexProxyConfig()));
+  const proxy =
+    cli === "codex" && providerProxy() ? await codexProxyConfig() : undefined;
+  if (proxy) cmd.splice(cmd.length - 1, 0, ...proxy.args);
   if (options.responseSchema) {
     if (cli === "codex") {
       const schemaPath = join(work, "response-schema.json");
@@ -495,7 +517,7 @@ export async function runLocal(options: {
       ? options.evalCase.worker
       : undefined;
   const workerLedgerPath = join(work, "worker-ledger.json");
-  const env = loginEnvironment();
+  const env = { ...loginEnvironment(), ...proxy?.env };
   if (nativeWorker) {
     if (cli !== "claude")
       throw new Error("The native Agent case requires Claude Code");

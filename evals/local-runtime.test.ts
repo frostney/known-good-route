@@ -183,19 +183,82 @@ describe("local authenticated evaluations", () => {
         "[model_providers.proxy.http_headers]",
         '"X-Client" = "eval"',
       ].join("\n"));
-      expect(await codexProxyConfig(path)).toEqual([
-        "-c",
-        'model_provider="proxy"',
-        "-c",
-        'model_providers={proxy={name="Proxy",base_url="https://proxy.example.test/v1",wire_api="responses",requires_openai_auth=false,http_headers={X-Client="eval"}}}',
-      ]);
+      expect(await codexProxyConfig(path)).toEqual({
+        args: [
+          "-c",
+          'model_provider="proxy"',
+          "-c",
+          'model_providers={proxy={name="Proxy",base_url="https://proxy.example.test/v1",wire_api="responses",requires_openai_auth=false,env_http_headers={X-Client="KGR_CODEX_PROVIDER_HEADER_0"}}}',
+        ],
+        env: { KGR_CODEX_PROVIDER_HEADER_0: "eval" },
+      });
       await Bun.write(path, ['model_provider = "proxy.with dot"', '[model_providers."proxy.with dot"]', 'base_url = "https://proxy.example.test/v1"'].join("\n"));
-      expect((await codexProxyConfig(path))[3]).toBe('model_providers={"proxy.with dot"={base_url="https://proxy.example.test/v1"}}');
+      expect(await codexProxyConfig(path)).toEqual({
+        args: ["-c", 'model_provider="proxy.with dot"', "-c", 'model_providers={"proxy.with dot"={base_url="https://proxy.example.test/v1"}}'],
+        env: {},
+      });
       await Bun.write(path, 'model_provider = "missing"\n');
       await expect(codexProxyConfig(path)).rejects.toThrow("base_url");
       await Bun.write(path, ['model_provider = "keyed"', "[model_providers.keyed]", 'base_url = "https://proxy.example.test/v1"', 'env_key = "PROXY_KEY"'].join("\n"));
       await expect(codexProxyConfig(path)).rejects.toThrow("environment");
     } finally {
+      await rm(work, { recursive: true, force: true });
+    }
+  });
+  test("the Codex provider proxy's token and header values reach Codex in its environment, not its arguments", async () => {
+    const work = await mkdtemp(join(tmpdir(), "kgr-proxy-run-"));
+    const keys = ["KGR_CODEX_BIN", "KGR_PROVIDER_PROXY", "CODEX_HOME"];
+    const saved = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+    const fake = join(work, "fake-codex");
+    try {
+      await Bun.write(
+        join(work, "config.toml"),
+        [
+          'model_provider = "proxy"',
+          "[model_providers.proxy]",
+          'base_url = "https://proxy.example.test/v1"',
+          'experimental_bearer_token = "token-sentinel"',
+          "[model_providers.proxy.http_headers]",
+          'Authorization = "header-sentinel"',
+        ].join("\n"),
+      );
+      await Bun.write(
+        fake,
+        `#!/usr/bin/env bun\nawait Bun.write(new URL("started.json", import.meta.url), JSON.stringify({ args: Bun.argv, env: process.env }));\nprocess.stdout.write(JSON.stringify({type:"turn.completed",usage:{input_tokens:0,output_tokens:0}})+"\\n");\n`,
+      );
+      await chmod(fake, 0o755);
+      process.env.KGR_CODEX_BIN = fake;
+      process.env.KGR_PROVIDER_PROXY = "1";
+      process.env.CODEX_HOME = work;
+      await runLocal({
+        target: "codex:gpt-6-astra",
+        effort: "medium",
+        skillsRoot: work,
+        instructions: "Test only",
+        evalCase: {
+          id: "offline",
+          description: "",
+          prompt: "No action",
+          fixture: { evidence: {} },
+          expected: {},
+        },
+        transcript: join(work, "trace.jsonl"),
+        server: false,
+      });
+      const started = (await Bun.file(join(work, "started.json")).json()) as {
+        args: string[];
+        env: Record<string, string>;
+      };
+      expect(started.args.join(" ")).not.toContain("sentinel");
+      expect(started.args).toContain(
+        'model_providers={proxy={base_url="https://proxy.example.test/v1",env_key="KGR_CODEX_PROVIDER_TOKEN",env_http_headers={Authorization="KGR_CODEX_PROVIDER_HEADER_0"}}}',
+      );
+      expect(started.env.KGR_CODEX_PROVIDER_TOKEN).toBe("token-sentinel");
+      expect(started.env.KGR_CODEX_PROVIDER_HEADER_0).toBe("header-sentinel");
+    } finally {
+      for (const key of keys)
+        if (saved[key] === undefined) delete process.env[key];
+        else process.env[key] = saved[key];
       await rm(work, { recursive: true, force: true });
     }
   });
