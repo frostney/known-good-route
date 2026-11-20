@@ -92,9 +92,11 @@ class Heading:
     text: str
     line: int | None = None  # A form field's line; rendered Markdown has none.
     has_content: bool = False
+    # The heading as written in Markdown, so a reported heading can be pasted as it is.
+    written: str = ""
 
     def __str__(self) -> str:
-        return f"{'#' * self.level} {self.text}"
+        return self.written or f"{'#' * self.level} {self.text}"
 
 
 @dataclass
@@ -178,7 +180,8 @@ def footnote_label(href: str) -> str:
     if href.startswith("#user-content-"):
         label = re.sub(r"-[0-9a-f]{32}$", "", label)
     # The target carries the definition's spelling, percent-encoded; a reference matches it in any case.
-    return unquote(label).casefold()
+    # Only escapes of UTF-8 bytes are decoded, so a label written with `%41` stays apart from `A`.
+    return re.sub(r"(?:%[89A-Fa-f][0-9A-Fa-f])+", lambda match: unquote(match.group(0)), label).casefold()
 
 
 def literal(text: str) -> str:
@@ -304,6 +307,24 @@ def source_line(node: Node) -> int | None:
     return int(position.group(1)) if position else None
 
 
+def written_heading(source: str, node: Node, level: int) -> str:
+    """A rendered heading's own Markdown, as one ATX line, or "" when its source is not a Markdown heading."""
+    span = re.fullmatch(r"([1-9][0-9]*):[0-9]+-([1-9][0-9]*):[0-9]+", node.attrs.get("data-sourcepos", ""))
+    lines = source.replace("\r\n", "\n").split("\n")
+    if not span or not int(span.group(1)) <= int(span.group(2)) <= len(lines):
+        return ""
+    block = lines[int(span.group(1)) - 1 : int(span.group(2))]
+    atx = re.fullmatch(r" {0,3}(#{1,6})(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*", block[0])
+    if len(block) == 1 and atx and len(atx.group(1)) == level:
+        content = atx.group(2) or ""
+        content = "" if re.fullmatch(r"#+", content) else content
+    elif len(block) > 1 and re.fullmatch(r" {0,3}(=+|-+)[ \t]*", block[-1]) and block[-1].strip()[0] == "=-"[level - 1]:
+        content = " ".join(line.strip() for line in block[:-1])  # A setext heading's text lines.
+    else:
+        return ""
+    return f"{'#' * level} {content}".rstrip()
+
+
 def spaced_rule(rule: Node, note: Node, source: str | None, positioned: bool = False) -> bool:
     """Whether a rendered rule is a `---` line with a blank line before and after it, then the note.
 
@@ -402,10 +423,11 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
             level = HEADING_TAG.fullmatch(child.tag)
             if level and not nested:
                 line = source_line(child)
+                written = written_heading(source, child, int(level.group(1))) if source is not None else ""
                 text = " ".join(heading_text(child).split())
                 # A closing run of `#` would end the heading where it is written back.
                 text = re.sub(r"(^|\s)(#+)$", r"\1\\\2", text)
-                heading = Heading(int(level.group(1)), text, line)
+                heading = Heading(int(level.group(1)), text, line, written=written)
                 while open_sections and open_sections[-1].level >= heading.level:
                     open_sections.pop()
                 content()  # A subsection is content of the sections around it.
@@ -790,7 +812,7 @@ def form_template(path: str, text: str) -> Template:
 
 def markdown_template(path: str, text: str, renderer: Callable[[str], str]) -> Template:
     fields, body = front_matter(text)
-    return Template(path, fields.get("name") or Path(path).stem, headings(renderer(body)))
+    return Template(path, fields.get("name") or Path(path).stem, headings(renderer(body), source=body))
 
 
 def parse_template(path: str, text: str, renderer: Callable[[str], str] | None = None) -> Template:
@@ -1127,7 +1149,7 @@ def select(
     tied = [
         template
         for score, template, _ in scored[1:]
-        if score == best_score and [str(h) for h in template.headings] != [str(h) for h in best.headings]
+        if score == best_score and [(h.level, h.text) for h in template.headings] != [(h.level, h.text) for h in best.headings]
     ]
     if tied:
         choices = ", ".join(template.name for template in [best, *tied])

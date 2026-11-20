@@ -51,7 +51,8 @@ belongs to.
   the template `--template-name` names has none, so there is nothing to
   compare.
 - Exit 1 with `mismatch`: fix each reported heading in the body and run the
-  check again.
+  check again. A Markdown template's heading is reported as the template
+  writes it, so it can be pasted into the body.
 - Exit 2 with `operational-error`: the check could not compare, for example
   outside a git checkout, without the Markdown renderer, for an
   unreachable repository, for an issue form it cannot read, or for a body that

@@ -590,6 +590,19 @@ class RendererParityTests(unittest.TestCase):
         texts = {CHECK_TEMPLATE.headings(REAL_RENDER(heading))[0].text for heading in ("## [Summary]()\n", "## Summary\n")}
         self.assertEqual(len(texts), 2)
 
+    def test_a_template_heading_is_reported_as_written(self):
+        template = "## API**v2**_beta_\n\nTitle\n=====\n\n## Done ##\n\n<h2>Raw</h2>\n"
+        self.assertEqual(
+            [str(h) for h in CHECK_TEMPLATE.parse_template("t.md", template, REAL_RENDER).headings],
+            ["## API**v2**_beta_", "# Title", "## Done", "## Raw"],
+        )
+
+    def test_footnote_labels_written_with_and_without_percent_escapes_stay_apart(self):
+        texts = {
+            CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("ref%41", "refA")
+        }
+        self.assertEqual(len(texts), 2)
+
     def test_every_captured_case_reads_as_github_rendered_it(self):
         for case, fixture in RENDERED.items():
             for kind in (None, "pr", "issue"):
