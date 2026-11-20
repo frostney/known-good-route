@@ -230,7 +230,7 @@ def names_head(paragraph: Node) -> bool:
 
 def is_footnotes(node: Node) -> bool:
     """The footnotes section GitHub appends, with its generated heading."""
-    return node.tag == "section" and ("data-footnotes" in node.attrs or "footnotes" in node.attrs.get("class", "").split())
+    return node.tag == "section" and "data-footnotes" in node.attrs
 
 
 def is_checked(node: Node) -> bool:
@@ -246,7 +246,7 @@ def has_checked(node: Node) -> bool:
 NOTE_SOURCE = re.compile(r"(?:\A|\n)[ \t]*\n[ \t]{0,3}(?:-[ \t]*){3,}\n[ \t]*\n[ \t]{0,3}Edit:")
 
 
-def spaced_rule(rule: Node, source: str | None) -> bool:
+def spaced_rule(rule: Node, source: str | None, positioned: bool = False) -> bool:
     """Whether a rendered rule is a `---` line with a blank line before and after it.
 
     The local renderer marks each rule with its source line; HTML without that
@@ -257,7 +257,9 @@ def spaced_rule(rule: Node, source: str | None) -> bool:
     source = source.replace("\r\n", "\n")
     position = rule.attrs.get("data-sourcepos", "")
     if not position:
-        return bool(NOTE_SOURCE.search(source))
+        # A raw <hr> among positioned Markdown is no separator; HTML with no
+        # positions at all, such as GitHub's, is checked against the source.
+        return not positioned and bool(NOTE_SOURCE.search(source))
     lines = source.split("\n")
     line = int(position.split(":")[0])
     before = lines[line - 2] if line >= 2 else ""
@@ -303,7 +305,8 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
         # The review note closes the body: a `---` rule with a blank line
         # before and after it, then a line that opens with `Edit:` and names
         # the head it covers in code, such as ``Edit: `1a2b3c4` reviewed``.
-        end = note_rule(top, lambda rule: spaced_rule(rule, source))
+        positioned = "data-sourcepos" in html
+        end = note_rule(top, lambda rule: spaced_rule(rule, source, positioned))
     if kind == "issue" and blocks:
         last = blocks[-1]
         paragraphs = [node for node in elements(last.children) if "markdown-alert-title" not in node.attrs.get("class", "")]
@@ -333,7 +336,9 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
                 continue
             level = HEADING_TAG.fullmatch(child.tag)
             if level and not nested:
-                heading = Heading(int(level.group(1)), " ".join(heading_text(child).split()))
+                position = child.attrs.get("data-sourcepos", "")
+                line = int(position.split(":")[0]) if position[:1].isdigit() else None
+                heading = Heading(int(level.group(1)), " ".join(heading_text(child).split()), line)
                 while open_sections and open_sections[-1].level >= heading.level:
                     open_sections.pop()
                 content()  # A subsection is content of the sections around it.
@@ -530,6 +535,9 @@ def declared_name(text: str) -> str:
         key, separator, value = line.partition(":")
         if not separator or line.startswith((" ", "\t", "-")) or scalar(key) != "name":
             continue
+        opened = value.strip()[:1]
+        if opened in ("'", '"') and not re.match(r"""(?:"(?:[^"\\]|\\.)*"|'(?:[^']|'')*')""", value.strip()):
+            return ""  # A quoted name continued on later lines is not read here: unknown.
         if scalar(value) and not BLOCK_SCALAR.match(value.strip()):
             return scalar(value)
         # A block scalar, or a plain one continued on the lines below the key.
@@ -560,6 +568,9 @@ def form_template(path: str, text: str) -> Template:
     """
     # The declared name comes first, so an error in a field still carries it.
     declared = declared_name(text)
+    if not declared and re.search(r"""(?m)^["']?name["']?[ \t]*:""", text):
+        # A name the form declares but this reader cannot read: it may be any template's.
+        raise CheckError(f"{path}: cannot read the issue form's name; pass --template PATH")
     name = declared or Path(path).stem
     found: list[Heading] = []
     in_body = False

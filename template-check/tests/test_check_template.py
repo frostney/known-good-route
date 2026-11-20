@@ -308,6 +308,16 @@ class RenderedHeadingTests(unittest.TestCase):
         }
         self.assertEqual(len(texts), 3)
 
+    @needs_renderer
+    def test_a_raw_rule_inside_the_review_note_does_not_open_another(self):
+        body = "## Summary\n\n---\n\nEdit: `abc1234` reviewed\n\n<hr>\n\nEdit: `def5678` also\n"
+        found = CHECK_TEMPLATE.headings(REAL_RENDER(body), "pr", body)
+        self.assertEqual([(h.text, h.has_content) for h in found], [("Summary", False)])
+
+    def test_an_authors_footnotes_section_keeps_its_headings(self):
+        html = '<section class="footnotes"><h2>Sources</h2><p>x</p></section>'
+        self.assertEqual([h.text for h in CHECK_TEMPLATE.headings(html)], ["Sources"])
+
     def test_a_partly_formatted_alert_marker_is_no_attribution_note(self):
         quote = "<h2>Related</h2><blockquote><p>[!<em>NOTE</em>]\nCreated on behalf of @someone using Some Model.</p></blockquote>"
         self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(quote, "issue")], [True])
@@ -443,6 +453,9 @@ class RendererParityTests(unittest.TestCase):
             finally:
                 CHECK_TEMPLATE.cmarkgfm, CHECK_TEMPLATE.tempfile.gettempdir = saved
 
+    def test_a_markdown_heading_reports_its_source_line(self):
+        self.assertEqual([h.line for h in CHECK_TEMPLATE.headings(REAL_RENDER("Intro.\n\n## A\n\n## B\n"))], [3, 5])
+
     def test_only_a_blank_lined_dash_rule_opens_the_review_note(self):
         body = (
             "## Summary\n\nAn example:\n\n```\n\n---\n\nEdit: `abc1234` reviewed\n```\n\n"
@@ -471,6 +484,11 @@ class TemplateParsingTests(unittest.TestCase):
 
     def test_a_name_continues_below_a_comment_after_its_key(self):
         self.assertEqual(CHECK_TEMPLATE.declared_name("name: # shown in the chooser\n  bug-report\nbody:\n"), "bug-report")
+
+    def test_a_form_name_this_reader_cannot_read_is_an_error(self):
+        with self.assertRaises(CHECK_TEMPLATE.CheckError) as raised:
+            CHECK_TEMPLATE.parse_template("f.yml", 'name: "Bug\n  report"\nbody:\n  - type: input\n    attributes:\n      label: A\n')
+        self.assertEqual(raised.exception.name, "")
 
     def test_a_type_given_as_a_block_scalar_is_read(self):
         template = CHECK_TEMPLATE.parse_template(
