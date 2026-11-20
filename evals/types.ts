@@ -28,6 +28,7 @@ export const actionNames = [
   "git.stackSubmit",
   "git.stackSync",
   "ci.dispatchRun",
+  "ci.rerunRun",
   "monitor.wait",
   "report",
   "behaviorTest.run",

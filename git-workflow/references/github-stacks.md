@@ -171,6 +171,19 @@ update, merge the freshly fetched remote base and push normally.
   select the complete reported stack only after its final membership audit
   still matches; never merge a prefix beneath its top overlays. Never select
   rebase-merge merely because stack maintenance used rebases.
+- When `gh stack merge` refuses because required status checks have not
+  succeeded, or a layer's `mergeStateStatus` is `BLOCKED` although its checks
+  looked green, run `delivery-wait`'s `inspect checks-terminal
+  --all-workflows` on each layer's exact head. `recoverable` means GitHub
+  counts a cancelled duplicate run on that head in place of an older run that
+  passed. Rerun each run the result names with its `gh run rerun` command,
+  await `wait checks-terminal` on the unchanged head, then retry the same
+  merge. Rerunning any other run does not help: GitHub counts the newest
+  check suite of each workflow and event, so only a rerun of that cancelled
+  run replaces its result. This refusal is a readiness gate: it never
+  justifies the layer fallback below, an administrator merge or any other
+  bypass of the repository's protections. Handle any other result as that
+  result.
 - A stack merges whole. Before merging a prefix, count the layers above it:
   the squash merge leaves each of them conflicting with the base, so each
   needs the rebase, a CI run and its readiness again. Merge a prefix only when

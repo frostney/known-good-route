@@ -334,6 +334,7 @@ def workflow_census(gh: Gh, repo: str, number: int, head: str, checks: bool, res
             "name": run.get("name"),
             "workflowId": run.get("workflow_id"),
             "event": run.get("event"),
+            "checkSuiteId": run.get("check_suite_id"),
             "attempt": run.get("run_attempt"),
             "status": run.get("status"),
             "conclusion": run.get("conclusion"),
@@ -350,6 +351,7 @@ def workflow_census(gh: Gh, repo: str, number: int, head: str, checks: bool, res
             ],
         })
     mark_superseded_runs(observation["runs"])
+    mark_cancelled_duplicates(observation["runs"], repo)
     return observation
 
 
@@ -358,8 +360,10 @@ def mark_superseded_runs(runs: list[dict[str, Any]]) -> None:
 
     A workflow that cancels its run when a second event arrives for the same
     head, or that is triggered again by hand, leaves the older run on the head.
-    Only the newest run from one source decides, as for a named check. A run
-    whose workflow is unknown is its own source.
+    Only the newest run from one source decides, as for a named check and as
+    GitHub decides mergeability: it numbers runs and check suites in creation
+    order, whichever run was cancelled. A run whose workflow is unknown is its
+    own source.
     """
     newest: dict[tuple[Any, Any], int] = {}
     for run in runs:
@@ -372,6 +376,59 @@ def mark_superseded_runs(runs: list[dict[str, Any]]) -> None:
             run["superseded"] = True
 
 
+def mark_cancelled_duplicates(runs: list[dict[str, Any]], repo: str) -> None:
+    """Flag a newest run that was cancelled beside an older run of its source.
+
+    One event can start two runs of a workflow for the same head, for example
+    when a pull request and its native stack registration race. A
+    `concurrency` group with `cancel-in-progress` then cancels whichever run
+    joined it first, which can be the newer one. GitHub still counts the newest
+    check suite, so its cancelled jobs block merging although the older run
+    passed. Rerunning the cancelled run replaces its result.
+
+    `olderRun` is `passed` once an older run of the source passed, with the
+    command that reruns the cancelled one, and `pending` while an older run
+    has not finished and none has passed. A cancelled newest run beside only
+    failed older runs is an ordinary failure and is not flagged, and so is one
+    cancelled again after a rerun: the race happens only when runs start, so
+    another cancellation, such as a job timeout, needs its own diagnosis.
+    """
+    sources: dict[tuple[Any, Any], list[dict[str, Any]]] = {}
+    for run in runs:
+        if run.get("workflowId") is not None:
+            sources.setdefault((run["workflowId"], run.get("event")), []).append(run)
+    for source in sources.values():
+        newest = max(source, key=lambda run: run["id"])
+        if newest.get("status") != "completed" or newest.get("conclusion") != "cancelled":
+            continue
+        if (newest.get("attempt") or 1) > 1:
+            continue
+        older = [run for run in source if run is not newest]
+        passed = [
+            run["id"] for run in older
+            if run.get("status") == "completed" and run.get("conclusion") in PASSING_WORKFLOW_CONCLUSIONS
+        ]
+        pending = [
+            run["id"] for run in older
+            if run.get("status") != "completed" or not run.get("conclusion")
+        ]
+        if passed:
+            newest["cancelledDuplicate"] = {
+                "olderRunId": max(passed),
+                "olderRun": "passed",
+                "rerun": f"gh run rerun {newest['id']} --repo {repo}",
+            }
+        elif pending:
+            newest["cancelledDuplicate"] = {"olderRunId": max(pending), "olderRun": "pending"}
+
+
+def cancelled_duplicates(observation: dict[str, Any], older_run: str) -> list[dict[str, Any]]:
+    return [
+        run for run in deciding_runs(observation)
+        if (run.get("cancelledDuplicate") or {}).get("olderRun") == older_run
+    ]
+
+
 def deciding_runs(observation: dict[str, Any]) -> list[dict[str, Any]]:
     return [run for run in observation.get("runs", []) if not run.get("superseded")]
 
@@ -379,6 +436,9 @@ def deciding_runs(observation: dict[str, Any]) -> list[dict[str, Any]]:
 def workflow_failures(observation: dict[str, Any]) -> list[str]:
     failures = []
     for run in deciding_runs(observation):
+        if run.get("cancelledDuplicate"):
+            # Decided by the older run of its source; see mark_cancelled_duplicates.
+            continue
         conclusion = run.get("conclusion")
         if run.get("status") == "completed" and conclusion and conclusion not in PASSING_WORKFLOW_CONCLUSIONS:
             failures.append(f"{run.get('name')}: {conclusion}")
@@ -406,7 +466,15 @@ class WorkflowCensusGate:
 
     def failures(self, observation: dict[str, Any]) -> list[str]:
         failures = workflow_failures(observation)
-        observed = checks_by_name(observation)
+        # A named check from a cancelled duplicate run fails with that run.
+        duplicate_suites = {
+            run.get("checkSuiteId") for run in deciding_runs(observation)
+            if run.get("cancelledDuplicate") and run.get("checkSuiteId") is not None
+        }
+        observed = {
+            name: [check for check in checks if check.get("suite") not in duplicate_suites]
+            for name, checks in checks_by_name(observation).items()
+        }
         failures += [
             f"check {name}: " + ", ".join(sorted({
                 str(check.get("conclusion")).lower() for check in observed[name] if check_failed(check)
@@ -423,6 +491,15 @@ class WorkflowCensusGate:
         if failures:
             self.previous = None
             return "changed", "a workflow run, job or check reached a non-success terminal result: " + "; ".join(failures)
+        recoverable = cancelled_duplicates(observation, "passed")
+        if recoverable:
+            self.previous = None
+            return "recoverable", "; ".join(
+                f"the newest run of {run.get('name')} ({run['id']}) was cancelled while an older run "
+                f"of the same workflow and event ({run['cancelledDuplicate']['olderRunId']}) passed: "
+                f"rerun it with {run['cancelledDuplicate']['rerun']}"
+                for run in recoverable
+            )
         runs = deciding_runs(observation)
         jobs = [job for run in runs for job in run.get("jobs", [])]
         pending_runs = [run for run in runs if run.get("status") != "completed" or not run.get("conclusion")]
@@ -430,9 +507,16 @@ class WorkflowCensusGate:
             job for job in jobs
             if not job.get("conclusion") or (job.get("status") != "completed" and job.get("completedAt") is None)
         ]
+        undecided = cancelled_duplicates(observation, "pending")
         reason = None
         if not runs:
             reason = "no workflow runs have appeared for the head"
+        elif undecided:
+            reason = "; ".join(
+                f"the newest run of {run.get('name')} ({run['id']}) was cancelled; waiting for the older run "
+                f"of the same workflow and event ({run['cancelledDuplicate']['olderRunId']}) to finish"
+                for run in undecided
+            )
         elif pending_runs or pending_jobs:
             reason = (
                 f"{len(pending_runs)} of {len(runs)} workflow runs and "

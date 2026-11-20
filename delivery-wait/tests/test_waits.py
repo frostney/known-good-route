@@ -177,14 +177,17 @@ def workflow_run(
     name: str = "PR",
     workflow_id: int | None = None,
     event: str = "pull_request",
+    check_suite_id: int | None = None,
+    attempt: int = 1,
 ) -> dict:
     return {
         "run": {
             "id": run_id,
             "name": name,
             **({"workflow_id": workflow_id} if workflow_id is not None else {}),
+            **({"check_suite_id": check_suite_id} if check_suite_id is not None else {}),
             "event": event,
-            "run_attempt": 1,
+            "run_attempt": attempt,
             "head_sha": head,
             "status": status,
             "conclusion": conclusion,
@@ -1163,6 +1166,135 @@ class WaitCommandsTest(unittest.TestCase):
         )])
         _, output = self.census_wait(deadline=self.short_deadline())
         self.assertNotIn(output["state"], ("satisfied", "changed"))
+
+    def cancelled_duplicate(self, older: dict | None = None, **newer: object) -> list[dict]:
+        """Run 101 and the newer run 102 of workflow 9, both for one pull_request event.
+
+        Their concurrency group cancelled 102, the run that joined it first.
+        """
+        return [
+            older or workflow_run(101, [workflow_job(1000, "build")], workflow_id=9, check_suite_id=501),
+            workflow_run(
+                102, [workflow_job(1001, "build", conclusion="cancelled", run_id=102)],
+                conclusion="cancelled", workflow_id=9, check_suite_id=502, **newer,
+            ),
+        ]
+
+    def test_all_workflows_names_a_newest_run_cancelled_beside_a_passed_older_run(self) -> None:
+        self.write_scenario(census=[census(*self.cancelled_duplicate())])
+        for command in ("wait", "inspect"):
+            with self.subTest(command=command):
+                self.reset_census()
+                if command == "wait":
+                    result, output = self.census_wait()
+                else:
+                    result, output = self.run_json(
+                        DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
+                        "--pr", "7", "--head", "head-1", "--all-workflows",
+                    )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(output["state"], "recoverable")
+                self.assertIn("gh run rerun 102 --repo owner/repo", output["reason"])
+                runs = {run["id"]: run for run in output["observation"]["runs"]}
+                self.assertTrue(runs[101].get("superseded"))
+                self.assertEqual(runs[102]["cancelledDuplicate"], {
+                    "olderRunId": 101,
+                    "olderRun": "passed",
+                    "rerun": "gh run rerun 102 --repo owner/repo",
+                })
+
+    def test_all_workflows_does_not_name_a_cancelled_run_that_is_older(self) -> None:
+        # The usual cancel-in-progress order: the newer run cancelled the older one.
+        for conclusion, expected in (("success", "satisfied"), ("failure", "changed")):
+            with self.subTest(newer=conclusion):
+                self.reset_census()
+                self.write_scenario(census=[census(
+                    workflow_run(101, [workflow_job(1000, "build", conclusion="cancelled")], conclusion="cancelled", workflow_id=9),
+                    workflow_run(102, [workflow_job(1001, "build", conclusion=conclusion, run_id=102)], conclusion=conclusion, workflow_id=9),
+                )])
+                _, output = self.census_wait()
+                self.assertEqual(output["state"], expected)
+                self.assertFalse(any(run.get("cancelledDuplicate") for run in output["observation"]["runs"]))
+
+    def test_all_workflows_cancelled_newest_run_without_a_passed_older_run_is_a_failure(self) -> None:
+        for name, older in (
+            ("older run failed", workflow_run(101, [workflow_job(1000, "build", conclusion="failure")], conclusion="failure", workflow_id=9)),
+            ("older run is another event", workflow_run(101, [workflow_job(1000, "build")], workflow_id=9, event="push")),
+            ("older run is another workflow", workflow_run(101, [workflow_job(1000, "build")], workflow_id=10, name="Lint")),
+        ):
+            with self.subTest(name):
+                self.reset_census()
+                self.write_scenario(census=[census(*self.cancelled_duplicate(older))])
+                _, output = self.census_wait()
+                self.assertEqual(output["state"], "changed")
+                self.assertIn("cancelled", output["reason"])
+
+    def test_all_workflows_waits_for_the_older_run_beside_a_cancelled_newest_run(self) -> None:
+        running = workflow_run(101, [workflow_job(1000, "build", "in_progress", None)], status="in_progress", conclusion=None, workflow_id=9)
+        for conclusion, expected in (("success", "recoverable"), ("failure", "changed")):
+            with self.subTest(older=conclusion):
+                self.reset_census()
+                finished = workflow_run(101, [workflow_job(1000, "build", conclusion=conclusion)], conclusion=conclusion, workflow_id=9)
+                self.write_scenario(census=[
+                    census(*self.cancelled_duplicate(running)),
+                    census(*self.cancelled_duplicate(running)),
+                    census(*self.cancelled_duplicate(finished)),
+                ])
+                _, output = self.census_wait()
+                self.assertEqual(output["state"], expected)
+                self.assertEqual(output["metrics"]["observations"], 3)
+        self.reset_census()
+        self.write_scenario(census=[census(*self.cancelled_duplicate(running))])
+        _, output = self.census_wait(deadline=self.short_deadline())
+        self.assertEqual(output["state"], "timed-out")
+        _, output = self.run_json(
+            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
+            "--pr", "7", "--head", "head-1", "--all-workflows",
+        )
+        self.assertEqual(output["state"], "waiting")
+        self.assertIn("waiting for the older run of the same workflow and event (101)", output["reason"])
+
+    def test_a_cancelled_duplicate_cancelled_again_after_its_rerun_is_a_failure(self) -> None:
+        # A rerun can be cancelled for its own reason, such as a job timeout;
+        # naming it recoverable again would loop on reruns.
+        self.write_scenario(census=[census(*self.cancelled_duplicate(attempt=2))])
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "changed")
+        self.assertIn("cancelled", output["reason"])
+        self.assertFalse(any(run.get("cancelledDuplicate") for run in output["observation"]["runs"]))
+
+    def test_all_workflows_reports_another_failure_before_a_cancelled_duplicate(self) -> None:
+        self.write_scenario(census=[census(
+            *self.cancelled_duplicate(),
+            workflow_run(103, [workflow_job(1002, "lint", conclusion="failure", run_id=103)], conclusion="failure", workflow_id=10, name="Lint"),
+        )])
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "changed")
+        self.assertIn("lint: failure", output["reason"])
+        self.assertNotIn("build", output["reason"])
+
+    def test_a_named_check_from_a_cancelled_duplicate_run_is_recoverable(self) -> None:
+        # The run's jobs are also its check runs, numbered by its check suite.
+        self.write_scenario(
+            pull=pull("head-1", [
+                check("build", "COMPLETED", "SUCCESS", app="github-actions", event="pull_request", suite_id=501, workflow=9),
+                check("build", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=502, workflow=9),
+            ]),
+            census=[census(*self.cancelled_duplicate())],
+        )
+        _, output = self.census_wait("--check", "build")
+        self.assertEqual(output["state"], "recoverable")
+
+    def test_all_workflows_is_satisfied_once_the_cancelled_duplicate_is_rerun(self) -> None:
+        # `gh run rerun` starts a new attempt of the same run.
+        older = self.cancelled_duplicate()[0]
+        self.write_scenario(census=[
+            census(older, workflow_run(102, [workflow_job(1003, "build", "in_progress", None, run_id=102)], status="in_progress", conclusion=None, workflow_id=9, attempt=2)),
+            census(older, workflow_run(102, [workflow_job(1003, "build", run_id=102)], workflow_id=9, attempt=2)),
+        ])
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "satisfied")
+        self.assertFalse(any(run.get("cancelledDuplicate") for run in output["observation"]["runs"]))
 
     def test_all_workflows_inspect_cannot_confirm_stability(self) -> None:
         self.write_scenario(census=[census(workflow_run(101, matrix_jobs(2)))])

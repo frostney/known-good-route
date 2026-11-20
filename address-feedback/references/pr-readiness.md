@@ -47,7 +47,12 @@ runs GitHub Actions on the head, and one `--check` for each commit status or
 other app's check on it. Where nothing runs in Actions, or policy declares an
 Actions workflow advisory, name every other check with `--check` instead,
 because `--all-workflows` waits for a run to appear and counts every
-workflow.
+workflow. A `recoverable` result names a cancelled duplicate run that GitHub
+counts in place of an older run that passed: rerun each with the command the
+result gives and await `checks-terminal` again on the same head. The PR
+stays pending until that wait reports `satisfied`. The rerun needs no
+decision from the person, and the cancelled run never justifies bypassing a
+required check.
 
 Resolving without replying does not satisfy the gate. An automation's reply to
 a maintainer reply in a thread that is now resolved answers that reply rather

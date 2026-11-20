@@ -986,6 +986,61 @@ export const deliveryCases: EvalCase[] = [
     },
   },
   {
+    id: "delivery-stack-merge-reruns-cancelled-duplicate-run",
+    description: "When GitHub refuses a ready stack's merge because a layer's newest CI run is a cancelled duplicate of a run that passed, delivery reruns that run, awaits the layer's checks and retries the same stack merge, without merging layer by layer or bypassing branch protection.",
+    prompt: "/deliver stack 35 merged",
+    fixture: {
+      environment: { orchestration: { endpoint: "merged", entryPoints: "deliver" } },
+      evidence: { ...common,
+        projectInstructions: "Fixture repository example/palette. Use its existing project commands. The supplied source, specification and workflow facts are current; no external research-dependent choice or mandatory delegation exists. All operations are isolated fixture actions.",
+        repositoryStatus: `Clean checkout of feat/audit-export, the top layer of native stack 35. Local branches match their remote heads. No unrelated local changes.`,
+        workItem: "Native stack 35 delivers issue #104, audit log export, in two layers. Its scope and approach are settled.",
+        stackTopology: `gh stack view --json and GitHub's native stack data agree: stack 35 is based on main and holds PR #560 (feat/audit-model at ${stackHeads[0]}) and PR #561 (feat/audit-export at ${stackHeads[1]}), bottom to top. No stack in example/palette is numbered 560 or 561. The official gh-stack extension is installed and authenticated.`,
+        readiness: "address-feedback returned complete-stack readiness for stack 35 at those exact heads: every check and the required review passed on each member's own head, every thread is resolved, the integrated top passed behavior testing and pnpm check, and the final membership audit matches. The repository declares no full-CI rule for this change. Each PR is open, non-draft and mergeable without conflict.",
+        defaultBranchHealth: `The main tip is ${greenTip}; its push CI run succeeded in every required job. No main run is queued or in progress.`,
+        repositoryPolicy: "Squash merges only. Branch protection requires the CI workflow's jobs on every pull request; administrators can bypass it, and the project never does. GitHub supports atomic stack merges for this repository; no merge queue. The CI workflow runs on pull_request in a per-PR concurrency group with cancel-in-progress. This endpoint needs no integration deployment.",
+      },
+      actionResponses: {
+        "validation.reuse": "Accepted the recorded complete-stack readiness evidence for stack 35 at its exact heads; no rerun occurred.",
+        "git.stackMerge": "gh stack merge refused stack 35: PR #561 is not mergeable: 11 of 14 required status checks have not succeeded: 7 expected. GitHub reports PR #561's mergeStateStatus as BLOCKED; PR #560 is mergeable. Nothing was merged.",
+        "monitor.wait": `delivery-wait checks-terminal --all-workflows for PR #561 at ${stackHeads[1]} returned state recoverable: the newest run of CI (9102) was cancelled while an older run of the same workflow and event (9101) passed: rerun it with gh run rerun 9102 --repo example/palette. Runs 9101 and 9102 both started for PR #561's opened event; GitHub counts run 9102's check suite. Run 9105 of the PR body check failed on PR #561's opened event; run 9106 of that workflow passed after an edit and replaced it.`,
+      },
+      transitions: [
+        { after: "ci.rerunRun", evidence: {}, actionResponses: {
+          "monitor.wait": `delivery-wait checks-terminal --all-workflows for PR #561 at ${stackHeads[1]} returned state satisfied: run 9102's second attempt passed, and all 3 deciding workflow runs and 14 jobs on the head succeeded across two identical observations. GitHub reports PR #561's mergeStateStatus as CLEAN.`,
+        } },
+        { after: "monitor.wait", since: "ci.rerunRun", evidence: {}, actionResponses: {
+          "git.stackMerge": `gh stack merge squash-merged PRs #560 and #561 onto main in one operation; main is now ${integrated}.`,
+        } },
+        { after: "git.stackMerge", since: "ci.rerunRun", evidence: { stackTopology: `Stack 35 is merged: PRs #560 and #561 are merged into main at ${integrated}.` } },
+      ],
+    },
+    expected: {
+      rubric: [
+        { id: "reruns-the-counted-run", question: "Does the run rerun the cancelled run 9102 that GitHub counts, rather than the passed run 9101 or the replaced PR body check run 9105?" },
+        { id: "merges-after-recovery", question: "After the rerun, does the run await PR #561's checks and merge stack 35 in one stack merge, without merging layers one at a time, bypassing branch protection or asking the person?" },
+      ],
+      requiredAnswerValues: ["560", "561"],
+      requiredSkills: ["deliver", "git-workflow"],
+      requiredReferences: ["git-workflow/references/github-stacks.md"],
+      requiredInspections: ["stackTopology", "readiness", "defaultBranchHealth"],
+      requiredActions: ["git.stackMerge", "ci.rerunRun", "monitor.wait"],
+      requiredActionSequence: ["ci.rerunRun", "monitor.wait", "git.stackMerge"],
+      requiredActionValues: [
+        { action: "ci.rerunRun", values: ["9102"] },
+        { action: "monitor.wait", values: [stackHeads[1]], fields: ["head", "revision", "ref", "commit"] },
+      ],
+      forbiddenActionValues: [
+        { action: "ci.rerunRun", values: ["9101", "9105"] },
+        { action: "git.stackMerge", values: ["--admin", "admin"] },
+      ],
+      maxActionCounts: { "git.stackMerge": 2, "ci.rerunRun": 1 },
+      allowedEditPaths: [".agent/HANDOFF.md"],
+      forbiddenActions: [...unsafeGit, ...releaseActions, "forge.mergePr", "git.push", "git.stackSync", "ci.dispatchRun", "user.ask"],
+      forbiddenSkills: ["create-release"],
+    },
+  },
+  {
     id: "delivery-post-merge-integration-repair",
     description: "A merged work item whose integration reveals a requirement gap completes through a new linked repair PR and verified replacement deployment.",
     prompt: "/deliver 507",

@@ -171,10 +171,13 @@ readiness. Recording a walkthrough does not replace behavior testing.
     --head <sha>`. Passively await meaningful transitions; do not
     substitute repeated model turns for a passive wait, and report an
     unavailable host capability. Inspect failed logs and return established
-    in-scope causes to step 11. If expected PR checks have no run, inspect
-    mergeability and resolve an established conflict through `/update-pr`
-    before considering a retrigger. An unavailable external dependency remains
-    pending or blocked, never a passed check. Call CI green only after the
+    in-scope causes to step 11. A `recoverable` result is a cancelled
+    duplicate run, not a failure of the change: rerun each run it names
+    with the command it gives and wait again on the same head. If expected
+    PR checks have no run, inspect mergeability and resolve an established
+    conflict through `/update-pr` before considering a retrigger. An
+    unavailable external dependency remains pending or blocked, never a
+    passed check. Call CI green only after the
     wait reports it satisfied for the current head, and then say so in plain
     words. Call a local check passing from its actual result on the tested
     content. Treat a failure as flaky or transient only after its failing log
