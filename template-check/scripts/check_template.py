@@ -175,7 +175,7 @@ def heading_text(node: Node | str) -> str:
     character reads escaped, as it is written, so it never passes for one.
     """
     if isinstance(node, str):
-        return re.sub(r"([`*~<])", r"\\\1", node)
+        return re.sub(r"([`*~<\[])", r"\\\1", node)
     if node.tag == "img":
         return node.attrs.get("alt", "")
     inner = "".join(heading_text(child) for child in node.children)
@@ -252,12 +252,12 @@ def note_rule(children: list[Node | str]) -> Node | None:
     """The rule that opens the last review note, also inside wrapper elements."""
     found = None
     blocks = elements(children)
-    for rule, following in zip(blocks, blocks[1:]):
-        if rule.tag == "hr" and following.tag == "p" and names_head(following):
-            found = rule
-    for block in blocks:
-        if block.tag == "div" and not is_alert(block):
-            found = note_rule(block.children) or found
+    for index, block in enumerate(blocks):
+        following = blocks[index + 1] if index + 1 < len(blocks) else None
+        if block.tag == "hr" and following is not None and following.tag == "p" and names_head(following):
+            found = block
+        elif block.tag == "div" and not is_alert(block):
+            found = note_rule(block.children) or found  # Later in the document than any before it.
     return found
 
 
@@ -286,7 +286,8 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
         last = blocks[-1]
         paragraphs = [node for node in elements(last.children) if "markdown-alert-title" not in node.attrs.get("class", "")]
         lines = [line.strip() for line in text_of(paragraphs[0]).splitlines() if line.strip()] if len(paragraphs) == 1 else []
-        if last.tag == "blockquote" and lines[:1] == ["[!NOTE]"]:
+        opening = paragraphs[0].children[0] if len(paragraphs) == 1 and paragraphs[0].children else None
+        if last.tag == "blockquote" and lines[:1] == ["[!NOTE]"] and isinstance(opening, str):
             lines = lines[1:]  # cmark-gfm leaves the alert a quote that opens with its marker.
         elif "markdown-alert-note" not in last.attrs.get("class", "").split():
             lines = []

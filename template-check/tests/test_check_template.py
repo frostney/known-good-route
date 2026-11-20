@@ -307,6 +307,24 @@ class RenderedHeadingTests(unittest.TestCase):
         }
         self.assertEqual(len(texts), 3)
 
+    def test_a_quoted_attribution_example_is_content(self):
+        quote = "<h2>Related</h2><blockquote><p><code>[!NOTE]</code>\nCreated on behalf of @someone using Some Model.</p></blockquote>"
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(quote, "issue")], [True])
+
+    def test_an_earlier_wrapped_example_does_not_stand_for_the_review_note(self):
+        body = (
+            "<div><hr><p>Edit: <code>abc1234</code> example</p></div>"
+            "<h2>Testing</h2><p>Ran it.</p><hr><p>Edit: <code>def5678</code> reviewed</p>"
+        )
+        self.assertEqual([(h.text, h.has_content) for h in CHECK_TEMPLATE.headings(body, "pr")], [("Testing", True)])
+
+    def test_literal_brackets_never_pass_for_a_link(self):
+        literal, link = (
+            CHECK_TEMPLATE.headings(html)[0].text
+            for html in ("<h2>[Setup](/setup)</h2>", '<h2><a href="/setup">Setup</a></h2>')
+        )
+        self.assertNotEqual(literal, link)
+
     def test_an_image_in_the_attribution_note_is_content(self):
         note = (
             '<h2>Related</h2><div class="markdown-alert markdown-alert-note"><p class="markdown-alert-title">Note</p>'
@@ -394,7 +412,17 @@ class RendererParityTests(unittest.TestCase):
         )
         self.assertEqual(completed.stdout.decode("utf-8").strip(), "<h2>\U0001F4C1 Files</h2>")
 
-    @unittest.skipUnless(shutil.which("uv"), "uv is not installed")
+    def test_the_fallback_program_never_imports_from_the_directory_it_runs_in(self):
+        with tempfile.TemporaryDirectory() as directory:
+            Path(directory, "cmarkgfm.py").write_text("raise SystemExit('shadowed')\n", encoding="utf-8")
+            completed = subprocess.run(
+                [sys.executable, "-I", "-c", CHECK_TEMPLATE.RENDER],
+                input=b"## A\n", cwd=directory, capture_output=True, check=True,
+            )
+        self.assertEqual(completed.stdout.decode("utf-8").strip(), "<h2>A</h2>")
+
+    # Resolves cmarkgfm from PyPI through uv, so it runs only when asked for.
+    @unittest.skipUnless(shutil.which("uv") and os.environ.get("TEMPLATE_CHECK_UV_TESTS"), "set TEMPLATE_CHECK_UV_TESTS=1")
     def test_the_uv_fallback_never_imports_from_the_directory_it_runs_in(self):
         with tempfile.TemporaryDirectory() as directory:
             Path(directory, "cmarkgfm.py").write_text("raise SystemExit('shadowed')\n", encoding="utf-8")
