@@ -5,8 +5,8 @@ Reports template headings that are missing, renamed, out of order or left
 empty. Exits 0 when the headings match or no template exists, 1 on a
 mismatch and 2 on an operational error.
 
-Markdown bodies and templates are read as GitHub renders them, through its
-Markdown API, so a heading counts only where GitHub shows one. A heading
+Markdown bodies and templates are rendered locally with cmark-gfm, the engine
+behind GitHub's Markdown, so a heading counts only where GitHub shows one. A heading
 inside a list item, quote, table or alert is that section's content, not a
 section of its own.
 """
@@ -18,6 +18,7 @@ import difflib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -27,6 +28,15 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__.
+
+try:
+    import cmarkgfm
+    from cmarkgfm.cmark import Options
+except ImportError:  # main() runs the script again with it, through uv.
+    cmarkgfm = None
+
+# GitHub's cmark-gfm for Python, pinned to a release over a year old.
+CMARKGFM = "cmarkgfm==2025.10.22"
 
 
 HEADING_TAG = re.compile(r"h([1-6])")
@@ -184,12 +194,12 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
     if kind == "issue" and blocks:
         last = blocks[-1]
         paragraphs = [node for node in elements(last.children) if "markdown-alert-title" not in node.attrs.get("class", "")]
-        lines = [line for line in text_of(paragraphs[0]).splitlines() if line.strip()] if len(paragraphs) == 1 else []
-        if (
-            "markdown-alert-note" in last.attrs.get("class", "").split()
-            and len(lines) == 1
-            and ATTRIBUTION.fullmatch(" ".join(lines[0].split()))
-        ):
+        lines = [line.strip() for line in text_of(paragraphs[0]).splitlines() if line.strip()] if len(paragraphs) == 1 else []
+        if last.tag == "blockquote" and lines[:1] == ["[!NOTE]"]:
+            lines = lines[1:]  # cmark-gfm leaves the alert a quote that opens with its marker.
+        elif "markdown-alert-note" not in last.attrs.get("class", "").split():
+            lines = []
+        if len(lines) == 1 and ATTRIBUTION.fullmatch(" ".join(lines[0].split())):
             top = [node for node in top if node is not last]
 
     found: list[Heading] = []
@@ -228,92 +238,19 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
     return found
 
 
-def target_host(repo: str | None) -> str | None:
-    """The host of the repository the check is about, resolved the way gh resolves it.
+def render(markdown: str) -> str:
+    """Markdown as GitHub renders it in an issue or pull request, rendered locally.
 
-    A host-qualified `--repo` or `GH_REPO` names it; gh resolves a repository
-    named without a host, and otherwise the repository of the current
-    checkout. None, outside any checkout, leaves the host to gh.
+    cmark-gfm renders raw HTML here, as GitHub does before it filters the
+    tags it never shows; alerts stay quotes that open with their marker.
     """
-    named = repository(repo or os.environ.get("GH_REPO")) or ""
-    if named.count("/") == 2:
-        return canonical_host(named.split("/")[0])
-    if named:
-        try:
-            url = gh_runner(["repo", "view", named, "--json", "url", "--jq", ".url"])
-        except CheckError as error:
-            raise CheckError(f"cannot resolve the GitHub host of {named}: {error}") from error
-        host = urlparse((url or "").strip()).hostname
-        if not host:
-            raise CheckError(f"cannot resolve the GitHub host of {named}")
-        return canonical_host(host)
-    return checkout_host(None, os.environ)
-
-
-def canonical_host(host: str) -> str:
-    """A host as gh spells it: lowercase, and www.github.com is github.com."""
-    host = host.lower()
-    return "github.com" if host == "www.github.com" else host
-
-
-def checkout_host(root: Path | None, env: dict[str, str] | os._Environ[str]) -> str | None:
-    """The host of the repository gh resolves for a checkout; None outside any checkout.
-
-    A git checkout gh cannot place is an operational error: it belongs to some
-    host, or to none yet, and Markdown is never sent to a guessed one.
-    """
-    reason = "gh found no repository"
-    try:
-        url = gh_runner(["repo", "view", "--json", "url", "--jq", ".url"], cwd=root, env=dict(env))
-    except CheckError as error:
-        url, reason = None, str(error)
-    if url and urlparse(url.strip()).hostname:
-        return canonical_host(urlparse(url.strip()).hostname)
-    inside = subprocess.run(
-        ["git", *(["-C", str(root)] if root else []), "rev-parse", "--is-inside-work-tree"],
-        text=True, capture_output=True, check=False,
-    )
-    if inside.returncode == 0 and inside.stdout.strip() == "true":
-        raise CheckError(
-            f"cannot tell which GitHub host this checkout belongs to ({reason}); pass --repo HOST/OWNER/REPO"
-        )
-    return None
-
-
-def same_host(root: Path, host: str | None) -> str | None:
-    """Refuse templates from a checkout on another host than the body's; return the host.
-
-    The checkout is placed by its own remotes, without GH_REPO or GH_HOST; only
-    when that fails is GH_HOST kept, for an Enterprise host configured through it.
-    """
-    environment = {key: value for key, value in os.environ.items() if key not in ("GH_REPO", "GH_HOST")}
-    try:
-        own = checkout_host(root, environment)
-    except CheckError as error:
-        # Retry with GH_HOST only when gh knew no host for the remotes; any other
-        # failure leaves the checkout unplaced, and nothing is rendered.
-        if "GH_HOST" not in os.environ or "known GitHub host" not in str(error):
-            raise
-        own = checkout_host(root, {**environment, "GH_HOST": os.environ["GH_HOST"]})
-    if host is None:
-        return own
-    if own is not None and own != host:
-        raise CheckError(
-            f"the templates in {root} belong to {own}, but the body belongs to {host}; "
-            "check them against a body on the same host"
-        )
-    return host
-
-
-def render(markdown: str, host: str | None = None) -> str:
-    """Markdown as GitHub renders it in an issue or pull request, on that host."""
     if not markdown.strip():
         return ""
-    route = ["--hostname", host] if host else []
-    output = gh_runner(["api", *route, "markdown", "--input", "-"], json.dumps({"text": markdown, "mode": "gfm"}))
-    if output is None:
-        raise CheckError("GitHub's Markdown API is not available")
-    return output
+    if cmarkgfm is None:
+        raise CheckError(f"the Markdown renderer is not installed: pip install {CMARKGFM}")
+    return cmarkgfm.github_flavored_markdown_to_html(
+        markdown, options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES
+    )
 
 
 def front_matter(text: str) -> tuple[dict[str, str], str]:
@@ -663,11 +600,7 @@ class Source:
 
     def read(self, path: str) -> str:
         if self.root is not None:
-            resolved = (self.root / path).resolve()
-            # A symlink may point anywhere; only the checkout's own files are read.
-            if not resolved.is_relative_to(self.root.resolve()):
-                raise CheckError(f"template {path} resolves outside the checkout")
-            return resolved.read_text(encoding="utf-8")
+            return (self.root / path).read_text(encoding="utf-8")
         assert self.run is not None
         output = self.run(
             ["api", *self.route, "-H", "Accept: application/vnd.github.raw", f"repos/{self.slug}/contents/{path}"]
@@ -954,14 +887,11 @@ def select(
     return best, problems
 
 
-def gh_runner(
-    args: list[str], stdin: str | None = None, cwd: Path | None = None, env: dict[str, str] | None = None
-) -> str | None:
+def gh_runner(args: list[str]) -> str | None:
     """Run gh and return its output, or None for a resource GitHub reports missing."""
     try:
         completed = subprocess.run(
-            ["gh", *args], input=stdin, cwd=cwd, env=env, text=True, encoding="utf-8",
-            capture_output=True, timeout=60, check=False,
+            ["gh", *args], text=True, encoding="utf-8", capture_output=True, timeout=60, check=False,
         )
     except FileNotFoundError as error:
         raise CheckError("gh is not installed or not on PATH") from error
@@ -975,22 +905,17 @@ def gh_runner(
     return completed.stdout
 
 
-def live_body(kind: str, number: int, repo: str | None) -> tuple[str, str]:
-    """A live body and the host gh fetched it from, by the URL gh returns."""
-    args = [kind, "view", str(number), "--json", "body,url"]
+def live_body(kind: str, number: int, repo: str | None) -> str:
+    args = [kind, "view", str(number), "--json", "body"]
     if repo:
         args.extend(["--repo", repo])
     output = gh_runner(args)
     if output is None:
         raise CheckError(f"{kind} #{number} was not found")
     try:
-        data = json.loads(output)
-        host = urlparse(data["url"]).hostname
-        if not host:
-            raise ValueError("no host")
-        return str(data["body"] or ""), canonical_host(host)
+        return str(json.loads(output)["body"] or "")
     except (ValueError, KeyError, TypeError) as error:
-        raise CheckError(f"gh returned no body or URL for {kind} #{number}") from error
+        raise CheckError(f"gh returned no body for {kind} #{number}") from error
 
 
 def checkout_root() -> Path:
@@ -1017,41 +942,23 @@ def parser() -> argparse.ArgumentParser:
     return result
 
 
-def template_checkout(path: Path) -> Path | None:
-    """The checkout a template path lies in, refusing one that resolves outside it."""
-    located = subprocess.run(
-        ["git", "-C", str(path.absolute().parent), "rev-parse", "--show-toplevel"],
-        text=True, capture_output=True, check=False,
-    )
-    if located.returncode != 0:
-        return None  # A standalone file: it renders on the body's host.
-    root = Path(located.stdout.strip())
-    if not path.resolve().is_relative_to(root.resolve()):
-        raise CheckError(f"template {path} resolves outside its checkout")
-    return root
-
-
 def repository(name: str | None) -> str | None:
     """OWNER/REPO or HOST/OWNER/REPO, also from a repository URL gh accepts."""
-    if name and "://" not in name and name.count("/") == 2:
-        host, slug = name.split("/", 1)
-        return f"{canonical_host(host)}/{slug}"
     if not name or "://" not in name:
         return name
     url = urlparse(name)
     path = url.path.strip("/").removesuffix(".git")
     if not url.hostname or path.count("/") != 1:
         raise CheckError(f"--repo {name} names no repository")
-    return f"{canonical_host(url.hostname)}/{path}"
+    return f"{url.hostname}/{path}"
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
     args.repo = repository(args.repo)
-    live_host: str | None = None
     if args.pr is not None:
-        source_label, (text, live_host) = f"pr #{args.pr}", live_body("pr", args.pr, args.repo)
+        source_label, text = f"pr #{args.pr}", live_body("pr", args.pr, args.repo)
     elif args.issue is not None:
-        source_label, (text, live_host) = f"issue #{args.issue}", live_body("issue", args.issue, args.repo)
+        source_label, text = f"issue #{args.issue}", live_body("issue", args.issue, args.repo)
     elif args.body == "-":
         source_label, text = "stdin", sys.stdin.read()
     else:
@@ -1061,33 +968,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         except (OSError, ValueError) as error:
             raise CheckError(f"cannot read body: {error}") from error
     kind = "pr" if args.pr is not None else "issue" if args.issue is not None else args.kind
-    # Everything renders on one host: that of the repository the check is about.
-    # A template from a checkout must belong to that host too. The host is
-    # resolved only when something is rendered.
-    hosts: dict[str, str | None] = {}
-    checked: set[Path] = set()
-
-    def host() -> str | None:
-        if "host" not in hosts:
-            hosts["host"] = live_host or target_host(args.repo)
-        return hosts["host"]
-
-    def renderer_for(root: Path | None) -> Callable[[str], str]:
-        def renderer(markdown: str) -> str:
-            if not markdown.strip():
-                return ""
-            if root is not None and root.resolve() not in checked:
-                # Outside any checkout, the templates' checkout names the host.
-                hosts["host"] = same_host(root, host())
-                checked.add(root.resolve())
-            return render(markdown, host())
-
-        return renderer
-
     if args.template:
         try:
-            renderer = renderer_for(template_checkout(args.template))
-            templates = [parse_template(str(args.template), args.template.read_text(encoding="utf-8"), renderer)]
+            templates = [parse_template(str(args.template), args.template.read_text(encoding="utf-8"))]
         except (OSError, ValueError) as error:
             raise CheckError(f"cannot read template: {error}") from error
         absent = f"{args.template} has no headings"
@@ -1100,7 +983,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             source = Source(root=args.root or checkout_root())
         else:
             source = Source(repo=args.repo, run=gh_runner)
-        templates = readable(discover(source, kind, renderer_for(source.root), args.template_name), args.template_name)
+        templates = readable(discover(source, kind, None, args.template_name), args.template_name)
         absent = f"no {kind} template with headings found"
     templates = [template for template in templates if template.headings]
     if not templates:
@@ -1108,7 +991,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     # Without a kind, as with --template alone, the body reads as a pull request's.
     text = text.removeprefix("\ufeff")
-    body = headings(render(text, host()) if text.strip() else "", kind or "pr")
+    body = headings(render(text), kind or "pr")
     template, problems = select(templates, body, args.template_name)
     return {
         "state": "mismatch" if problems else "match",
@@ -1119,7 +1002,17 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def with_renderer() -> None:
+    """Run this script again with the renderer, through uv, when it is not installed."""
+    if cmarkgfm is not None or os.environ.get("TEMPLATE_CHECK_BOOTSTRAPPED") or not shutil.which("uv"):
+        return  # render() reports a renderer that is still missing.
+    os.environ["TEMPLATE_CHECK_BOOTSTRAPPED"] = "1"
+    command = ["uv", "run", "--quiet", "--no-project", "--python", sys.executable, "--with", CMARKGFM]
+    os.execvp("uv", [*command, "python", __file__, *sys.argv[1:]])
+
+
 def main() -> int:
+    with_renderer()
     args = parser().parse_args()
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(errors="replace")  # A label the terminal cannot encode.

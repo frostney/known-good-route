@@ -6,10 +6,11 @@ description: >-
   workflow must check a draft or posted body against its template.
 license: Unlicense OR MIT
 compatibility: >-
-  Requires Python 3.11 or newer, git, network access and the GitHub CLI (gh)
-  authenticated to GitHub, which renders every Markdown body and template.
-  Reading a live body or a remote repository's templates also needs access to
-  that repository.
+  Requires Python 3.11 or newer, git and the cmarkgfm package, GitHub's
+  cmark-gfm renderer, which the script runs through uv when it is not
+  installed. Reading a live body or a remote repository's templates also
+  requires the GitHub CLI (gh) authenticated to that repository, and network
+  access.
 ---
 
 # Template check
@@ -51,32 +52,25 @@ belongs to.
 - Exit 1 with `mismatch`: fix each reported heading in the body and run the
   check again.
 - Exit 2 with `operational-error`: the check could not compare, for example
-  outside a git checkout, when GitHub cannot render the Markdown, for an
+  outside a git checkout, without the Markdown renderer, for an
   unreachable repository, for an issue form it cannot read, or for a body that
   fits several templates equally. Fix the
   cause it names, pass `--repo`, `--template-name` or `--template PATH` as it
   says, and never treat it as a pass.
 
-It reads a Markdown body or template as GitHub renders it, through the
-Markdown API, so a heading counts exactly where GitHub shows one. Everything
-renders on one host: for a live pull request or issue, the host gh fetched it
-from; for a draft, the host of the repository the check is about, resolved as
-gh resolves it: a host-qualified `--repo` or `GH_REPO`, a repository named
-without a host as gh places it, then the repository of the current checkout,
-and otherwise the templates' own checkout. A template found in a checkout,
-placed by its own remotes, must belong to that same host,
-and a checkout gh cannot place is an operational error: Markdown is never sent
-to another host. A template file that resolves outside its checkout, such as
-through a symlink, is never read. A standalone template file renders on the
-body's host. The host is resolved,
-and Markdown rendered, only when there is something to compare. With
-`--template-name`, only the templates that can be the one named are rendered.
+It reads a Markdown body or template as GitHub renders it: with cmark-gfm,
+the engine behind GitHub's Markdown, run locally, so a heading counts exactly
+where GitHub shows one and nothing is sent anywhere to be rendered. Without
+the `cmarkgfm` package, the script runs itself through uv with a pinned
+version; without uv, it is an operational error that names the install
+command. With `--template-name`, only the templates that can be the one named
+are read.
 
 Text in code, comments and other HTML GitHub does not show is no heading. A
 heading inside a list item, quote, table or alert is its section's content,
-not a section of its own. A template heading pairs with a body heading at the same level before
-one at another level, so a subsection that shares a section's name does not
-stand in for it. A list item that shows nothing, or only `[ ]`, such as a
+not a section of its own. A template heading pairs with a body heading at the
+same level before one at another level, so a subsection that shares a
+section's name does not stand in for it. A list item that shows nothing, or only `[ ]`, such as a
 template's `-` placeholder, is not content. Reading stops at a pull request's
 review note, the last rule followed by a line that opens with `Edit:` and
 names the head it covers in code, such as ``Edit: `1a2b3c4` reviewed``, so the
