@@ -247,6 +247,13 @@ class RenderedHeadingTests(unittest.TestCase):
         )
         self.assertNotEqual(image, emphasis)
 
+    def test_an_author_link_with_the_anchor_class_keeps_its_destination(self):
+        texts = {
+            CHECK_TEMPLATE.headings(f'<h2><a class="anchor" href="{href}">Flags</a></h2>')[0].text
+            for href in ("/reference", "/unrelated")
+        }
+        self.assertEqual(len(texts), 2)
+
     def test_struck_out_and_emphasized_words_are_part_of_a_heading(self):
         texts = [
             CHECK_TEMPLATE.headings(html)[0].text
@@ -519,6 +526,22 @@ class RendererParityTests(unittest.TestCase):
         found = CHECK_TEMPLATE.headings(REAL_RENDER(body), "issue", body)
         self.assertEqual([h.has_content for h in found], [True])
 
+    def test_a_footnote_reference_in_a_heading_compares_by_its_label(self):
+        template = "## Rollout [^ref]\n\n[^ref]: r\n"
+        body = "Intro.[^a]\n\n## Rollout [^ref]\n\n[^a]: a\n[^ref]: r\n"
+        texts = [[h.text for h in CHECK_TEMPLATE.headings(REAL_RENDER(text))] for text in (template, body)]
+        self.assertEqual(texts, [["Rollout [^ref]"], ["Rollout [^ref]"]])
+        self.assertEqual(CHECK_TEMPLATE.footnote_label("#user-content-fn-ref-e42c25f642414e4141c39e11533dd6f0"), "ref")
+
+    def test_a_review_note_inside_a_section_ends_the_body(self):
+        body = "## Summary\n\nx\n\n<section>\n\n---\n\nEdit: `abc1234` reviewed\n\n## Testing\n\nRan.\n\n</section>\n"
+        found = CHECK_TEMPLATE.headings(REAL_RENDER(body), "pr", body)
+        self.assertEqual([(h.text, h.has_content) for h in found], [("Summary", True)])
+
+    def test_a_reported_link_heading_with_a_literal_bracket_reads_back(self):
+        reported = CHECK_TEMPLATE.headings(REAL_RENDER("## [Flags \\]](/reference)\n"))[0]
+        self.assertEqual(str(CHECK_TEMPLATE.headings(REAL_RENDER(f"{reported}\n"))[0]), str(reported))
+
     def test_every_captured_case_reads_as_github_rendered_it(self):
         for case, fixture in RENDERED.items():
             for kind in (None, "pr", "issue"):
@@ -544,6 +567,15 @@ class TemplateParsingTests(unittest.TestCase):
         with self.assertRaises(CHECK_TEMPLATE.CheckError) as raised:
             CHECK_TEMPLATE.parse_template("f.yml", 'name: "Bug\nbody:\n  - type: input\n    attributes:\n      label: "A"\n')
         self.assertEqual(raised.exception.name, "")
+
+    def test_a_label_may_continue_on_the_lines_below_its_value(self):
+        for label, expected in (
+            ("Steps to reproduce the problem\n        on a clean install", "Steps to reproduce the problem on a clean install"),
+            ('"Steps: to\n        reproduce"', "Steps: to reproduce"),
+        ):
+            with self.subTest(label=label):
+                form = f"body:\n  - type: input\n    attributes:\n      label: {label}\n      description: x\n"
+                self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], [expected])
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):

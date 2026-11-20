@@ -56,6 +56,8 @@ RENDER = (
 
 
 HEADING_TAG = re.compile(r"h([1-6])")
+# Block elements that only group what they hold, so a review note may sit inside one.
+WRAPPERS = {"div", "section", "article", "main", "header", "footer", "aside", "nav"}
 # Elements whose headings are their section's content rather than sections.
 NESTING = {"li", "blockquote", "table", "pre", "code", "summary"}
 MEDIA = {"img", "video", "audio", "picture", "iframe", "object", "embed"}
@@ -159,8 +161,8 @@ INLINE_TAGS = {"sub", "sup", "kbd", "mark", "ins", "u", "small", "abbr"}
 
 def renderer_link(node: Node) -> bool:
     """A link GitHub adds, not the author: a heading anchor, or one to the image it wraps."""
-    if "anchor" in node.attrs.get("class", "").split():
-        return True
+    if "anchor" in node.attrs.get("class", "").split() and not text_of(node).strip():
+        return True  # GitHub's anchor shows only an icon; an author's link shows text.
     children = elements(node.children)
     sources = {child.attrs.get(key) for child in children for key in ("src", "data-canonical-src")}
     own_text = "".join(child for child in node.children if isinstance(child, str)).strip()
@@ -168,9 +170,15 @@ def renderer_link(node: Node) -> bool:
     return only_images and not own_text and node.attrs.get("href") in sources
 
 
+def footnote_label(href: str) -> str:
+    """A footnote's own label from its reference's target: `#fn-ref` locally, `#user-content-fn-ref-<hash>` on GitHub."""
+    label = re.sub(r"^#(?:user-content-)?fn-", "", href)
+    return re.sub(r"-[0-9a-f]{32}$", "", label) if href.startswith("#user-content-") else label
+
+
 def literal(text: str) -> str:
     """Text with each character Markdown could read as markup escaped, so it reads back as written."""
-    return re.sub(r"([\\`*_~<\[&])", r"\\\1", text)
+    return re.sub(r"([\\`*_~<\[\]&])", r"\\\1", text)
 
 
 def heading_text(node: Node | str) -> str:
@@ -187,6 +195,10 @@ def heading_text(node: Node | str) -> str:
         return literal(node)
     if node.tag == "img":
         return literal(node.attrs.get("alt", ""))
+    references = elements(node.children)
+    if node.tag == "sup" and references and all("data-footnote-ref" in child.attrs for child in references):
+        # A footnote reference shows a number that depends on the footnotes before it; compare its label.
+        return "".join(f"[^{footnote_label(child.attrs.get('href', ''))}]" for child in references)
     if node.tag == "code":
         code = text_of(node)
         fence = "`" * (max((len(run) for run in re.findall(r"`+", code)), default=0) + 1)
@@ -311,7 +323,7 @@ def note_rule(children: list[Node | str], valid: Callable[[Node, Node], bool]) -
         following = blocks[index + 1] if index + 1 < len(blocks) else None
         if block.tag == "hr" and following is not None and following.tag == "p" and names_head(following) and valid(block, following):
             found = block
-        elif block.tag == "div" and not is_alert(block):
+        elif block.tag in WRAPPERS and not is_alert(block) and not is_footnotes(block):
             found = note_rule(block.children, valid) or found  # Later in the document than any before it.
     return found
 
@@ -693,15 +705,21 @@ def form_template(path: str, text: str) -> Template:
             error.name = name
             raise error
         key, separator, value = content.partition(":")
-        if not separator or not (value[:1].isspace() or not value):
-            # A type or label may continue as a plain scalar below its key.
-            pending = item.pop("pending", None)
-            if pending and indent > pending[1]:
-                item[pending[0]] = scalar(content)
-                if pending[0] == "label":
+        is_key = bool(separator) and (value[:1].isspace() or not value)
+        pending = item.pop("pending", None)
+        if pending and indent > pending[1]:
+            # A type or label may continue below its key, as a plain scalar or
+            # inside an open quote, where a colon is text.
+            written = pending[2]
+            if not is_key or (written[:1] in ("'", '"') and not QUOTED_SCALAR.match(written)):
+                written = f"{written} {content}".strip()
+                item[pending[0]] = scalar(written)
+                item["pending"] = (pending[0], pending[1], written)
+                if pending[0] == "label" and not pending[2]:
                     item["line"] = number
+                continue
+        if not is_key:
             continue
-        item.pop("pending", None)
         key = scalar(key)
         if key_indent is None and indent > item_indent:
             key_indent = indent
@@ -711,7 +729,7 @@ def form_template(path: str, text: str) -> Template:
             if key == "type":
                 item["type"] = "" if BLOCK_SCALAR.match(value.strip()) else scalar(value)
                 if not item["type"]:
-                    item["pending"] = ("type", indent)
+                    item["pending"] = ("type", indent, "")
             elif key == "attributes" and value.strip().startswith("{"):
                 attributes_indent = None
                 mapping = flow_mapping(value.strip())
@@ -735,8 +753,8 @@ def form_template(path: str, text: str) -> Template:
                     block, block_indent = [], indent + int(digit) if digit else None
                 else:
                     item["label"] = scalar(value)
-                    if not scalar(value):
-                        item["pending"] = ("label", indent)
+                    if not QUOTED_SCALAR.fullmatch(value.strip()):
+                        item["pending"] = ("label", indent, value.strip())
     if block is not None:
         item["label"] = " ".join(block)
     finish()
