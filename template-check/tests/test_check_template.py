@@ -193,6 +193,15 @@ class RenderedHeadingTests(unittest.TestCase):
 
     def test_the_footnotes_github_appends_are_no_section(self):
         self.assertEqual(self.read("footnotes"), [("Summary", True)])
+        self.assertEqual(self.read("footnote_after_last"), [("Summary", True), ("Testing", False)])
+
+    def test_nested_placeholders_are_no_content_and_a_nested_answer_is(self):
+        self.assertEqual(self.read("nested_placeholders"), [("A", False), ("B", True)])
+        nested = "<h2>A</h2><ul><li>[ ]<ul><li>[ ]</li></ul></li></ul>"
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(nested)], [False])
+
+    def test_a_line_break_in_a_heading_separates_its_words(self):
+        self.assertEqual(self.read("line_break_heading"), [("Rollout plan", True)])
 
     def test_a_checked_task_item_is_content_and_an_unchecked_one_is_not(self):
         self.assertEqual(self.read("checked_task"), [("Done", True), ("Open", False)])
@@ -223,13 +232,17 @@ class RenderedHeadingTests(unittest.TestCase):
         finally:
             os.environ.pop("GH_HOST", None)
             os.environ.update(environment)
-        self.assertEqual(
-            [
-                CHECK_TEMPLATE.remote_host(url)
-                for url in ("git@ghe.example.com:cli/cli.git", "https://github.com/cli/cli", "ssh://git@ghe.example.com/cli/cli")
-            ],
-            ["ghe.example.com", "github.com", "ghe.example.com"],
-        )
+
+    def test_a_checkout_renders_on_the_host_gh_resolves_for_it(self):
+        # gh resolves an SSH-over-443 remote to github.com, not ssh.github.com.
+        original = CHECK_TEMPLATE.gh_runner
+        environment = {key: os.environ.pop(key) for key in ("GH_REPO", "GH_HOST") if key in os.environ}
+        CHECK_TEMPLATE.gh_runner = lambda args, stdin=None, cwd=None: "https://github.com/cli/cli\n"
+        try:
+            self.assertEqual(CHECK_TEMPLATE.target_host(None, None), "github.com")
+        finally:
+            CHECK_TEMPLATE.gh_runner = original
+            os.environ.update(environment)
 
 
 class TemplateParsingTests(unittest.TestCase):
@@ -798,6 +811,27 @@ class CommandTests(unittest.TestCase):
         self.assertEqual((code, result["state"]), (0, "match"))
         code, result = self.run_check(*common, "--template-name", "Other", stdin=body(*FULL))
         self.assertEqual((code, result["state"]), (2, "operational-error"))
+
+    def test_a_host_qualified_repository_discovers_templates_on_its_host(self):
+        route = "api --hostname ghe.example.com"
+        listing = lambda *names: json.dumps([{"name": name, "type": kind} for name, kind in names])
+        self.scenario.write_text(json.dumps({
+            f"{route} repos/cli/cli/contents": listing((".github", "dir")),
+            f"{route} repos/cli/cli/contents/.github": listing(("pull_request_template.md", "file")),
+            f"{route} -H Accept: application/vnd.github.raw repos/cli/cli/contents/.github/pull_request_template.md":
+                "## Summary\n\n## Testing\n",
+        }), encoding="utf-8")
+        code, result = self.run_check("--repo", "ghe.example.com/cli/cli", "--kind", "pr", "--body", "-", stdin="## Summary\n\nDone.\n")
+        self.assertEqual((code, [p["expected"] for p in result["problems"]]), (1, ["## Testing"]))
+
+    def test_a_template_without_front_matter_that_fails_to_render_is_known_by_its_file_name(self):
+        self.write(".github/ISSUE_TEMPLATE/default.md", ISSUE_TEMPLATE)
+        self.write(".github/ISSUE_TEMPLATE/other.md", "## Unrenderable\n")
+        self.scenario.write_text(json.dumps({"render-error-for": "Unrenderable"}), encoding="utf-8")
+        code, result = self.run_check(
+            "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "Issue", stdin=body(*FULL)
+        )
+        self.assertEqual((code, result["state"]), (0, "match"))
 
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "owner/project"

@@ -86,13 +86,18 @@ class TreeBuilder(HTMLParser):
         self.stack = [self.root]
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "br":
+            self.stack[-1].children.append(" ")  # A line break separates words.
+            return
         node = Node(tag, {key: value or "" for key, value in attrs})
         self.stack[-1].children.append(node)
         if tag not in VOID:
             self.stack.append(node)
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        self.stack[-1].children.append(Node(tag, {key: value or "" for key, value in attrs}))
+        self.handle_starttag(tag, attrs)
+        if tag not in VOID:
+            self.handle_endtag(tag)
 
     def handle_endtag(self, tag: str) -> None:
         for index in range(len(self.stack) - 1, 0, -1):
@@ -151,7 +156,8 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
     builder = TreeBuilder()
     builder.feed(html)
     builder.close()
-    top = list(builder.root.children)
+    # GitHub appends footnotes after the last section; they are no section's content.
+    top = [node for node in builder.root.children if not (isinstance(node, Node) and is_footnotes(node))]
     blocks = elements(top)
     if kind == "pr":
         for rule, following in zip(blocks, blocks[1:]):
@@ -185,30 +191,26 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
                 found.append(heading)
                 open_sections.append(heading)
                 continue
-            if child.tag == "li" and words(child) in ("", "[ ]") and not has_media(child) and not has_checked(child):
-                continue
+            if child.tag == "li":
+                lists = [node for node in elements(child.children) if node.tag in ("ul", "ol")]
+                own = Node("li", {}, [node for node in child.children if not any(node is nested_list for nested_list in lists)])
+                if words(own) in ("", "[ ]") and not has_media(own) and not has_checked(own):
+                    visit(lists, True)
+                    continue
             if child.tag in MEDIA or is_checked(child):
                 content()
-            visit(child.children, nested or child.tag in NESTING or is_alert(child) or is_footnotes(child))
+            visit(child.children, nested or child.tag in NESTING or is_alert(child))
 
     visit(top, False)
     return found
-
-
-def remote_host(url: str) -> str | None:
-    """The host of a git remote URL, in https, ssh or scp form."""
-    url = url.strip()
-    scp = re.fullmatch(r"[^@/]+@([^:/]+):.*", url)
-    return scp.group(1) if scp else urlparse(url).hostname
 
 
 def target_host(repo: str | None, root: Path | None) -> str | None:
     """The GitHub host the body belongs to, so its Markdown is rendered nowhere else.
 
     A host-qualified `--repo` or `GH_REPO` names it; otherwise `GH_HOST`, which
-    gh applies to a repository named without a host, and then the checkout's
-    `origin` remote.
-    None leaves gh's own default.
+    gh applies to a repository named without a host, and then the repository gh
+    resolves for the checkout. None leaves gh's own default.
     """
     named = repo or os.environ.get("GH_REPO", "")
     if named.count("/") == 2:
@@ -217,9 +219,11 @@ def target_host(repo: str | None, root: Path | None) -> str | None:
         return os.environ["GH_HOST"]
     if named:
         return None
-    command = ["git", *(["-C", str(root)] if root else []), "remote", "get-url", "origin"]
-    completed = subprocess.run(command, text=True, capture_output=True, check=False)
-    return remote_host(completed.stdout) if completed.returncode == 0 else None
+    try:
+        url = gh_runner(["repo", "view", "--json", "url", "--jq", ".url"], cwd=root)
+    except CheckError:
+        return None  # No repository gh can resolve; gh's default host applies.
+    return urlparse(url.strip()).hostname if url else None
 
 
 def render(markdown: str, host: str | None = None) -> str:
@@ -554,6 +558,10 @@ class Source:
         self.root = root
         self.repo = repo
         self.run = run
+        # A host-qualified HOST/OWNER/REPO sends each request to that host.
+        parts = (repo or "").split("/")
+        self.slug = "/".join(parts[-2:])
+        self.route = ["--hostname", parts[0]] if len(parts) == 3 else []
 
     def entries(self, directory: str) -> list[tuple[str, bool]]:
         """Names in a directory with whether each is a directory; [] when absent."""
@@ -563,8 +571,8 @@ class Source:
                 return []
             return sorted((entry.name, entry.is_dir()) for entry in path.iterdir())
         assert self.run is not None
-        endpoint = f"repos/{self.repo}/contents" + (f"/{directory}" if directory else "")
-        output = self.run(["api", endpoint])
+        endpoint = f"repos/{self.slug}/contents" + (f"/{directory}" if directory else "")
+        output = self.run(["api", *self.route, endpoint])
         if output is None and not directory:
             raise CheckError(f"repository {self.repo} was not found or is not accessible")
         if output is None:
@@ -579,7 +587,7 @@ class Source:
             return (self.root / path).read_text(encoding="utf-8")
         assert self.run is not None
         output = self.run(
-            ["api", "-H", "Accept: application/vnd.github.raw", f"repos/{self.repo}/contents/{path}"]
+            ["api", *self.route, "-H", "Accept: application/vnd.github.raw", f"repos/{self.slug}/contents/{path}"]
         )
         if output is None:
             raise CheckError(f"template {path} disappeared from {self.repo}")
@@ -623,7 +631,11 @@ def discover(source: Source, kind: str, renderer: Callable[[str], str] | None = 
                 # Keep the declared name, so a check naming another template ignores it.
                 if not error.name:
                     try:
-                        error.name = declared_name(text.removeprefix("\ufeff"))
+                        if path.lower().endswith((".yml", ".yaml")):
+                            error.name = declared_name(text.removeprefix("\ufeff"))
+                        else:
+                            fields = front_matter(text.removeprefix("\ufeff"))[0]
+                            error.name = fields.get("name") or Path(path).stem
                     except ValueError:
                         pass
                 raise
@@ -835,11 +847,11 @@ def select(
     return best, problems
 
 
-def gh_runner(args: list[str], stdin: str | None = None) -> str | None:
+def gh_runner(args: list[str], stdin: str | None = None, cwd: Path | None = None) -> str | None:
     """Run gh and return its output, or None for a resource GitHub reports missing."""
     try:
         completed = subprocess.run(
-            ["gh", *args], input=stdin, text=True, capture_output=True, timeout=60, check=False
+            ["gh", *args], input=stdin, cwd=cwd, text=True, capture_output=True, timeout=60, check=False
         )
     except FileNotFoundError as error:
         raise CheckError("gh is not installed or not on PATH") from error

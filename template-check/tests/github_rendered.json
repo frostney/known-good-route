@@ -58,5 +58,17 @@
  "two_rules": {
   "markdown": "## Summary\n\nText.\n\n---\n\nMore.\n\n## Testing\n\nRan it.\n\n---\n\nEdit: `abc1234` reviewed\n",
   "html": "<h2>Summary</h2>\n<p>Text.</p>\n<hr>\n<p>More.</p>\n<h2>Testing</h2>\n<p>Ran it.</p>\n<hr>\n<p>Edit: <code class=\"notranslate\">abc1234</code> reviewed</p>"
+ },
+ "footnote_after_last": {
+  "markdown": "## Summary\n\nText.[^1]\n\n## Testing\n\n-\n\n[^1]: A note.\n",
+  "html": "<h2>Summary</h2>\n<p>Text.<sup><a href=\"#user-content-fn-1-cf25ae71a284e283c04eb0e00a891097\" id=\"user-content-fnref-1-cf25ae71a284e283c04eb0e00a891097\" data-footnote-ref=\"\" aria-describedby=\"footnote-label\">1</a></sup></p>\n<h2>Testing</h2>\n<ul>\n<li></li>\n</ul>\n<section data-footnotes=\"\" class=\"footnotes\"><h2 id=\"footnote-label\" class=\"sr-only\">Footnotes</h2>\n<ol>\n<li id=\"user-content-fn-1-cf25ae71a284e283c04eb0e00a891097\">\n<p>A note. <a href=\"#user-content-fnref-1-cf25ae71a284e283c04eb0e00a891097\" data-footnote-backref=\"\" aria-label=\"Back to reference 1\" class=\"data-footnote-backref\">\u21a9</a></p>\n</li>\n</ol>\n</section>"
+ },
+ "nested_placeholders": {
+  "markdown": "## A\n\n- [ ]\n  - [ ]\n\n## B\n\n- [ ]\n  - real\n",
+  "html": "<h2>A</h2>\n<ul class=\"contains-task-list\">\n<li class=\"task-list-item\"><input type=\"checkbox\" id=\"\" disabled=\"\" class=\"task-list-item-checkbox\" aria-label=\"Incomplete task\">\n<ul>\n<li>[ ]</li>\n</ul>\n</li>\n</ul>\n<h2>B</h2>\n<ul class=\"contains-task-list\">\n<li class=\"task-list-item\"><input type=\"checkbox\" id=\"\" disabled=\"\" class=\"task-list-item-checkbox\" aria-label=\"Incomplete task\">\n<ul>\n<li>real</li>\n</ul>\n</li>\n</ul>"
+ },
+ "line_break_heading": {
+  "markdown": "## Rollout<br>plan\n\nText.\n",
+  "html": "<h2>Rollout<br>plan</h2>\n<p>Text.</p>"
  }
 }
