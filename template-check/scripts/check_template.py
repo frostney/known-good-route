@@ -156,12 +156,16 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
             lazy = paragraph and not was_blank and not (
                 LIST_ITEM.match(line) or ATX.match(line) or FENCE.match(line) or THEMATIC_BREAK.match(line)
             )
+            open_column = lists[-1] if lists else None  # Before this line closes any item.
             while lists and indent < lists[-1] and not lazy:
                 lists.pop()
             container = lists[-1] if lists else 0
             underline = paragraph and SETEXT_UNDERLINE.match(line)
             item = None if underline or THEMATIC_BREAK.match(line) else LIST_ITEM.match(line)
-            if item and paragraph and (
+            # A sibling of an open item continues its list; only an item that
+            # would open a new list is held to the paragraph-interruption rule.
+            opens_list = open_column is None or indent >= open_column
+            if item and paragraph and opens_list and (
                 not line[item.end() :].strip() or re.match(r" *(?![1][.)])[0-9]", line)
             ):
                 item = None
@@ -564,7 +568,10 @@ def discover(source: Source, kind: str) -> list[Template | CheckError]:
             try:
                 found.append(parse_template(path, text))
             except ValueError as error:
-                raise CheckError(f"cannot read template {path}: {error}") from error
+                failure = CheckError(f"cannot read template {path}: {error}")
+                # Keep the form's declared name, so a check that names it still sees the error.
+                failure.name = declared_name(text) if path.lower().endswith((".yml", ".yaml")) else ""
+                raise failure from error
         except CheckError as error:
             error.path = path
             found.append(error)

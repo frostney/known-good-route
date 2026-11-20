@@ -440,6 +440,9 @@ class HeadingTests(unittest.TestCase):
         form = "body:\n  -  # Overview: context\n    type: input\n    attributes:\n      label: A\n"
         self.assertEqual([str(h) for h in CHECK_TEMPLATE.parse_template("f.yml", form).headings], ["### A"])
 
+    def test_a_sibling_ordered_item_keeps_its_fence_in_the_list(self):
+        self.assertEqual(CHECK_TEMPLATE.headings("1. First\n2. Second\n    ```\n   ## Testing\n    ```\n"), [])
+
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 
@@ -756,6 +759,16 @@ class CommandTests(unittest.TestCase):
             "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "Issue", stdin=body(*FULL)
         )
         self.assertEqual((code, result["state"]), (0, "match"))
+
+    def test_a_form_that_fails_to_parse_keeps_its_declared_name(self):
+        self.write(".github/ISSUE_TEMPLATE/form.yml", 'name: Bug report\nbody:\n  - type: input\n    attributes: {label: "\\UFFFFFFFF"}\n')
+        self.write(".github/ISSUE_TEMPLATE/bug.md", "---\nname: Bug report\n---\n## Summary\n\n-\n")
+        code, result = self.run_check(
+            "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "Bug report",
+            stdin="## Summary\n\nText.\n",
+        )
+        self.assertEqual((code, result["state"]), (2, "operational-error"))
+        self.assertIn("form.yml", result["reason"])
 
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "owner/project"
