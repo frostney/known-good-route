@@ -65,7 +65,10 @@ WRAPPERS = {"div", "section", "article", "main", "header", "footer", "aside", "n
 # Elements whose headings are their section's content rather than sections.
 NESTING = {"li", "blockquote", "table", "pre", "code", "summary"}
 # A <picture> shows only the image inside it, so it is no media of its own.
-MEDIA = {"img", "video", "audio", "iframe", "object", "embed"}
+MEDIA = {"img", "video", "audio"}
+# An embed GitHub removes; cmark-gfm's tag filter already escapes <script>,
+# <iframe> and the like into text, as GitHub's does.
+STRIPPED = {"embed"}
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 # Opening one of these closes an open paragraph, as HTML does.
 CLOSES_PARAGRAPH = {
@@ -145,6 +148,8 @@ class TreeBuilder(HTMLParser):
             return
         if tag in CLOSES_PARAGRAPH and self.stack[-1].tag == "p":
             self.stack.pop()
+        if tag in STRIPPED:
+            return
         node = Node(tag, {key: value or "" for key, value in attrs})
         self.stack[-1].children.append(node)
         if tag not in VOID:
@@ -235,6 +240,19 @@ def literal(text: str) -> str:
     return re.sub(r"(?i)\b(?:https?|ftp)(?=://)|\bwww(?=\.)", lambda match: match.group(0) + "\\", text)
 
 
+def flattened(children: list[Node | str]) -> list[Node | str]:
+    """Children with plain wrappers such as <span> replaced by what they hold, as they show."""
+    shown: list[Node | str] = []
+    for child in children:
+        if isinstance(child, Node) and child.tag in ("span", "font"):
+            shown += flattened(child.children)
+        elif isinstance(child, str) and shown and isinstance(shown[-1], str):
+            shown[-1] += child
+        else:
+            shown.append(child)
+    return shown
+
+
 def heading_text(node: Node | str, github: bool = True) -> str:
     """A heading's words, with its inline code in backticks.
 
@@ -260,12 +278,13 @@ def heading_text(node: Node | str, github: bool = True) -> str:
         # Whitespace in code is literal; CODE_SPACE keeps each character through the heading's folding.
         code = re.sub(r"\s", lambda match: f"{CODE_SPACE}{ord(match.group(0)):x}{CODE_SPACE}", code)
         return f"{fence} {code} {fence}" if padded else f"{fence}{code}{fence}"
-    parts = [heading_text(child, github=github) for child in node.children]
+    children = flattened(node.children)
+    parts = [heading_text(child, github=github) for child in children]
     for index in range(len(parts) - 1):
         if parts[index].endswith("*") and parts[index + 1].startswith("*"):
             # Two runs of `*` side by side would merge; write one with `_` instead.
             for side in (index, index + 1):
-                child = node.children[side]
+                child = children[side]
                 width = len(INLINE_MARKERS.get(child.tag, "")) if isinstance(child, Node) else 0
                 if width and parts[side].startswith("*" * width):
                     parts[side] = "_" * width + parts[side][width:-width] + "_" * width
@@ -1168,40 +1187,51 @@ def readable(found: list[Template | CheckError], name: str | None) -> list[Templ
     return templates
 
 
-def in_order_pairs(expected: list[Heading], actual: list[Heading]) -> list[tuple[int, int]]:
-    """The longest run of template headings the body keeps, by text and in order.
-
-    Among runs of that length, the one with the most headings at their
-    template level wins, so a subsection that shares a section's name does not
-    take that section's place; text alone still pairs a heading whose level
-    changed.
-    """
-    rows, cols = len(expected), len(actual)
-    # One more pair always outweighs every same-level bonus together.
-    pair_weight = min(rows, cols) + 1
-
-    def weight(i: int, j: int) -> int:
-        if expected[i].text != actual[j].text:
-            return 0
-        return pair_weight + (expected[i].level == actual[j].level)
-
-    lengths = [[0] * (cols + 1) for _ in range(rows + 1)]
-    for i in range(rows - 1, -1, -1):
-        for j in range(cols - 1, -1, -1):
-            best = max(lengths[i + 1][j], lengths[i][j + 1])
-            if weight(i, j):
-                best = max(best, lengths[i + 1][j + 1] + weight(i, j))
-            lengths[i][j] = best
-    pairs, i, j = [], 0, 0
-    while i < rows and j < cols:
-        if weight(i, j) and lengths[i][j] == lengths[i + 1][j + 1] + weight(i, j):
-            pairs.append((i, j))
-            i, j = i + 1, j + 1
-        elif lengths[i + 1][j] >= lengths[i][j + 1]:
-            i += 1
+def longest_run(rows: list[int], cols: list[int], same: Callable[[int, int], bool]) -> list[tuple[int, int]]:
+    """The longest in-order run of pairs between two index lists, by `same`."""
+    lengths = [[0] * (len(cols) + 1) for _ in range(len(rows) + 1)]
+    for a in range(len(rows) - 1, -1, -1):
+        for b in range(len(cols) - 1, -1, -1):
+            if same(rows[a], cols[b]):
+                lengths[a][b] = lengths[a + 1][b + 1] + 1
+            else:
+                lengths[a][b] = max(lengths[a + 1][b], lengths[a][b + 1])
+    pairs, a, b = [], 0, 0
+    while a < len(rows) and b < len(cols):
+        if same(rows[a], cols[b]) and lengths[a][b] == lengths[a + 1][b + 1] + 1:
+            pairs.append((rows[a], cols[b]))
+            a, b = a + 1, b + 1
+        elif lengths[a + 1][b] >= lengths[a][b + 1]:
+            a += 1
         else:
-            j += 1
+            b += 1
     return pairs
+
+
+def in_order_pairs(expected: list[Heading], actual: list[Heading]) -> list[tuple[int, int]]:
+    """The template headings the body keeps in order: exact copies first, then by text alone.
+
+    Headings the body copied at the template's level pair first. Between
+    them, a heading whose level changed pairs by its text, unless the body
+    also holds an exact copy elsewhere, which is then out of order instead;
+    so a subsection that shares a section's name does not take its place.
+    """
+    exact = longest_run(
+        list(range(len(expected))),
+        list(range(len(actual))),
+        lambda i, j: (expected[i].level, expected[i].text) == (actual[j].level, actual[j].text),
+    )
+    kept = {j for _, j in exact}
+    elsewhere = {
+        i for i, heading in enumerate(expected)
+        if any(j not in kept and (actual[j].level, actual[j].text) == (heading.level, heading.text) for j in range(len(actual)))
+    }
+    pairs = list(exact)
+    bounds = [(-1, -1), *exact, (len(expected), len(actual))]
+    for (i0, j0), (i1, j1) in zip(bounds, bounds[1:]):
+        rows = [i for i in range(i0 + 1, i1) if i not in elsewhere]
+        pairs += longest_run(rows, list(range(j0 + 1, j1)), lambda i, j: expected[i].text == actual[j].text)
+    return sorted(pairs)
 
 
 def similarity(left: Heading, right: Heading) -> float:
@@ -1247,9 +1277,11 @@ def compare(expected: list[Heading], actual: list[Heading]) -> list[dict[str, An
     for index, heading in enumerate(expected):
         if index in matched:
             continue
-        position = next(
+        # The copy at the template's level first, so a subsection is not taken for it.
+        position = min(
             (j for j, found in enumerate(actual) if j not in used and found.text == heading.text),
-            None,
+            key=lambda j: (actual[j].level != heading.level, j),
+            default=None,
         )
         if position is None:
             continue
@@ -1315,7 +1347,11 @@ def select(
     scored = []
     for template in templates:
         problems = compare(template.headings, body)
-        kept = len(in_order_pairs(template.headings, body))
+        # Kept by text, at any level: a template the body follows keeps the most.
+        kept = len(longest_run(
+            list(range(len(template.headings))), list(range(len(body))),
+            lambda i, j: template.headings[i].text == body[j].text,
+        ))
         # Most template headings kept first, so a body missing a heading from
         # the template it follows does not match a smaller template instead.
         scored.append(((-kept, len(problems)), template, problems))

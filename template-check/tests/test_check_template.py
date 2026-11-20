@@ -725,6 +725,22 @@ class RendererParityTests(unittest.TestCase):
         found = CHECK_TEMPLATE.headings(REAL_RENDER("## Steps\n\n- <span>[ ]</span>\n"))
         self.assertEqual([h.has_content for h in found], [False])
 
+    def test_html_github_removes_is_no_content_and_escaped_html_is(self):
+        for html, shown in (('<embed src="https://example.org/results.pdf">', False), ("<script>alert(1)</script>", True)):
+            with self.subTest(html=html):
+                found = CHECK_TEMPLATE.headings(REAL_RENDER(f"## Evidence\n\n{html}\n"))
+                self.assertEqual([h.has_content for h in found], [shown])
+
+    def test_a_misplaced_exact_heading_is_out_of_order_not_a_subsection_to_promote(self):
+        template = CHECK_TEMPLATE.headings(REAL_RENDER("# Summary\n\n# Testing\n"))
+        text = "Summary\n-------\n\nx\n\n# Testing\n\ny\n\n# Summary\n\nz\n"
+        problems = CHECK_TEMPLATE.compare(template, CHECK_TEMPLATE.headings(REAL_RENDER(text), "pr", text))
+        self.assertEqual([(p["kind"], p["actual"]) for p in problems], [("out-of-order", "# Summary")])
+
+    def test_a_plain_span_does_not_change_adjacent_emphasis(self):
+        texts = {CHECK_TEMPLATE.headings(REAL_RENDER(h))[0].text for h in ("## **A**<em>B</em>\n", "## <span>**A**</span><em>B</em>\n")}
+        self.assertEqual(len(texts), 1)
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
