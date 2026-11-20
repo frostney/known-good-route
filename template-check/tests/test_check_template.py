@@ -699,6 +699,14 @@ class RendererParityTests(unittest.TestCase):
         template = CHECK_TEMPLATE.parse_template("t.md", "---\nname: Bug\ntitle: *description\n---\n## A\n", REAL_RENDER)
         self.assertEqual((template.name, [str(h) for h in template.headings]), ("Bug", ["## A"]))
 
+    def test_an_authored_alert_class_wrapper_keeps_its_heading(self):
+        template = '<div class="markdown-alert">\n\n## Summary\n\n</div>\n'
+        self.assertEqual([str(h) for h in CHECK_TEMPLATE.parse_template("t.md", template, REAL_RENDER).headings], ["## Summary"])
+
+    def test_a_comment_in_flow_front_matter_ends_at_its_line(self):
+        template = "---\n{about: Report a problem, # chooser text\n name: Bug Report}\n---\n## A\n"
+        self.assertEqual(CHECK_TEMPLATE.parse_template("t.md", template, REAL_RENDER).name, "Bug Report")
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
@@ -1264,6 +1272,14 @@ class CommandTests(unittest.TestCase):
         template = self.write("template.md", heading)
         code, result = self.run_check("--template", str(template), "--body", "-", stdin=f"{heading}\nIt builds.\n")
         self.assertEqual((code, result["state"]), (0, "match"))
+
+    def test_a_form_named_by_an_alias_blocks_a_named_check(self):
+        self.write(".github/ISSUE_TEMPLATE/bad.yml", "name: *display\nbody:\n  - type: input\n    attributes:\n      label: A\n")
+        self.write(".github/ISSUE_TEMPLATE/report.md", "---\nname: report\nabout: x\n---\n## Summary\n")
+        code, result = self.run_check(
+            "--root", str(self.checkout), "--kind", "issue", "--template-name", "report", "--body", "-", stdin="## Summary\n\nx\n"
+        )
+        self.assertEqual((code, result["state"]), (2, "operational-error"))
 
     def test_a_check_that_cannot_run_is_an_operational_error(self):
         undecodable = self.root / "latin1.md"

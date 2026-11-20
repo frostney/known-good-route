@@ -307,8 +307,9 @@ def plain(node: Node) -> bool:
     )
 
 
-def is_alert(node: Node) -> bool:
-    return node.tag == "div" and "markdown-alert" in node.attrs.get("class", "").split()
+def is_alert(node: Node, github: bool = True) -> bool:
+    """A GitHub alert; cmark-gfm leaves alerts as quotes, so locally a div with the class is the author's."""
+    return github and node.tag == "div" and "markdown-alert" in node.attrs.get("class", "").split()
 
 
 def names_head(paragraph: Node) -> bool:
@@ -448,7 +449,7 @@ class EndOfBody(Exception):
     """Reading reached the review note, where the body ends."""
 
 
-def note_rule(children: list[Node | str], valid: Callable[[Node, Node], bool]) -> Node | None:
+def note_rule(children: list[Node | str], valid: Callable[[Node, Node], bool], github: bool = True) -> Node | None:
     """The rule that opens the last review note, also inside wrapper elements."""
     found = None
     blocks = elements(children)
@@ -456,8 +457,8 @@ def note_rule(children: list[Node | str], valid: Callable[[Node, Node], bool]) -
         following = blocks[index + 1] if index + 1 < len(blocks) else None
         if block.tag == "hr" and following is not None and following.tag == "p" and names_head(following) and valid(block, following):
             found = block
-        elif block.tag in WRAPPERS and not is_alert(block) and not is_footnotes(block):
-            found = note_rule(block.children, valid) or found  # Later in the document than any before it.
+        elif block.tag in WRAPPERS and not is_alert(block, github) and not is_footnotes(block):
+            found = note_rule(block.children, valid, github) or found  # Later in the document than any before it.
     return found
 
 
@@ -486,7 +487,7 @@ def headings(html: str, kind: str | None = None, source: str | None = None, gith
         # The review note closes the body: a `---` rule with a blank line
         # before and after it, then a line that opens with `Edit:` and names
         # the head it covers in code, such as ``Edit: `1a2b3c4` reviewed``.
-        end = note_rule(top, lambda rule, note: spaced_rule(rule, note, source, positioned))
+        end = note_rule(top, lambda rule, note: spaced_rule(rule, note, source, positioned), github)
     # A rule or an empty element after the attribution shows nothing, so it does not hide it.
     shown = [block for block in blocks if block.tag != "hr" and (words(block) or has_media(block) or has_checked(block))]
     if kind == "issue" and shown:
@@ -496,7 +497,7 @@ def headings(html: str, kind: str | None = None, source: str | None = None, gith
         opening = paragraphs[0].children[0] if len(paragraphs) == 1 and paragraphs[0].children else None
         if last.tag == "blockquote" and isinstance(opening, str) and opening.strip().split("\n")[0] == "[!NOTE]":
             lines = lines[1:]  # cmark-gfm leaves the alert a quote that opens with its marker.
-        elif "markdown-alert-note" not in last.attrs.get("class", "").split():
+        elif not (github and "markdown-alert-note" in last.attrs.get("class", "").split()):
             lines = []
         loose_text = any(isinstance(child, str) and child.strip() for child in last.children)
         if len(lines) == 1 and ATTRIBUTION.fullmatch(" ".join(lines[0].split())) and not has_media(last) and not loose_text:
@@ -542,7 +543,7 @@ def headings(html: str, kind: str | None = None, source: str | None = None, gith
                     continue
             if child.tag in MEDIA or is_checked(child):
                 content()
-            visit(child.children, nested or child.tag in NESTING or is_alert(child))
+            visit(child.children, nested or child.tag in NESTING or is_alert(child, github))
 
     try:
         visit(top, False)
@@ -589,6 +590,28 @@ def render(markdown: str) -> str:
     return completed.stdout
 
 
+def without_comment(line: str) -> str:
+    """A YAML line without its comment: a `#` after whitespace, outside quotes, to the line's end.
+
+    Brackets may open on one line and close on another, so only quotes are tracked.
+    """
+    quote, escaped = "", False
+    for index, char in enumerate(line):
+        if escaped:
+            escaped = False
+        elif quote == '"' and char == "\\":
+            escaped = True
+        elif quote == "'" and char == "'" and line[index + 1 : index + 2] == "'":
+            escaped = True
+        elif quote:
+            quote = "" if char == quote else quote
+        elif char in "\"'" and (scalar_starts(line[:index]) or scalar_starts(PROPERTIES.sub("", line[:index]))):
+            quote = char
+        elif char == "#" and (index == 0 or line[index - 1].isspace()):
+            return line[:index]
+    return line
+
+
 def front_matter(text: str) -> tuple[dict[str, str], str]:
     """Split a Markdown template's YAML front matter from its body."""
     lines = text.replace("\r\n", "\n").split("\n")
@@ -599,7 +622,7 @@ def front_matter(text: str) -> tuple[dict[str, str], str]:
             block = [entry for entry in lines[1:index] if entry.strip() and not re.match(r"\.\.\.(?:[ \t]+#.*)?[ \t]*$", entry)]
             # Front matter is a YAML mapping, in block or flow style, at any
             # indent; an opening `---` rule over Markdown is part of the body.
-            joined = " ".join(entry.strip() for entry in block)
+            joined = " ".join(without_comment(entry).strip() for entry in block)
             if joined.startswith("{"):
                 return flow_mapping(joined), "\n".join(lines[index + 1 :])
             if not any(YAML_KEY.match(entry.lstrip()) for entry in block):
@@ -1075,7 +1098,8 @@ def discover(
                 if not error.name:
                     try:
                         if path.lower().endswith((".yml", ".yaml")):
-                            error.name = declared_name(text.removeprefix("\ufeff"))
+                            declared = declared_name(text.removeprefix("\ufeff"))
+                            error.name = "" if isinstance(declared, Alias) else declared  # An alias is unknown.
                         else:
                             fields = front_matter(text.removeprefix("\ufeff"))[0]
                             named = fields.get("name")
