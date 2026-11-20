@@ -204,6 +204,12 @@ describe("local authenticated evaluations", () => {
       });
       await Bun.write(path, ['model_provider = "proxy"', "[model_providers.proxy]", 'base_url = "https://proxy.example.test/v1"', "[model_providers.proxy.query_params]", 'api_key = "query-sentinel"'].join("\n"));
       await expect(codexProxyConfig(path)).rejects.toThrow("query_params");
+      await Bun.write(path, ['model_provider = "proxy"', "[model_providers.proxy]", 'base_url = "https://proxy.example.test/v1"', "[model_providers.proxy.http_headers]", 'Authorization = { value = "header-sentinel" }'].join("\n"));
+      await expect(codexProxyConfig(path)).rejects.toThrow("string");
+      await Bun.write(path, ['model_provider = "proxy"', "[model_providers.proxy]", 'base_url = "https://proxy.example.test/v1"', "experimental_bearer_token = 7"].join("\n"));
+      await expect(codexProxyConfig(path)).rejects.toThrow("string");
+      await Bun.write(path, ['model_provider = "proxy"', "[model_providers.proxy]", 'base_url = "https://proxy.example.test/v1"', 'http_headers = "header-sentinel"'].join("\n"));
+      await expect(codexProxyConfig(path)).rejects.toThrow("table of strings");
       await Bun.write(path, 'model_provider = "missing"\n');
       await expect(codexProxyConfig(path)).rejects.toThrow("base_url");
       await Bun.write(path, ['model_provider = "keyed"', "[model_providers.keyed]", 'base_url = "https://proxy.example.test/v1"', 'env_key = "PROXY_KEY"'].join("\n"));

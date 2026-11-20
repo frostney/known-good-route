@@ -92,19 +92,29 @@ export async function codexProxyConfig(
     http_headers: headers = {},
     ...table
   } = provider;
+  // Codex names a malformed value at startup; turning one into text would hide it.
+  if (
+    (token !== undefined && typeof token !== "string") ||
+    typeof headers !== "object" ||
+    Array.isArray(headers) ||
+    Object.values(headers).some((value) => typeof value !== "string")
+  )
+    throw new Error(
+      "Codex provider proxy needs experimental_bearer_token to be a string and http_headers a table of strings.",
+    );
   const env: Record<string, string> = {};
   // Codex rejects an empty variable, so an empty value stays where it was.
   if (token === "") table.experimental_bearer_token = token;
   else if (token !== undefined) {
     table.env_key = `${proxyVariable}TOKEN`;
-    env[table.env_key] = String(token);
+    env[table.env_key] = token;
   }
   const blank = Object.entries(headers).filter(([, value]) => value === "");
   const moved = Object.entries(headers)
     .filter(([, value]) => value !== "")
     .map(([header, value], index) => ({
       header,
-      value: String(value),
+      value: value as string,
       variable: `${proxyVariable}HEADER_${index}`,
     }));
   if (blank.length) table.http_headers = Object.fromEntries(blank);
