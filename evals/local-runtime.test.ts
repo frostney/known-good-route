@@ -211,8 +211,9 @@ describe("local authenticated evaluations", () => {
       await Bun.write(path, ['model_provider = "proxy"', "[model_providers.proxy]", 'base_url = "https://proxy.example.test/v1"', 'http_headers = "header-sentinel"'].join("\n"));
       await expect(codexProxyConfig(path)).rejects.toThrow("table of strings");
       await Bun.write(path, ['model_provider = "proxy"', "[model_providers.proxy]", 'base_url = "https://proxy.example.test/v1"', 'experimental_bearer_token = "token-\\u0000-sentinel"'].join("\n"));
-      const refusal = await codexProxyConfig(path).catch((error) => String(error));
-      expect(refusal).toContain("null bytes");
+      // Some Bun versions refuse the escape when they parse the file.
+      const refusal = await codexProxyConfig(path).then(() => "accepted", String);
+      expect(refusal).toMatch(/null bytes|readable/);
       expect(refusal).not.toContain("sentinel");
       await Bun.write(path, 'model_provider = "missing"\n');
       await expect(codexProxyConfig(path)).rejects.toThrow("base_url");
