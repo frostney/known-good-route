@@ -297,8 +297,14 @@ def has_media(node: Node) -> bool:
 
 
 def plain(node: Node) -> bool:
-    """Whether a node shows only text, in paragraphs at most, with no formatting such as code."""
-    return all(child.tag == "p" and plain(child) for child in elements(node.children))
+    """Whether a node shows only text, in paragraphs at most, with no formatting such as code.
+
+    An element that shows nothing, such as an empty code block, is ignored.
+    """
+    return all(
+        (child.tag == "p" and plain(child)) or (not text_of(child).strip() and not has_media(child) and child.tag not in MEDIA)
+        for child in elements(node.children)
+    )
 
 
 def is_alert(node: Node) -> bool:
@@ -627,6 +633,10 @@ def yaml_escape(match: re.Match[str]) -> str:
     return chr(point)
 
 
+class Alias(str):
+    """A YAML alias such as `*name`, which this reader does not resolve."""
+
+
 def bare(value: str) -> str:
     """A YAML value without the anchors and tags before it; no plain scalar starts with `&` or `!`."""
     return re.sub(r"^(?:[&!]\S*(?:[ \t]+|$))+", "", value.strip())
@@ -636,7 +646,7 @@ def scalar(value: str) -> str:
     """A plain or quoted single-line YAML scalar without a trailing comment."""
     value = bare(value)
     if value.startswith("*"):
-        raise CheckError(f"cannot read the YAML alias {value.split()[0]}, which this reader does not resolve")
+        return Alias(value.split()[0])  # Rejected only where the value is used.
     double = re.match(r'"(?:[^"\\]|\\.)*"', value)
     if double:
         inner = double.group(0)[1:-1]
@@ -778,6 +788,7 @@ def form_template(path: str, text: str) -> Template:
     """
     # The declared name comes first, so an error in a field still carries it.
     declared = declared_name(text)
+    declared = "" if isinstance(declared, Alias) else declared
     if not declared and re.search(r"""(?m)^["']?name["']?[ \t]*:""", text):
         # A name the form declares but this reader cannot read: it may be any template's.
         raise CheckError(f"{path}: cannot read the issue form's name; pass --template PATH")
@@ -793,6 +804,11 @@ def form_template(path: str, text: str) -> Template:
     block_indent: int | None = None  # Set by the block's first line.
 
     def finish() -> None:
+        for key in ("type", "label"):
+            if isinstance(item.get(key), Alias):
+                error = CheckError(f"{path}: cannot read the YAML alias {item[key]} on line {item['start']}; pass --template PATH")
+                error.name = name
+                raise error
         if not item or item.get("type") == "markdown":
             return
         if not item.get("label"):
@@ -926,6 +942,8 @@ def form_template(path: str, text: str) -> Template:
 
 def markdown_template(path: str, text: str, renderer: Callable[[str], str]) -> Template:
     fields, body = front_matter(text)
+    if isinstance(fields.get("name"), Alias):
+        raise CheckError(f"{path}: cannot read the YAML alias {fields['name']} that names the template; pass --template PATH")
     return Template(path, fields.get("name") or Path(path).stem, standalone(headings(renderer(body), source=body, github=False), renderer, body))
 
 
@@ -933,12 +951,7 @@ def parse_template(path: str, text: str, renderer: Callable[[str], str] | None =
     text = text.removeprefix("\ufeff")
     renderer = renderer or render
     if path.lower().endswith((".yml", ".yaml")):
-        try:
-            template = form_template(path, text)
-        except CheckError as error:
-            if str(error).startswith(path):
-                raise
-            raise CheckError(f"{path}: {error}; pass --template PATH") from error
+        template = form_template(path, text)
         # GitHub shows each label as a rendered heading, so compare it as one.
         if template.headings:
             shown = headings(renderer("\n\n".join(f"### {heading.text}" for heading in template.headings)), github=False)
@@ -1007,10 +1020,12 @@ def may_be_named(path: str, text: str, name: str) -> bool:
         text = text.removeprefix("\ufeff")
         if path.lower().endswith((".yml", ".yaml")):
             declared = declared_name(text)
-            if not declared:
-                return True  # Every form declares a name; one not found here may be this one.
+            if not declared or isinstance(declared, Alias):
+                return True  # Every form declares a name; one not read here may be this one.
         else:
             declared = front_matter(text)[0].get("name", "")
+            if isinstance(declared, Alias):
+                return True
     except ValueError:
         return True
     return (declared or Path(path).stem).casefold() == wanted
@@ -1063,7 +1078,8 @@ def discover(
                             error.name = declared_name(text.removeprefix("\ufeff"))
                         else:
                             fields = front_matter(text.removeprefix("\ufeff"))[0]
-                            error.name = fields.get("name") or Path(path).stem
+                            named = fields.get("name")
+                            error.name = "" if isinstance(named, Alias) else named or Path(path).stem
                     except ValueError:
                         pass
                 raise

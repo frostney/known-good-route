@@ -691,6 +691,14 @@ class RendererParityTests(unittest.TestCase):
         self.assertTrue(all(h.defined_elsewhere for h in headings))
         self.assertLessEqual(len(calls), 3)
 
+    def test_a_bracket_placeholder_beside_an_empty_code_block_is_no_content(self):
+        found = CHECK_TEMPLATE.headings(REAL_RENDER("## Steps\n\n- [ ]\n\n  ```\n  ```\n"))
+        self.assertEqual([h.has_content for h in found], [False])
+
+    def test_an_alias_in_metadata_the_check_does_not_use_is_ignored(self):
+        template = CHECK_TEMPLATE.parse_template("t.md", "---\nname: Bug\ntitle: *description\n---\n## A\n", REAL_RENDER)
+        self.assertEqual((template.name, [str(h) for h in template.headings]), ("Bug", ["## A"]))
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
@@ -779,6 +787,13 @@ class TemplateParsingTests(unittest.TestCase):
         form = "body:\n  - type: input\n    attributes: {label: &steps Steps}\n  - type: input\n    attributes: {label: *steps}\n"
         with self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, r"f\.yml: .*alias \*steps"):
             CHECK_TEMPLATE.parse_template("f.yml", form, REAL_RENDER)
+
+    def test_a_markdown_bullet_inside_a_form_value_is_text(self):
+        form = (
+            "body:\n  - type: markdown\n    attributes:\n      value: |\n        * Note: read this first\n"
+            "  - type: input\n    attributes:\n      label: A\n"
+        )
+        self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["A"])
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):
