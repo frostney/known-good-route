@@ -443,6 +443,16 @@ class HeadingTests(unittest.TestCase):
     def test_a_sibling_ordered_item_keeps_its_fence_in_the_list(self):
         self.assertEqual(CHECK_TEMPLATE.headings("1. First\n2. Second\n    ```\n   ## Testing\n    ```\n"), [])
 
+    def test_a_blockquote_after_a_list_item_closes_the_list(self):
+        self.assertEqual(CHECK_TEMPLATE.headings("- item\n> Note\n\n  ```\ncode\n  ## Testing\n  ```\n"), [])
+
+    def test_a_bare_dash_after_a_sibling_item_is_an_item_not_an_underline(self):
+        self.assertEqual(CHECK_TEMPLATE.headings("- first\n-\n    ```\n  ## Testing\n    ```\n"), [])
+
+    def test_escapes_past_the_last_code_point_are_value_errors(self):
+        with self.assertRaises(ValueError):
+            CHECK_TEMPLATE.scalar('"\\UFFFFFFFF"')
+
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 

@@ -154,13 +154,17 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
             # A line that continues the paragraph above, with no blank line
             # and no new block, stays in that paragraph's list item.
             lazy = paragraph and not was_blank and not (
-                LIST_ITEM.match(line) or ATX.match(line) or FENCE.match(line) or THEMATIC_BREAK.match(line)
+                LIST_ITEM.match(line)
+                or ATX.match(line)
+                or FENCE.match(line)
+                or THEMATIC_BREAK.match(line)
+                or line.lstrip(" ").startswith(">")
             )
             open_column = lists[-1] if lists else None  # Before this line closes any item.
             while lists and indent < lists[-1] and not lazy:
                 lists.pop()
             container = lists[-1] if lists else 0
-            underline = paragraph and SETEXT_UNDERLINE.match(line)
+            underline = paragraph and SETEXT_UNDERLINE.match(line) and indent >= (open_column or 0)
             item = None if underline or THEMATIC_BREAK.match(line) else LIST_ITEM.match(line)
             # A sibling of an open item continues its list; only an item that
             # would open a new list is held to the paragraph-interruption rule.
@@ -260,7 +264,12 @@ YAML_ESCAPES = {
 
 def yaml_escape(match: re.Match[str]) -> str:
     code = match.group(1)
-    return chr(int(code[1:], 16)) if len(code) > 1 else YAML_ESCAPES[code]
+    if len(code) == 1:
+        return YAML_ESCAPES[code]
+    point = int(code[1:], 16)
+    if point > sys.maxunicode:
+        raise ValueError(f"escape \\{code} is past the last Unicode code point")
+    return chr(point)
 
 
 def scalar(value: str) -> str:
@@ -570,7 +579,10 @@ def discover(source: Source, kind: str) -> list[Template | CheckError]:
             except ValueError as error:
                 failure = CheckError(f"cannot read template {path}: {error}")
                 # Keep the form's declared name, so a check that names it still sees the error.
-                failure.name = declared_name(text) if path.lower().endswith((".yml", ".yaml")) else ""
+                try:
+                    failure.name = declared_name(text) if path.lower().endswith((".yml", ".yaml")) else ""
+                except ValueError:
+                    failure.name = ""
                 raise failure from error
         except CheckError as error:
             error.path = path
