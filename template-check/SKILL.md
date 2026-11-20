@@ -61,9 +61,10 @@ belongs to.
 It reads a Markdown body or template as GitHub renders it: with cmark-gfm,
 the engine behind GitHub's Markdown, run locally, so a heading counts exactly
 where GitHub shows one and nothing is sent anywhere to be rendered. Without
-the `cmarkgfm` package, the script runs itself through uv with a pinned
-version; without uv, it is an operational error that names the install
-command. With `--template-name`, only the templates that can be the one named
+the `cmarkgfm` package, it renders through uv with a pinned version from PyPI,
+outside the checkout and ignoring uv configuration files; without uv, it is an
+operational error that names the install command. A check with no template
+needs no renderer. With `--template-name`, only the templates that can be the one named
 are read.
 
 Text in code, comments and other HTML GitHub does not show is no heading. A

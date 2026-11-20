@@ -218,6 +218,43 @@ class RenderedHeadingTests(unittest.TestCase):
         )
         self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(note, "issue")], [True])
 
+    def test_a_review_note_may_name_its_commit_inside_other_formatting(self):
+        note = "<h2>Testing</h2><hr><p>Edit: <strong><code>abc1234</code></strong> reviewed</p>"
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(note, "pr")], [False])
+
+    def test_a_heading_keeps_its_inline_code_apart_from_text(self):
+        plain, code = (
+            CHECK_TEMPLATE.headings(html)[0].text
+            for html in ("<h2>:warning: Testing</h2>", "<h2><code>:warning:</code> Testing</h2>")
+        )
+        self.assertEqual((plain, code), (":warning: Testing", "`:warning:` Testing"))
+
+    def test_www_github_com_is_github_com(self):
+        self.assertEqual(CHECK_TEMPLATE.repository("https://www.github.com/cli/cli"), "github.com/cli/cli")
+
+    def test_without_the_renderer_or_uv_rendering_is_an_operational_error(self):
+        original = (CHECK_TEMPLATE.cmarkgfm, CHECK_TEMPLATE.shutil.which)
+        CHECK_TEMPLATE.cmarkgfm, CHECK_TEMPLATE.shutil.which = None, lambda name: None
+        try:
+            with self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, "pip install cmarkgfm"):
+                REAL_RENDER("## A\n")
+        finally:
+            CHECK_TEMPLATE.cmarkgfm, CHECK_TEMPLATE.shutil.which = original
+
+    def test_a_check_with_no_template_renders_nothing(self):
+        original = CHECK_TEMPLATE.render
+
+        def unavailable(markdown):
+            raise AssertionError("rendered without a template")
+
+        CHECK_TEMPLATE.render = unavailable
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                args = CHECK_TEMPLATE.parser().parse_args(["--root", directory, "--kind", "pr", "--body", os.devnull])
+                self.assertEqual(CHECK_TEMPLATE.run(args)["state"], "no-template")
+        finally:
+            CHECK_TEMPLATE.render = original
+
     def test_a_repository_url_names_its_host(self):
         self.assertEqual(
             [CHECK_TEMPLATE.repository(name) for name in ("https://ghe.example.com/cli/cli.git", "cli/cli", None)],

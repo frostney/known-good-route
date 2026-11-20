@@ -16,11 +16,11 @@ from __future__ import annotations
 import argparse
 import difflib
 import json
-import os
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from pathlib import Path
@@ -32,11 +32,18 @@ sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__
 try:
     import cmarkgfm
     from cmarkgfm.cmark import Options
-except ImportError:  # main() runs the script again with it, through uv.
+except ImportError:  # render() runs it through uv instead.
     cmarkgfm = None
 
 # GitHub's cmark-gfm for Python, pinned to a release over a year old.
 CMARKGFM = "cmarkgfm==2025.10.22"
+# Raw HTML is kept, as GitHub keeps it before filtering the tags it never shows.
+RENDER = (
+    "import sys, cmarkgfm\n"
+    "from cmarkgfm.cmark import Options\n"
+    "sys.stdout.write(cmarkgfm.github_flavored_markdown_to_html(sys.stdin.read(), "
+    "options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES))"
+)
 
 
 HEADING_TAG = re.compile(r"h([1-6])")
@@ -127,6 +134,20 @@ def text_of(node: Node | str) -> str:
     return "".join(text_of(child) for child in node.children)
 
 
+def heading_text(node: Node | str) -> str:
+    """A heading's words, with its inline code in backticks.
+
+    GitHub turns `:warning:` into an emoji in text but not in code, so a
+    heading with the shortcode in code differs from one without.
+    """
+    if isinstance(node, str):
+        return node
+    if node.tag == "img":
+        return node.attrs.get("alt", "")
+    inner = "".join(heading_text(child) for child in node.children)
+    return f"`{inner}`" if node.tag == "code" else inner
+
+
 def words(node: Node | str) -> str:
     return " ".join(text_of(node).split())
 
@@ -147,12 +168,23 @@ def names_head(paragraph: Node) -> bool:
     """Whether a paragraph's first line opens with `Edit:` and names a commit in code."""
     if not words(paragraph).startswith("Edit:"):
         return False
-    for child in paragraph.children:
-        if isinstance(child, str) and "\n" in child:
-            return False  # The first line ended without naming a commit.
-        if isinstance(child, Node) and child.tag == "code" and re.fullmatch(r"[0-9a-f]{4,40}", words(child)):
-            return True
-    return False
+
+    def first_line(node: Node) -> bool | None:
+        """True once a commit in code is found, False at the first line break."""
+        for child in node.children:
+            if isinstance(child, str):
+                if "\n" in child:
+                    return False
+            elif child.tag == "code":
+                if re.fullmatch(r"[0-9a-f]{4,40}", words(child)):
+                    return True
+            else:
+                found = first_line(child)
+                if found is not None:
+                    return found
+        return None
+
+    return bool(first_line(paragraph))
 
 
 def is_footnotes(node: Node) -> bool:
@@ -217,7 +249,7 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
                 continue
             level = HEADING_TAG.fullmatch(child.tag)
             if level and not nested:
-                heading = Heading(int(level.group(1)), words(child))
+                heading = Heading(int(level.group(1)), " ".join(heading_text(child).split()))
                 while open_sections and open_sections[-1].level >= heading.level:
                     open_sections.pop()
                 content()  # A subsection is content of the sections around it.
@@ -246,11 +278,31 @@ def render(markdown: str) -> str:
     """
     if not markdown.strip():
         return ""
-    if cmarkgfm is None:
+    if cmarkgfm is not None:
+        return cmarkgfm.github_flavored_markdown_to_html(
+            markdown, options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES
+        )
+    uv = shutil.which("uv")
+    if not uv:
         raise CheckError(f"the Markdown renderer is not installed: pip install {CMARKGFM}")
-    return cmarkgfm.github_flavored_markdown_to_html(
-        markdown, options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES
-    )
+    # Outside the checkout, with uv's configuration files ignored and PyPI named,
+    # so no checkout can choose where the renderer comes from.
+    command = [
+        uv, "run", "--quiet", "--no-config", "--no-project", "--isolated",
+        "--default-index", "https://pypi.org/simple", "--python", sys.executable,
+        "--with", CMARKGFM, "python", "-c", RENDER,
+    ]
+    try:
+        completed = subprocess.run(
+            command, input=markdown, cwd=tempfile.gettempdir(), text=True, encoding="utf-8",
+            capture_output=True, timeout=300, check=False,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise CheckError("the Markdown renderer did not start through uv within 300s") from error
+    if completed.returncode != 0:
+        detail = (completed.stderr or completed.stdout).strip()[-500:]
+        raise CheckError(f"cannot run the Markdown renderer through uv ({detail}); pip install {CMARKGFM}")
+    return completed.stdout
 
 
 def front_matter(text: str) -> tuple[dict[str, str], str]:
@@ -950,7 +1002,8 @@ def repository(name: str | None) -> str | None:
     path = url.path.strip("/").removesuffix(".git")
     if not url.hostname or path.count("/") != 1:
         raise CheckError(f"--repo {name} names no repository")
-    return f"{url.hostname}/{path}"
+    host = url.hostname.lower()
+    return f"{'github.com' if host == 'www.github.com' else host}/{path}"
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
@@ -1002,17 +1055,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
-def with_renderer() -> None:
-    """Run this script again with the renderer, through uv, when it is not installed."""
-    if cmarkgfm is not None or os.environ.get("TEMPLATE_CHECK_BOOTSTRAPPED") or not shutil.which("uv"):
-        return  # render() reports a renderer that is still missing.
-    os.environ["TEMPLATE_CHECK_BOOTSTRAPPED"] = "1"
-    command = ["uv", "run", "--quiet", "--no-project", "--python", sys.executable, "--with", CMARKGFM]
-    os.execvp("uv", [*command, "python", __file__, *sys.argv[1:]])
-
-
 def main() -> int:
-    with_renderer()
     args = parser().parse_args()
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(errors="replace")  # A label the terminal cannot encode.
