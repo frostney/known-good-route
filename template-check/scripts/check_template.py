@@ -144,7 +144,7 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
             empty_item = bool(item) and not line[len(item.group(0)) :].strip()
             if item:
                 # An empty item's content starts one column past its marker.
-                marker = item.group(0)
+                marker = item.group(0).expandtabs(4)
                 lists.append(len(marker.rstrip()) + 1 if empty_item else len(marker))
             fence_indent = container
         inner = line[fence_indent:] if indent >= fence_indent else line.lstrip(" ")
@@ -204,7 +204,10 @@ def front_matter(text: str) -> tuple[dict[str, str], str]:
             # Front matter holds YAML keys; an opening `---` rule over Markdown
             # is part of the body.
             if not any(YAML_KEY.match(entry) for entry in block) or not all(
-                entry.startswith((" ", "\t", "- ", "#", "]", "}")) or YAML_KEY.match(entry) for entry in block
+                entry.startswith((" ", "\t", "- ", "#", "]", "}"))
+                or entry.rstrip() == "-"
+                or YAML_KEY.match(entry)
+                for entry in block
             ):
                 return {}, text
             fields = {}
@@ -266,9 +269,10 @@ def flow_mapping(text: str) -> dict[str, str]:
     """The entries of a one-line YAML flow mapping such as `{label: Steps}`.
 
     A comma or colon inside a quoted value or a nested bracket belongs to that
-    value. Anything that is not a closed flow mapping reads as empty.
+    value. A comment may follow the closing brace. Anything that is not a
+    closed flow mapping reads as empty.
     """
-    text = text.strip()
+    text = top_level(text, "#")[0].strip()
     if not (text.startswith("{") and text.endswith("}")):
         return {}
     found = {}
@@ -332,13 +336,14 @@ def form_template(path: str, text: str) -> Template:
         if content.startswith("#"):
             continue
         # A list item under `body:` may start at the same indent as the key.
-        if indent == 0 and not (in_body and content.startswith("- ")):
+        starts_item = content == "-" or content.startswith("- ")
+        if indent == 0 and not (in_body and starts_item):
             key, _, value = content.partition(":")
             in_body = scalar(key) == "body"
             continue
         if not in_body:
             continue
-        if content.startswith("- ") and (item_indent is None or indent == item_indent):
+        if starts_item and (item_indent is None or indent == item_indent):
             finish()
             item_indent, item = indent, {"start": number}
             attributes_indent = label_indent = None

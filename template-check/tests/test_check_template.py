@@ -284,6 +284,29 @@ class HeadingTests(unittest.TestCase):
             [True, False],
         )
 
+    def test_a_tab_after_a_list_marker_counts_to_the_next_stop(self):
+        found = CHECK_TEMPLATE.headings("-\tExample\n\n    ```\n    ## In code\n       ```\n\n## Next\n")
+        self.assertEqual([str(h) for h in found], ["## Next"])
+
+    def test_a_form_field_dash_may_stand_alone_and_never_yields_a_partial_form(self):
+        form = "body:\n  -\n    type: textarea\n    attributes:\n      label: Summary\n  - type: input\n    attributes: {label: Steps}\n"
+        self.assertEqual(
+            [str(h) for h in CHECK_TEMPLATE.parse_template("form.yml", form).headings], ["### Summary", "### Steps"]
+        )
+        with self.assertRaises(CHECK_TEMPLATE.CheckError):
+            CHECK_TEMPLATE.parse_template("form.yml", form.replace("    type: textarea\n    attributes:\n      label", "      type: textarea\n      attributes:\n        label"))
+
+    def test_a_comment_may_follow_inline_form_attributes(self):
+        template = CHECK_TEMPLATE.parse_template(
+            "form.yml", "body:\n  - type: input\n    attributes: {label: 'C# guide'} # Required entry\n"
+        )
+        self.assertEqual([str(h) for h in template.headings], ["### C# guide"])
+
+    def test_front_matter_may_put_a_sequence_dash_on_its_own_line(self):
+        self.assertEqual(
+            CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug Report\nlabels:\n-\n  bug\n---\n## A\n").name, "Bug Report"
+        )
+
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 
