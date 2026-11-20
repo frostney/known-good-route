@@ -104,7 +104,9 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
     container = 0  # Content column the current line sits in.
     empty_item = False  # The last line was a list marker with nothing after it.
     paragraph = False  # The last line was paragraph text a Setext underline can follow.
+    previous_blank = True  # The previous physical line was blank, code or not.
     for number, line in enumerate(lines, start=1):
+        was_blank, previous_blank = previous_blank, not line.strip()
         # Markdown measures indentation in columns, with tab stops every four.
         margin = len(line) - len(line.lstrip(" \t"))
         line = line[:margin].expandtabs(4) + line[margin:]
@@ -137,7 +139,7 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
                     lists.pop()
                 empty_item = False
                 continue
-            if kind == "pr" and after_blank and NOTE_RULE.match(line):
+            if kind == "pr" and (after_blank or was_blank) and NOTE_RULE.match(line):
                 following = next((rest for rest in lines[number:] if rest.strip()), "")
                 if NOTE_OPENING.match(following):
                     break
@@ -190,7 +192,7 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
             open_sections.append(heading)
             paragraph = False
             continue
-        paragraph = not item and not underline
+        paragraph = not item and not underline and not THEMATIC_BREAK.match(line)
         for section in open_sections:
             section.has_content = True
     return found
@@ -238,19 +240,30 @@ def front_matter(text: str) -> tuple[dict[str, str], str]:
     return {}, text
 
 
+# YAML's double-quoted escapes: a character, or a code point in hex.
+YAML_ESCAPE = re.compile(r"\\(x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8}|.)")
+YAML_ESCAPES = {
+    "0": "\0", "a": "\a", "b": "\b", "t": "\t", "\t": "\t", "n": "\n", "v": "\v", "f": "\f",
+    "r": "\r", "e": "\x1b", " ": " ", '"': '"', "/": "/", "\\": "\\", "N": "\x85",
+    "_": "\xa0", "L": "\u2028", "P": "\u2029",
+}
+
+
+def yaml_escape(match: re.Match[str]) -> str:
+    code = match.group(1)
+    return chr(int(code[1:], 16)) if len(code) > 1 else YAML_ESCAPES[code]
+
+
 def scalar(value: str) -> str:
     """A plain or quoted single-line YAML scalar without a trailing comment."""
     value = value.strip()
     double = re.match(r'"(?:[^"\\]|\\.)*"', value)
     if double:
+        inner = double.group(0)[1:-1]
         try:
-            return str(json.loads(double.group(0)))
-        except ValueError:
-            inner = double.group(0)[1:-1]
-            try:
-                return inner.encode("latin-1", "backslashreplace").decode("unicode_escape")
-            except UnicodeDecodeError:
-                return inner
+            return YAML_ESCAPE.sub(yaml_escape, inner)
+        except KeyError:
+            return inner  # An escape YAML does not define; compare the text as written.
     single = re.match(r"'(?:[^']|'')*'", value)
     if single:
         return single.group(0)[1:-1].replace("''", "'")
@@ -389,7 +402,7 @@ def form_template(path: str, text: str) -> Template:
         if content.startswith("#"):
             continue
         # A list item under `body:` may start at the same indent as the key.
-        starts_item = content == "-" or content.startswith("- ")
+        starts_item = bool(re.match(r"-(?:[ \t]|$)", content))
         if indent == 0 and not (in_body and starts_item):
             key, _, value = content.partition(":")
             in_body = scalar(key) == "body"
@@ -401,7 +414,8 @@ def form_template(path: str, text: str) -> Template:
             item_indent, item = indent, {"start": number}
             attributes_indent = label_indent = None
             pad = 1 + len(content[1:]) - len(content[1:].lstrip())
-            key_indent = None if content == "-" else indent + pad
+            # After a bare or comment-only dash, the first key sets the column.
+            key_indent = None if content[1:].strip().startswith("#") or not content[1:].strip() else indent + pad
             content, indent = content[1:].lstrip(), indent + pad
         if item_indent is None:
             continue

@@ -404,6 +404,30 @@ class HeadingTests(unittest.TestCase):
     def test_yaml_escapes_in_a_double_quoted_label_decode(self):
         self.assertEqual(CHECK_TEMPLATE.flow_mapping('{label: "OS \\x28optional\\x29"}'), {"label": "OS (optional)"})
 
+    def test_a_field_whose_dash_is_followed_by_a_tab_is_never_skipped(self):
+        with self.assertRaises(CHECK_TEMPLATE.CheckError):
+            CHECK_TEMPLATE.parse_template(
+                "f.yml", "body:\n  - type: input\n    attributes: {label: A}\n  -\t{type: input, attributes: {label: B}}\n"
+            )
+
+    def test_a_comment_only_dash_takes_its_key_column_from_the_first_key(self):
+        form = "body:\n  -  # instructions\n    type: markdown\n    attributes:\n      value: hi\n  - type: input\n    attributes:\n      label: A\n"
+        self.assertEqual([str(h) for h in CHECK_TEMPLATE.parse_template("f.yml", form).headings], ["### A"])
+
+    def test_a_thematic_break_is_not_a_paragraph_a_list_cannot_interrupt(self):
+        found = CHECK_TEMPLATE.headings("text\n\n---\n2. item\n\n   ```\n      ```\n\n## Testing\n")
+        self.assertEqual([str(h) for h in found], ["## Testing"])
+
+    def test_a_review_note_after_a_list_fence_is_not_body_content(self):
+        text = "## Summary\n\nx\n\n- item\n\n  ```\n  code\n\n---\n\nEdit: reviewed\n\n## Testing\n"
+        self.assertEqual([str(h) for h in CHECK_TEMPLATE.headings(text, "pr")], ["## Summary"])
+
+    def test_double_quoted_values_decode_yaml_escapes(self):
+        self.assertEqual(
+            [CHECK_TEMPLATE.scalar(value) for value in ('"Before\\_after"', '"OS \\x28optional\\x29"', '"\\"q\\" \\\\"')],
+            ["Before\xa0after", "OS (optional)", '"q" \\'],
+        )
+
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 
