@@ -126,7 +126,12 @@ if sys.argv[1:2] == ["api"] and sys.argv[-3:] == ["markdown", "--input", "-"]:
         sys.exit(1)
     sys.stdout.buffer.write(mini_render(text).encode("utf-8"))  # gh writes UTF-8.
     sys.exit(0)
-answer = responses.get(f"{os.getcwd()} :: " + " ".join(sys.argv[1:]), responses.get(" ".join(sys.argv[1:])))
+command = " ".join(sys.argv[1:])
+answer = responses.get(f"{os.getcwd()} :: {command} :: GH_HOST") if os.environ.get("GH_HOST") else None
+answer = answer or responses.get(f"{os.getcwd()} :: {command}", responses.get(command))
+if answer and answer.startswith("!"):
+    print(answer[1:], file=sys.stderr)  # A gh failure, as gh reports it.
+    sys.exit(1)
 # Like gh, GH_HOST hides a checkout whose remote is on another host.
 if answer and sys.argv[1:3] == ["repo", "view"] and os.environ.get("GH_HOST") and f"//{os.environ['GH_HOST']}/" not in answer:
     answer = None
@@ -250,6 +255,12 @@ class RenderedHeadingTests(unittest.TestCase):
         self.assertEqual(
             [CHECK_TEMPLATE.repository(name) for name in ("https://ghe.example.com/cli/cli.git", "cli/cli", None)],
             ["ghe.example.com/cli/cli", "cli/cli", None],
+        )
+
+    def test_a_host_is_spelled_as_gh_spells_it(self):
+        self.assertEqual(
+            [CHECK_TEMPLATE.repository(name) for name in ("WWW.GitHub.com/cli/cli", "https://GITHUB.COM/cli/cli")],
+            ["github.com/cli/cli", "github.com/cli/cli"],
         )
 
     def test_an_attribution_in_another_kind_of_alert_is_content(self):
@@ -1086,6 +1097,41 @@ class CommandTests(unittest.TestCase):
         self.assertEqual((code, result["state"]), (2, "operational-error"))
         self.assertIn("outside the checkout", result["reason"])
         self.assertEqual(self.renders(log), [])
+
+    def test_a_template_link_from_a_checkout_to_outside_it_is_never_read(self):
+        subprocess.run(["git", "init", "-q", str(self.checkout)], check=True)
+        outside = self.root / "elsewhere.md"
+        outside.write_text("## Private\n", encoding="utf-8")
+        link = self.checkout / "template.md"
+        link.symlink_to(outside)
+        log = self.root / "gh.log"
+        self.env["FAKE_GH_LOG"] = str(log)
+        code, result = self.run_check("--template", str(link), "--body", "-", stdin="## Private\n\nx\n")
+        self.assertEqual((code, result["state"]), (2, "operational-error"))
+        self.assertIn("outside its checkout", result["reason"])
+        self.assertEqual(self.renders(log), [])
+
+    def test_gh_host_is_tried_only_when_gh_knows_no_host_for_the_remotes(self):
+        subprocess.run(["git", "init", "-q", str(self.checkout)], check=True)
+        self.write(".github/pull_request_template.md", "## Summary\n")
+        key = f"{self.checkout} :: repo view --json url --jq .url"
+        for first, expected in (
+            ("!none of the git remotes configured for this repository point to a known GitHub host", (0, "match")),
+            ("!error connecting to the host: network is unreachable", (2, "operational-error")),
+        ):
+            with self.subTest(first=first):
+                log = self.root / f"gh-{expected[0]}.log"
+                self.env.update({"FAKE_GH_LOG": str(log), "GH_HOST": "ghe.example.com"})
+                self.scenario.write_text(json.dumps({
+                    key: first,
+                    f"{key} :: GH_HOST": "https://ghe.example.com/cli/cli\n",
+                }), encoding="utf-8")
+                code, result = self.run_check(
+                    "--repo", "ghe.example.com/cli/cli", "--root", str(self.checkout), "--kind", "pr", "--body", "-",
+                    stdin="## Summary\n\nDone.\n",
+                )
+                self.assertEqual((code, result["state"]), expected)
+                self.assertEqual(len(self.renders(log)), 2 if expected[0] == 0 else 0)
 
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "cli/cli"

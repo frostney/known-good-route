@@ -237,7 +237,7 @@ def target_host(repo: str | None) -> str | None:
     """
     named = repository(repo or os.environ.get("GH_REPO")) or ""
     if named.count("/") == 2:
-        return named.split("/")[0]
+        return canonical_host(named.split("/")[0])
     if named:
         try:
             url = gh_runner(["repo", "view", named, "--json", "url", "--jq", ".url"])
@@ -246,8 +246,14 @@ def target_host(repo: str | None) -> str | None:
         host = urlparse((url or "").strip()).hostname
         if not host:
             raise CheckError(f"cannot resolve the GitHub host of {named}")
-        return host
+        return canonical_host(host)
     return checkout_host(None, os.environ)
+
+
+def canonical_host(host: str) -> str:
+    """A host as gh spells it: lowercase, and www.github.com is github.com."""
+    host = host.lower()
+    return "github.com" if host == "www.github.com" else host
 
 
 def checkout_host(root: Path | None, env: dict[str, str] | os._Environ[str]) -> str | None:
@@ -256,18 +262,21 @@ def checkout_host(root: Path | None, env: dict[str, str] | os._Environ[str]) -> 
     A git checkout gh cannot place is an operational error: it belongs to some
     host, or to none yet, and Markdown is never sent to a guessed one.
     """
+    reason = "gh found no repository"
     try:
         url = gh_runner(["repo", "view", "--json", "url", "--jq", ".url"], cwd=root, env=dict(env))
-    except CheckError:
-        url = None
+    except CheckError as error:
+        url, reason = None, str(error)
     if url and urlparse(url.strip()).hostname:
-        return urlparse(url.strip()).hostname
+        return canonical_host(urlparse(url.strip()).hostname)
     inside = subprocess.run(
         ["git", *(["-C", str(root)] if root else []), "rev-parse", "--is-inside-work-tree"],
         text=True, capture_output=True, check=False,
     )
     if inside.returncode == 0 and inside.stdout.strip() == "true":
-        raise CheckError("cannot tell which GitHub host this checkout belongs to; pass --repo HOST/OWNER/REPO")
+        raise CheckError(
+            f"cannot tell which GitHub host this checkout belongs to ({reason}); pass --repo HOST/OWNER/REPO"
+        )
     return None
 
 
@@ -280,8 +289,10 @@ def same_host(root: Path, host: str | None) -> str | None:
     environment = {key: value for key, value in os.environ.items() if key not in ("GH_REPO", "GH_HOST")}
     try:
         own = checkout_host(root, environment)
-    except CheckError:
-        if "GH_HOST" not in os.environ:
+    except CheckError as error:
+        # Retry with GH_HOST only when gh knew no host for the remotes; any other
+        # failure leaves the checkout unplaced, and nothing is rendered.
+        if "GH_HOST" not in os.environ or "known GitHub host" not in str(error):
             raise
         own = checkout_host(root, {**environment, "GH_HOST": os.environ["GH_HOST"]})
     if host is None:
@@ -977,7 +988,7 @@ def live_body(kind: str, number: int, repo: str | None) -> tuple[str, str]:
         host = urlparse(data["url"]).hostname
         if not host:
             raise ValueError("no host")
-        return str(data["body"] or ""), host
+        return str(data["body"] or ""), canonical_host(host)
     except (ValueError, KeyError, TypeError) as error:
         raise CheckError(f"gh returned no body or URL for {kind} #{number}") from error
 
@@ -1006,15 +1017,32 @@ def parser() -> argparse.ArgumentParser:
     return result
 
 
+def template_checkout(path: Path) -> Path | None:
+    """The checkout a template path lies in, refusing one that resolves outside it."""
+    located = subprocess.run(
+        ["git", "-C", str(path.absolute().parent), "rev-parse", "--show-toplevel"],
+        text=True, capture_output=True, check=False,
+    )
+    if located.returncode != 0:
+        return None  # A standalone file: it renders on the body's host.
+    root = Path(located.stdout.strip())
+    if not path.resolve().is_relative_to(root.resolve()):
+        raise CheckError(f"template {path} resolves outside its checkout")
+    return root
+
+
 def repository(name: str | None) -> str | None:
     """OWNER/REPO or HOST/OWNER/REPO, also from a repository URL gh accepts."""
+    if name and "://" not in name and name.count("/") == 2:
+        host, slug = name.split("/", 1)
+        return f"{canonical_host(host)}/{slug}"
     if not name or "://" not in name:
         return name
     url = urlparse(name)
     path = url.path.strip("/").removesuffix(".git")
     if not url.hostname or path.count("/") != 1:
         raise CheckError(f"--repo {name} names no repository")
-    return f"{url.hostname}/{path}"
+    return f"{canonical_host(url.hostname)}/{path}"
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
@@ -1058,7 +1086,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     if args.template:
         try:
-            renderer = renderer_for(args.template.resolve().parent)
+            renderer = renderer_for(template_checkout(args.template))
             templates = [parse_template(str(args.template), args.template.read_text(encoding="utf-8"), renderer)]
         except (OSError, ValueError) as error:
             raise CheckError(f"cannot read template: {error}") from error
