@@ -124,7 +124,7 @@ if sys.argv[1:2] == ["api"] and sys.argv[-3:] == ["markdown", "--input", "-"]:
     if "render-error" in responses or responses.get("render-error-for", "\0") in text:
         print(responses.get("render-error", "gh: Server Error (HTTP 500)"), file=sys.stderr)
         sys.exit(1)
-    print(mini_render(text), end="")
+    sys.stdout.buffer.write(mini_render(text).encode("utf-8"))  # gh writes UTF-8.
     sys.exit(0)
 answer = responses.get(f"{os.getcwd()} :: " + " ".join(sys.argv[1:]), responses.get(" ".join(sys.argv[1:])))
 if answer is None:
@@ -182,6 +182,9 @@ class RenderedHeadingTests(unittest.TestCase):
         self.assertEqual(self.read("attribution", "pr"), [("Related", True)])
         self.assertEqual(self.read("note_by_person", "issue"), [("Related", True)])
 
+    def test_an_attribution_note_with_more_in_it_is_content(self):
+        self.assertEqual(self.read("attribution_with_more", "issue"), [("Related", True)])
+
     def test_a_heading_inside_an_alert_is_content(self):
         self.assertEqual(self.read("alert_heading"), [("A", True), ("B", True)])
 
@@ -217,7 +220,7 @@ class RenderedHeadingTests(unittest.TestCase):
             original = CHECK_TEMPLATE.gh_runner
             environment = {key: os.environ.pop(key) for key in ("GH_REPO", "GH_HOST") if key in os.environ}
 
-            def unresolved(args, stdin=None, cwd=None):
+            def unresolved(args, **options):
                 raise CHECK_TEMPLATE.CheckError("no repository")
 
             CHECK_TEMPLATE.gh_runner = unresolved
@@ -240,7 +243,7 @@ class RenderedHeadingTests(unittest.TestCase):
     def test_markdown_renders_on_the_target_host(self):
         calls = []
         original = CHECK_TEMPLATE.gh_runner
-        CHECK_TEMPLATE.gh_runner = lambda args, stdin=None: calls.append(args) or "<h2>A</h2>"
+        CHECK_TEMPLATE.gh_runner = lambda args, *rest, **options: calls.append(args) or "<h2>A</h2>"
         try:
             REAL_RENDER("## A", "ghe.example.com")
             REAL_RENDER("## A")
@@ -265,7 +268,7 @@ class RenderedHeadingTests(unittest.TestCase):
         # gh resolves an SSH-over-443 remote to github.com, not ssh.github.com.
         original = CHECK_TEMPLATE.gh_runner
         environment = {key: os.environ.pop(key) for key in ("GH_REPO", "GH_HOST") if key in os.environ}
-        CHECK_TEMPLATE.gh_runner = lambda args, stdin=None, cwd=None: "https://github.com/cli/cli\n"
+        CHECK_TEMPLATE.gh_runner = lambda args, **options: "https://github.com/cli/cli\n"
         try:
             self.assertEqual(CHECK_TEMPLATE.target_host(None, None), "github.com")
         finally:
@@ -880,6 +883,35 @@ class CommandTests(unittest.TestCase):
         self.assertEqual((code, result["state"]), (0, "match"))
         renders = [call for call in map(json.loads, log.read_text().splitlines()) if call[-3:] == ["markdown", "--input", "-"]]
         self.assertEqual(renders, [["api", "--hostname", "ghe.example.com", "markdown", "--input", "-"], ["api", "markdown", "--input", "-"]])
+
+    def test_root_templates_render_on_the_root_checkouts_host_whatever_repo_names(self):
+        log = self.root / "gh.log"
+        self.env["FAKE_GH_LOG"] = str(log)
+        self.write(".github/pull_request_template.md", "## Summary\n")
+        self.scenario.write_text(json.dumps({
+            f"{self.checkout} :: repo view --json url --jq .url": "https://ghe.example.com/cli/cli\n",
+        }), encoding="utf-8")
+        code, result = self.run_check(
+            "--repo", "cli/cli", "--root", str(self.checkout), "--kind", "pr", "--body", "-", stdin="## Summary\n\nDone.\n"
+        )
+        self.assertEqual((code, result["state"]), (0, "match"))
+        renders = [call for call in map(json.loads, log.read_text().splitlines()) if call[-3:] == ["markdown", "--input", "-"]]
+        self.assertEqual(renders[0], ["api", "--hostname", "ghe.example.com", "markdown", "--input", "-"])
+        self.assertEqual(renders[1], ["api", "markdown", "--input", "-"])
+
+    def test_a_checkout_without_templates_needs_no_host(self):
+        subprocess.run(["git", "init", "-q", str(self.checkout)], check=True)
+        subprocess.run(["git", "-C", str(self.checkout), "remote", "add", "origin", "https://ghe.example.com/cli/cli"], check=True)
+        code, result = self.run_check("--root", str(self.checkout), "--kind", "pr", "--body", "-", stdin="## Summary\n")
+        self.assertEqual((code, result["state"]), (0, "no-template"))
+
+    def test_rendered_html_is_read_as_utf8_whatever_the_locale(self):
+        template = self.write("template.md", "## Ship \U0001F680\n")
+        draft = self.write("draft.md", "## Ship \U0001F680\n\nDone.\n")
+        self.env.update({"LC_ALL": "C", "LANG": "C", "PYTHONUTF8": "0"})
+        self.env.pop("PYTHONIOENCODING", None)
+        code, result = self.run_check("--template", str(template), "--body", str(draft))
+        self.assertEqual((code, result["state"]), (0, "match"))
 
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "owner/project"

@@ -35,7 +35,7 @@ NESTING = {"li", "blockquote", "table", "pre", "code", "summary"}
 MEDIA = {"img", "video", "audio", "picture", "iframe", "object", "embed"}
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 # The attribution note `create-issue` ends every issue with, as rendered text.
-ATTRIBUTION = re.compile(r"(?:Note\s*)?Created on behalf of @[\w-]+ using .+\.")
+ATTRIBUTION = re.compile(r"Created on behalf of @[\w-]+ using [^.]+(?:\.[^.\s]+)*\.")
 YAML_KEY = re.compile(r"""(?:[A-Za-z0-9_][\w .-]*|"[^"]*"|'[^']*')[ \t]*:(?:[ \t]|$)""")
 BLOCK_SCALAR = re.compile(r"[|>](?:[+-]([0-9])?|([0-9])[+-]?)?(?:\s+#.*)?$")
 # A renamed heading still resembles the template's wording this closely.
@@ -179,7 +179,12 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
                 break
     if kind == "issue" and blocks:
         last = blocks[-1]
-        if (is_alert(last) or last.tag == "blockquote") and ATTRIBUTION.fullmatch(words(last)):
+        paragraphs = [node for node in elements(last.children) if "markdown-alert-title" not in node.attrs.get("class", "")]
+        if (
+            (is_alert(last) or last.tag == "blockquote")
+            and len(paragraphs) == 1
+            and ATTRIBUTION.fullmatch(words(paragraphs[0]))
+        ):
             top = [node for node in top if node is not last]
 
     found: list[Heading] = []
@@ -232,8 +237,14 @@ def target_host(repo: str | None, root: Path | None) -> str | None:
         return os.environ["GH_HOST"]
     if named:
         return None
+    return checkout_host(root)
+
+
+def checkout_host(root: Path | None) -> str | None:
+    """The host of the repository gh resolves for a checkout, from its own remotes."""
+    own = {key: value for key, value in os.environ.items() if key not in ("GH_REPO", "GH_HOST")}
     try:
-        url = gh_runner(["repo", "view", "--json", "url", "--jq", ".url"], cwd=root)
+        url = gh_runner(["repo", "view", "--json", "url", "--jq", ".url"], cwd=root, env=own)
     except CheckError:
         url = None
     if url and urlparse(url.strip()).hostname:
@@ -868,11 +879,14 @@ def select(
     return best, problems
 
 
-def gh_runner(args: list[str], stdin: str | None = None, cwd: Path | None = None) -> str | None:
+def gh_runner(
+    args: list[str], stdin: str | None = None, cwd: Path | None = None, env: dict[str, str] | None = None
+) -> str | None:
     """Run gh and return its output, or None for a resource GitHub reports missing."""
     try:
         completed = subprocess.run(
-            ["gh", *args], input=stdin, cwd=cwd, text=True, capture_output=True, timeout=60, check=False
+            ["gh", *args], input=stdin, cwd=cwd, env=env, text=True, encoding="utf-8",
+            capture_output=True, timeout=60, check=False,
         )
     except FileNotFoundError as error:
         raise CheckError("gh is not installed or not on PATH") from error
@@ -938,12 +952,17 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             raise CheckError(f"cannot read body: {error}") from error
     kind = "pr" if args.pr is not None else "issue" if args.issue is not None else args.kind
     # The body belongs to the repository named or checked out here; templates
-    # may come from another checkout through --root.
-    body_host = target_host(args.repo, None)
-    template_host = target_host(args.repo, args.root) if args.root and not args.repo else body_host
+    # found through --root belong to that checkout. Each host is resolved only
+    # when a render needs it.
+    hosts: dict[str, str | None] = {}
+
+    def host_for(source: str) -> str | None:
+        if source not in hosts:
+            hosts[source] = checkout_host(args.root) if source == "root" else target_host(args.repo, None)
+        return hosts[source]
 
     def renderer(markdown: str) -> str:
-        return render(markdown, template_host)
+        return render(markdown, host_for("root" if args.root and not args.template else "body"))
 
     if args.template:
         try:
@@ -967,7 +986,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         return {"state": "no-template", "body": source_label, "problems": [], "reason": absent}
 
     # Without a kind, as with --template alone, the body reads as a pull request's.
-    body = headings(render(text.removeprefix("\ufeff"), body_host), kind or "pr")
+    body = headings(render(text.removeprefix("\ufeff"), host_for("body")), kind or "pr")
     template, problems = select(templates, body, args.template_name)
     return {
         "state": "mismatch" if problems else "match",

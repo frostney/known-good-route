@@ -74,5 +74,9 @@
  "image_heading": {
   "markdown": "## Release ![production](https://example.org/production.svg)\n\nText.\n",
   "html": "<h2>Release <a target=\"_blank\" rel=\"noopener noreferrer nofollow\" href=\"https://camo.githubusercontent.com/55a0d3423b57df531cad67f0131adf1c02dd98fdd864e4db1f75510df590e217/68747470733a2f2f6578616d706c652e6f72672f70726f64756374696f6e2e737667\"><img src=\"https://camo.githubusercontent.com/55a0d3423b57df531cad67f0131adf1c02dd98fdd864e4db1f75510df590e217/68747470733a2f2f6578616d706c652e6f72672f70726f64756374696f6e2e737667\" alt=\"production\" data-canonical-src=\"https://example.org/production.svg\" style=\"max-width: 100%;\"></a></h2>\n<p>Text.</p>"
+ },
+ "attribution_with_more": {
+  "markdown": "## Related\n\n> [!NOTE]\n> Created on behalf of @someone using Some Model.\n>\n> All tests passed.\n",
+  "html": "<h2>Related</h2>\n<div class=\"markdown-alert markdown-alert-note\"><p class=\"markdown-alert-title\"><svg data-component=\"Octicon\" class=\"octicon octicon-info mr-2\" viewBox=\"0 0 16 16\" version=\"1.1\" width=\"16\" height=\"16\" aria-hidden=\"true\"><path d=\"M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z\"></path></svg>Note</p><p>Created on behalf of <a class=\"user-mention notranslate\" data-hovercard-type=\"user\" data-hovercard-url=\"/users/Someone/hovercard\" data-octo-click=\"hovercard-link-click\" data-octo-dimensions=\"link_type:self\" href=\"https://github.com/Someone\">@Someone</a> using Some Model.</p>\n<p>All tests passed.</p>\n</div>"
  }
 }
