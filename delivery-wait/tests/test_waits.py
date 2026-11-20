@@ -179,6 +179,9 @@ def workflow_run(
     event: str = "pull_request",
     check_suite_id: int | None = None,
     attempt: int = 1,
+    branch: str = "feature",
+    created_at: str = "2026-08-12T08:00:00Z",
+    updated_at: str = "2026-08-12T08:05:00Z",
 ) -> dict:
     return {
         "run": {
@@ -189,6 +192,9 @@ def workflow_run(
             "event": event,
             "run_attempt": attempt,
             "head_sha": head,
+            "head_branch": branch,
+            "created_at": created_at,
+            "updated_at": updated_at,
             "status": status,
             "conclusion": conclusion,
             "html_url": f"https://example.invalid/runs/{run_id}",
@@ -1175,8 +1181,9 @@ class WaitCommandsTest(unittest.TestCase):
         return [
             older or workflow_run(101, [workflow_job(1000, "build")], workflow_id=9, check_suite_id=501),
             workflow_run(
-                102, [workflow_job(1001, "build", conclusion="cancelled", run_id=102)],
-                conclusion="cancelled", workflow_id=9, check_suite_id=502, **newer,
+                102, newer.pop("jobs", [workflow_job(1001, "build", conclusion="cancelled", run_id=102)]),
+                conclusion="cancelled", workflow_id=9, check_suite_id=502,
+                updated_at=newer.pop("updated_at", "2026-08-12T08:00:02Z"), **newer,
             ),
         ]
 
@@ -1262,6 +1269,40 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(output["state"], "changed")
         self.assertIn("cancelled", output["reason"])
         self.assertFalse(any(run.get("cancelledDuplicate") for run in output["observation"]["runs"]))
+
+    def test_a_cancelled_run_that_did_not_race_the_older_run_is_a_failure(self) -> None:
+        for name, newer in (
+            # Cancelled by hand after the older run had finished.
+            ("cancelled after the older run finished", {"updated_at": "2026-08-12T09:00:00Z"}),
+            # Another pull request whose branch points at the same commit.
+            ("another branch", {"branch": "other"}),
+            # A job failed before the rest were cancelled.
+            ("a job failed", {"jobs": [
+                workflow_job(1001, "build", conclusion="failure", run_id=102),
+                workflow_job(1002, "test", conclusion="cancelled", run_id=102),
+            ]}),
+        ):
+            with self.subTest(name):
+                self.reset_census()
+                self.write_scenario(census=[census(*self.cancelled_duplicate(**newer))])
+                _, output = self.census_wait()
+                self.assertEqual(output["state"], "changed")
+                self.assertFalse(any(run.get("cancelledDuplicate") for run in output["observation"]["runs"]))
+
+    def test_a_named_check_waits_for_a_rerun_that_has_no_check_runs_yet(self) -> None:
+        # Until the new attempt creates its check runs, the rollup still shows
+        # the first attempt's cancelled ones.
+        older = self.cancelled_duplicate()[0]
+        queued = workflow_run(102, [], status="queued", conclusion=None, workflow_id=9, check_suite_id=502, attempt=2)
+        passed = workflow_run(102, [workflow_job(1003, "build", run_id=102)], workflow_id=9, check_suite_id=502, attempt=2)
+        cancelled_check = check("build", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=502, workflow=9)
+        passed_check = check("build", "COMPLETED", "SUCCESS", app="github-actions", event="pull_request", suite_id=502, workflow=9)
+        self.write_scenario(
+            pullsByRequest=[pull("head-1", [cancelled_check]), pull("head-1", [cancelled_check]), pull("head-1", [passed_check])],
+            census=[census(older, queued), census(older, queued), census(older, passed)],
+        )
+        _, output = self.census_wait("--check", "build")
+        self.assertEqual(output["state"], "satisfied")
 
     def test_all_workflows_reports_another_failure_before_a_cancelled_duplicate(self) -> None:
         self.write_scenario(census=[census(

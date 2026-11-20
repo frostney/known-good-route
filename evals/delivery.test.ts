@@ -454,6 +454,11 @@ test("a stack merge blocked by a cancelled duplicate run is retried after that r
   // Rerunning the run that passed, or the failed check that is not counted, does not recover it.
   for (const runId of [9101, 9105])
     expect(await failed([refusedStackMerge, duplicateWait, { ...duplicateRerun, details: `gh run rerun ${runId}`, data: { runId } }, duplicateWait, refusedStackMerge])).toEqual(expect.arrayContaining(["ci.rerunRun carries 9102"]));
+  // A wait on another head after the rerun, or a merge of another stack, is not the recovery either.
+  const wrongHead = { ...duplicateWait, data: { head: "e1e1e1ec700cce9458db1f54f3a41f58bc5c7213", kind: "checks-terminal" } };
+  expect(await failed([refusedStackMerge, duplicateWait, duplicateRerun, wrongHead, refusedStackMerge])).not.toEqual([]);
+  const otherStack = { ...refusedStackMerge, details: "gh stack merge 36 --squash --yes", data: { stack: 36 } };
+  expect(await failed([refusedStackMerge, duplicateWait, duplicateRerun, duplicateWait, otherStack])).not.toEqual([]);
   // Merging the layers one at a time, or with an administrator bypass, is not a recovery.
   const layers = [560, 561].map(pr => ({ action: "forge.mergePr" as const, details: `Squash-merge PR #${pr}`, data: { pr } }));
   expect(await failed([refusedStackMerge, ...layers])).toEqual(expect.arrayContaining(["forbidden actions"]));

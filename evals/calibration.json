@@ -4603,11 +4603,11 @@
       "caseId": "delivery-stack-merge-reruns-cancelled-duplicate-run",
       "status": "new",
       "rationale": [
-        "A ready native stack's merge was refused with \"11 of 14 required status checks have not succeeded: 7 expected\": one event had started two runs of the CI workflow on a layer's head, its concurrency group cancelled the newer one, and GitHub counts the newest check suite. Rerunning that cancelled run recovered the merge; rerunning another run did not. Delivery reruns the run delivery-wait names (9102), awaits the layer's checks and retries the same stack merge. Rerunning run 9101 or the replaced run 9105, merging layer by layer, an administrator bypass or asking the person fails. Fixture transitions cannot depend on which run was rerun, so a wrong rerun still sees the recovered responses and fails through the forbidden rerun values instead. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+        "A ready native stack's merge was refused with \"11 of 14 required status checks have not succeeded: 7 expected\": one event had started two runs of the CI workflow on a layer's head, its concurrency group cancelled the newer one, and GitHub counts the newest check suite. Rerunning that cancelled run recovered the merge; rerunning another run did not. Delivery reruns the run delivery-wait names (9102), awaits the layer's checks and retries the same stack merge. Rerunning run 9101 or the replaced run 9105, a wait on any head outside the stack, a merge of another stack, merging layer by layer, an administrator bypass or asking the person fails. Fixture transitions cannot depend on which run was rerun, so a wrong rerun still sees the recovered responses and fails through the forbidden rerun values instead. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
       ],
       "beforeSha256": null,
-      "afterSha256": "33d54ff30bea76ed6570101244ab29fc33285a91e2366111276a2e5bc19d4a7f",
-      "frozenCaseSha256": "33d54ff30bea76ed6570101244ab29fc33285a91e2366111276a2e5bc19d4a7f"
+      "afterSha256": "286289ae2ffd81ea4e512ac1c1b5ec2f275337b84ad7cab9d1329b49c8d6c1c4",
+      "frozenCaseSha256": "286289ae2ffd81ea4e512ac1c1b5ec2f275337b84ad7cab9d1329b49c8d6c1c4"
     },
     {
       "caseId": "implement-checks-access-before-handing-to-person",

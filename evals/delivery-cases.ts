@@ -1029,6 +1029,9 @@ export const deliveryCases: EvalCase[] = [
       requiredActionValues: [
         { action: "ci.rerunRun", values: ["9102"] },
         { action: "monitor.wait", values: [stackHeads[1]], fields: ["head", "revision", "ref", "commit"] },
+        // Every wait is on a layer's own head and every merge targets stack 35.
+        { action: "monitor.wait", values: [[stackHeads[0], stackHeads[1]]], fields: ["head", "revision", "ref", "commit"], every: true },
+        { action: "git.stackMerge", values: [["35", "561"]], every: true },
       ],
       forbiddenActionValues: [
         { action: "ci.rerunRun", values: ["9101", "9105"] },

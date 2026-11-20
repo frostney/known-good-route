@@ -142,12 +142,17 @@ requires its own identity flags:
     `concurrency` group with `cancel-in-progress` cancels whichever joined it
     first, which can be the newer run. GitHub then counts that cancelled run
     and blocks merging, although the older run passed. The wait marks such a
-    newest run with `cancelledDuplicate` instead of counting it as a failure.
-    While an older run of the same workflow and event has not finished, it
-    waits for that run. Once one has passed, it reports `recoverable`, unless
-    another run, job or named check failed, which is `changed`. A cancelled
-    newest run beside only failed older runs is an ordinary failure, and so
-    is a run cancelled again after its rerun.
+    newest run with `cancelledDuplicate` instead of counting it as a failure
+    when it raced the older run: both come from the same branch, the older
+    run had started before the newer one was cancelled and was still running
+    then, and no job of the cancelled run failed another way. While that
+    older run has not finished, the wait waits for it. Once it has passed,
+    the wait reports `recoverable`, unless another run, job or named check
+    failed, which is `changed`. A cancelled newest run beside only failed
+    older runs is an ordinary failure, and so is one cancelled after the
+    older run finished, one with a failed job and one cancelled again after
+    its rerun. A named check from a run that has not finished, such as a
+    rerun, waits for that run.
   - `--all-workflows` does not cover commit statuses or check runs from other
     apps, such as CodeRabbit or Vercel. Add a `--check` for each one the caller
     needs; the wait then also requires those contexts to succeed.
