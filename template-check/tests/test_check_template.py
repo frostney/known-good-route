@@ -633,6 +633,7 @@ class RendererParityTests(unittest.TestCase):
             "<h2>Contact helpful@example.com</h2>\n",
             "Run `x  \ny`\n=========\n",
             "<h2>Check<em>!</em></h2>\n",
+            "[Docs](/docs) `x  \ny`\n===========\n",
         ):
             with self.subTest(template=template):
                 [heading] = CHECK_TEMPLATE.parse_template("t.md", template, REAL_RENDER).headings
@@ -655,6 +656,15 @@ class RendererParityTests(unittest.TestCase):
             CHECK_TEMPLATE.headings(REAL_RENDER(f"<h2><code>foo{space}bar</code></h2>\n"))[0].text for space in ("&nbsp;", " ")
         }
         self.assertEqual(len(texts), 2)
+
+    def test_a_list_item_showing_brackets_as_code_is_content(self):
+        found = CHECK_TEMPLATE.headings(REAL_RENDER("## Steps\n\n- `[ ]`\n"))
+        self.assertEqual([h.has_content for h in found], [True])
+
+    def test_a_form_label_is_reported_as_written(self):
+        form = "body:\n  - type: input\n    attributes:\n      label: ***Required***~~optional~~\n"
+        [heading] = CHECK_TEMPLATE.parse_template("f.yml", form, REAL_RENDER).headings
+        self.assertEqual(CHECK_TEMPLATE.headings(REAL_RENDER(f"{heading}\n"))[0].text, heading.text)
 
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
@@ -691,7 +701,7 @@ class TemplateParsingTests(unittest.TestCase):
             "body:\n  - type: input\n    attributes:\n      label: Run `--help`\n",
             lambda markdown: mini_render(markdown.replace("`", "")),
         )
-        self.assertEqual([str(h) for h in template.headings], ["### Run --help"])
+        self.assertEqual([(h.text, str(h)) for h in template.headings], [("Run --help", "### Run `--help`")])
 
     def test_a_name_continues_below_a_comment_after_its_key(self):
         self.assertEqual(CHECK_TEMPLATE.declared_name("name: # shown in the chooser\n  bug-report\nbody:\n"), "bug-report")

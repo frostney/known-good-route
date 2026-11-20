@@ -287,6 +287,11 @@ def has_media(node: Node) -> bool:
     return any(child.tag in MEDIA or has_media(child) for child in elements(node.children))
 
 
+def plain(node: Node) -> bool:
+    """Whether a node shows only text, in paragraphs at most, with no formatting such as code."""
+    return all(child.tag == "p" and plain(child) for child in elements(node.children))
+
+
 def is_alert(node: Node) -> bool:
     return node.tag == "div" and "markdown-alert" in node.attrs.get("class", "").split()
 
@@ -363,7 +368,7 @@ def written_heading(lines: list[str], node: Node, level: int) -> str:
     return f"{'#' * level} {content}".rstrip()
 
 
-def standalone(found: list[Heading], renderer: Callable[[str], str]) -> list[Heading]:
+def standalone(found: list[Heading], renderer: Callable[[str], str], source: str = "") -> list[Heading]:
     """Report each heading in a form that shows the same heading where it is pasted.
 
     Tried in turn: as written in the source, as compared, then as HTML, which
@@ -383,8 +388,10 @@ def standalone(found: list[Heading], renderer: Callable[[str], str]) -> list[Hea
         return [heading for (heading, _), shown in zip(candidates, alone) if (shown.level, shown.text) != (heading.level, heading.text)]
 
     for heading in failing([(heading, heading.written) for heading in found if heading.written]):
-        if "<a " in heading.html or "data-footnote-ref" in heading.html:
-            heading.defined_elsewhere = True  # Its written form reads right with that definition.
+        # Followed by its own document, which holds every link and footnote definition.
+        shown = headings(renderer(f"{heading.written}\n\n{source}"), github=False)[:1]
+        if [(h.level, h.text) for h in shown] == [(heading.level, heading.text)]:
+            heading.defined_elsewhere = True
         else:
             heading.written = ""
     for heading in failing([(heading, str(heading)) for heading in found if not heading.written]):
@@ -512,7 +519,8 @@ def headings(html: str, kind: str | None = None, source: str | None = None, gith
             if child.tag == "li":
                 lists = [node for node in elements(child.children) if node.tag in ("ul", "ol")]
                 own = Node("li", {}, [node for node in child.children if not any(node is nested_list for nested_list in lists)])
-                if words(own) in ("", "[ ]") and not has_media(own) and not has_checked(own):
+                placeholder = not words(own) or (words(own) == "[ ]" and plain(own))
+                if placeholder and not has_media(own) and not has_checked(own):
                     visit(lists, True)
                     continue
             if child.tag in MEDIA or is_checked(child):
@@ -905,7 +913,7 @@ def form_template(path: str, text: str) -> Template:
 
 def markdown_template(path: str, text: str, renderer: Callable[[str], str]) -> Template:
     fields, body = front_matter(text)
-    return Template(path, fields.get("name") or Path(path).stem, standalone(headings(renderer(body), source=body, github=False), renderer))
+    return Template(path, fields.get("name") or Path(path).stem, standalone(headings(renderer(body), source=body, github=False), renderer, body))
 
 
 def parse_template(path: str, text: str, renderer: Callable[[str], str] | None = None) -> Template:
@@ -918,7 +926,8 @@ def parse_template(path: str, text: str, renderer: Callable[[str], str] | None =
             shown = headings(renderer("\n\n".join(f"### {heading.text}" for heading in template.headings)), github=False)
             if len(shown) == len(template.headings):
                 for heading, rendered in zip(template.headings, shown):
-                    heading.text = rendered.text
+                    # Reported as the label GitHub renders it from, which shows the same heading.
+                    heading.written, heading.text = f"### {heading.text}", rendered.text
         return template
     return markdown_template(path, text, renderer)
 
@@ -1371,7 +1380,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     # Without a kind, as with --template alone, the body reads as a pull request's.
     text = text.removeprefix("\ufeff")
-    body = standalone(headings(render(text), kind or "pr", text, github=False), render)
+    body = standalone(headings(render(text), kind or "pr", text, github=False), render, text)
     template, problems = select(templates, body, args.template_name)
     return {
         "state": "mismatch" if problems else "match",
