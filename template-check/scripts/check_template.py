@@ -94,6 +94,8 @@ class Heading:
     has_content: bool = False
     # The heading as written in Markdown, so a reported heading can be pasted as it is.
     written: str = ""
+    # Whether it shows a link or footnote whose definition is elsewhere in its document.
+    defined_elsewhere: bool = False
 
     def __str__(self) -> str:
         return self.written or f"{'#' * self.level} {self.text}"
@@ -191,7 +193,7 @@ def literal(text: str) -> str:
     return re.sub(r"(?i)\b(?:https?|ftp)(?=://)|\bwww(?=\.)", lambda match: match.group(0) + "\\", text)
 
 
-def heading_text(node: Node | str, underscore: bool = False) -> str:
+def heading_text(node: Node | str, underscore: bool = False, github: bool = True) -> str:
     """A heading's words, with its inline code in backticks.
 
     GitHub turns `:warning:` into an emoji in text but not in code, so a
@@ -214,18 +216,19 @@ def heading_text(node: Node | str, underscore: bool = False) -> str:
         fence = "`" * (max((len(run) for run in re.findall(r"`+", code)), default=0) + 1)
         padded = code[:1] == "`" or code[-1:] == "`" or (code[:1] == code[-1:] == " " and code.strip())
         return f"{fence} {code} {fence}" if padded else f"{fence}{code}{fence}"
-    parts = [heading_text(child) for child in node.children]
+    parts = [heading_text(child, github=github) for child in node.children]
     for index in range(len(parts) - 1):
         if parts[index].endswith("*") and parts[index + 1].startswith("*"):
             # Two runs of `*` side by side would merge; write one with `_` instead.
             for side in (index, index + 1):
                 child = node.children[side]
                 if isinstance(child, Node) and INLINE_MARKERS.get(child.tag, "").startswith("*"):
-                    parts[side] = heading_text(child, underscore=True)
+                    parts[side] = heading_text(child, underscore=True, github=github)
                     break
     inner = "".join(parts)
     # An empty destination is still a link, to the page itself.
-    if node.tag == "a" and "href" in node.attrs and not renderer_link(node):
+    # Only GitHub's HTML has links it added itself; the local renderer adds none.
+    if node.tag == "a" and "href" in node.attrs and not (github and renderer_link(node)):
         # In angle brackets, so no text after the link can read as part of its destination.
         # An ampersand as an entity, since an entity-shaped destination would otherwise decode.
         destination = re.sub(r"([\\<>])", r"\\\1", node.attrs["href"]).replace("&", "&amp;")
@@ -337,7 +340,7 @@ def standalone(found: list[Heading], renderer: Callable[[str], str]) -> list[Hea
         same = len(alone) == len(written)
         for heading, shown in zip(written, alone):
             if not same or (shown.level, shown.text) != (heading.level, heading.text):
-                heading.written = ""
+                heading.written, heading.defined_elsewhere = "", same
     return found
 
 
@@ -401,12 +404,13 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
     # GitHub appends footnotes after the last section; they are no section's content.
     top = [node for node in builder.root.children if not (isinstance(node, Node) and is_footnotes(node))]
     blocks = elements(top)
+    # The local renderer marks every block with its source position; GitHub's HTML has none.
+    positioned = "data-sourcepos" in html
     end = None
     if kind == "pr":
         # The review note closes the body: a `---` rule with a blank line
         # before and after it, then a line that opens with `Edit:` and names
         # the head it covers in code, such as ``Edit: `1a2b3c4` reviewed``.
-        positioned = "data-sourcepos" in html
         end = note_rule(top, lambda rule, note: spaced_rule(rule, note, source, positioned))
     if kind == "issue" and blocks:
         last = blocks[-1]
@@ -441,7 +445,7 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
             if level and not nested:
                 line = source_line(child)
                 written = written_heading(source_lines, child, int(level.group(1))) if source is not None else ""
-                text = " ".join(heading_text(child).split())
+                text = " ".join(heading_text(child, github=not positioned).split())
                 # A closing run of `#` would end the heading where it is written back.
                 text = re.sub(r"(^|\s)(#+)$", r"\1\\\2", text)
                 heading = Heading(int(level.group(1)), text, line, written=written)
@@ -552,7 +556,8 @@ def yaml_escape(match: re.Match[str]) -> str:
 
 def scalar(value: str) -> str:
     """A plain or quoted single-line YAML scalar without a trailing comment."""
-    value = value.strip()
+    # An anchor or tag before the value names it; no plain scalar starts with `&` or `!`.
+    value = re.sub(r"^(?:[&!]\S*(?:[ \t]+|$))+", "", value.strip())
     double = re.match(r'"(?:[^"\\]|\\.)*"', value)
     if double:
         inner = double.group(0)[1:-1]
@@ -1063,6 +1068,8 @@ def compare(expected: list[Heading], actual: list[Heading]) -> list[dict[str, An
     problems: list[dict[str, Any]] = []
 
     def problem(kind: str, index: int, found: Heading | None, detail: str) -> None:
+        if expected[index].defined_elsewhere:
+            detail += "; it uses a link or footnote defined elsewhere in the template, so copy that definition too"
         problems.append({
             "kind": kind,
             "templateIndex": index,

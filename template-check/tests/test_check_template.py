@@ -604,6 +604,20 @@ class RendererParityTests(unittest.TestCase):
             ["## [Docs](<https://example.org/docs>)", "## Plain"],
         )
 
+    def test_an_authors_new_tab_link_around_its_image_keeps_its_destination(self):
+        texts = {
+            CHECK_TEMPLATE.headings(REAL_RENDER(f'## <a target="_blank" href="/{env}.svg"><img src="/{env}.svg" alt="Env"></a>\n'))[0].text
+            for env in ("prod", "staging")
+        }
+        self.assertEqual(len(texts), 2)
+
+    def test_a_heading_whose_footnote_is_defined_elsewhere_says_to_copy_it(self):
+        template = CHECK_TEMPLATE.parse_template("t.md", "## Testing[^docs]\n\n-\n\n[^docs]: How we test.\n", REAL_RENDER)
+        text = "## Testing[^docs]\n\nRan it.\n"
+        body = CHECK_TEMPLATE.standalone(CHECK_TEMPLATE.headings(REAL_RENDER(text), "pr", text), REAL_RENDER)
+        [problem] = CHECK_TEMPLATE.compare(template.headings, body)
+        self.assertIn("copy that definition", problem["detail"])
+
     def test_footnote_labels_written_with_and_without_percent_escapes_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("ref%41", "refA")
@@ -651,6 +665,10 @@ class TemplateParsingTests(unittest.TestCase):
 
     def test_an_anchored_body_list_is_read(self):
         form = "body: &fields\n  - type: input\n    attributes:\n      label: A\n"
+        self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["A"])
+
+    def test_an_anchored_markdown_type_needs_no_label(self):
+        form = "body:\n  - type: &intro markdown\n    attributes:\n      value: Hi\n  - type: input\n    attributes:\n      label: A\n"
         self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["A"])
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
