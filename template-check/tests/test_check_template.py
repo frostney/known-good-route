@@ -597,6 +597,13 @@ class RendererParityTests(unittest.TestCase):
             ["## API**v2**_beta_", "# Title", "## Done", "## Raw"],
         )
 
+    def test_a_heading_that_needs_a_definition_elsewhere_is_reported_as_compared(self):
+        template = "## [Docs][doc]\n\n## Plain\n\n[doc]: https://example.org/docs\n"
+        self.assertEqual(
+            [str(h) for h in CHECK_TEMPLATE.parse_template("t.md", template, REAL_RENDER).headings],
+            ["## [Docs](<https://example.org/docs>)", "## Plain"],
+        )
+
     def test_footnote_labels_written_with_and_without_percent_escapes_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("ref%41", "refA")

@@ -307,10 +307,9 @@ def source_line(node: Node) -> int | None:
     return int(position.group(1)) if position else None
 
 
-def written_heading(source: str, node: Node, level: int) -> str:
+def written_heading(lines: list[str], node: Node, level: int) -> str:
     """A rendered heading's own Markdown, as one ATX line, or "" when its source is not a Markdown heading."""
     span = re.fullmatch(r"([1-9][0-9]*):[0-9]+-([1-9][0-9]*):[0-9]+", node.attrs.get("data-sourcepos", ""))
-    lines = source.replace("\r\n", "\n").split("\n")
     if not span or not int(span.group(1)) <= int(span.group(2)) <= len(lines):
         return ""
     block = lines[int(span.group(1)) - 1 : int(span.group(2))]
@@ -323,6 +322,23 @@ def written_heading(source: str, node: Node, level: int) -> str:
     else:
         return ""
     return f"{'#' * level} {content}".rstrip()
+
+
+def standalone(found: list[Heading], renderer: Callable[[str], str]) -> list[Heading]:
+    """Keep each heading's written Markdown only where it shows the same heading on its own.
+
+    A reference link or footnote resolves through a definition elsewhere in
+    its document, so pasted alone it would read differently; such a heading
+    is reported as compared instead.
+    """
+    written = [heading for heading in found if heading.written]
+    if written:
+        alone = headings(renderer("\n\n".join(heading.written for heading in written)))
+        same = len(alone) == len(written)
+        for heading, shown in zip(written, alone):
+            if not same or (shown.level, shown.text) != (heading.level, heading.text):
+                heading.written = ""
+    return found
 
 
 def spaced_rule(rule: Node, note: Node, source: str | None, positioned: bool = False) -> bool:
@@ -407,6 +423,7 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
 
     found: list[Heading] = []
     open_sections: list[Heading] = []
+    source_lines = source.replace("\r\n", "\n").split("\n") if source is not None else []
 
     def content() -> None:
         for section in open_sections:
@@ -423,7 +440,7 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
             level = HEADING_TAG.fullmatch(child.tag)
             if level and not nested:
                 line = source_line(child)
-                written = written_heading(source, child, int(level.group(1))) if source is not None else ""
+                written = written_heading(source_lines, child, int(level.group(1))) if source is not None else ""
                 text = " ".join(heading_text(child).split())
                 # A closing run of `#` would end the heading where it is written back.
                 text = re.sub(r"(^|\s)(#+)$", r"\1\\\2", text)
@@ -812,7 +829,7 @@ def form_template(path: str, text: str) -> Template:
 
 def markdown_template(path: str, text: str, renderer: Callable[[str], str]) -> Template:
     fields, body = front_matter(text)
-    return Template(path, fields.get("name") or Path(path).stem, headings(renderer(body), source=body))
+    return Template(path, fields.get("name") or Path(path).stem, standalone(headings(renderer(body), source=body), renderer))
 
 
 def parse_template(path: str, text: str, renderer: Callable[[str], str] | None = None) -> Template:
@@ -1276,7 +1293,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     # Without a kind, as with --template alone, the body reads as a pull request's.
     text = text.removeprefix("\ufeff")
-    body = headings(render(text), kind or "pr", text)
+    body = standalone(headings(render(text), kind or "pr", text), render)
     template, problems = select(templates, body, args.template_name)
     return {
         "state": "mismatch" if problems else "match",
