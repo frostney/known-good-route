@@ -41,8 +41,10 @@ CMARKGFM = "cmarkgfm==2025.10.22"
 RENDER = (
     "import sys, cmarkgfm\n"
     "from cmarkgfm.cmark import Options\n"
-    "sys.stdout.write(cmarkgfm.github_flavored_markdown_to_html(sys.stdin.read(), "
-    "options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES))"
+    "markdown = sys.stdin.buffer.read().decode('utf-8')\n"
+    "html = cmarkgfm.github_flavored_markdown_to_html(markdown, "
+    "options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES)\n"
+    "sys.stdout.buffer.write(html.encode('utf-8'))"
 )
 
 
@@ -51,6 +53,12 @@ HEADING_TAG = re.compile(r"h([1-6])")
 NESTING = {"li", "blockquote", "table", "pre", "code", "summary"}
 MEDIA = {"img", "video", "audio", "picture", "iframe", "object", "embed"}
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
+# Opening one of these closes an open paragraph, as HTML does.
+CLOSES_PARAGRAPH = {
+    "address", "article", "aside", "blockquote", "details", "div", "dl", "fieldset", "figure", "footer",
+    "form", "h1", "h2", "h3", "h4", "h5", "h6", "header", "hr", "main", "nav", "ol", "p", "pre", "section",
+    "table", "ul",
+}
 # The attribution note `create-issue` ends every issue with, as rendered text.
 ATTRIBUTION = re.compile(r"Created on behalf of @[\w-]+ using (?:(?!\.\s).)+\.")
 YAML_KEY = re.compile(r"""(?:[A-Za-z0-9_][\w .-]*|"[^"]*"|'[^']*')[ \t]*:(?:[ \t]|$)""")
@@ -106,6 +114,8 @@ class TreeBuilder(HTMLParser):
         if tag == "br":
             self.stack[-1].children.append("\n")  # A line break separates words and lines.
             return
+        if tag in CLOSES_PARAGRAPH and self.stack[-1].tag == "p":
+            self.stack.pop()
         node = Node(tag, {key: value or "" for key, value in attrs})
         self.stack[-1].children.append(node)
         if tag not in VOID:
@@ -138,10 +148,11 @@ def heading_text(node: Node | str) -> str:
     """A heading's words, with its inline code in backticks.
 
     GitHub turns `:warning:` into an emoji in text but not in code, so a
-    heading with the shortcode in code differs from one without.
+    heading with the shortcode in code differs from one without. A literal
+    backtick reads escaped, as it is written, so it never passes for code.
     """
     if isinstance(node, str):
-        return node
+        return node.replace("`", "\\`")
     if node.tag == "img":
         return node.attrs.get("alt", "")
     inner = "".join(heading_text(child) for child in node.children)
@@ -286,11 +297,12 @@ def render(markdown: str) -> str:
     if not uv:
         raise CheckError(f"the Markdown renderer is not installed: pip install {CMARKGFM}")
     # Outside the checkout, with uv's configuration files ignored and PyPI named,
-    # so no checkout can choose where the renderer comes from.
+    # so no checkout can choose where the renderer comes from; Python runs
+    # isolated (-I), so no file in that directory can stand in for it.
     command = [
         uv, "run", "--quiet", "--no-config", "--no-project", "--isolated",
         "--default-index", "https://pypi.org/simple", "--python", sys.executable,
-        "--with", CMARKGFM, "python", "-c", RENDER,
+        "--with", CMARKGFM, "python", "-I", "-c", RENDER,
     ]
     try:
         completed = subprocess.run(

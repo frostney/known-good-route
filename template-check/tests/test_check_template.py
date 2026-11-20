@@ -3,6 +3,7 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -229,6 +230,16 @@ class RenderedHeadingTests(unittest.TestCase):
         )
         self.assertEqual((plain, code), (":warning: Testing", "`:warning:` Testing"))
 
+    def test_an_unclosed_paragraph_closes_at_the_next_heading(self):
+        body = "<p>Intro.<h2>Testing</h2><hr><p>Edit: <code>abc1234</code> reviewed</p>"
+        self.assertEqual([(h.text, h.has_content) for h in CHECK_TEMPLATE.headings(body, "pr")], [("Testing", False)])
+
+    def test_literal_backticks_never_pass_for_inline_code(self):
+        literal, code = (
+            CHECK_TEMPLATE.headings(html)[0].text for html in ("<h2>`make` it</h2>", "<h2><code>make</code> it</h2>")
+        )
+        self.assertNotEqual(literal, code)
+
     def test_www_github_com_is_github_com(self):
         self.assertEqual(CHECK_TEMPLATE.repository("https://www.github.com/cli/cli"), "github.com/cli/cli")
 
@@ -295,6 +306,30 @@ class RenderedHeadingTests(unittest.TestCase):
 @needs_renderer
 class RendererParityTests(unittest.TestCase):
     """cmark-gfm, rendering locally, yields the headings GitHub's own rendering does."""
+
+    def test_the_fallback_program_reads_and_writes_utf8_whatever_the_stream_encoding(self):
+        # Streams in Windows' cp1252, which cannot decode the emoji's UTF-8 bytes.
+        cp1252 = (
+            "import io, sys\n"
+            "sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='cp1252')\n"
+            "sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='cp1252')\n"
+        )
+        completed = subprocess.run(
+            [sys.executable, "-I", "-c", cp1252 + CHECK_TEMPLATE.RENDER],
+            input="## \U0001F4C1 Files\n".encode("utf-8"), capture_output=True, check=True,
+        )
+        self.assertEqual(completed.stdout.decode("utf-8").strip(), "<h2>\U0001F4C1 Files</h2>")
+
+    @unittest.skipUnless(shutil.which("uv"), "uv is not installed")
+    def test_the_uv_fallback_never_imports_from_the_directory_it_runs_in(self):
+        with tempfile.TemporaryDirectory() as directory:
+            Path(directory, "cmarkgfm.py").write_text("raise SystemExit('shadowed')\n", encoding="utf-8")
+            saved = (CHECK_TEMPLATE.cmarkgfm, CHECK_TEMPLATE.tempfile.gettempdir)
+            CHECK_TEMPLATE.cmarkgfm, CHECK_TEMPLATE.tempfile.gettempdir = None, lambda: directory
+            try:
+                self.assertEqual(REAL_RENDER("## A\n").strip(), "<h2>A</h2>")
+            finally:
+                CHECK_TEMPLATE.cmarkgfm, CHECK_TEMPLATE.tempfile.gettempdir = saved
 
     def test_every_captured_case_reads_as_github_rendered_it(self):
         for case, fixture in RENDERED.items():
