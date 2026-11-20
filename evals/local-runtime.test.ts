@@ -197,9 +197,9 @@ describe("local authenticated evaluations", () => {
         args: ["-c", 'model_provider="proxy.with dot"', "-c", 'model_providers={"proxy.with dot"={base_url="https://proxy.example.test/v1"}}'],
         env: {},
       });
-      await Bun.write(path, ['model_provider = "proxy"', "[model_providers.proxy]", 'base_url = "https://proxy.example.test/v1"', 'experimental_bearer_token = " "', "[model_providers.proxy.http_headers]", '"X-Empty" = ""', '"__proto__" = "odd-name"'].join("\n"));
+      await Bun.write(path, ['model_provider = "proxy"', "[model_providers.proxy]", 'base_url = "https://proxy.example.test/v1"', 'experimental_bearer_token = " "', "[model_providers.proxy.http_headers]", '"X-Empty" = "\\u0085"', '"__proto__" = "odd-name"'].join("\n"));
       expect(await codexProxyConfig(path)).toEqual({
-        args: ["-c", 'model_provider="proxy"', "-c", 'model_providers={proxy={base_url="https://proxy.example.test/v1",experimental_bearer_token=" ",http_headers={X-Empty=""},env_http_headers={__proto__="KGR_CODEX_PROVIDER_HEADER_0"}}}'],
+        args: ["-c", 'model_provider="proxy"', "-c", 'model_providers={proxy={base_url="https://proxy.example.test/v1",experimental_bearer_token=" ",http_headers={X-Empty="\u0085"},env_http_headers={__proto__="KGR_CODEX_PROVIDER_HEADER_0"}}}'],
         env: { KGR_CODEX_PROVIDER_HEADER_0: "odd-name" },
       });
       await Bun.write(path, ['model_provider = "proxy"', "[model_providers.proxy]", 'base_url = "https://proxy.example.test/v1"', "[model_providers.proxy.query_params]", 'api_key = "query-sentinel"'].join("\n"));
@@ -215,6 +215,8 @@ describe("local authenticated evaluations", () => {
       const refusal = await codexProxyConfig(path).then(() => "accepted", String);
       expect(refusal).toMatch(/null bytes|readable/);
       expect(refusal).not.toContain("sentinel");
+      await Bun.write(path, ['model_provider = "gcp"', "[model_providers.gcp]", 'base_url = "https://proxy.example.test/v1"', "[model_providers.gcp.http_headers]", 'Authorization = "header-sentinel"'].join("\n"));
+      await expect(codexProxyConfig(path)).rejects.toThrow("built-in gcp provider");
       await Bun.write(path, 'model_provider = "missing"\n');
       await expect(codexProxyConfig(path)).rejects.toThrow("base_url");
       await Bun.write(path, ['model_provider = "keyed"', "[model_providers.keyed]", 'base_url = "https://proxy.example.test/v1"', 'env_key = "PROXY_KEY"'].join("\n"));

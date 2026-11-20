@@ -107,7 +107,9 @@ export async function codexProxyConfig(
     );
   const env: Record<string, string> = {};
   // Codex treats a blank variable as missing, so a blank value stays where it was.
-  const blankValue = (value: unknown) => (value as string).trim() === "";
+  // Unicode White_Space is what Codex trims; JavaScript's trim() differs.
+  const blankValue = (value: unknown) =>
+    /^\p{White_Space}*$/u.test(value as string);
   if (token !== undefined && blankValue(token))
     table.experimental_bearer_token = token;
   else if (token !== undefined) {
@@ -122,6 +124,12 @@ export async function codexProxyConfig(
       value: value as string,
       variable: `${proxyVariable}HEADER_${index}`,
     }));
+  // Codex lets its built-in cloud providers change only a few fields, and
+  // env_http_headers is not among them.
+  if (moved.length && ["amazon-bedrock", "amazon-bedrock-runtime", "gcp"].includes(id))
+    throw new Error(
+      `Codex provider proxy does not pass http_headers for the built-in ${id} provider: they would show in the process list.`,
+    );
   if (blank.length) table.http_headers = Object.fromEntries(blank);
   if (moved.length)
     table.env_http_headers = Object.fromEntries(
