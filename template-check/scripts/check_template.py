@@ -87,6 +87,9 @@ class CheckError(Exception):
     name = ""  # That template's declared name, when it was read.
 
 
+EMAIL_AT = re.compile(r"(`+).*?(?<!`)\1(?!`)|\]\(<(?:\\.|[^>\\])*>\)|(?<=[\w.+-])@(?=[\w-]+\.[\w-])")
+
+
 @dataclass
 class Heading:
     level: int
@@ -99,7 +102,12 @@ class Heading:
     defined_elsewhere: bool = False
 
     def __str__(self) -> str:
-        return self.written or f"{'#' * self.level} {self.text}"
+        if self.written:
+            return self.written
+        # Outside code and link destinations, an email address would become a link
+        # where this is pasted; no escape stops that, but a tag around its `@` does.
+        shown = EMAIL_AT.sub(lambda match: "<span>@</span>" if match.group(0) == "@" else match.group(0), self.text)
+        return f"{'#' * self.level} {shown}"
 
 
 @dataclass
@@ -332,7 +340,8 @@ def written_heading(lines: list[str], node: Node, level: int) -> str:
         content = atx.group(2) or ""
         content = "" if re.fullmatch(r"#+", content) else content
     elif len(block) > 1 and re.fullmatch(r" {0,3}(=+|-+)[ \t]*", block[-1]) and block[-1].strip()[0] == "=-"[level - 1]:
-        content = " ".join(line.strip() for line in block[:-1])  # A setext heading's text lines.
+        # A setext heading's text lines; a line break in a heading reads as a space.
+        content = " ".join(re.sub(r"(?<!\\)((?:\\\\)*)\\$", r"\1", line.strip()) for line in block[:-1])
         # As an ATX heading, a closing run of `#` would end it early; escape it.
         content = re.sub(r"(^|[ \t])(#+)$", r"\1\\\2", content)
     else:
@@ -741,7 +750,8 @@ def form_template(path: str, text: str) -> Template:
             )
             error.name = name
             raise error
-        found.append(Heading(3, " ".join(item["label"].split()), item["line"]))
+        # Rendered later as a heading, which folds whitespace outside inline code itself.
+        found.append(Heading(3, re.sub(r"[\r\n]+", " ", item["label"]).strip(), item["line"]))
 
     for number, raw in enumerate(text.replace("\r\n", "\n").split("\n"), start=1):
         if not raw.strip():

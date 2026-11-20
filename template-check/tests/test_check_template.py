@@ -627,6 +627,18 @@ class RendererParityTests(unittest.TestCase):
         self.assertEqual((str(heading), heading.defined_elsewhere), ("# Testing \\###", False))
         self.assertEqual(CHECK_TEMPLATE.headings(REAL_RENDER(f"{heading}\n"))[0].text, heading.text)
 
+    def test_reported_headings_read_back_as_the_same_heading(self):
+        for template in ("Rollout\\\nplan\n=======\n", "<h2>Contact helpful@example.com</h2>\n"):
+            with self.subTest(template=template):
+                [heading] = CHECK_TEMPLATE.parse_template("t.md", template, REAL_RENDER).headings
+                self.assertFalse(heading.defined_elsewhere)
+                self.assertEqual(CHECK_TEMPLATE.headings(REAL_RENDER(f"{heading}\n"))[0].text, heading.text)
+
+    def test_a_form_label_keeps_the_spaces_in_its_inline_code(self):
+        form = "body:\n  - type: input\n    attributes:\n      label: Run `cmd  arg`\n"
+        [label] = CHECK_TEMPLATE.parse_template("f.yml", form, REAL_RENDER).headings
+        self.assertEqual(label.text, CHECK_TEMPLATE.headings(REAL_RENDER("### Run `cmd  arg`\n"))[0].text)
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
