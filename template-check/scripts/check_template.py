@@ -35,7 +35,7 @@ NESTING = {"li", "blockquote", "table", "pre", "code", "summary"}
 MEDIA = {"img", "video", "audio", "picture", "iframe", "object", "embed"}
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 # The attribution note `create-issue` ends every issue with, as rendered text.
-ATTRIBUTION = re.compile(r"Created on behalf of @[\w-]+ using .+\.")
+ATTRIBUTION = re.compile(r"Created on behalf of @[\w-]+ using (?:(?!\.\s).)+\.")
 YAML_KEY = re.compile(r"""(?:[A-Za-z0-9_][\w .-]*|"[^"]*"|'[^']*')[ \t]*:(?:[ \t]|$)""")
 BLOCK_SCALAR = re.compile(r"[|>](?:[+-]([0-9])?|([0-9])[+-]?)?(?:\s+#.*)?$")
 # A renamed heading still resembles the template's wording this closely.
@@ -228,24 +228,26 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
     return found
 
 
-def default_host() -> str:
-    """The host gh uses for a repository named without one."""
-    return os.environ.get("GH_HOST") or "github.com"
-
-
-def target_host(repo: str | None) -> str:
+def target_host(repo: str | None) -> str | None:
     """The host of the repository the check is about, resolved the way gh resolves it.
 
-    A host-qualified `--repo` or `GH_REPO` names it, a plain OWNER/REPO lives
-    on gh's default host, and otherwise it is the host of the repository gh
-    resolves for the current checkout.
+    A host-qualified `--repo` or `GH_REPO` names it; gh resolves a repository
+    named without a host, and otherwise the repository of the current
+    checkout. None, outside any checkout, leaves the host to gh.
     """
     named = repository(repo or os.environ.get("GH_REPO")) or ""
     if named.count("/") == 2:
         return named.split("/")[0]
     if named:
-        return default_host()
-    return checkout_host(None, os.environ) or default_host()
+        try:
+            url = gh_runner(["repo", "view", named, "--json", "url", "--jq", ".url"])
+        except CheckError as error:
+            raise CheckError(f"cannot resolve the GitHub host of {named}: {error}") from error
+        host = urlparse((url or "").strip()).hostname
+        if not host:
+            raise CheckError(f"cannot resolve the GitHub host of {named}")
+        return host
+    return checkout_host(None, os.environ)
 
 
 def checkout_host(root: Path | None, env: dict[str, str] | os._Environ[str]) -> str | None:
@@ -269,15 +271,27 @@ def checkout_host(root: Path | None, env: dict[str, str] | os._Environ[str]) -> 
     return None
 
 
-def same_host(root: Path, host: str) -> None:
-    """Refuse templates from a checkout that belongs to another host than the body's."""
-    # The checkout's own repository: GH_REPO may name another, GH_HOST still applies.
-    own = checkout_host(root, {key: value for key, value in os.environ.items() if key != "GH_REPO"})
+def same_host(root: Path, host: str | None) -> str | None:
+    """Refuse templates from a checkout on another host than the body's; return the host.
+
+    The checkout is placed by its own remotes, without GH_REPO or GH_HOST; only
+    when that fails is GH_HOST kept, for an Enterprise host configured through it.
+    """
+    environment = {key: value for key, value in os.environ.items() if key not in ("GH_REPO", "GH_HOST")}
+    try:
+        own = checkout_host(root, environment)
+    except CheckError:
+        if "GH_HOST" not in os.environ:
+            raise
+        own = checkout_host(root, {**environment, "GH_HOST": os.environ["GH_HOST"]})
+    if host is None:
+        return own
     if own is not None and own != host:
         raise CheckError(
             f"the templates in {root} belong to {own}, but the body belongs to {host}; "
             "check them against a body on the same host"
         )
+    return host
 
 
 def render(markdown: str, host: str | None = None) -> str:
@@ -1022,10 +1036,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     # Everything renders on one host: that of the repository the check is about.
     # A template from a checkout must belong to that host too. The host is
     # resolved only when something is rendered.
-    hosts: dict[str, str] = {}
+    hosts: dict[str, str | None] = {}
     checked: set[Path] = set()
 
-    def host() -> str:
+    def host() -> str | None:
         if "host" not in hosts:
             hosts["host"] = live_host or target_host(args.repo)
         return hosts["host"]
@@ -1035,7 +1049,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             if not markdown.strip():
                 return ""
             if root is not None and root.resolve() not in checked:
-                same_host(root, host())
+                # Outside any checkout, the templates' checkout names the host.
+                hosts["host"] = same_host(root, host())
                 checked.add(root.resolve())
             return render(markdown, host())
 

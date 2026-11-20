@@ -61,9 +61,10 @@ It reads a Markdown body or template as GitHub renders it, through the
 Markdown API, so a heading counts exactly where GitHub shows one. Everything
 renders on one host: for a live pull request or issue, the host gh fetched it
 from; for a draft, the host of the repository the check is about, resolved as
-gh resolves it, from a host-qualified `--repo` or `GH_REPO`, then `GH_HOST` for
-a repository named without a host, then the repository gh resolves for the
-current checkout. A template found in a checkout must belong to that same host,
+gh resolves it: a host-qualified `--repo` or `GH_REPO`, a repository named
+without a host as gh places it, then the repository of the current checkout,
+and otherwise the templates' own checkout. A template found in a checkout,
+placed by its own remotes, must belong to that same host,
 and a checkout gh cannot place is an operational error: Markdown is never sent
 to another host. A template file that resolves outside its checkout, such as
 through a symlink, is never read. A standalone template file renders on the
