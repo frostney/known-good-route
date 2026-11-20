@@ -597,12 +597,16 @@ class RendererParityTests(unittest.TestCase):
             ["## API**v2**_beta_", "# Title", "## Done", "## Raw"],
         )
 
-    def test_a_heading_that_needs_a_definition_elsewhere_is_reported_as_compared(self):
-        template = "## [Docs][doc]\n\n## Plain\n\n[doc]: https://example.org/docs\n"
+    def test_a_heading_that_needs_a_definition_elsewhere_is_reported_as_written_and_marked(self):
+        template = "## [Docs][doc]\n\n## Plain\n\n## Rollout [^linux|mac]\n\n[doc]: https://example.org/docs\n[^linux|mac]: x\n"
         self.assertEqual(
-            [str(h) for h in CHECK_TEMPLATE.parse_template("t.md", template, REAL_RENDER).headings],
-            ["## [Docs](<https://example.org/docs>)", "## Plain"],
+            [(str(h), h.defined_elsewhere) for h in CHECK_TEMPLATE.parse_template("t.md", template, REAL_RENDER).headings],
+            [("## [Docs][doc]", True), ("## Plain", False), ("## Rollout [^linux|mac]", True)],
         )
+
+    def test_spaces_inside_inline_code_are_compared_as_written(self):
+        texts = {CHECK_TEMPLATE.headings(REAL_RENDER(heading))[0].text for heading in ("## `foo   bar`\n", "## `foo bar`\n")}
+        self.assertEqual(len(texts), 2)
 
     def test_an_authors_new_tab_link_around_its_image_keeps_its_destination(self):
         texts = {
@@ -670,6 +674,10 @@ class TemplateParsingTests(unittest.TestCase):
     def test_an_anchored_markdown_type_needs_no_label(self):
         form = "body:\n  - type: &intro markdown\n    attributes:\n      value: Hi\n  - type: input\n    attributes:\n      label: A\n"
         self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["A"])
+
+    def test_a_quoted_flow_label_may_follow_an_anchor(self):
+        form = 'body:\n  - type: input\n    attributes: {label: &title "Repro, expected", description: x}\n'
+        self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["Repro, expected"])
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):

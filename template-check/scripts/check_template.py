@@ -56,6 +56,7 @@ RENDER = (
 
 
 HEADING_TAG = re.compile(r"h([1-6])")
+CODE_SPACE = "\x00"  # A space inside inline code, which no rendered text contains.
 # Block elements that only group what they hold, so a review note may sit inside one.
 WRAPPERS = {"div", "section", "article", "main", "header", "footer", "aside", "nav"}
 # Elements whose headings are their section's content rather than sections.
@@ -215,6 +216,8 @@ def heading_text(node: Node | str, underscore: bool = False, github: bool = True
         code = text_of(node)
         fence = "`" * (max((len(run) for run in re.findall(r"`+", code)), default=0) + 1)
         padded = code[:1] == "`" or code[-1:] == "`" or (code[:1] == code[-1:] == " " and code.strip())
+        # Spaces in code are literal; CODE_SPACE keeps them through the heading's whitespace folding.
+        code = code.replace(" ", CODE_SPACE)
         return f"{fence} {code} {fence}" if padded else f"{fence}{code}{fence}"
     parts = [heading_text(child, github=github) for child in node.children]
     for index in range(len(parts) - 1):
@@ -328,19 +331,21 @@ def written_heading(lines: list[str], node: Node, level: int) -> str:
 
 
 def standalone(found: list[Heading], renderer: Callable[[str], str]) -> list[Heading]:
-    """Keep each heading's written Markdown only where it shows the same heading on its own.
+    """Mark each heading whose written Markdown shows a different heading on its own.
 
     A reference link or footnote resolves through a definition elsewhere in
     its document, so pasted alone it would read differently; such a heading
-    is reported as compared instead.
+    is reported as written, with a note to copy that definition too.
     """
     written = [heading for heading in found if heading.written]
     if written:
         alone = headings(renderer("\n\n".join(heading.written for heading in written)))
         same = len(alone) == len(written)
         for heading, shown in zip(written, alone):
-            if not same or (shown.level, shown.text) != (heading.level, heading.text):
-                heading.written, heading.defined_elsewhere = "", same
+            if not same:
+                heading.written = ""
+            elif (shown.level, shown.text) != (heading.level, heading.text):
+                heading.defined_elsewhere = True  # Its written form still reads right with that definition.
     return found
 
 
@@ -445,7 +450,7 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
             if level and not nested:
                 line = source_line(child)
                 written = written_heading(source_lines, child, int(level.group(1))) if source is not None else ""
-                text = " ".join(heading_text(child, github=not positioned).split())
+                text = " ".join(heading_text(child, github=not positioned).split()).replace(CODE_SPACE, " ")
                 # A closing run of `#` would end the heading where it is written back.
                 text = re.sub(r"(^|\s)(#+)$", r"\1\\\2", text)
                 heading = Heading(int(level.group(1)), text, line, written=written)
@@ -575,6 +580,20 @@ def scalar(value: str) -> str:
 QUOTED_KEY = re.compile(r"""(?:^|[\[{,\s])(?:"(?:[^"\\]|\\.)*"|'(?:[^']|'')*')[ \t]*:$""")
 
 
+# An anchor or tag, which may stand between a key and its quoted value.
+PROPERTIES = re.compile(r"(?:(?<=[\s\[{,])|^)(?:[&!]\S*[ \t]+)+$")
+
+
+def scalar_starts(current: str) -> bool:
+    """Whether a scalar may start after this text in a flow collection."""
+    stripped = current.rstrip()
+    return (
+        not stripped
+        or stripped[-1] in "[{,"
+        or stripped[-1] == ":" and (current[-1].isspace() or bool(QUOTED_KEY.search(current)))
+    )
+
+
 def scan(text: str, separator: str) -> tuple[list[str], bool]:
     """Split text at each separator outside quotes and nested brackets.
 
@@ -593,11 +612,7 @@ def scan(text: str, separator: str) -> tuple[list[str], bool]:
             escaped = True
         elif quote:
             quote = "" if char == quote else quote
-        elif char in "\"'" and (
-            not current.strip()
-            or current.rstrip()[-1] in "[{,"
-            or current.rstrip()[-1] == ":" and (current[-1].isspace() or QUOTED_KEY.search(current))
-        ):
+        elif char in "\"'" and (scalar_starts(current) or scalar_starts(PROPERTIES.sub("", current))):
             quote = char
         elif char in "{[":
             opened += char
