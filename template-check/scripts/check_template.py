@@ -152,6 +152,8 @@ def text_of(node: Node | str) -> str:
 
 # Inline formatting a reader sees, written back as Markdown in heading text.
 INLINE_MARKERS = {"code": "`", "em": "*", "i": "*", "strong": "**", "b": "**", "del": "~~", "s": "~~", "strike": "~~"}
+# Inline HTML GitHub shows apart from plain text, written back as tags.
+INLINE_TAGS = {"sub", "sup", "kbd", "mark", "ins", "u", "small", "abbr"}
 
 
 def heading_text(node: Node | str) -> str:
@@ -163,10 +165,12 @@ def heading_text(node: Node | str) -> str:
     character reads escaped, as it is written, so it never passes for one.
     """
     if isinstance(node, str):
-        return re.sub(r"([`*~])", r"\\\1", node)
+        return re.sub(r"([`*~<])", r"\\\1", node)
     if node.tag == "img":
         return node.attrs.get("alt", "")
     inner = "".join(heading_text(child) for child in node.children)
+    if node.tag in INLINE_TAGS:
+        return f"<{node.tag}>{inner}</{node.tag}>"
     marker = INLINE_MARKERS.get(node.tag, "")
     return f"{marker}{inner}{marker}"
 
@@ -216,7 +220,8 @@ def is_footnotes(node: Node) -> bool:
 
 
 def is_checked(node: Node) -> bool:
-    return node.tag == "input" and "checked" in node.attrs
+    """A checked task-list box; a hidden or other input shows no answer."""
+    return node.tag == "input" and node.attrs.get("type") == "checkbox" and "checked" in node.attrs
 
 
 def has_checked(node: Node) -> bool:
@@ -476,8 +481,11 @@ def declared_name(text: str) -> str:
             block.append(following.strip())
         joined = " ".join(" ".join(block).split())
         return joined if BLOCK_SCALAR.match(value.strip()) else scalar(joined)
-    if text.lstrip().startswith("{"):
-        return flow_mapping(" ".join(line.strip() for line in lines)).get("name", "")
+    content = [line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")]
+    if content[:1] == ["---"]:
+        content = content[1:]  # A YAML document marker before the mapping.
+    if content and content[0].startswith("{"):
+        return flow_mapping(" ".join(content)).get("name", "")
     return ""
 
 
@@ -701,6 +709,8 @@ def may_be_named(path: str, text: str, name: str) -> bool:
         text = text.removeprefix("\ufeff")
         if path.lower().endswith((".yml", ".yaml")):
             declared = declared_name(text)
+            if not declared:
+                return True  # Every form declares a name; one not found here may be this one.
         else:
             declared = front_matter(text)[0].get("name", "")
     except ValueError:

@@ -69,8 +69,10 @@ are read.
 
 Text in code, comments and other HTML GitHub does not show is no heading. A
 heading inside a list item, quote, table or alert is its section's content,
-not a section of its own. A heading compares with its inline code, emphasis
-and strikethrough, as GitHub shows them. A template heading pairs with a body
+not a section of its own. A heading compares with its inline code, emphasis,
+strikethrough and inline HTML such as subscript, as GitHub shows them. Emoji
+shortcodes such as `:bug:` compare as written, not as the emoji GitHub shows,
+so write them as the template does. A template heading pairs with a body
 heading at the same level before one at another level, so a subsection that shares a
 section's name does not stand in for it. A list item that shows nothing, or only `[ ]`, such as a
 template's `-` placeholder, is not content. Reading stops at a pull request's

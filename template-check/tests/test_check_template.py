@@ -247,6 +247,15 @@ class RenderedHeadingTests(unittest.TestCase):
         ]
         self.assertEqual(len(set(texts)), 4)
 
+    def test_sub_and_superscript_are_part_of_a_heading(self):
+        texts = {CHECK_TEMPLATE.headings(html)[0].text for html in ("<h2>H<sub>2</sub>O</h2>", "<h2>H2O</h2>", "<h2>H<sup>2</sup>O</h2>")}
+        self.assertEqual(len(texts), 3)
+
+    def test_only_a_checked_task_box_is_content(self):
+        hidden = '<h2>Testing</h2><p><input type="hidden" checked=""></p>'
+        box = '<h2>Testing</h2><ul><li><input type="checkbox" checked="" disabled=""> </li></ul>'
+        self.assertEqual([CHECK_TEMPLATE.headings(html)[0].has_content for html in (hidden, box)], [False, True])
+
     def test_a_malformed_repository_is_an_error(self):
         # Four parts, joined here so the text holds no repository name to look up.
         for name in ("/".join(["github.com", "extra", "cli", "cli"]), "cli//cli", "cli"):
@@ -947,6 +956,16 @@ class CommandTests(unittest.TestCase):
         }), encoding="utf-8")
         code, result = self.run_check("--repo", "ghe.example.com/cli/cli", "--kind", "pr", "--body", "-", stdin="## Summary\n\nDone.\n")
         self.assertEqual((code, [p["expected"] for p in result["problems"]]), (1, ["## Testing"]))
+
+    def test_a_flow_style_form_after_a_document_marker_blocks_a_named_check(self):
+        self.write(".github/ISSUE_TEMPLATE/form.yml", "---\n{name: Bug report, body: [{type: input, attributes: {label: A}}]}\n")
+        self.write(".github/ISSUE_TEMPLATE/bug.md", "---\nname: Bug report\n---\n## Summary\n\n-\n")
+        code, result = self.run_check(
+            "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "Bug report",
+            stdin="## Summary\n\nText.\n",
+        )
+        self.assertEqual((code, result["state"]), (2, "operational-error"))
+        self.assertIn("form.yml", result["reason"])
 
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "cli/cli"
