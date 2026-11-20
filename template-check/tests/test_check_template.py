@@ -240,6 +240,37 @@ class RenderedHeadingTests(unittest.TestCase):
         )
         self.assertNotEqual(literal, code)
 
+    def test_struck_out_and_emphasized_words_are_part_of_a_heading(self):
+        texts = [
+            CHECK_TEMPLATE.headings(html)[0].text
+            for html in ("<h2>Do not deploy</h2>", "<h2>Do <del>not</del> deploy</h2>", "<h2>Do <em>not</em> deploy</h2>", "<h2>Do *not* deploy</h2>")
+        ]
+        self.assertEqual(len(set(texts)), 4)
+
+    def test_a_malformed_repository_is_an_error(self):
+        # Four parts, joined here so the text holds no repository name to look up.
+        for name in ("/".join(["github.com", "extra", "cli", "cli"]), "cli//cli", "cli"):
+            with self.subTest(name=name), self.assertRaises(CHECK_TEMPLATE.CheckError):
+                CHECK_TEMPLATE.repository(name)
+
+    def test_the_uv_fallback_clears_inherited_package_sources(self):
+        seen = {}
+        saved = (CHECK_TEMPLATE.cmarkgfm, CHECK_TEMPLATE.shutil.which, CHECK_TEMPLATE.subprocess.run)
+        os.environ["UV_INDEX"] = "private=https://packages.example.invalid/simple"
+
+        def run(command, **options):
+            seen.update(command=command, env=options["env"])
+            return subprocess.CompletedProcess(command, 0, "<h2>A</h2>", "")
+
+        CHECK_TEMPLATE.cmarkgfm, CHECK_TEMPLATE.shutil.which, CHECK_TEMPLATE.subprocess.run = None, lambda name: "uv", run
+        try:
+            REAL_RENDER("## A\n")
+        finally:
+            CHECK_TEMPLATE.cmarkgfm, CHECK_TEMPLATE.shutil.which, CHECK_TEMPLATE.subprocess.run = saved
+            os.environ.pop("UV_INDEX", None)
+        self.assertNotIn("UV_INDEX", seen["env"])
+        self.assertIn("https://pypi.org/simple", seen["command"])
+
     def test_www_github_com_is_github_com(self):
         self.assertEqual(CHECK_TEMPLATE.repository("https://www.github.com/cli/cli"), "github.com/cli/cli")
 
@@ -367,6 +398,12 @@ class TemplateParsingTests(unittest.TestCase):
             "  - type: input\n    attributes:\n      label: A\n",
         )
         self.assertEqual([str(h) for h in template.headings], ["### A"])
+
+    def test_front_matter_may_be_indented_or_one_flow_mapping(self):
+        for front in ("{name: Bug report, about: Report a bug}", "  name: Bug report\n  about: Report a bug"):
+            with self.subTest(front=front):
+                template = CHECK_TEMPLATE.parse_template("bug.md", f"---\n{front}\n---\n## Summary\n")
+                self.assertEqual((template.name, [str(h) for h in template.headings]), ("Bug report", ["## Summary"]))
 
     def test_a_flow_key_needs_a_space_after_its_colon(self):
         with self.assertRaises(CHECK_TEMPLATE.CheckError):

@@ -61,16 +61,17 @@ belongs to.
 It reads a Markdown body or template as GitHub renders it: with cmark-gfm,
 the engine behind GitHub's Markdown, run locally, so a heading counts exactly
 where GitHub shows one and nothing is sent anywhere to be rendered. Without
-the `cmarkgfm` package, it renders through uv with a pinned version from PyPI,
-outside the checkout and ignoring uv configuration files; without uv, it is an
+the `cmarkgfm` package, it renders through uv with a pinned version from PyPI
+alone, outside the checkout and ignoring uv configuration and index settings; without uv, it is an
 operational error that names the install command. A check with no template
 needs no renderer. With `--template-name`, only the templates that can be the one named
 are read.
 
 Text in code, comments and other HTML GitHub does not show is no heading. A
 heading inside a list item, quote, table or alert is its section's content,
-not a section of its own. A template heading pairs with a body heading at the
-same level before one at another level, so a subsection that shares a
+not a section of its own. A heading compares with its inline code, emphasis
+and strikethrough, as GitHub shows them. A template heading pairs with a body
+heading at the same level before one at another level, so a subsection that shares a
 section's name does not stand in for it. A list item that shows nothing, or only `[ ]`, such as a
 template's `-` placeholder, is not content. Reading stops at a pull request's
 review note, the last rule followed by a line that opens with `Edit:` and

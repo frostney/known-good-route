@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import difflib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -37,6 +38,11 @@ except ImportError:  # render() runs it through uv instead.
 
 # GitHub's cmark-gfm for Python, pinned to a release over a year old.
 CMARKGFM = "cmarkgfm==2025.10.22"
+# uv settings that name a package source; the fallback clears them so PyPI is the only one.
+UV_SOURCES = {
+    "UV_INDEX", "UV_INDEX_URL", "UV_DEFAULT_INDEX", "UV_EXTRA_INDEX_URL", "UV_FIND_LINKS", "UV_NO_INDEX",
+    "UV_INDEX_STRATEGY", "UV_CONFIG_FILE", "UV_KEYRING_PROVIDER",
+}
 # Raw HTML is kept, as GitHub keeps it before filtering the tags it never shows.
 RENDER = (
     "import sys, cmarkgfm\n"
@@ -144,19 +150,25 @@ def text_of(node: Node | str) -> str:
     return "".join(text_of(child) for child in node.children)
 
 
+# Inline formatting a reader sees, written back as Markdown in heading text.
+INLINE_MARKERS = {"code": "`", "em": "*", "i": "*", "strong": "**", "b": "**", "del": "~~", "s": "~~", "strike": "~~"}
+
+
 def heading_text(node: Node | str) -> str:
     """A heading's words, with its inline code in backticks.
 
     GitHub turns `:warning:` into an emoji in text but not in code, so a
-    heading with the shortcode in code differs from one without. A literal
-    backtick reads escaped, as it is written, so it never passes for code.
+    heading with the shortcode in code differs from one without, and a
+    struck-out or emphasized word differs from plain text. A literal marker
+    character reads escaped, as it is written, so it never passes for one.
     """
     if isinstance(node, str):
-        return node.replace("`", "\\`")
+        return re.sub(r"([`*~])", r"\\\1", node)
     if node.tag == "img":
         return node.attrs.get("alt", "")
     inner = "".join(heading_text(child) for child in node.children)
-    return f"`{inner}`" if node.tag == "code" else inner
+    marker = INLINE_MARKERS.get(node.tag, "")
+    return f"{marker}{inner}{marker}"
 
 
 def words(node: Node | str) -> str:
@@ -304,9 +316,11 @@ def render(markdown: str) -> str:
         "--default-index", "https://pypi.org/simple", "--python", sys.executable,
         "--with", CMARKGFM, "python", "-I", "-c", RENDER,
     ]
+    # Index settings inherited from the environment could still add or prefer another source.
+    environment = {key: value for key, value in os.environ.items() if key not in UV_SOURCES}
     try:
         completed = subprocess.run(
-            command, input=markdown, cwd=tempfile.gettempdir(), text=True, encoding="utf-8",
+            command, input=markdown, cwd=tempfile.gettempdir(), env=environment, text=True, encoding="utf-8",
             capture_output=True, timeout=300, check=False,
         )
     except subprocess.TimeoutExpired as error:
@@ -325,14 +339,18 @@ def front_matter(text: str) -> tuple[dict[str, str], str]:
     for index, line in enumerate(lines[1:], start=1):
         if line.strip() == "---":
             block = [entry for entry in lines[1:index] if entry.strip() and not re.match(r"\.\.\.(?:[ \t]+#.*)?[ \t]*$", entry)]
-            # Front matter holds YAML keys; an opening `---` rule over Markdown
-            # is part of the body.
-            if not any(YAML_KEY.match(entry) for entry in block):
+            # Front matter is a YAML mapping, in block or flow style, at any
+            # indent; an opening `---` rule over Markdown is part of the body.
+            joined = " ".join(entry.strip() for entry in block)
+            if joined.startswith("{"):
+                return flow_mapping(joined), "\n".join(lines[index + 1 :])
+            if not any(YAML_KEY.match(entry.lstrip()) for entry in block):
                 return {}, text
+            margin = min(len(entry) - len(entry.lstrip()) for entry in block)
             fields = {}
             for entry in block:
                 key, separator, value = entry.partition(":")
-                if separator and not entry.startswith((" ", "\t")):
+                if separator and len(entry) - len(entry.lstrip()) == margin:
                     fields[key.strip()] = scalar(value)
             return fields, "\n".join(lines[index + 1 :])
     return {}, text
@@ -1008,7 +1026,12 @@ def parser() -> argparse.ArgumentParser:
 
 def repository(name: str | None) -> str | None:
     """OWNER/REPO or HOST/OWNER/REPO, also from a repository URL gh accepts."""
-    if not name or "://" not in name:
+    if not name:
+        return name
+    if "://" not in name:
+        parts = name.split("/")
+        if len(parts) not in (2, 3) or not all(parts):
+            raise CheckError(f"--repo {name} is not OWNER/REPO, HOST/OWNER/REPO or a repository URL")
         return name
     url = urlparse(name)
     path = url.path.strip("/").removesuffix(".git")
