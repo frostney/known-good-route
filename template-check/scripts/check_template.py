@@ -108,6 +108,9 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
         # Markdown measures indentation in columns, with tab stops every four.
         margin = len(line) - len(line.lstrip(" \t"))
         line = line[:margin].expandtabs(4) + line[margin:]
+        # A nonblank line that dedents out of a fence's list item ends both.
+        if fence and fence_indent and line.strip() and len(line) - len(line.lstrip(" ")) < fence_indent:
+            fence = ""
         if not fence:
             # A line that starts a comment, or closes one, belongs to an HTML
             # block: what else it holds is text, never a heading.
@@ -116,6 +119,7 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
                 opener = len(line) - len(line.lstrip(" "))
                 while lists and opener < lists[-1]:
                     lists.pop()
+                    empty_item = False
             if in_html:
                 if "-->" not in line:
                     in_comment = True
@@ -129,9 +133,9 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
             if not line.strip():
                 after_blank, paragraph = True, False
                 # A list item that starts empty ends at the first blank line.
-                if empty_item:
+                if empty_item and lists:
                     lists.pop()
-                    empty_item = False
+                empty_item = False
                 continue
             if kind == "pr" and after_blank and NOTE_RULE.match(line):
                 following = next((rest for rest in lines[number:] if rest.strip()), "")
@@ -144,15 +148,15 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
                 continue
         after_blank = False
         indent = len(line) - len(line.lstrip(" "))
-        if fence and fence_indent and indent < fence_indent:
-            fence = ""
         if not fence:
             while lists and indent < lists[-1]:
                 lists.pop()
             container = lists[-1] if lists else 0
             underline = paragraph and SETEXT_UNDERLINE.match(line)
             item = None if underline or THEMATIC_BREAK.match(line) else LIST_ITEM.match(line)
-            if item and paragraph and re.match(r" *(?![1][.)])[0-9]", line):
+            if item and paragraph and (
+                not line[item.end() :].strip() or re.match(r" *(?![1][.)])[0-9]", line)
+            ):
                 item = None
             empty_item = bool(item) and not line[len(item.group(0)) :].strip()
             if item:
@@ -242,7 +246,11 @@ def scalar(value: str) -> str:
         try:
             return str(json.loads(double.group(0)))
         except ValueError:
-            return double.group(0)[1:-1]
+            inner = double.group(0)[1:-1]
+            try:
+                return inner.encode("latin-1", "backslashreplace").decode("unicode_escape")
+            except UnicodeDecodeError:
+                return inner
     single = re.match(r"'(?:[^']|'')*'", value)
     if single:
         return single.group(0)[1:-1].replace("''", "'")
@@ -327,6 +335,8 @@ def declared_name(text: str) -> str:
                 break
             block.append(following.strip())
         return " ".join(" ".join(block).split())
+    if text.lstrip().startswith("{"):
+        return flow_mapping(" ".join(line.strip() for line in lines)).get("name", "")
     return ""
 
 
@@ -390,8 +400,9 @@ def form_template(path: str, text: str) -> Template:
             finish()
             item_indent, item = indent, {"start": number}
             attributes_indent = label_indent = None
-            key_indent = None if content == "-" else indent + 2
-            content, indent = content[2:].lstrip(), indent + 2
+            pad = 1 + len(content[1:]) - len(content[1:].lstrip())
+            key_indent = None if content == "-" else indent + pad
+            content, indent = content[1:].lstrip(), indent + pad
         if item_indent is None:
             continue
         key, separator, value = content.partition(":")
@@ -833,6 +844,8 @@ def main() -> int:
     # A check that could not run must not read as a mismatch to fix.
     except (CheckError, OSError, ValueError, KeyError, TypeError) as error:
         result = {"state": "operational-error", "problems": [], "reason": str(error)}
+    except Exception as error:  # A defect in this checker is no verdict on the body either.
+        result = {"state": "operational-error", "problems": [], "reason": f"checker failed: {error!r}"}
     if args.json:
         print(json.dumps(result, sort_keys=True, separators=(",", ":")))
     else:

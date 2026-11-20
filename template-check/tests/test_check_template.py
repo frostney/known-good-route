@@ -382,6 +382,28 @@ class HeadingTests(unittest.TestCase):
     def test_an_unindented_comment_ends_a_list(self):
         self.assertEqual([str(h) for h in CHECK_TEMPLATE.headings("- item\n<!-- note -->\n  ## Testing\n")], ["## Testing"])
 
+    def test_a_comment_after_an_empty_item_does_not_crash(self):
+        found = CHECK_TEMPLATE.headings("## A\n\n-\n<!-- Describe this section. -->\n\n## B\n")
+        self.assertEqual([str(h) for h in found], ["## A", "## B"])
+
+    def test_a_heading_in_a_comment_after_a_list_fence_stays_hidden(self):
+        self.assertEqual(CHECK_TEMPLATE.headings("- item\n\n  ```\n  code\n<!--\n## Testing\n-->\n"), [])
+
+    def test_a_form_written_as_one_flow_mapping_keeps_its_name(self):
+        self.assertEqual(
+            CHECK_TEMPLATE.declared_name("{name: bug-report, body: [{type: input, attributes: {label: A}}]}\n"), "bug-report"
+        )
+
+    def test_a_field_key_column_follows_the_padding_after_its_dash(self):
+        template = CHECK_TEMPLATE.parse_template("f.yml", "body:\n  -   type: input\n      attributes:\n        label: A\n")
+        self.assertEqual([str(h) for h in template.headings], ["### A"])
+
+    def test_an_empty_ordered_marker_does_not_interrupt_a_paragraph(self):
+        self.assertEqual([str(h) for h in CHECK_TEMPLATE.headings("Prose\n1.\n   ## Testing\n")], ["## Testing"])
+
+    def test_yaml_escapes_in_a_double_quoted_label_decode(self):
+        self.assertEqual(CHECK_TEMPLATE.flow_mapping('{label: "OS \\x28optional\\x29"}'), {"label": "OS (optional)"})
+
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 
