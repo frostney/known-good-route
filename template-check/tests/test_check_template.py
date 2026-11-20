@@ -560,6 +560,20 @@ class RendererParityTests(unittest.TestCase):
         reported = CHECK_TEMPLATE.headings(REAL_RENDER("## [Notice](https://example.org/?a=1&amp;copy;)\n"))[0]
         self.assertEqual(str(CHECK_TEMPLATE.headings(REAL_RENDER(f"{reported}\n"))[0]), str(reported))
 
+    def test_an_authors_link_around_its_own_badge_keeps_its_destination(self):
+        texts = {
+            CHECK_TEMPLATE.headings(REAL_RENDER(f"## [![Status](/{name}.svg)](/{name}.svg)\n"))[0].text for name in ("build", "status")
+        }
+        self.assertEqual(len(texts), 2)
+
+    def test_a_reported_heading_with_a_plain_url_stays_plain_where_written_back(self):
+        reported = CHECK_TEMPLATE.headings(REAL_RENDER("## https&#58;//example.org and www&#46;example.org\n"))[0]
+        self.assertEqual(str(CHECK_TEMPLATE.headings(REAL_RENDER(f"{reported}\n"))[0]), str(reported))
+
+    def test_an_unreadable_source_position_on_a_raw_heading_leaves_no_line(self):
+        found = CHECK_TEMPLATE.headings(REAL_RENDER('<h2 data-sourcepos="2-4">Testing</h2>\n'))
+        self.assertEqual([(h.text, h.line) for h in found], [("Testing", None)])
+
     def test_every_captured_case_reads_as_github_rendered_it(self):
         for case, fixture in RENDERED.items():
             for kind in (None, "pr", "issue"):
@@ -594,6 +608,10 @@ class TemplateParsingTests(unittest.TestCase):
             with self.subTest(label=label):
                 form = f"body:\n  - type: input\n    attributes:\n      label: {label}\n      description: x\n"
                 self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], [expected])
+
+    def test_a_label_may_start_below_a_comment_after_its_key(self):
+        form = "body:\n  - type: input\n    attributes:\n      label: # Shown in the issue\n        Steps to reproduce\n"
+        self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["Steps to reproduce"])
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):

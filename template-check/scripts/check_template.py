@@ -167,7 +167,9 @@ def renderer_link(node: Node) -> bool:
     sources = {child.attrs.get(key) for child in children for key in ("src", "data-canonical-src")}
     own_text = "".join(child for child in node.children if isinstance(child, str)).strip()
     only_images = bool(children) and all(child.tag == "img" for child in children)
-    return only_images and not own_text and node.attrs.get("href") in sources
+    # GitHub opens the image it wraps in a new tab; the local renderer adds no wrapper.
+    generated = node.attrs.get("target") == "_blank"
+    return generated and only_images and not own_text and node.attrs.get("href") in sources
 
 
 def footnote_label(href: str) -> str:
@@ -181,7 +183,9 @@ def footnote_label(href: str) -> str:
 
 def literal(text: str) -> str:
     """Text with each character Markdown could read as markup escaped, so it reads back as written."""
-    return re.sub(r"([\\`*_~<\[\]&])", r"\\\1", text)
+    text = re.sub(r"([\\`*_~<\[\]&])", r"\\\1", text)
+    # A plain-text URL would become a link where it is written back.
+    return re.sub(r"(?i)\b(?:https?|ftp)(?=://)|\bwww(?=\.)", lambda match: match.group(0) + "\\", text)
 
 
 def heading_text(node: Node | str) -> str:
@@ -387,8 +391,7 @@ def headings(html: str, kind: str | None = None, source: str | None = None) -> l
                 continue
             level = HEADING_TAG.fullmatch(child.tag)
             if level and not nested:
-                position = child.attrs.get("data-sourcepos", "")
-                line = int(position.split(":")[0]) if position[:1].isdigit() else None
+                line = source_line(child)
                 text = " ".join(heading_text(child).split())
                 # A closing run of `#` would end the heading where it is written back.
                 text = re.sub(r"(^|\s)(#+)$", r"\1\\\2", text)
@@ -761,7 +764,8 @@ def form_template(path: str, text: str) -> Template:
                 else:
                     item["label"] = scalar(value)
                     if not QUOTED_SCALAR.fullmatch(value.strip()):
-                        item["pending"] = ("label", indent, value.strip())
+                        # A comment-only value is empty: the label starts on the next line.
+                        item["pending"] = ("label", indent, value.strip() if scalar(value) else "")
     if block is not None:
         item["label"] = " ".join(block)
     finish()
