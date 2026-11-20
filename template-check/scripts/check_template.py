@@ -62,7 +62,8 @@ CODE_SPACE = "\x00"  # A space inside inline code, which no rendered text contai
 WRAPPERS = {"div", "section", "article", "main", "header", "footer", "aside", "nav"}
 # Elements whose headings are their section's content rather than sections.
 NESTING = {"li", "blockquote", "table", "pre", "code", "summary"}
-MEDIA = {"img", "video", "audio", "picture", "iframe", "object", "embed"}
+# A <picture> shows only the image inside it, so it is no media of its own.
+MEDIA = {"img", "video", "audio", "iframe", "object", "embed"}
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 # Opening one of these closes an open paragraph, as HTML does.
 CLOSES_PARAGRAPH = {
@@ -133,8 +134,10 @@ class TreeBuilder(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.root = Node("root", {})
         self.stack = [self.root]
+        self.joins = False  # Whether text continues the text before it, as across a dropped comment.
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.joins = False
         if tag == "br":
             self.stack[-1].children.append("\n")  # A line break separates words and lines.
             return
@@ -151,13 +154,19 @@ class TreeBuilder(HTMLParser):
             self.handle_endtag(tag)
 
     def handle_endtag(self, tag: str) -> None:
+        self.joins = False
         for index in range(len(self.stack) - 1, 0, -1):
             if self.stack[index].tag == tag:
                 del self.stack[index:]
                 return
 
     def handle_data(self, data: str) -> None:
-        self.stack[-1].children.append(data)
+        children = self.stack[-1].children
+        if self.joins and children and isinstance(children[-1], str):
+            children[-1] += data
+        else:
+            children.append(data)
+        self.joins = True
 
 
 def inner_html(node: Node) -> str:
@@ -387,13 +396,15 @@ def standalone(found: list[Heading], renderer: Callable[[str], str], source: str
             alone = [(headings(renderer(form), github=False) or [Heading(0, "")])[0] for _, form in candidates]
         return [heading for (heading, _), shown in zip(candidates, alone) if (shown.level, shown.text) != (heading.level, heading.text)]
 
-    for heading in failing([(heading, heading.written) for heading in found if heading.written]):
-        # Followed by its own document, which holds every link and footnote definition.
-        shown = headings(renderer(f"{heading.written}\n\n{source}"), github=False)[:1]
-        if [(h.level, h.text) for h in shown] == [(heading.level, heading.text)]:
-            heading.defined_elsewhere = True
-        else:
-            heading.written = ""
+    broken = failing([(heading, heading.written) for heading in found if heading.written])
+    if broken:
+        # Followed by their own document, which holds every link and footnote definition.
+        shown = headings(renderer("\n\n".join([*(heading.written for heading in broken), source])), github=False)
+        for index, heading in enumerate(broken):
+            if index < len(shown) and (shown[index].level, shown[index].text) == (heading.level, heading.text):
+                heading.defined_elsewhere = True
+            else:
+                heading.written = ""
     for heading in failing([(heading, str(heading)) for heading in found if not heading.written]):
         heading.written = f"<h{heading.level}>{heading.html}</h{heading.level}>"
     return found
@@ -624,6 +635,8 @@ def bare(value: str) -> str:
 def scalar(value: str) -> str:
     """A plain or quoted single-line YAML scalar without a trailing comment."""
     value = bare(value)
+    if value.startswith("*"):
+        raise CheckError(f"cannot read the YAML alias {value.split()[0]}, which this reader does not resolve")
     double = re.match(r'"(?:[^"\\]|\\.)*"', value)
     if double:
         inner = double.group(0)[1:-1]
@@ -920,7 +933,12 @@ def parse_template(path: str, text: str, renderer: Callable[[str], str] | None =
     text = text.removeprefix("\ufeff")
     renderer = renderer or render
     if path.lower().endswith((".yml", ".yaml")):
-        template = form_template(path, text)
+        try:
+            template = form_template(path, text)
+        except CheckError as error:
+            if str(error).startswith(path):
+                raise
+            raise CheckError(f"{path}: {error}; pass --template PATH") from error
         # GitHub shows each label as a rendered heading, so compare it as one.
         if template.headings:
             shown = headings(renderer("\n\n".join(f"### {heading.text}" for heading in template.headings)), github=False)

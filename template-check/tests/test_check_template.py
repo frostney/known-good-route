@@ -662,9 +662,34 @@ class RendererParityTests(unittest.TestCase):
         self.assertEqual([h.has_content for h in found], [True])
 
     def test_a_form_label_is_reported_as_written(self):
-        form = "body:\n  - type: input\n    attributes:\n      label: ***Required***~~optional~~\n"
+        form = "body:\n  - type: input\n    attributes:\n      label: \"***Required***~~optional~~\"\n"
         [heading] = CHECK_TEMPLATE.parse_template("f.yml", form, REAL_RENDER).headings
         self.assertEqual(CHECK_TEMPLATE.headings(REAL_RENDER(f"{heading}\n"))[0].text, heading.text)
+
+    def test_an_empty_picture_is_no_content(self):
+        found = CHECK_TEMPLATE.headings(REAL_RENDER("## Evidence\n\n<picture></picture>\n"))
+        self.assertEqual([h.has_content for h in found], [False])
+        shown = CHECK_TEMPLATE.headings(REAL_RENDER('## Evidence\n\n<picture><img src="/a.png" alt="a"></picture>\n'))
+        self.assertEqual([h.has_content for h in shown], [True])
+
+    def test_a_comment_inside_heading_text_does_not_change_it(self):
+        texts = {
+            CHECK_TEMPLATE.headings(REAL_RENDER(heading))[0].text
+            for heading in ("## https&#58;//example.org\n", "## https<!-- guide -->&#58;//example.org\n")
+        }
+        self.assertEqual(len(texts), 1)
+
+    def test_definition_checks_render_once_for_all_headings(self):
+        template = "".join(f"## [Docs {i}][doc]\n\n" for i in range(20)) + "[doc]: https://example.org\n"
+        calls = []
+
+        def counting(markdown):
+            calls.append(markdown)
+            return REAL_RENDER(markdown)
+
+        headings = CHECK_TEMPLATE.parse_template("t.md", template, counting).headings
+        self.assertTrue(all(h.defined_elsewhere for h in headings))
+        self.assertLessEqual(len(calls), 3)
 
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
@@ -749,6 +774,11 @@ class TemplateParsingTests(unittest.TestCase):
     def test_an_anchored_quoted_label_may_continue_past_a_colon(self):
         form = 'body:\n  - type: input\n    attributes:\n      label: &title "First line\n        continuation: more"\n'
         self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["First line continuation: more"])
+
+    def test_a_yaml_alias_in_a_form_is_an_error(self):
+        form = "body:\n  - type: input\n    attributes: {label: &steps Steps}\n  - type: input\n    attributes: {label: *steps}\n"
+        with self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, r"f\.yml: .*alias \*steps"):
+            CHECK_TEMPLATE.parse_template("f.yml", form, REAL_RENDER)
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):

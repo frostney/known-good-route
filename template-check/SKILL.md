@@ -89,5 +89,6 @@ attribution note `create-issue` closes it with is not content either.
 
 Issue forms are YAML that GitHub does not render here, so the check reads them
 itself: in GitHub's block layout, where a field's `attributes` may be a
-one-line flow mapping. A form written in any other flow style is an
+one-line flow mapping. A form written in any other flow style, or that uses a
+YAML alias such as `*name`, is an
 operational error, never a partial check.
