@@ -60,6 +60,27 @@ function tomlKey(key: string) {
 // can list a process's arguments, so the table's bearer token and header values
 // travel in the child's environment and the arguments name their variables.
 const proxyVariable = "KGR_CODEX_PROVIDER_";
+// Codex treats these settings as secret and has no environment form for them.
+const argumentOnlySecrets = new Set(["query_params", "model_catalog_url", "args"]);
+function refuseArgumentSecrets(value: unknown, path: string): void {
+  if (typeof value === "string") {
+    const url = URL.canParse(value) ? new URL(value) : undefined;
+    if (url?.username || url?.password)
+      throw new Error(
+        `Codex provider proxy does not pass credentials in a URL (${path}): they would show in the process list.`,
+      );
+  }
+  if (!value || typeof value !== "object") return;
+  for (const [key, item] of Object.entries(value)) {
+    const set =
+      typeof item === "object" && item ? Object.keys(item).length : item !== "";
+    if (argumentOnlySecrets.has(key) && set)
+      throw new Error(
+        `Codex provider proxy does not pass ${path}.${key}: it would show in the process list.`,
+      );
+    refuseArgumentSecrets(item, `${path}.${key}`);
+  }
+}
 export async function codexProxyConfig(
   path = join(
     process.env.CODEX_HOME || join(homedir(), ".codex"),
@@ -82,16 +103,12 @@ export async function codexProxyConfig(
     throw new Error(
       "Codex provider proxy does not pass provider keys from the environment.",
     );
-  // Codex reads query parameters from its arguments only.
-  if (Object.keys(provider.query_params ?? {}).length)
-    throw new Error(
-      "Codex provider proxy does not pass query_params: they would show in the process list.",
-    );
   const {
     experimental_bearer_token: token,
     http_headers: headers = {},
     ...table
   } = provider;
+  refuseArgumentSecrets(table, `model_providers.${id}`);
   // Codex names a malformed value at startup; turning one into text would hide
   // it. A null byte fails the spawn with an error that quotes the whole value.
   const usable = (value: unknown) =>

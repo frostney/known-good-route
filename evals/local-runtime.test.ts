@@ -217,6 +217,16 @@ describe("local authenticated evaluations", () => {
       expect(refusal).not.toContain("sentinel");
       await Bun.write(path, ['model_provider = "gcp"', "[model_providers.gcp]", 'base_url = "https://proxy.example.test/v1"', "[model_providers.gcp.http_headers]", 'Authorization = "header-sentinel"'].join("\n"));
       await expect(codexProxyConfig(path)).rejects.toThrow("built-in gcp provider");
+      for (const [setting, named] of [
+        ['model_catalog_url = "https://proxy.example.test/models?key=url-sentinel"', "model_catalog_url"],
+        ['base_url = "https://user:url-sentinel@proxy.example.test/v1"', "base_url"],
+        ['auth = { command = "helper", args = ["arg-sentinel"] }', "auth.args"],
+      ] as const) {
+        await Bun.write(path, ['model_provider = "proxy"', "[model_providers.proxy]", 'base_url = "https://proxy.example.test/v1"'].filter((line) => !setting.startsWith("base_url") || !line.startsWith("base_url")).concat(setting).join("\n"));
+        const refusal = await codexProxyConfig(path).then(() => "accepted", String);
+        expect(refusal).toContain(named);
+        expect(refusal).not.toContain("sentinel");
+      }
       await Bun.write(path, 'model_provider = "missing"\n');
       await expect(codexProxyConfig(path)).rejects.toThrow("base_url");
       await Bun.write(path, ['model_provider = "keyed"', "[model_providers.keyed]", 'base_url = "https://proxy.example.test/v1"', 'env_key = "PROXY_KEY"'].join("\n"));
