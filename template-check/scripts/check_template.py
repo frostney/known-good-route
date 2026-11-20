@@ -190,7 +190,7 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
                 section.has_content = True
             continue
         if PLACEHOLDER.match((line[container:] if indent >= container else line).expandtabs(4)):
-            paragraph = False
+            paragraph = bool(item) and not empty_item
             continue
         match = None if container and indent >= container else ATX.match(line)
         if match:
@@ -300,7 +300,7 @@ def scan(text: str, separator: str) -> tuple[list[str], bool]:
     apostrophe in a plain `What's wrong?` is text. Inside quotes, `\\"` and
     `''` escape the closing quote.
     """
-    parts, current, depth, quote, escaped, closed = [], "", 0, "", False, True
+    parts, current, opened, quote, escaped, closed = [], "", "", "", False, True
     for index, char in enumerate(text):
         if escaped:
             escaped = False
@@ -317,16 +317,16 @@ def scan(text: str, separator: str) -> tuple[list[str], bool]:
         ):
             quote = char
         elif char in "{[":
-            depth += 1
+            opened += char
         elif char in "}]":
-            depth -= 1
-            closed = closed and depth >= 0
-        elif char == separator and depth == 0:
+            closed = closed and opened[-1:] == ("{" if char == "}" else "[")
+            opened = opened[:-1]
+        elif char == separator and not opened:
             parts.append(current)
             current = ""
             continue
         current += char
-    return [*parts, current], closed and depth == 0 and not quote
+    return [*parts, current], closed and not opened and not quote
 
 
 def top_level(text: str, separator: str) -> list[str]:
@@ -579,8 +579,9 @@ def discover(source: Source, kind: str) -> list[Template | CheckError]:
             except ValueError as error:
                 failure = CheckError(f"cannot read template {path}: {error}")
                 # Keep the form's declared name, so a check that names it still sees the error.
+                # Only the name line is read, so the field that failed cannot fail it too.
                 try:
-                    failure.name = declared_name(text) if path.lower().endswith((".yml", ".yaml")) else ""
+                    failure.name = declared_name(text.removeprefix("\ufeff"))
                 except ValueError:
                     failure.name = ""
                 raise failure from error

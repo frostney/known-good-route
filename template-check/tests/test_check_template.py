@@ -453,6 +453,12 @@ class HeadingTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             CHECK_TEMPLATE.scalar('"\\UFFFFFFFF"')
 
+    def test_an_empty_task_box_keeps_its_item_paragraph_open(self):
+        self.assertEqual(CHECK_TEMPLATE.headings("- [ ]\ncontinued\n\n    ```\n  ## Testing\n    ```\n"), [])
+
+    def test_inline_attributes_with_mismatched_brackets_are_an_error(self):
+        self.assertEqual(CHECK_TEMPLATE.flow_mapping("{label: Steps, description: [unfinished}}"), {})
+
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 
@@ -779,6 +785,22 @@ class CommandTests(unittest.TestCase):
         )
         self.assertEqual((code, result["state"]), (2, "operational-error"))
         self.assertIn("form.yml", result["reason"])
+
+    def test_a_failing_template_keeps_its_declared_name_in_either_format(self):
+        for failing in (
+            (".github/ISSUE_TEMPLATE/form.yml", '\ufeffname: Bug report\nbody:\n  - type: input\n    attributes: {label: "\\UFFFFFFFF"}\n'),
+            (".github/ISSUE_TEMPLATE/other.md", '---\nname: Bug report\nabout: "\\UFFFFFFFF"\n---\n## Summary\n'),
+        ):
+            with self.subTest(failing=failing[0]):
+                self.directory.cleanup()
+                self.setUp()
+                self.write(*failing)
+                self.write(".github/ISSUE_TEMPLATE/bug.md", "---\nname: Bug report\n---\n## Summary\n\n-\n")
+                code, result = self.run_check(
+                    "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "Bug report",
+                    stdin="## Summary\n\nText.\n",
+                )
+                self.assertEqual((code, result["state"]), (2, "operational-error"))
 
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "owner/project"
