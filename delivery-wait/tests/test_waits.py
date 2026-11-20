@@ -182,6 +182,7 @@ def workflow_run(
     branch: str = "feature",
     head_repository: int = 1,
     started_at: str | None = None,
+    pull_requests: list[int] | None = None,
     created_at: str = "2026-08-12T08:00:00Z",
     updated_at: str = "2026-08-12T08:05:00Z",
 ) -> dict:
@@ -198,6 +199,7 @@ def workflow_run(
             "head_repository": {"id": head_repository},
             "created_at": created_at,
             "run_started_at": started_at or created_at,
+            **({"pull_requests": [{"number": n} for n in pull_requests]} if pull_requests is not None else {}),
             "updated_at": updated_at,
             "status": status,
             "conclusion": conclusion,
@@ -1282,6 +1284,8 @@ class WaitCommandsTest(unittest.TestCase):
             ("another branch", {"branch": "other"}),
             # A fork's pull request whose branch has the same name.
             ("another repository", {"head_repository": 2}),
+            # The branch's pull request against another base.
+            ("another pull request", {"pull_requests": [8]}),
             # A job failed before the rest were cancelled.
             ("a job failed", {"jobs": [
                 workflow_job(1001, "build", conclusion="failure", run_id=102),
@@ -1326,6 +1330,27 @@ class WaitCommandsTest(unittest.TestCase):
         )
         _, output = self.census_wait("--check", "build")
         self.assertEqual(output["state"], "satisfied")
+
+    def test_runs_named_for_this_pull_request_can_be_duplicates(self) -> None:
+        older = workflow_run(101, [workflow_job(1000, "build")], workflow_id=9, check_suite_id=501, pull_requests=[7])
+        self.write_scenario(census=[census(*self.cancelled_duplicate(older, pull_requests=[7]))])
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "recoverable")
+        # An older run named only for another pull request does not count.
+        self.reset_census()
+        other = workflow_run(101, [workflow_job(1000, "build")], workflow_id=9, check_suite_id=501, pull_requests=[8])
+        self.write_scenario(census=[census(*self.cancelled_duplicate(other))])
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "changed")
+
+    def test_a_failed_named_check_from_a_cancelled_duplicate_still_counts(self) -> None:
+        # The rollup shows a failure the job census has not caught up with.
+        self.write_scenario(
+            pull=pull("head-1", [check("build", "COMPLETED", "FAILURE", app="github-actions", event="pull_request", suite_id=502, workflow=9)]),
+            census=[census(*self.cancelled_duplicate())],
+        )
+        _, output = self.census_wait("--check", "build")
+        self.assertEqual(output["state"], "changed")
 
     def test_an_older_run_that_was_rerun_cannot_show_the_race(self) -> None:
         # Its creation and its latest update span two attempts.

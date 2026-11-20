@@ -337,6 +337,10 @@ def workflow_census(gh: Gh, repo: str, number: int, head: str, checks: bool, res
             "checkSuiteId": run.get("check_suite_id"),
             "headBranch": run.get("head_branch"),
             "headRepositoryId": (run.get("head_repository") or {}).get("id"),
+            "pullRequests": sorted(
+                pull.get("number") for pull in run.get("pull_requests") or []
+                if isinstance(pull, dict) and pull.get("number") is not None
+            ),
             "runStartedAt": run.get("run_started_at"),
             "updatedAt": run.get("updated_at"),
             "attempt": run.get("run_attempt"),
@@ -355,7 +359,7 @@ def workflow_census(gh: Gh, repo: str, number: int, head: str, checks: bool, res
             ],
         })
     mark_superseded_runs(observation["runs"])
-    mark_cancelled_duplicates(observation["runs"], repo)
+    mark_cancelled_duplicates(observation["runs"], repo, number)
     return observation
 
 
@@ -380,7 +384,7 @@ def mark_superseded_runs(runs: list[dict[str, Any]]) -> None:
             run["superseded"] = True
 
 
-def mark_cancelled_duplicates(runs: list[dict[str, Any]], repo: str) -> None:
+def mark_cancelled_duplicates(runs: list[dict[str, Any]], repo: str, number: int) -> None:
     """Flag a newest run that was cancelled beside an older run of its source.
 
     One event can start two runs of a workflow for the same head, for example
@@ -401,6 +405,8 @@ def mark_cancelled_duplicates(runs: list[dict[str, Any]], repo: str) -> None:
     started before the newer one was cancelled and was still running then, and
     no job of the cancelled run failed in any other way. A run cancelled after
     the older one finished, or with a failed job, needs its own diagnosis.
+    Where GitHub names the pull requests a run belongs to, both runs belong
+    to this one: a branch can have pull requests against two bases.
     """
     sources: dict[tuple[Any, Any], list[dict[str, Any]]] = {}
     for run in runs:
@@ -412,12 +418,18 @@ def mark_cancelled_duplicates(runs: list[dict[str, Any]], repo: str) -> None:
             continue
         if (newest.get("attempt") or 1) > 1:
             continue
+        if newest.get("pullRequests") and number not in newest["pullRequests"]:
+            continue
         if any(
             job.get("conclusion") not in PASSING_WORKFLOW_CONCLUSIONS | {"cancelled", None}
             for job in newest.get("jobs", [])
         ):
             continue
-        older = [run for run in source if run is not newest and raced(run, newest)]
+        older = [
+            run for run in source
+            if run is not newest and raced(run, newest)
+            and (not run.get("pullRequests") or number in run["pullRequests"])
+        ]
         passed = [
             run["id"] for run in older
             if run.get("status") == "completed" and run.get("conclusion") in PASSING_WORKFLOW_CONCLUSIONS
@@ -504,8 +516,9 @@ class WorkflowCensusGate:
 
     def failures(self, observation: dict[str, Any]) -> list[str]:
         failures = workflow_failures(observation)
-        # A named check from a cancelled duplicate run fails with that run. A
-        # cancelled one from a run that has not finished, or that passed on a
+        # A cancelled named check from a cancelled duplicate run goes with
+        # that run; any other conclusion still counts. A cancelled one from a
+        # run that has not finished, or that passed on a
         # later attempt, is left from an earlier attempt: the check rollup is
         # read before the runs and can lag behind a rerun. The run's jobs
         # decide, and a stable census needs a second observation.
@@ -523,8 +536,10 @@ class WorkflowCensusGate:
         observed = {
             name: [
                 check for check in checks
-                if check.get("suite") not in duplicate_suites
-                and not (check.get("suite") in running_suites and str(check.get("conclusion", "")).upper() == "CANCELLED")
+                if not (
+                    check.get("suite") in duplicate_suites | running_suites
+                    and str(check.get("conclusion", "")).upper() == "CANCELLED"
+                )
             ]
             for name, checks in checks_by_name(observation).items()
         }

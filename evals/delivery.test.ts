@@ -455,6 +455,10 @@ test("a stack merge blocked by a cancelled duplicate run is retried after that r
   fixture.record("monitor.wait", { head: duplicateHead });
   expect(fixture.record("git.stackMerge")).toContain("squash-merged");
   expect(fixture.evidence.stackTopology).toContain("Stack 35 is merged");
+  // A rerun of another run does not bring the counted run's checks to pass.
+  const wrongRerun = createFixtureState(c.fixture);
+  wrongRerun.record("ci.rerunRun", { runId: 9101 }, "gh run rerun 9101");
+  expect(wrongRerun.record("monitor.wait", { head: duplicateHead })).toContain("recoverable");
   // A wait on the lower layer after the rerun does not unlock the merge.
   const lowerFirst = createFixtureState(c.fixture);
   for (const step of [refusedStackMerge, duplicateRerun]) lowerFirst.record(step.action, step.data);

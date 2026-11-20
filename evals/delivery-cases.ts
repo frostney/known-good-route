@@ -1006,7 +1006,7 @@ export const deliveryCases: EvalCase[] = [
         "monitor.wait": `delivery-wait checks-terminal --all-workflows for PR #561 at ${stackHeads[1]} returned state recoverable: the newest run of CI (9102) was cancelled while an older run of the same workflow and event (9101) passed: rerun it with gh run rerun 9102 --repo example/palette. Runs 9101 and 9102 both started for PR #561's opened event; GitHub counts run 9102's check suite. Run 9105 of the PR body check failed on PR #561's opened event; run 9106 of that workflow passed after an edit and replaced it.`,
       },
       transitions: [
-        { after: "ci.rerunRun", evidence: {}, actionResponses: {
+        { after: "ci.rerunRun", whenCarries: { values: ["9102"] }, evidence: {}, actionResponses: {
           "monitor.wait": `delivery-wait checks-terminal --all-workflows for PR #561 at ${stackHeads[1]} returned state satisfied: run 9102's second attempt passed, and all 3 deciding workflow runs and 14 jobs on the head succeeded across two identical observations. GitHub reports PR #561's mergeStateStatus as CLEAN.`,
         } },
         // Only a wait on the rerun layer's own head shows its checks passed.

@@ -144,7 +144,8 @@ requires its own identity flags:
     and blocks merging, although the older run passed. The wait marks such a
     newest run with `cancelledDuplicate` instead of counting it as a failure
     when it raced the older run: both come from the same branch of the same
-    repository, the older run, on its first attempt, had started before the
+    repository and, where GitHub names their pull requests, belong to this
+    one, the older run, on its first attempt, had started before the
     newer one was cancelled and was still running then, and no job of the
     cancelled run failed another way. While that older run has not finished,
     the wait waits for it. Once it has passed and every other run on the
@@ -202,12 +203,15 @@ establishes the awaited fact. `changed` means a check or workflow reached a
 non-success terminal result or other relevant state moved; inspect it before
 deciding. `recoverable`, from `checks-terminal --all-workflows`, means a run
 is a cancelled duplicate whose older run passed, nothing else has failed and
-no other run is still running. Each such run's `cancelledDuplicate.rerun`
-holds the `gh run rerun` command that replaces its result. Run one, wait
-again on the same head, and run the next one the new result names: reruns
-that share a concurrency group would cancel each other. A rerun retries the
-same commit; it is never a
-reason to bypass a required check or merge protection. `invalidated` means the
+no other run on the head is still running. Each such run's
+`cancelledDuplicate.rerun` holds the `gh run rerun` command that replaces its
+result. Run one, wait again on the same head, and run the next one the new
+result names: reruns that share a concurrency group would cancel each other.
+If `gh run rerun` reports that the run is already running, the rerun was
+accepted; wait again. The wait sees only the head's own runs, so a group that
+spans other branches can still lose a run elsewhere to the rerun. A rerun
+retries the same commit; it is never a reason to bypass a required check or
+merge protection. `invalidated` means the
 expected head, ref, or saved identity no longer matches, `timed-out` means the
 deadline passed, and `cancelled` means the wait was interrupted. These exit 0;
 `operational-error` exits 2. `inspect` can also report `waiting`.
