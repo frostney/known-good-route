@@ -151,7 +151,12 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
         after_blank = False
         indent = len(line) - len(line.lstrip(" "))
         if not fence:
-            while lists and indent < lists[-1]:
+            # A line that continues the paragraph above, with no blank line
+            # and no new block, stays in that paragraph's list item.
+            lazy = paragraph and not was_blank and not (
+                LIST_ITEM.match(line) or ATX.match(line) or FENCE.match(line) or THEMATIC_BREAK.match(line)
+            )
+            while lists and indent < lists[-1] and not lazy:
                 lists.pop()
             container = lists[-1] if lists else 0
             underline = paragraph and SETEXT_UNDERLINE.match(line)
@@ -192,7 +197,7 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
             open_sections.append(heading)
             paragraph = False
             continue
-        paragraph = not item and not underline and not THEMATIC_BREAK.match(line)
+        paragraph = not underline and not THEMATIC_BREAK.match(line) and not (item and empty_item)
         for section in open_sections:
             section.has_content = True
     return found
@@ -406,6 +411,10 @@ def form_template(path: str, text: str) -> Template:
         if indent == 0 and not (in_body and starts_item):
             key, _, value = content.partition(":")
             in_body = scalar(key) == "body"
+            if in_body and value.strip() and not value.strip().startswith("#"):
+                error = CheckError(f"{path}: cannot read the issue form's body on line {number}; pass --template PATH")
+                error.name = name
+                raise error
             continue
         if not in_body:
             continue
@@ -417,6 +426,8 @@ def form_template(path: str, text: str) -> Template:
             # After a bare or comment-only dash, the first key sets the column.
             key_indent = None if content[1:].strip().startswith("#") or not content[1:].strip() else indent + pad
             content, indent = content[1:].lstrip(), indent + pad
+            if content.startswith("#"):
+                continue
         if item_indent is None:
             continue
         key, separator, value = content.partition(":")
@@ -456,7 +467,7 @@ def form_template(path: str, text: str) -> Template:
     if block is not None:
         item["label"] = " ".join(block)
     finish()
-    if not found and re.search(r"\blabel\s*:", text):
+    if not found and re.search(r"""\b["']?label["']?\s*:""", text):
         error = CheckError(f"{path}: cannot read the issue form's field labels; pass --template PATH")
         error.name = name
         raise error
@@ -550,7 +561,10 @@ def discover(source: Source, kind: str) -> list[Template | CheckError]:
                 text = source.read(path)
             except (OSError, ValueError) as error:
                 raise CheckError(f"cannot read template {path}: {error}") from error
-            found.append(parse_template(path, text))
+            try:
+                found.append(parse_template(path, text))
+            except ValueError as error:
+                raise CheckError(f"cannot read template {path}: {error}") from error
         except CheckError as error:
             error.path = path
             found.append(error)

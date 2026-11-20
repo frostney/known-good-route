@@ -67,3 +67,7 @@ not content either.
 Issue forms are read in GitHub's block layout, and a field's `attributes` may
 be a one-line flow mapping. A form written in any other flow style is an
 operational error, never a partial check.
+
+It reads the Markdown that issue and PR bodies use, not every CommonMark edge
+case. When it reports a heading missing or empty in a body that renders
+correctly, check the rendered body before you rewrite it.

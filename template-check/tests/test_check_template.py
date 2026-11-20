@@ -428,6 +428,18 @@ class HeadingTests(unittest.TestCase):
             ["Before\xa0after", "OS (optional)", '"q" \\'],
         )
 
+    def test_a_lazy_continuation_keeps_a_later_fence_in_its_list_item(self):
+        found = CHECK_TEMPLATE.headings("- item text\ncontinued lazily\n\n    ```\n  ## Required\n    ```\n")
+        self.assertEqual(found, [])
+
+    def test_an_inline_form_body_is_an_error_whatever_its_quoting(self):
+        with self.assertRaises(CHECK_TEMPLATE.CheckError):
+            CHECK_TEMPLATE.parse_template("f.yml", 'body: [{"type": "input", "attributes": {"label": "Report"}}]\n')
+
+    def test_a_comment_with_a_colon_on_a_dash_line_is_not_a_key(self):
+        form = "body:\n  -  # Overview: context\n    type: input\n    attributes:\n      label: A\n"
+        self.assertEqual([str(h) for h in CHECK_TEMPLATE.parse_template("f.yml", form).headings], ["### A"])
+
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 
@@ -736,6 +748,14 @@ class CommandTests(unittest.TestCase):
         code, result = self.run_check(*common, stdin=body(*FULL))
         self.assertEqual((code, result["state"]), (2, "operational-error"))
         self.assertIn("other.md", result["reason"])
+
+    def test_a_template_with_an_invalid_escape_blocks_only_a_check_that_needs_it(self):
+        self.write(".github/ISSUE_TEMPLATE/default.md", ISSUE_TEMPLATE)
+        self.write(".github/ISSUE_TEMPLATE/odd.yml", 'body:\n  - type: input\n    attributes: {label: "\\UFFFFFFFF"}\n')
+        code, result = self.run_check(
+            "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "Issue", stdin=body(*FULL)
+        )
+        self.assertEqual((code, result["state"]), (0, "match"))
 
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "owner/project"
