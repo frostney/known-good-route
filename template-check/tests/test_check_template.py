@@ -468,6 +468,13 @@ class HeadingTests(unittest.TestCase):
                 "f.yml", "body:\n  - type: input\n    attributes:\n      {\n        label: Version,\n        description: x }\n"
             )
 
+    def test_a_bracket_line_inside_a_block_value_is_text(self):
+        form = "body:\n  - type: markdown\n    attributes:\n      value: |\n        [Read the guide](https://example.org/guide)\n  - type: input\n    attributes:\n      label: A\n"
+        self.assertEqual([str(h) for h in CHECK_TEMPLATE.parse_template("f.yml", form).headings], ["### A"])
+
+    def test_a_list_item_that_opens_with_a_heading_starts_no_paragraph(self):
+        self.assertEqual(CHECK_TEMPLATE.headings("- ## Notes\nprose\n  ```\n## Testing\n  ```\n"), [])
+
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 

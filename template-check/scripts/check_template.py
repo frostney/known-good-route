@@ -207,7 +207,12 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
             open_sections.append(heading)
             paragraph = False
             continue
-        paragraph = not underline and not THEMATIC_BREAK.match(line) and not (item and empty_item)
+        opening = line[item.end() :] if item else ""
+        paragraph = (
+            not underline
+            and not THEMATIC_BREAK.match(line)
+            and not (item and (empty_item or ATX.match(opening) or FENCE.match(opening) or THEMATIC_BREAK.match(opening)))
+        )
         for section in open_sections:
             section.has_content = True
     return found
@@ -446,7 +451,12 @@ def form_template(path: str, text: str) -> Template:
         if item_indent is None:
             continue
         # Flow-style attributes that open on a later line are unsupported.
-        if attributes_indent is not None and indent > attributes_indent and content.startswith(("{", "[")):
+        if (
+            attributes_indent is not None
+            and label_indent is None
+            and indent > attributes_indent
+            and content.startswith(("{", "["))
+        ):
             error = CheckError(f"{path}: cannot read the attributes on line {number}; pass --template PATH")
             error.name = name
             raise error
