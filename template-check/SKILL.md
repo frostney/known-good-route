@@ -63,3 +63,7 @@ Reading stops at a pull request's review note, a `---` rule after a blank line
 followed by an `Edit:` line, so the note is not content of the last template
 section. For an issue, the attribution note `create-issue` closes it with is
 not content either.
+
+Issue forms are read in GitHub's block layout, and a field's `attributes` may
+be a one-line flow mapping. A form written in any other flow style is an
+operational error, never a partial check.

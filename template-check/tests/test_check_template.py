@@ -260,6 +260,30 @@ class HeadingTests(unittest.TestCase):
     def test_front_matter_may_end_its_yaml_document_with_dots(self):
         self.assertEqual(CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug\n...\n---\n## A\n").name, "Bug")
 
+    def test_a_fence_in_a_parent_item_closes_after_a_nested_item(self):
+        found = CHECK_TEMPLATE.headings("- parent\n  - child\n\n  ```\n  ## In code\n    ```\n\n## Next\n")
+        self.assertEqual([str(h) for h in found], ["## Next"])
+
+    def test_brackets_and_commas_inside_a_nested_quoted_value_are_text(self):
+        mapping = CHECK_TEMPLATE.flow_mapping('{options: ["] , label: Wrong, ]"], label: Correct}')
+        self.assertEqual(mapping["label"], "Correct")
+
+    def test_front_matter_may_close_a_flow_list_at_the_margin(self):
+        self.assertEqual(CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug\nlabels: [\n  bug,\n]\n---\n## A\n").name, "Bug")
+
+    def test_only_the_generated_attribution_note_is_dropped(self):
+        note = "## Related\n\n> [!NOTE]\n> Created on behalf of {}.\n"
+        self.assertEqual(
+            [CHECK_TEMPLATE.headings(note.format(who), "issue")[0].has_content for who in ("@someone using Some Model", "the accessibility team")],
+            [False, True],
+        )
+
+    def test_brackets_without_a_space_are_literal_text(self):
+        self.assertEqual(
+            [CHECK_TEMPLATE.headings(f"## A\n\n- {box}\n")[0].has_content for box in ("[]", "[ ]")],
+            [True, False],
+        )
+
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 
@@ -556,6 +580,18 @@ class CommandTests(unittest.TestCase):
         )
         self.assertEqual((code, result["state"]), (2, "operational-error"))
         self.assertIn("report.yml", result["reason"])
+
+    def test_a_template_that_cannot_be_decoded_blocks_only_a_check_that_needs_it(self):
+        self.write(".github/ISSUE_TEMPLATE/default.md", ISSUE_TEMPLATE)
+        (self.checkout / ".github/ISSUE_TEMPLATE/other.md").write_bytes(b"\xff\xfe")
+        common = ("--root", str(self.checkout), "--kind", "issue", "--body", "-")
+
+        code, result = self.run_check(*common, "--template-name", "Issue", stdin=body(*FULL))
+        self.assertEqual((code, result["state"]), (0, "match"))
+
+        code, result = self.run_check(*common, stdin=body(*FULL))
+        self.assertEqual((code, result["state"]), (2, "operational-error"))
+        self.assertIn("other.md", result["reason"])
 
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "owner/project"

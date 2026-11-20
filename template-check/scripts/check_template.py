@@ -32,9 +32,9 @@ LIST_ITEM = re.compile(r" *(?:[-*+]|[0-9]{1,9}[.)])(?:[ \t]+|$)")
 ATX = re.compile(r" {0,3}(#{1,6})(?:[ \t]+(.*))?$")
 # A list marker or an unchecked task box with nothing after it is a template
 # placeholder, not content.
-PLACEHOLDER = re.compile(r" {0,3}(?:[-*+]|[0-9]{1,9}[.)])(?:[ \t]+\[ ?\])?[ \t]*$")
+PLACEHOLDER = re.compile(r" {0,3}(?:[-*+]|[0-9]{1,9}[.)])(?:[ \t]+\[ \])?[ \t]*$")
 # The attribution note `create-issue` ends every issue with.
-ATTRIBUTION = re.compile(r"\n> \[!NOTE\][ \t]*\n> Created on behalf of [^\n]*\s*$")
+ATTRIBUTION = re.compile(r"\n> \[!NOTE\][ \t]*\n> Created on behalf of @[\w-]+ using [^\n]+\.[ \t]*\s*$")
 CLOSING_HASHES = re.compile(r"(?:^|[ \t]+)#+[ \t]*$")
 COMMENT = re.compile(r"<!--.*?-->")
 # Only a comment that starts a line opens an HTML block that can span lines;
@@ -96,8 +96,9 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
         text = ATTRIBUTION.sub("\n", text)
     lines = text.split("\n")
     after_blank = True
-    list_indent = 0  # Content column of the list item the line may belong to.
+    lists: list[int] = []  # Content columns of the open list items, outermost first.
     fence_indent = 0  # The open code block's container column.
+    container = 0  # Content column the current line sits in.
     empty_item = False  # The last line was a list marker with nothing after it.
     for number, line in enumerate(lines, start=1):
         # Markdown measures indentation in columns, with tab stops every four.
@@ -121,7 +122,8 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
                 after_blank = True
                 # A list item that starts empty ends at the first blank line.
                 if empty_item:
-                    list_indent, empty_item = 0, False
+                    lists.pop()
+                    empty_item = False
                 continue
             if kind == "pr" and after_blank and NOTE_RULE.match(line):
                 following = next((rest for rest in lines[number:] if rest.strip()), "")
@@ -134,15 +136,17 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
                 continue
         after_blank = False
         indent = len(line) - len(line.lstrip(" "))
-        container = list_indent  # Before this line can start a nested item.
         if not fence:
+            while lists and indent < lists[-1]:
+                lists.pop()
+            container = lists[-1] if lists else 0
             item = LIST_ITEM.match(line)
             empty_item = bool(item) and not line[len(item.group(0)) :].strip()
             if item:
-                list_indent = len(item.group(0))
-            elif indent < list_indent:
-                list_indent = 0
-            fence_indent = list_indent if indent >= list_indent else 0
+                # An empty item's content starts one column past its marker.
+                marker = item.group(0)
+                lists.append(len(marker.rstrip()) + 1 if empty_item else len(marker))
+            fence_indent = container
         inner = line[fence_indent:] if indent >= fence_indent else line.lstrip(" ")
         fence, in_code = code_fence(fence, inner)
         if in_code:
@@ -200,7 +204,7 @@ def front_matter(text: str) -> tuple[dict[str, str], str]:
             # Front matter holds YAML keys; an opening `---` rule over Markdown
             # is part of the body.
             if not any(YAML_KEY.match(entry) for entry in block) or not all(
-                entry.startswith((" ", "\t", "- ", "#")) or YAML_KEY.match(entry) for entry in block
+                entry.startswith((" ", "\t", "- ", "#", "]", "}")) or YAML_KEY.match(entry) for entry in block
             ):
                 return {}, text
             fields = {}
@@ -244,7 +248,7 @@ def top_level(text: str, separator: str) -> list[str]:
             escaped = True
         elif quote:
             quote = "" if char == quote else quote
-        elif char in "\"'" and (not current.strip() or current.rstrip().endswith(":")):
+        elif char in "\"'" and (not current.strip() or current.rstrip()[-1] in ":[{,"):
             quote = char
         elif char in "{[":
             depth += 1
@@ -459,7 +463,11 @@ def discover(source: Source, kind: str) -> list[Template | CheckError]:
     found: list[Template | CheckError] = []
     for path in paths:
         try:
-            found.append(parse_template(path, source.read(path)))
+            try:
+                text = source.read(path)
+            except (OSError, ValueError) as error:
+                raise CheckError(f"cannot read template {path}: {error}") from error
+            found.append(parse_template(path, text))
         except CheckError as error:
             error.path = path
             found.append(error)
