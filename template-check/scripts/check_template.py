@@ -29,10 +29,11 @@ sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__
 FENCE = re.compile(r" {0,3}(`{3,}|~{3,})(.*)")
 # A list item's marker; its content, and what nests in it, starts after it.
 LIST_ITEM = re.compile(r" *(?:[-*+]|[0-9]{1,9}[.)])(?:[ \t]+|$)")
+THEMATIC_BREAK = re.compile(r" {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$")
 ATX = re.compile(r" {0,3}(#{1,6})(?:[ \t]+(.*))?$")
 # A list marker or an unchecked task box with nothing after it is a template
 # placeholder, not content.
-PLACEHOLDER = re.compile(r" {0,3}(?:[-*+]|[0-9]{1,9}[.)])(?:[ \t]+\[ \])?[ \t]*$")
+PLACEHOLDER = re.compile(r" {0,3}(?:[-*+]|[0-9]{1,9}[.)])(?: {1,4}\[ \])?[ \t]*$")
 # The attribution note `create-issue` ends every issue with.
 ATTRIBUTION = re.compile(r"\n> \[!NOTE\][ \t]*\n> Created on behalf of @[\w-]+ using [^\n]+\.[ \t]*\s*$")
 CLOSING_HASHES = re.compile(r"(?:^|[ \t]+)#+[ \t]*$")
@@ -140,7 +141,7 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
             while lists and indent < lists[-1]:
                 lists.pop()
             container = lists[-1] if lists else 0
-            item = LIST_ITEM.match(line)
+            item = None if THEMATIC_BREAK.match(line) else LIST_ITEM.match(line)
             empty_item = bool(item) and not line[len(item.group(0)) :].strip()
             if item:
                 # An empty item's content starts one column past its marker.
@@ -200,7 +201,7 @@ def front_matter(text: str) -> tuple[dict[str, str], str]:
         return {}, text
     for index, line in enumerate(lines[1:], start=1):
         if line.strip() == "---":
-            block = [entry for entry in lines[1:index] if entry.strip() and entry.rstrip() != "..."]
+            block = [entry for entry in lines[1:index] if entry.strip() and not re.match(r"\.\.\.(?:[ \t]+#.*)?[ \t]*$", entry)]
             # Front matter holds YAML keys; an opening `---` rule over Markdown
             # is part of the body.
             if not any(YAML_KEY.match(entry) for entry in block) or not all(
@@ -360,9 +361,16 @@ def form_template(path: str, text: str) -> Template:
             if key == "type":
                 item["type"] = scalar(value)
             elif key == "attributes" and value.strip().startswith("{"):
-                label = flow_mapping(value.strip()).get("label")
-                if label:
-                    item["line"], item["label"] = number, label
+                attributes_indent = None
+                mapping = flow_mapping(value.strip())
+                if not mapping:
+                    error = CheckError(
+                        f"{path}: cannot read the attributes on line {number}; pass --template PATH"
+                    )
+                    error.name = name
+                    raise error
+                if mapping.get("label"):
+                    item["line"], item["label"] = number, mapping["label"]
         elif attributes_indent is not None and indent > attributes_indent:
             label_indent = label_indent or indent
             if indent == label_indent and key == "label":

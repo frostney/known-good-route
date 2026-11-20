@@ -307,6 +307,25 @@ class HeadingTests(unittest.TestCase):
             CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug Report\nlabels:\n-\n  bug\n---\n## A\n").name, "Bug Report"
         )
 
+    def test_an_inline_mapping_that_does_not_close_is_an_error(self):
+        with self.assertRaises(CHECK_TEMPLATE.CheckError):
+            CHECK_TEMPLATE.parse_template(
+                "form.yml", 'body:\n  - type: textarea\n    "attributes": {\n      label: Steps to\n      reproduce }\n'
+            )
+
+    def test_a_thematic_break_opens_no_list(self):
+        found = CHECK_TEMPLATE.headings("## A\n\n- - -\n\n    ```\n      ```\n\n## B\n")
+        self.assertEqual([str(h) for h in found], ["## A", "## B"])
+
+    def test_the_yaml_end_marker_may_carry_a_comment(self):
+        self.assertEqual(CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug\n... # end\n---\n## A\n").name, "Bug")
+
+    def test_a_box_five_spaces_past_its_marker_is_code_not_a_placeholder(self):
+        self.assertEqual(
+            [CHECK_TEMPLATE.headings(f"## A\n\n-{gap}[ ]\n")[0].has_content for gap in (" " * 5, " ")],
+            [True, False],
+        )
+
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 
