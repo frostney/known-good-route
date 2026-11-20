@@ -56,8 +56,11 @@ belongs to.
   cause it names, pass `--repo`, `--template-name` or `--template PATH` as it
   says, and never treat it as a pass.
 
-It reads a Markdown body or template as GitHub renders it, through GitHub's
-Markdown API, so a heading counts exactly where GitHub shows one. Text in code,
+It reads a Markdown body or template as GitHub renders it, through the
+Markdown API of the repository's own GitHub host, so a heading counts exactly
+where GitHub shows one. The host comes from a host-qualified `--repo` or
+`GH_REPO`, then `GH_HOST`, then the checkout's `origin` remote. A body is
+rendered only when there is a template to compare it with. Text in code,
 comments and other HTML GitHub does not show is no heading. A heading inside a
 list item, quote, table or alert is its section's content, not a section of
 its own. A template heading pairs with a body heading at the same level before

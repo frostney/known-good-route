@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import difflib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -23,6 +24,7 @@ from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import urlparse
 
 sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__.
 
@@ -124,6 +126,19 @@ def is_alert(node: Node) -> bool:
     return node.tag == "div" and "markdown-alert" in node.attrs.get("class", "").split()
 
 
+def is_footnotes(node: Node) -> bool:
+    """The footnotes section GitHub appends, with its generated heading."""
+    return node.tag == "section" and ("data-footnotes" in node.attrs or "footnotes" in node.attrs.get("class", "").split())
+
+
+def is_checked(node: Node) -> bool:
+    return node.tag == "input" and "checked" in node.attrs
+
+
+def has_checked(node: Node) -> bool:
+    return any(is_checked(child) or has_checked(child) for child in elements(node.children))
+
+
 def headings(html: str, kind: str | None = None) -> list[Heading]:
     """Headings of rendered HTML, each with whether its section shows anything.
 
@@ -141,12 +156,12 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
     if kind == "pr":
         for rule, following in zip(blocks, blocks[1:]):
             if rule.tag == "hr" and following.tag == "p" and words(following).startswith("Edit:"):
-                top = top[: top.index(rule)]
+                top = top[: next(index for index, node in enumerate(top) if node is rule)]
                 break
     if kind == "issue" and blocks:
         last = blocks[-1]
         if (is_alert(last) or last.tag == "blockquote") and ATTRIBUTION.fullmatch(words(last)):
-            top.remove(last)
+            top = [node for node in top if node is not last]
 
     found: list[Heading] = []
     open_sections: list[Heading] = []
@@ -170,21 +185,48 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
                 found.append(heading)
                 open_sections.append(heading)
                 continue
-            if child.tag == "li" and words(child) in ("", "[ ]") and not has_media(child):
+            if child.tag == "li" and words(child) in ("", "[ ]") and not has_media(child) and not has_checked(child):
                 continue
-            if child.tag in MEDIA:
+            if child.tag in MEDIA or is_checked(child):
                 content()
-            visit(child.children, nested or child.tag in NESTING or is_alert(child))
+            visit(child.children, nested or child.tag in NESTING or is_alert(child) or is_footnotes(child))
 
     visit(top, False)
     return found
 
 
-def render(markdown: str) -> str:
-    """Markdown as GitHub renders it in an issue or pull request."""
+def remote_host(url: str) -> str | None:
+    """The host of a git remote URL, in https, ssh or scp form."""
+    url = url.strip()
+    scp = re.fullmatch(r"[^@/]+@([^:/]+):.*", url)
+    return scp.group(1) if scp else urlparse(url).hostname
+
+
+def target_host(repo: str | None, root: Path | None) -> str | None:
+    """The GitHub host the body belongs to, so its Markdown is rendered nowhere else.
+
+    A host-qualified `--repo` or `GH_REPO` names it; otherwise `GH_HOST`, which
+    gh applies to a plain a private repository, and then the checkout's `origin` remote.
+    None leaves gh's own default.
+    """
+    named = repo or os.environ.get("GH_REPO", "")
+    if named.count("/") == 2:
+        return named.split("/")[0]
+    if os.environ.get("GH_HOST"):
+        return os.environ["GH_HOST"]
+    if named:
+        return None
+    command = ["git", *(["-C", str(root)] if root else []), "remote", "get-url", "origin"]
+    completed = subprocess.run(command, text=True, capture_output=True, check=False)
+    return remote_host(completed.stdout) if completed.returncode == 0 else None
+
+
+def render(markdown: str, host: str | None = None) -> str:
+    """Markdown as GitHub renders it in an issue or pull request, on that host."""
     if not markdown.strip():
         return ""
-    output = gh_runner(["api", "markdown", "--input", "-"], json.dumps({"text": markdown, "mode": "gfm"}))
+    route = ["--hostname", host] if host else []
+    output = gh_runner(["api", *route, "markdown", "--input", "-"], json.dumps({"text": markdown, "mode": "gfm"}))
     if output is None:
         raise CheckError("GitHub's Markdown API is not available")
     return output
@@ -442,7 +484,7 @@ def form_template(path: str, text: str) -> Template:
             label_indent = None
             if key == "type":
                 item["type"] = scalar(value)
-                if not value.strip():
+                if not scalar(value):
                     item["pending"] = ("type", indent)
             elif key == "attributes" and value.strip().startswith("{"):
                 attributes_indent = None
@@ -467,7 +509,7 @@ def form_template(path: str, text: str) -> Template:
                     block, block_indent = [], indent + int(digit) if digit else None
                 else:
                     item["label"] = scalar(value)
-                    if not value.strip():
+                    if not scalar(value):
                         item["pending"] = ("label", indent)
     if block is not None:
         item["label"] = " ".join(block)
@@ -486,9 +528,17 @@ def markdown_template(path: str, text: str, renderer: Callable[[str], str]) -> T
 
 def parse_template(path: str, text: str, renderer: Callable[[str], str] | None = None) -> Template:
     text = text.removeprefix("\ufeff")
+    renderer = renderer or render
     if path.lower().endswith((".yml", ".yaml")):
-        return form_template(path, text)
-    return markdown_template(path, text, renderer or render)
+        template = form_template(path, text)
+        # GitHub shows each label as a rendered heading, so compare it as one.
+        if template.headings:
+            shown = headings(renderer("\n\n".join(f"### {heading.text}" for heading in template.headings)))
+            if len(shown) == len(template.headings):
+                for heading, rendered in zip(template.headings, shown):
+                    heading.text = rendered.text
+        return template
+    return markdown_template(path, text, renderer)
 
 
 class Source:
@@ -535,7 +585,7 @@ class Source:
         return output
 
 
-def discover(source: Source, kind: str) -> list[Template | CheckError]:
+def discover(source: Source, kind: str, renderer: Callable[[str], str] | None = None) -> list[Template | CheckError]:
     """Every template GitHub would offer for a new issue or pull request.
 
     A template that cannot be read is returned as its error, so it blocks only
@@ -567,7 +617,15 @@ def discover(source: Source, kind: str) -> list[Template | CheckError]:
             except (OSError, ValueError) as error:
                 raise CheckError(f"cannot read template {path}: {error}") from error
             try:
-                found.append(parse_template(path, text))
+                found.append(parse_template(path, text, renderer))
+            except CheckError as error:
+                # Keep the declared name, so a check naming another template ignores it.
+                if not error.name:
+                    try:
+                        error.name = declared_name(text.removeprefix("\ufeff"))
+                    except ValueError:
+                        pass
+                raise
             except ValueError as error:
                 failure = CheckError(f"cannot read template {path}: {error}")
                 # Keep the form's declared name, so a check that names it still sees the error.
@@ -845,12 +903,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         except (OSError, ValueError) as error:
             raise CheckError(f"cannot read body: {error}") from error
     kind = "pr" if args.pr is not None else "issue" if args.issue is not None else args.kind
-    # Without a kind, as with --template alone, the body reads as a pull request's.
-    body = headings(render(text.removeprefix("\ufeff")), kind or "pr")
+    host = target_host(args.repo, args.root)
+
+    def renderer(markdown: str) -> str:
+        return render(markdown, host)
 
     if args.template:
         try:
-            templates = [parse_template(str(args.template), args.template.read_text(encoding="utf-8"))]
+            templates = [parse_template(str(args.template), args.template.read_text(encoding="utf-8"), renderer)]
         except (OSError, ValueError) as error:
             raise CheckError(f"cannot read template: {error}") from error
         absent = f"{args.template} has no headings"
@@ -863,12 +923,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             source = Source(root=args.root or checkout_root())
         else:
             source = Source(repo=args.repo, run=gh_runner)
-        templates = readable(discover(source, kind), args.template_name)
+        templates = readable(discover(source, kind, renderer), args.template_name)
         absent = f"no {kind} template with headings found"
     templates = [template for template in templates if template.headings]
     if not templates:
         return {"state": "no-template", "body": source_label, "problems": [], "reason": absent}
 
+    # Without a kind, as with --template alone, the body reads as a pull request's.
+    body = headings(renderer(text.removeprefix("\ufeff")), kind or "pr")
     template, problems = select(templates, body, args.template_name)
     return {
         "state": "mismatch" if problems else "match",

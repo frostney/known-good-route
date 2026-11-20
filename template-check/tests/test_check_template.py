@@ -50,6 +50,7 @@ def mini_render(text):
 # The fake gh renders Markdown with the same stand-in.
 MINI_RENDER = "import html, re\n\n" + inspect.getsource(mini_render)
 # Unit tests never call GitHub: Markdown templates render through the stand-in.
+REAL_RENDER = CHECK_TEMPLATE.render
 CHECK_TEMPLATE.render = mini_render
 RENDERED = json.loads((Path(__file__).parent / "github_rendered.json").read_text(encoding="utf-8"))
 
@@ -115,11 +116,12 @@ FAKE_GH = r"""#!/usr/bin/env python3
 import json, os, pathlib, sys
 """ + MINI_RENDER + r"""
 responses = json.loads(pathlib.Path(os.environ["FAKE_GH_SCENARIO"]).read_text())
-if sys.argv[1:] == ["api", "markdown", "--input", "-"]:
-    if "render-error" in responses:
-        print(responses["render-error"], file=sys.stderr)
+if sys.argv[1:2] == ["api"] and sys.argv[-3:] == ["markdown", "--input", "-"]:
+    text = json.load(sys.stdin)["text"]
+    if "render-error" in responses or responses.get("render-error-for", "\0") in text:
+        print(responses.get("render-error", "gh: Server Error (HTTP 500)"), file=sys.stderr)
         sys.exit(1)
-    print(mini_render(json.load(sys.stdin)["text"]), end="")
+    print(mini_render(text), end="")
     sys.exit(0)
 answer = responses.get(" ".join(sys.argv[1:]))
 if answer is None:
@@ -189,8 +191,64 @@ class RenderedHeadingTests(unittest.TestCase):
     def test_a_setext_heading_is_a_heading_as_github_shows_it(self):
         self.assertEqual(self.read("setext"), [("A topic", True)])
 
+    def test_the_footnotes_github_appends_are_no_section(self):
+        self.assertEqual(self.read("footnotes"), [("Summary", True)])
+
+    def test_a_checked_task_item_is_content_and_an_unchecked_one_is_not(self):
+        self.assertEqual(self.read("checked_task"), [("Done", True), ("Open", False)])
+
+    def test_the_review_note_cut_falls_at_the_rule_before_it(self):
+        self.assertEqual(self.read("two_rules", "pr"), [("Summary", True), ("Testing", True)])
+
+    def test_markdown_renders_on_the_target_host(self):
+        calls = []
+        original = CHECK_TEMPLATE.gh_runner
+        CHECK_TEMPLATE.gh_runner = lambda args, stdin=None: calls.append(args) or "<h2>A</h2>"
+        try:
+            REAL_RENDER("## A", "ghe.example.com")
+            REAL_RENDER("## A")
+        finally:
+            CHECK_TEMPLATE.gh_runner = original
+        self.assertEqual(calls[0][:3], ["api", "--hostname", "ghe.example.com"])
+        self.assertEqual(calls[1][:2], ["api", "markdown"])
+
+    def test_the_target_host_follows_the_repository(self):
+        environment = {key: os.environ.pop(key) for key in ("GH_REPO", "GH_HOST") if key in os.environ}
+        try:
+            self.assertEqual(CHECK_TEMPLATE.target_host("ghe.example.com/owner/repo", None), "ghe.example.com")
+            os.environ["GH_HOST"] = "ghe.example.com"
+            self.assertEqual(CHECK_TEMPLATE.target_host("a private repository", None), "ghe.example.com")
+            del os.environ["GH_HOST"]
+            self.assertIsNone(CHECK_TEMPLATE.target_host("a private repository", None))
+        finally:
+            os.environ.pop("GH_HOST", None)
+            os.environ.update(environment)
+        self.assertEqual(
+            [
+                CHECK_TEMPLATE.remote_host(url)
+                for url in ("git@ghe.example.com:owner/repo.git", "a private repository", "ssh://git@ghe.example.com/owner/repo")
+            ],
+            ["ghe.example.com", "github.com", "ghe.example.com"],
+        )
+
 
 class TemplateParsingTests(unittest.TestCase):
+    def test_form_labels_compare_as_github_renders_them(self):
+        template = CHECK_TEMPLATE.parse_template(
+            "f.yml",
+            "body:\n  - type: input\n    attributes:\n      label: Run `--help`\n",
+            lambda markdown: mini_render(markdown.replace("`", "")),
+        )
+        self.assertEqual([str(h) for h in template.headings], ["### Run --help"])
+
+    def test_a_comment_after_a_type_key_leaves_it_to_continue_below(self):
+        template = CHECK_TEMPLATE.parse_template(
+            "f.yml",
+            "body:\n  - type: # explanation\n      markdown\n    attributes:\n      value: hi\n"
+            "  - type: input\n    attributes:\n      label: A\n",
+        )
+        self.assertEqual([str(h) for h in template.headings], ["### A"])
+
     def test_a_flow_key_needs_a_space_after_its_colon(self):
         with self.assertRaises(CHECK_TEMPLATE.CheckError):
             CHECK_TEMPLATE.parse_template("f.yml", "body:\n  - type: input\n    attributes: {label:Summary}\n")
@@ -725,6 +783,21 @@ class CommandTests(unittest.TestCase):
         code, result = self.run_check("--template", str(template), "--body", "-", stdin=body(*FULL))
         self.assertEqual((code, result["state"]), (2, "operational-error"))
         self.assertIn("401", result["reason"])
+
+    def test_a_checkout_without_a_template_never_renders_the_body(self):
+        self.scenario.write_text(json.dumps({"render-error": "gh: Server Error (HTTP 500)"}), encoding="utf-8")
+        code, result = self.run_check("--root", str(self.checkout), "--kind", "pr", "--body", "-", stdin="## Summary\n")
+        self.assertEqual((code, result["state"]), (0, "no-template"))
+
+    def test_a_template_github_fails_to_render_blocks_only_a_check_that_needs_it(self):
+        self.write(".github/ISSUE_TEMPLATE/default.md", ISSUE_TEMPLATE)
+        self.write(".github/ISSUE_TEMPLATE/other.md", "---\nname: Other\n---\n## Unrenderable\n")
+        self.scenario.write_text(json.dumps({"render-error-for": "Unrenderable"}), encoding="utf-8")
+        common = ("--root", str(self.checkout), "--kind", "issue", "--body", "-")
+        code, result = self.run_check(*common, "--template-name", "Issue", stdin=body(*FULL))
+        self.assertEqual((code, result["state"]), (0, "match"))
+        code, result = self.run_check(*common, "--template-name", "Other", stdin=body(*FULL))
+        self.assertEqual((code, result["state"]), (2, "operational-error"))
 
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "owner/project"
