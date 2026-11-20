@@ -29,6 +29,8 @@ sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__
 FENCE = re.compile(r" {0,3}(`{3,}|~{3,})(.*)")
 # A list item's marker; its content, and what nests in it, starts after it.
 LIST_ITEM = re.compile(r" *(?:[-*+]|[0-9]{1,9}[.)])(?:[ \t]+|$)")
+# A run of `-` or `=` under a paragraph line underlines a Setext heading.
+SETEXT_UNDERLINE = re.compile(r" {0,3}(?:-+|=+)[ \t]*$")
 THEMATIC_BREAK = re.compile(r" {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$")
 ATX = re.compile(r" {0,3}(#{1,6})(?:[ \t]+(.*))?$")
 # A list marker or an unchecked task box with nothing after it is a template
@@ -101,6 +103,7 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
     fence_indent = 0  # The open code block's container column.
     container = 0  # Content column the current line sits in.
     empty_item = False  # The last line was a list marker with nothing after it.
+    paragraph = False  # The last line was paragraph text a Setext underline can follow.
     for number, line in enumerate(lines, start=1):
         # Markdown measures indentation in columns, with tab stops every four.
         margin = len(line) - len(line.lstrip(" \t"))
@@ -120,7 +123,7 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
                     line, in_comment = line.split("<!--", 1)[0], True
             line = COMMENT.sub("", line)
             if not line.strip():
-                after_blank = True
+                after_blank, paragraph = True, False
                 # A list item that starts empty ends at the first blank line.
                 if empty_item:
                     lists.pop()
@@ -131,7 +134,7 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
                 if NOTE_OPENING.match(following):
                     break
             if in_html:
-                after_blank = False
+                after_blank = paragraph = False
                 for section in open_sections:
                     section.has_content = True
                 continue
@@ -141,20 +144,26 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
             while lists and indent < lists[-1]:
                 lists.pop()
             container = lists[-1] if lists else 0
-            item = None if THEMATIC_BREAK.match(line) else LIST_ITEM.match(line)
+            underline = paragraph and SETEXT_UNDERLINE.match(line)
+            item = None if underline or THEMATIC_BREAK.match(line) else LIST_ITEM.match(line)
             empty_item = bool(item) and not line[len(item.group(0)) :].strip()
             if item:
                 # An empty item's content starts one column past its marker.
                 marker = item.group(0).expandtabs(4)
-                lists.append(len(marker.rstrip()) + 1 if empty_item else len(marker))
+                # Past four columns of padding, the item's content starts one
+                # column after its marker and the rest is indented code.
+                padded = len(marker) - len(marker.rstrip()) > 4
+                lists.append(len(marker.rstrip()) + 1 if empty_item or padded else len(marker))
             fence_indent = container
         inner = line[fence_indent:] if indent >= fence_indent else line.lstrip(" ")
         fence, in_code = code_fence(fence, inner)
         if in_code:
+            paragraph = False
             for section in open_sections:
                 section.has_content = True
             continue
         if PLACEHOLDER.match((line[container:] if indent >= container else line).expandtabs(4)):
+            paragraph = False
             continue
         match = None if container and indent >= container else ATX.match(line)
         if match:
@@ -167,7 +176,9 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
             heading = Heading(level, title, number)
             found.append(heading)
             open_sections.append(heading)
+            paragraph = False
             continue
+        paragraph = not item and not underline
         for section in open_sections:
             section.has_content = True
     return found
@@ -204,12 +215,7 @@ def front_matter(text: str) -> tuple[dict[str, str], str]:
             block = [entry for entry in lines[1:index] if entry.strip() and not re.match(r"\.\.\.(?:[ \t]+#.*)?[ \t]*$", entry)]
             # Front matter holds YAML keys; an opening `---` rule over Markdown
             # is part of the body.
-            if not any(YAML_KEY.match(entry) for entry in block) or not all(
-                entry.startswith((" ", "\t", "- ", "#", "]", "}"))
-                or entry.rstrip() == "-"
-                or YAML_KEY.match(entry)
-                for entry in block
-            ):
+            if not any(YAML_KEY.match(entry) for entry in block):
                 return {}, text
             fields = {}
             for entry in block:
@@ -253,7 +259,9 @@ def scan(text: str, separator: str) -> tuple[list[str], bool]:
             escaped = True
         elif quote:
             quote = "" if char == quote else quote
-        elif char in "\"'" and (not current.strip() or current.rstrip()[-1] in ":[{,"):
+        elif char in "\"'" and (
+            not current.strip() or current.rstrip()[-1] in "[{," or current[-1].isspace() and current.rstrip()[-1] == ":"
+        ):
             quote = char
         elif char in "{[":
             depth += 1
@@ -290,6 +298,24 @@ def flow_mapping(text: str) -> dict[str, str]:
     return found
 
 
+def declared_name(text: str) -> str:
+    """A form's top-level `name`, plain, quoted or as a folded or literal block."""
+    lines = text.replace("\r\n", "\n").split("\n")
+    for index, line in enumerate(lines):
+        key, separator, value = line.partition(":")
+        if not separator or line.startswith((" ", "\t", "-")) or scalar(key) != "name":
+            continue
+        if not BLOCK_SCALAR.match(value.strip()):
+            return scalar(value)
+        block = []
+        for following in lines[index + 1 :]:
+            if following.strip() and not following.startswith((" ", "\t")):
+                break
+            block.append(following.strip())
+        return " ".join(" ".join(block).split())
+    return ""
+
+
 def form_template(path: str, text: str) -> Template:
     """Headings of a GitHub issue form: one `###` per non-Markdown field label.
 
@@ -301,15 +327,11 @@ def form_template(path: str, text: str) -> Template:
     never checked against part of a form.
     """
     # The declared name comes first, so an error in a field still carries it.
-    declared = [
-        scalar(line.partition(":")[2])
-        for line in text.replace("\r\n", "\n").split("\n")
-        if not line.startswith((" ", "\t", "-")) and scalar(line.partition(":")[0]) == "name" and ":" in line
-    ]
-    name = declared[0] if declared and declared[0] else Path(path).stem
+    name = declared_name(text) or Path(path).stem
     found: list[Heading] = []
     in_body = False
     item_indent: int | None = None
+    key_indent: int | None = None  # Column of the current field's keys.
     item: dict[str, Any] = {}
     attributes_indent: int | None = None
     label_indent: int | None = None
@@ -354,6 +376,7 @@ def form_template(path: str, text: str) -> Template:
             finish()
             item_indent, item = indent, {"start": number}
             attributes_indent = label_indent = None
+            key_indent = None if content == "-" else indent + 2
             content, indent = content[2:].lstrip(), indent + 2
         if item_indent is None:
             continue
@@ -361,7 +384,9 @@ def form_template(path: str, text: str) -> Template:
         if not separator:
             continue
         key = scalar(key)
-        if indent == item_indent + 2:
+        if key_indent is None and indent > item_indent:
+            key_indent = indent
+        if indent == key_indent:
             attributes_indent = indent if key == "attributes" else None
             label_indent = None
             if key == "type":

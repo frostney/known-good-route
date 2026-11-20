@@ -288,13 +288,15 @@ class HeadingTests(unittest.TestCase):
         found = CHECK_TEMPLATE.headings("-\tExample\n\n    ```\n    ## In code\n       ```\n\n## Next\n")
         self.assertEqual([str(h) for h in found], ["## Next"])
 
-    def test_a_form_field_dash_may_stand_alone_and_never_yields_a_partial_form(self):
+    def test_a_form_field_dash_may_stand_alone_above_its_mapping(self):
         form = "body:\n  -\n    type: textarea\n    attributes:\n      label: Summary\n  - type: input\n    attributes: {label: Steps}\n"
         self.assertEqual(
             [str(h) for h in CHECK_TEMPLATE.parse_template("form.yml", form).headings], ["### Summary", "### Steps"]
         )
-        with self.assertRaises(CHECK_TEMPLATE.CheckError):
-            CHECK_TEMPLATE.parse_template("form.yml", form.replace("    type: textarea\n    attributes:\n      label", "      type: textarea\n      attributes:\n        label"))
+        deeper = form.replace("    type: textarea\n    attributes:\n      label", "      type: textarea\n      attributes:\n        label")
+        self.assertEqual(
+            [str(h) for h in CHECK_TEMPLATE.parse_template("form.yml", deeper).headings], ["### Summary", "### Steps"]
+        )
 
     def test_a_comment_may_follow_inline_form_attributes(self):
         template = CHECK_TEMPLATE.parse_template(
@@ -346,6 +348,25 @@ class HeadingTests(unittest.TestCase):
             [CHECK_TEMPLATE.headings(f"## A\n\n-{gap}[ ]\n")[0].has_content for gap in ("\t", "\t  ")],
             [False, True],
         )
+
+    def test_a_folded_form_name_names_the_form_and_its_errors(self):
+        with self.assertRaises(CHECK_TEMPLATE.CheckError) as raised:
+            CHECK_TEMPLATE.parse_template("report.yml", "name: >-\n  Bug\nbody:\n  - type: input\n    attributes: [odd]\n")
+        self.assertEqual(raised.exception.name, "Bug")
+
+    def test_a_quote_after_a_colon_inside_a_plain_value_is_text(self):
+        self.assertEqual(CHECK_TEMPLATE.flow_mapping("{label: Use ':' in code}"), {"label": "Use ':' in code"})
+
+    def test_front_matter_with_a_wrapped_value_keeps_its_name(self):
+        template = CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug Report\nabout: 'Tell us\nwhat broke'\n---\n## A\n")
+        self.assertEqual(template.name, "Bug Report")
+
+    def test_a_padded_list_item_starts_its_content_one_column_past_the_marker(self):
+        found = CHECK_TEMPLATE.headings("-     code\n\n  ```\n    ```\n\n## Next\n")
+        self.assertEqual([str(h) for h in found], ["## Next"])
+
+    def test_a_setext_underline_opens_no_list(self):
+        self.assertEqual([str(h) for h in CHECK_TEMPLATE.headings("A topic\n-\n  ## Testing\n")], ["## Testing"])
 
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
