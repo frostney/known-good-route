@@ -40,7 +40,8 @@ belongs to.
   `--template-name`, matching its front matter `name` or its file name.
   Without it the closest fit is used, and a tie is an error. Choose it from
   what the body is for, such as the issue's or PR's labels or title, and ask
-  only when nothing settles it. `--template PATH` skips discovery.
+  only when nothing settles it. `--template PATH` skips discovery; an issue
+  form passed that way checks an issue body without `--kind`.
 - `--json` prints one JSON object with the same result.
 
 ## Reading the result

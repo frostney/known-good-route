@@ -795,6 +795,16 @@ class RendererParityTests(unittest.TestCase):
             CHECK_TEMPLATE.render, CHECK_TEMPLATE.live_body = saved
         self.assertEqual([p["kind"] for p in result["problems"]], ["empty"])
 
+    def test_a_placeholder_list_in_a_nested_quote_is_no_content(self):
+        for nested, shown in (("- [ ]", False), ("- Answered", True)):
+            with self.subTest(nested=nested):
+                found = CHECK_TEMPLATE.headings(REAL_RENDER(f"## Steps\n\n- [ ]\n  > {nested}\n"))
+                self.assertEqual([h.has_content for h in found], [shown])
+
+    def test_front_matter_keys_may_be_any_word(self):
+        template = CHECK_TEMPLATE.parse_template("t.md", "---\n版本: 2\n---\n## A\n", REAL_RENDER)
+        self.assertEqual([str(h) for h in template.headings], ["## A"])
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
@@ -918,6 +928,10 @@ class TemplateParsingTests(unittest.TestCase):
         form = 'name: "\\UFFFFFFFF"\nbody:\n  - type: input\n    attributes:\n      label: A\n'
         template = CHECK_TEMPLATE.form_template("f.yml", form, need_name=False)
         self.assertEqual((template.name, [h.text for h in template.headings]), ("f", ["A"]))
+
+    def test_an_indentation_indicator_below_the_label_key_counts_from_the_key(self):
+        form = "body:\n  - type: input\n    attributes:\n      label:\n        >2\n        Summary\n"
+        self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["Summary"])
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):
@@ -1404,6 +1418,12 @@ class CommandTests(unittest.TestCase):
             "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "Bug", stdin="## Summary\n\nText.\n"
         )
         self.assertEqual((code, result["state"]), (0, "match"))
+
+    def test_a_form_passed_by_path_checks_an_issue_body(self):
+        template = self.write("form.yml", "name: Bug\nbody:\n  - type: textarea\n    attributes:\n      label: A\n")
+        body = "### A\n\n> [!NOTE]\n> Created on behalf of @someone using Some Model.\n"
+        code, result = self.run_check("--template", str(template), "--body", "-", stdin=body)
+        self.assertEqual((code, [p["kind"] for p in result["problems"]]), (1, ["empty"]))
 
     def test_a_check_that_cannot_run_is_an_operational_error(self):
         undecodable = self.root / "latin1.md"

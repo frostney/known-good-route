@@ -78,7 +78,7 @@ CLOSES_PARAGRAPH = {
 }
 # The attribution note `create-issue` ends every issue with, as rendered text.
 ATTRIBUTION = re.compile(r"Created on behalf of @[\w-]+ using (?:(?!\.\s).)+\.")
-YAML_KEY = re.compile(r"""(?:[A-Za-z0-9_][\w .-]*|"[^"]*"|'[^']*')[ \t]*:(?:[ \t]|$)""")
+YAML_KEY = re.compile(r"""(?:\w[\w .-]*|"[^"]*"|'[^']*')[ \t]*:(?:[ \t]|$)""")
 BLOCK_SCALAR = re.compile(r"[|>](?:[+-]([0-9])?|([0-9])[+-]?)?(?:\s+#.*)?$")
 # A renamed heading still resembles the template's wording this closely.
 RENAME_SIMILARITY = 0.6
@@ -577,7 +577,8 @@ def headings(html: str, kind: str | None = None, source: str | None = None, gith
                 open_sections.append(heading)
                 continue
             if child.tag == "li":
-                lists = [node for node in elements(child.children) if node.tag in ("ul", "ol")]
+                # Nested lists and quotes are read on their own, apart from the item's own text.
+                lists = [node for node in elements(child.children) if node.tag in ("ul", "ol", "blockquote")]
                 own = Node("li", {}, [node for node in child.children if not any(node is nested_list for nested_list in lists)])
                 placeholder = not words(own) or (words(own) == "[ ]" and plain(own))
                 if placeholder and not has_media(own) and not has_checked(own):
@@ -1019,7 +1020,8 @@ def form_template(path: str, text: str, need_name: bool = True) -> Template:
                 # The block's indicator on the line after its key: the label's lines follow.
                 indicator = BLOCK_SCALAR.match(bare(content))
                 digit = indicator.group(1) or indicator.group(2)
-                block, block_indent = [], indent + int(digit) if digit else None
+                # An indentation indicator counts from the key, as on the key's own line.
+                block, block_indent = [], pending[1] + int(digit) if digit else None
                 label_indent = label_indent if label_indent is not None else pending[1]
                 item["line"] = number
                 continue
@@ -1550,6 +1552,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         except (OSError, ValueError) as error:
             raise CheckError(f"cannot read body: {error}") from error
     kind = "pr" if args.pr is not None else "issue" if args.issue is not None else args.kind
+    if not kind and args.template and args.template.suffix.lower() in (".yml", ".yaml"):
+        kind = "issue"  # Only issues have forms.
     if args.template:
         try:
             templates = [parse_template(str(args.template), args.template.read_text(encoding="utf-8"), need_name=False)]
