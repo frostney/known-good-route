@@ -177,6 +177,14 @@ def renderer_link(node: Node) -> bool:
     return generated and only_images and not own_text and node.attrs.get("href") in sources
 
 
+def utf8(match: re.Match[str]) -> str:
+    """Percent escapes decoded as UTF-8, or kept as written when they are not valid UTF-8."""
+    try:
+        return unquote(match.group(0), errors="strict")
+    except UnicodeDecodeError:
+        return match.group(0)
+
+
 def footnote_label(href: str) -> str:
     """A footnote's own label from its reference's target: `#fn-ref` locally, `#user-content-fn-ref-<hash>` on GitHub."""
     label = re.sub(r"^#(?:user-content-)?fn-", "", href)
@@ -184,7 +192,7 @@ def footnote_label(href: str) -> str:
         label = re.sub(r"-[0-9a-f]{32}$", "", label)
     # The target carries the definition's spelling, percent-encoded; a reference matches it in any case.
     # Only escapes of UTF-8 bytes are decoded, so a label written with `%41` stays apart from `A`.
-    return re.sub(r"(?:%[89A-Fa-f][0-9A-Fa-f])+", lambda match: unquote(match.group(0)), label).casefold()
+    return re.sub(r"(?:%[89A-Fa-f][0-9A-Fa-f])+", utf8, label).casefold()
 
 
 def literal(text: str) -> str:
@@ -325,6 +333,8 @@ def written_heading(lines: list[str], node: Node, level: int) -> str:
         content = "" if re.fullmatch(r"#+", content) else content
     elif len(block) > 1 and re.fullmatch(r" {0,3}(=+|-+)[ \t]*", block[-1]) and block[-1].strip()[0] == "=-"[level - 1]:
         content = " ".join(line.strip() for line in block[:-1])  # A setext heading's text lines.
+        # As an ATX heading, a closing run of `#` would end it early; escape it.
+        content = re.sub(r"(^|[ \t])(#+)$", r"\1\\\2", content)
     else:
         return ""
     return f"{'#' * level} {content}".rstrip()
@@ -559,10 +569,14 @@ def yaml_escape(match: re.Match[str]) -> str:
     return chr(point)
 
 
+def bare(value: str) -> str:
+    """A YAML value without the anchors and tags before it; no plain scalar starts with `&` or `!`."""
+    return re.sub(r"^(?:[&!]\S*(?:[ \t]+|$))+", "", value.strip())
+
+
 def scalar(value: str) -> str:
     """A plain or quoted single-line YAML scalar without a trailing comment."""
-    # An anchor or tag before the value names it; no plain scalar starts with `&` or `!`.
-    value = re.sub(r"^(?:[&!]\S*(?:[ \t]+|$))+", "", value.strip())
+    value = bare(value)
     double = re.match(r'"(?:[^"\\]|\\.)*"', value)
     if double:
         inner = double.group(0)[1:-1]
@@ -674,7 +688,7 @@ def declared_name(text: str) -> str:
                 if QUOTED_SCALAR.match(joined):
                     return " ".join(scalar(joined).split())
             return ""  # A quote that never closes: unknown.
-        if scalar(value) and not BLOCK_SCALAR.match(value.strip()):
+        if scalar(value) and not BLOCK_SCALAR.match(bare(value)):
             return scalar(value)
         # A block scalar, or a plain one continued on the lines below the key.
         block = []
@@ -683,7 +697,7 @@ def declared_name(text: str) -> str:
                 break
             block.append(following.strip())
         joined = " ".join(" ".join(block).split())
-        return joined if BLOCK_SCALAR.match(value.strip()) else scalar(joined)
+        return joined if BLOCK_SCALAR.match(bare(value)) else scalar(joined)
     content = [line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")]
     if content[:1] == ["---"]:
         content = content[1:]  # A YAML document marker before the mapping.
@@ -808,12 +822,12 @@ def form_template(path: str, text: str) -> Template:
             attributes_indent = indent if key == "attributes" else None
             label_indent = None
             if key == "type":
-                item["type"] = "" if BLOCK_SCALAR.match(value.strip()) else scalar(value)
+                item["type"] = "" if BLOCK_SCALAR.match(bare(value)) else scalar(value)
                 if not item["type"]:
                     item["pending"] = ("type", indent, "")
-            elif key == "attributes" and value.strip().startswith("{"):
+            elif key == "attributes" and bare(value).startswith("{"):
                 attributes_indent = None
-                mapping = flow_mapping(value.strip())
+                mapping = flow_mapping(bare(value))
                 if not mapping:
                     error = CheckError(
                         f"{path}: cannot read the attributes on line {number}; pass --template PATH"
@@ -826,7 +840,7 @@ def form_template(path: str, text: str) -> Template:
             label_indent = label_indent or indent
             if indent == label_indent and key == "label":
                 item["line"] = number
-                indicator = BLOCK_SCALAR.match(value.strip())
+                indicator = BLOCK_SCALAR.match(bare(value))
                 if indicator:
                     # An explicit indentation indicator sets the block's indent;
                     # otherwise its first line does.

@@ -622,6 +622,17 @@ class RendererParityTests(unittest.TestCase):
         [problem] = CHECK_TEMPLATE.compare(template.headings, body)
         self.assertIn("copy that definition", problem["detail"])
 
+    def test_a_setext_heading_ending_in_hashes_is_reported_so_it_reads_back(self):
+        [heading] = CHECK_TEMPLATE.parse_template("t.md", "Testing ###\n===========\n", REAL_RENDER).headings
+        self.assertEqual((str(heading), heading.defined_elsewhere), ("# Testing \\###", False))
+        self.assertEqual(CHECK_TEMPLATE.headings(REAL_RENDER(f"{heading}\n"))[0].text, heading.text)
+
+    def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
+        texts = {
+            CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
+        }
+        self.assertEqual(len(texts), 2)
+
     def test_footnote_labels_written_with_and_without_percent_escapes_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("ref%41", "refA")
@@ -678,6 +689,12 @@ class TemplateParsingTests(unittest.TestCase):
     def test_a_quoted_flow_label_may_follow_an_anchor(self):
         form = 'body:\n  - type: input\n    attributes: {label: &title "Repro, expected", description: x}\n'
         self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["Repro, expected"])
+
+    def test_an_anchor_may_precede_a_block_label_or_flow_attributes(self):
+        for attributes in ("\n      label: &title >-\n        Steps to reproduce\n", " &field {label: Steps to reproduce}\n"):
+            with self.subTest(attributes=attributes):
+                form = f"body:\n  - type: input\n    attributes:{attributes}"
+                self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["Steps to reproduce"])
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):
