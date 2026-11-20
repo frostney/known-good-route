@@ -459,6 +459,15 @@ class HeadingTests(unittest.TestCase):
     def test_inline_attributes_with_mismatched_brackets_are_an_error(self):
         self.assertEqual(CHECK_TEMPLATE.flow_mapping("{label: Steps, description: [unfinished}}"), {})
 
+    def test_a_comment_line_does_not_end_an_empty_list_item(self):
+        self.assertEqual(CHECK_TEMPLATE.headings("-\n  <!-- hint -->\n    ```\n  ## Required\n    ```\n"), [])
+
+    def test_flow_attributes_opening_on_a_later_line_are_an_error(self):
+        with self.assertRaises(CHECK_TEMPLATE.CheckError):
+            CHECK_TEMPLATE.parse_template(
+                "f.yml", "body:\n  - type: input\n    attributes:\n      {\n        label: Version,\n        description: x }\n"
+            )
+
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 

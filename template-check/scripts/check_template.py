@@ -134,10 +134,12 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
             line = COMMENT.sub("", line)
             if not line.strip():
                 after_blank, paragraph = True, False
-                # A list item that starts empty ends at the first blank line.
-                if empty_item and lists:
-                    lists.pop()
-                empty_item = False
+                # A list item that starts empty ends at the first blank line;
+                # a line holding only a comment is not one.
+                if previous_blank:
+                    if empty_item and lists:
+                        lists.pop()
+                    empty_item = False
                 continue
             if kind == "pr" and (after_blank or was_blank) and NOTE_RULE.match(line):
                 following = next((rest for rest in lines[number:] if rest.strip()), "")
@@ -443,6 +445,11 @@ def form_template(path: str, text: str) -> Template:
                 continue
         if item_indent is None:
             continue
+        # Flow-style attributes that open on a later line are unsupported.
+        if attributes_indent is not None and indent > attributes_indent and content.startswith(("{", "[")):
+            error = CheckError(f"{path}: cannot read the attributes on line {number}; pass --template PATH")
+            error.name = name
+            raise error
         key, separator, value = content.partition(":")
         if not separator:
             continue
