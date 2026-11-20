@@ -280,6 +280,40 @@ class RenderedHeadingTests(unittest.TestCase):
         self.assertNotIn("UV_INDEX", seen["env"])
         self.assertIn("https://pypi.org/simple", seen["command"])
 
+    def test_github_host_aliases_resolve_to_github_com(self):
+        self.assertEqual(
+            [CHECK_TEMPLATE.repository(name) for name in ("ssh://git@ssh.github.com:443/cli/cli.git", "www.github.com/cli/cli")],
+            ["github.com/cli/cli", "github.com/cli/cli"],
+        )
+
+    def test_a_review_note_inside_a_wrapper_ends_the_body(self):
+        body = "<div><h2>Testing</h2><hr><p>Edit: <code>abc1234</code> reviewed</p></div>"
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(body, "pr")], [False])
+
+    def test_a_review_note_needs_blank_lines_around_its_rule_in_the_source(self):
+        cramped = "## Summary\n---\nEdit: `abc1234` reviewed\n\n## Testing\n\nRan it.\n"
+        spaced = "## Summary\n\nText.\n\n---\n\nEdit: `abc1234` reviewed\n\n## Testing\n\nRan it.\n"
+        read = lambda text: [h.text for h in CHECK_TEMPLATE.headings(mini_render(text), "pr", text)]
+        self.assertEqual((read(cramped), read(spaced)), (["Summary", "Testing"], ["Summary"]))
+
+    def test_an_uppercase_commit_names_the_head(self):
+        body = "<h2>Testing</h2><hr><p>Edit: <code>ABC1234</code> reviewed</p>"
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(body, "pr")], [False])
+
+    def test_a_link_in_a_heading_compares_by_its_destination(self):
+        texts = {
+            CHECK_TEMPLATE.headings(html)[0].text
+            for html in ('<h2><a href="https://example.org/a">Testing</a></h2>', '<h2><a href="https://example.org/b">Testing</a></h2>', "<h2>Testing</h2>")
+        }
+        self.assertEqual(len(texts), 3)
+
+    def test_an_image_in_the_attribution_note_is_content(self):
+        note = (
+            '<h2>Related</h2><div class="markdown-alert markdown-alert-note"><p class="markdown-alert-title">Note</p>'
+            '<p>Created on behalf of @someone using Some Model. <img src="https://example.org/shot.png" alt=""></p></div>'
+        )
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(note, "issue")], [True])
+
     def test_www_github_com_is_github_com(self):
         self.assertEqual(CHECK_TEMPLATE.repository("https://www.github.com/cli/cli"), "github.com/cli/cli")
 

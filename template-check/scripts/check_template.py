@@ -156,6 +156,16 @@ INLINE_MARKERS = {"code": "`", "em": "*", "i": "*", "strong": "**", "b": "**", "
 INLINE_TAGS = {"sub", "sup", "kbd", "mark", "ins", "u", "small", "abbr"}
 
 
+def renderer_link(node: Node) -> bool:
+    """A link GitHub adds, not the author: a heading anchor, or one to the image it wraps."""
+    if "anchor" in node.attrs.get("class", "").split():
+        return True
+    images = [child for child in elements(node.children) if child.tag == "img"]
+    sources = {image.attrs.get(key) for image in images for key in ("src", "data-canonical-src")}
+    own_text = "".join(child for child in node.children if isinstance(child, str)).strip()
+    return bool(images) and not own_text and node.attrs.get("href") in sources
+
+
 def heading_text(node: Node | str) -> str:
     """A heading's words, with its inline code in backticks.
 
@@ -169,6 +179,8 @@ def heading_text(node: Node | str) -> str:
     if node.tag == "img":
         return node.attrs.get("alt", "")
     inner = "".join(heading_text(child) for child in node.children)
+    if node.tag == "a" and node.attrs.get("href") and not renderer_link(node):
+        return f"[{inner}]({node.attrs['href']})"
     if node.tag in INLINE_TAGS:
         return f"<{node.tag}>{inner}</{node.tag}>"
     marker = INLINE_MARKERS.get(node.tag, "")
@@ -203,7 +215,7 @@ def names_head(paragraph: Node) -> bool:
                 if "\n" in child:
                     return False
             elif child.tag == "code":
-                if re.fullmatch(r"[0-9a-f]{4,40}", words(child)):
+                if re.fullmatch(r"[0-9a-fA-F]{4,40}", words(child)):
                     return True
             else:
                 found = first_line(child)
@@ -228,7 +240,28 @@ def has_checked(node: Node) -> bool:
     return any(is_checked(child) or has_checked(child) for child in elements(node.children))
 
 
-def headings(html: str, kind: str | None = None) -> list[Heading]:
+# The review note's rule in the source: `---` with a blank line before and after.
+NOTE_SOURCE = re.compile(r"(?:\A|\n)[ \t]*\n[ \t]{0,3}(?:-[ \t]*){3,}\n[ \t]*\n[ \t]{0,3}Edit:")
+
+
+class EndOfBody(Exception):
+    """Reading reached the review note, where the body ends."""
+
+
+def note_rule(children: list[Node | str]) -> Node | None:
+    """The rule that opens the last review note, also inside wrapper elements."""
+    found = None
+    blocks = elements(children)
+    for rule, following in zip(blocks, blocks[1:]):
+        if rule.tag == "hr" and following.tag == "p" and names_head(following):
+            found = rule
+    for block in blocks:
+        if block.tag == "div" and not is_alert(block):
+            found = note_rule(block.children) or found
+    return found
+
+
+def headings(html: str, kind: str | None = None, source: str | None = None) -> list[Heading]:
     """Headings of rendered HTML, each with whether its section shows anything.
 
     A section runs to the next heading of the same or a higher level. A list
@@ -243,14 +276,12 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
     # GitHub appends footnotes after the last section; they are no section's content.
     top = [node for node in builder.root.children if not (isinstance(node, Node) and is_footnotes(node))]
     blocks = elements(top)
-    if kind == "pr":
+    end = None
+    if kind == "pr" and (source is None or NOTE_SOURCE.search(source.replace("\r\n", "\n"))):
         # The review note closes the body: a rule, then a line that opens with
         # `Edit:` and names the head it covers in code, such as
         # ``Edit: `1a2b3c4` reviewed``.
-        for rule, following in reversed(list(zip(blocks, blocks[1:]))):
-            if rule.tag == "hr" and following.tag == "p" and names_head(following):
-                top = top[: next(index for index, node in enumerate(top) if node is rule)]
-                break
+        end = note_rule(top)
     if kind == "issue" and blocks:
         last = blocks[-1]
         paragraphs = [node for node in elements(last.children) if "markdown-alert-title" not in node.attrs.get("class", "")]
@@ -259,7 +290,7 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
             lines = lines[1:]  # cmark-gfm leaves the alert a quote that opens with its marker.
         elif "markdown-alert-note" not in last.attrs.get("class", "").split():
             lines = []
-        if len(lines) == 1 and ATTRIBUTION.fullmatch(" ".join(lines[0].split())):
+        if len(lines) == 1 and ATTRIBUTION.fullmatch(" ".join(lines[0].split())) and not has_media(last):
             top = [node for node in top if node is not last]
 
     found: list[Heading] = []
@@ -271,6 +302,8 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
 
     def visit(children: list[Node | str], nested: bool) -> None:
         for child in children:
+            if child is end:
+                raise EndOfBody
             if isinstance(child, str):
                 if child.strip():
                     content()
@@ -294,7 +327,10 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
                 content()
             visit(child.children, nested or child.tag in NESTING or is_alert(child))
 
-    visit(top, False)
+    try:
+        visit(top, False)
+    except EndOfBody:
+        pass
     return found
 
 
@@ -1034,6 +1070,12 @@ def parser() -> argparse.ArgumentParser:
     return result
 
 
+def github_host(host: str) -> str:
+    """A host as gh resolves it: www and SSH-over-443 aliases of github.com are github.com."""
+    host = host.lower()
+    return "github.com" if host in ("www.github.com", "ssh.github.com") else host
+
+
 def repository(name: str | None) -> str | None:
     """OWNER/REPO or HOST/OWNER/REPO, also from a repository URL gh accepts."""
     if not name:
@@ -1042,13 +1084,12 @@ def repository(name: str | None) -> str | None:
         parts = name.split("/")
         if len(parts) not in (2, 3) or not all(parts):
             raise CheckError(f"--repo {name} is not OWNER/REPO, HOST/OWNER/REPO or a repository URL")
-        return name
+        return "/".join([github_host(parts[0]), *parts[1:]]) if len(parts) == 3 else name
     url = urlparse(name)
     path = url.path.strip("/").removesuffix(".git")
     if not url.hostname or path.count("/") != 1:
         raise CheckError(f"--repo {name} names no repository")
-    host = url.hostname.lower()
-    return f"{'github.com' if host == 'www.github.com' else host}/{path}"
+    return f"{github_host(url.hostname)}/{path}"
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
@@ -1089,7 +1130,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     # Without a kind, as with --template alone, the body reads as a pull request's.
     text = text.removeprefix("\ufeff")
-    body = headings(render(text), kind or "pr")
+    body = headings(render(text), kind or "pr", text)
     template, problems = select(templates, body, args.template_name)
     return {
         "state": "mismatch" if problems else "match",
