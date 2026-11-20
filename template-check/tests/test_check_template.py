@@ -754,6 +754,19 @@ class RendererParityTests(unittest.TestCase):
         template = CHECK_TEMPLATE.parse_template("t.md", "---\n? name\n: Bug Report\n---\n## A\n", REAL_RENDER)
         self.assertEqual((template.name, [str(h) for h in template.headings]), ("Bug Report", ["## A"]))
 
+    def test_wrapped_and_unclosed_bracket_placeholders_are_no_content(self):
+        for body in ("## Steps\n\n- <div>[ ]</div>\n", "## Steps\n\n<ul><li>[ ]<li>[ ]</ul>\n"):
+            with self.subTest(body=body):
+                self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(REAL_RENDER(body))], [False])
+
+    def test_text_split_by_a_span_compares_as_one_run(self):
+        texts = {CHECK_TEMPLATE.headings(REAL_RENDER(h))[0].text for h in ("## https<span>://example.org</span>\n", "## https:&#47;/example.org\n")}
+        self.assertEqual(len(texts), 1)
+
+    def test_a_template_passed_by_path_needs_no_readable_name(self):
+        template = CHECK_TEMPLATE.parse_template("t.md", "---\nname: *display\n---\n## A\n", REAL_RENDER, need_name=False)
+        self.assertEqual((template.name, [str(h) for h in template.headings]), ("t", ["## A"]))
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
@@ -857,6 +870,12 @@ class TemplateParsingTests(unittest.TestCase):
     def test_a_quoted_type_may_continue_past_an_escaped_line_break(self):
         form = 'body:\n  - type: "mark\\\n      down"\n    attributes:\n      value: Hi\n  - type: input\n    attributes:\n      label: A\n'
         self.assertEqual([h.text for h in CHECK_TEMPLATE.form_template("f.yml", form).headings], ["A"])
+
+    def test_a_plain_form_name_may_continue_below(self):
+        self.assertEqual(CHECK_TEMPLATE.declared_name("name: Bug\n  Report\nbody:\n  - type: input\n"), "Bug Report")
+
+    def test_an_ssh_clone_url_names_its_repository(self):
+        self.assertEqual(CHECK_TEMPLATE.repository("git@github.com:cli/cli.git"), "github.com/cli/cli")
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):

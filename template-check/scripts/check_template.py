@@ -148,6 +148,11 @@ class TreeBuilder(HTMLParser):
             return
         if tag in CLOSES_PARAGRAPH and self.stack[-1].tag == "p":
             self.stack.pop()
+        if tag == "li":
+            # A new item closes the open item of its own list, whose end tag HTML lets an author omit.
+            lists = [index for index, node in enumerate(self.stack) if node.tag in ("li", "ul", "ol")]
+            if lists and self.stack[lists[-1]].tag == "li":
+                del self.stack[lists[-1] :]
         if tag in STRIPPED:
             return
         node = Node(tag, {key: value or "" for key, value in attrs})
@@ -256,12 +261,11 @@ def flattened(children: list[Node | str]) -> list[Node | str]:
     """Children with plain wrappers such as <span> replaced by what they hold, as they show."""
     shown: list[Node | str] = []
     for child in children:
-        if isinstance(child, Node) and child.tag in ("span", "font"):
-            shown += flattened(child.children)
-        elif isinstance(child, str) and shown and isinstance(shown[-1], str):
-            shown[-1] += child
-        else:
-            shown.append(child)
+        for item in flattened(child.children) if isinstance(child, Node) and child.tag in ("span", "font") else [child]:
+            if isinstance(item, str) and shown and isinstance(shown[-1], str):
+                shown[-1] += item  # Text the wrapper split reads as one run, as it shows.
+            else:
+                shown.append(item)
     return shown
 
 
@@ -336,7 +340,7 @@ def plain(node: Node) -> bool:
     An element that shows nothing, such as an empty code block, is ignored.
     """
     return all(
-        (child.tag in ("p", "span") and plain(child)) or (not text_of(child).strip() and not has_media(child) and child.tag not in MEDIA)
+        (child.tag in ("p", "span", "div") and plain(child)) or (not text_of(child).strip() and not has_media(child) and child.tag not in MEDIA)
         for child in elements(node.children)
     )
 
@@ -833,7 +837,17 @@ def declared_name(text: str) -> str:
                     return " ".join(scalar(joined).split())
             return ""  # A quote that never closes: unknown.
         if scalar(value) and not BLOCK_SCALAR.match(bare(value)):
-            return scalar(value)
+            if QUOTED_SCALAR.match(bare(value)) or re.search(r"\s#", value):
+                return scalar(value)  # A quoted name, or one a comment ends, is complete.
+            # A plain name continues on more indented lines, folded into spaces.
+            words_below = []
+            for following in lines[index + 1 :]:
+                if not following.strip():
+                    continue
+                if not following.startswith((" ", "\t")) or following.strip().startswith("#"):
+                    break
+                words_below.append(following.strip())
+            return scalar(" ".join([value.strip(), *words_below]))
         # A block scalar, or a plain one continued on the lines below the key.
         block = []
         for following in lines[index + 1 :]:
@@ -850,7 +864,7 @@ def declared_name(text: str) -> str:
     return ""
 
 
-def form_template(path: str, text: str) -> Template:
+def form_template(path: str, text: str, need_name: bool = True) -> Template:
     """Headings of a GitHub issue form: one `###` per non-Markdown field label.
 
     GitHub renders each answered or empty field as `### <label>` followed by
@@ -863,7 +877,7 @@ def form_template(path: str, text: str) -> Template:
     # The declared name comes first, so an error in a field still carries it.
     declared = declared_name(text)
     declared = "" if isinstance(declared, Alias) else declared
-    if not declared and re.search(r"""(?m)^["']?name["']?[ \t]*:""", text):
+    if need_name and not declared and re.search(r"""(?m)^["']?name["']?[ \t]*:""", text):
         # A name the form declares but this reader cannot read: it may be any template's.
         raise CheckError(f"{path}: cannot read the issue form's name; pass --template PATH")
     name = declared or Path(path).stem
@@ -1016,18 +1030,20 @@ def form_template(path: str, text: str) -> Template:
     return Template(path, name, found)
 
 
-def markdown_template(path: str, text: str, renderer: Callable[[str], str]) -> Template:
+def markdown_template(path: str, text: str, renderer: Callable[[str], str], need_name: bool = True) -> Template:
     fields, body = front_matter(text)
+    if isinstance(fields.get("name"), Alias) and not need_name:
+        fields["name"] = ""  # A template passed by path needs no name; its file names it.
     if isinstance(fields.get("name"), Alias):
         raise CheckError(f"{path}: cannot read the YAML alias {fields['name']} that names the template; pass --template PATH")
     return Template(path, fields.get("name") or Path(path).stem, standalone(headings(renderer(body), source=body, github=False), renderer, body))
 
 
-def parse_template(path: str, text: str, renderer: Callable[[str], str] | None = None) -> Template:
+def parse_template(path: str, text: str, renderer: Callable[[str], str] | None = None, need_name: bool = True) -> Template:
     text = text.removeprefix("\ufeff")
     renderer = renderer or render
     if path.lower().endswith((".yml", ".yaml")):
-        template = form_template(path, text)
+        template = form_template(path, text, need_name)
         # GitHub shows each label as a rendered heading, so compare it as one.
         if template.headings:
             shown = headings(renderer("\n\n".join(f"### {heading.text}" for heading in template.headings)), github=False)
@@ -1036,7 +1052,7 @@ def parse_template(path: str, text: str, renderer: Callable[[str], str] | None =
                     # Reported as the label GitHub renders it from, which shows the same heading.
                     heading.written, heading.text = f"### {heading.text}", rendered.text
         return template
-    return markdown_template(path, text, renderer)
+    return markdown_template(path, text, renderer, need_name)
 
 
 class Source:
@@ -1454,6 +1470,9 @@ def repository(name: str | None) -> str | None:
     """OWNER/REPO or HOST/OWNER/REPO, also from a repository URL gh accepts."""
     if not name:
         return name
+    scp = re.fullmatch(r"[\w.-]+@([\w.-]+):(?!//)(.+)", name)
+    if scp:  # An SSH clone URL such as a private repository.
+        name = f"ssh://{scp.group(1)}/{scp.group(2)}"
     if "://" not in name:
         parts = name.split("/")
         if len(parts) not in (2, 3) or not all(parts):
@@ -1483,7 +1502,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     kind = "pr" if args.pr is not None else "issue" if args.issue is not None else args.kind
     if args.template:
         try:
-            templates = [parse_template(str(args.template), args.template.read_text(encoding="utf-8"))]
+            templates = [parse_template(str(args.template), args.template.read_text(encoding="utf-8"), need_name=False)]
         except (OSError, ValueError) as error:
             raise CheckError(f"cannot read template: {error}") from error
         absent = f"{args.template} has no headings"
