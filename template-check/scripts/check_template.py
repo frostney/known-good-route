@@ -61,7 +61,7 @@ HEADING_TAG = re.compile(r"h([1-6])")
 COLLAPSIBLE = re.compile(r"[ \t\n\r\f]+")
 CODE_SPACE = "\x00"  # A space inside inline code, which no rendered text contains.
 # Block elements that only group what they hold, so a review note may sit inside one.
-WRAPPERS = {"div", "section", "article", "main", "header", "footer", "aside", "nav"}
+WRAPPERS = {"div", "section", "article", "main", "header", "footer", "aside", "nav", "details"}
 # Elements whose headings are their section's content rather than sections.
 NESTING = {"li", "blockquote", "table", "pre", "code", "summary"}
 # A <picture> shows only the image inside it, so it is no media of its own.
@@ -594,6 +594,12 @@ def headings(html: str, kind: str | None = None, source: str | None = None, gith
     return found
 
 
+def lines_of(text: str) -> str:
+    """Text with every line ending as `\\n`; cmark-gfm also ends a line at a bare `\\r`,
+    so its source positions count lines as this does."""
+    return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
 def render(markdown: str) -> str:
     """Markdown as GitHub renders it in an issue or pull request, rendered locally.
 
@@ -906,7 +912,12 @@ def form_template(path: str, text: str, need_name: bool = True) -> Template:
     never checked against part of a form.
     """
     # The declared name comes first, so an error in a field still carries it.
-    declared = declared_name(text)
+    try:
+        declared = declared_name(text)
+    except ValueError:
+        if need_name:
+            raise
+        declared = ""  # A form passed by path needs no name; its file names it.
     declared = "" if isinstance(declared, Unreadable) else declared
     if need_name and not declared and re.search(r"""(?m)^["']?name["']?[ \t]*:""", text):
         # A name the form declares but this reader cannot read: it may be any template's.
@@ -1079,7 +1090,7 @@ def markdown_template(path: str, text: str, renderer: Callable[[str], str], need
 
 
 def parse_template(path: str, text: str, renderer: Callable[[str], str] | None = None, need_name: bool = True) -> Template:
-    text = text.removeprefix("\ufeff")
+    text = lines_of(text.removeprefix("\ufeff"))
     renderer = renderer or render
     if path.lower().endswith((".yml", ".yaml")):
         template = form_template(path, text, need_name)
@@ -1565,7 +1576,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         return {"state": "no-template", "body": source_label, "problems": [], "reason": absent}
 
     # Without a kind, as with --template alone, the body reads as a pull request's.
-    text = text.removeprefix("\ufeff")
+    text = lines_of(text.removeprefix("\ufeff"))
     body = standalone(headings(render(text), kind or "pr", text, github=False), render, text)
     template, problems = select(templates, body, args.template_name)
     return {

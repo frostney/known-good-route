@@ -776,6 +776,25 @@ class RendererParityTests(unittest.TestCase):
         }
         self.assertEqual(len(texts), 2)
 
+    def test_a_review_note_inside_details_ends_the_body(self):
+        body = "## Testing\n\n<details>\n\n---\n\nEdit: `abc1234` reviewed\n\n</details>\n"
+        found = CHECK_TEMPLATE.headings(REAL_RENDER(body), "pr", body, github=False)
+        self.assertEqual([h.has_content for h in found], [False])
+
+    def test_a_bare_carriage_return_in_a_live_body_keeps_the_review_note(self):
+        saved = CHECK_TEMPLATE.render, CHECK_TEMPLATE.live_body
+        CHECK_TEMPLATE.render = REAL_RENDER
+        CHECK_TEMPLATE.live_body = lambda kind, number, repo: "## Summary\n\nOne\rtwo.\n\n## Testing\n\n---\n\nEdit: `abc1234` reviewed\n"
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                template = Path(directory) / "t.md"
+                template.write_text("## Summary\n\n-\n\n## Testing\n\n-\n", encoding="utf-8")
+                args = CHECK_TEMPLATE.parser().parse_args(["--template", str(template), "--pr", "1", "--repo", "cli/cli"])
+                result = CHECK_TEMPLATE.run(args)
+        finally:
+            CHECK_TEMPLATE.render, CHECK_TEMPLATE.live_body = saved
+        self.assertEqual([p["kind"] for p in result["problems"]], ["empty"])
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
@@ -894,6 +913,11 @@ class TemplateParsingTests(unittest.TestCase):
         form = "body:\n  - type: input\n    attributes: {label: [Expected, Actual]}\n"
         with self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, "collection"):
             CHECK_TEMPLATE.form_template("f.yml", form)
+
+    def test_a_form_passed_by_path_needs_no_decodable_name(self):
+        form = 'name: "\\UFFFFFFFF"\nbody:\n  - type: input\n    attributes:\n      label: A\n'
+        template = CHECK_TEMPLATE.form_template("f.yml", form, need_name=False)
+        self.assertEqual((template.name, [h.text for h in template.headings]), ("f", ["A"]))
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):
