@@ -87,7 +87,7 @@ class TreeBuilder(HTMLParser):
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag == "br":
-            self.stack[-1].children.append(" ")  # A line break separates words.
+            self.stack[-1].children.append("\n")  # A line break separates words and lines.
             return
         node = Node(tag, {key: value or "" for key, value in attrs})
         self.stack[-1].children.append(node)
@@ -181,10 +181,11 @@ def headings(html: str, kind: str | None = None) -> list[Heading]:
     if kind == "issue" and blocks:
         last = blocks[-1]
         paragraphs = [node for node in elements(last.children) if "markdown-alert-title" not in node.attrs.get("class", "")]
+        lines = [line for line in text_of(paragraphs[0]).splitlines() if line.strip()] if len(paragraphs) == 1 else []
         if (
             (is_alert(last) or last.tag == "blockquote")
-            and len(paragraphs) == 1
-            and ATTRIBUTION.fullmatch(words(paragraphs[0]))
+            and len(lines) == 1
+            and ATTRIBUTION.fullmatch(" ".join(lines[0].split()))
         ):
             top = [node for node in top if node is not last]
 
@@ -250,13 +251,14 @@ def checkout_host(root: Path | None) -> str | None:
         url = None
     if url and urlparse(url.strip()).hostname:
         return urlparse(url.strip()).hostname
-    # A checkout with remotes belongs to some host; never guess which.
-    remotes = subprocess.run(
-        ["git", *(["-C", str(root)] if root else []), "remote"], text=True, capture_output=True, check=False
+    # A git checkout belongs to some host, or to none yet; never guess which.
+    inside = subprocess.run(
+        ["git", *(["-C", str(root)] if root else []), "rev-parse", "--is-inside-work-tree"],
+        text=True, capture_output=True, check=False,
     )
-    if remotes.returncode == 0 and remotes.stdout.strip():
+    if inside.returncode == 0 and inside.stdout.strip() == "true":
         raise CheckError("cannot tell which GitHub host this checkout belongs to; pass --repo HOST/OWNER/REPO")
-    return None  # No repository at all: gh's default host applies.
+    return None  # Not a checkout at all: gh's default host applies.
 
 
 def render(markdown: str, host: str | None = None) -> str:
@@ -401,7 +403,7 @@ def declared_name(text: str) -> str:
         key, separator, value = line.partition(":")
         if not separator or line.startswith((" ", "\t", "-")) or scalar(key) != "name":
             continue
-        if value.strip() and not BLOCK_SCALAR.match(value.strip()):
+        if scalar(value) and not BLOCK_SCALAR.match(value.strip()):
             return scalar(value)
         # A block scalar, or a plain one continued on the lines below the key.
         block = []
@@ -962,7 +964,19 @@ def parser() -> argparse.ArgumentParser:
     return result
 
 
+def repository(name: str | None) -> str | None:
+    """OWNER/REPO or HOST/OWNER/REPO, also from a repository URL gh accepts."""
+    if not name or "://" not in name:
+        return name
+    url = urlparse(name)
+    path = url.path.strip("/").removesuffix(".git")
+    if not url.hostname or path.count("/") != 1:
+        raise CheckError(f"--repo {name} names no repository")
+    return f"{url.hostname}/{path}"
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
+    args.repo = repository(args.repo)
     if args.pr is not None:
         source_label, text = f"pr #{args.pr}", live_body("pr", args.pr, args.repo)
     elif args.issue is not None:
@@ -988,15 +1002,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         return hosts[key]
 
     def body_host() -> str | None:
-        return host_of("body", lambda: target_host(args.repo, None))
+        return host_of("body:", lambda: target_host(args.repo, None))
 
     def renderer_for(root: Path | None) -> Callable[[str], str]:
         def renderer(markdown: str) -> str:
             if not markdown.strip():
                 return ""
             if root is None:
-                return render(markdown, host_of("repo", lambda: target_host(args.repo, None)))
-            return render(markdown, host_of(str(root), lambda: checkout_host(root)))
+                return render(markdown, host_of("repo:", lambda: target_host(args.repo, None)))
+            return render(markdown, host_of(f"checkout:{root.resolve()}", lambda: checkout_host(root)))
 
         return renderer
 

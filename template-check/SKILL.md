@@ -32,8 +32,9 @@ belongs to.
   and `.github/`: `pull_request_template.md` or a `PULL_REQUEST_TEMPLATE/`
   folder for PRs, and `issue_template.md` or an `ISSUE_TEMPLATE/` folder of
   templates and issue forms for issues. `--root` names another checkout.
-  `--repo OWNER/REPO` names the repository for `--pr` and `--issue` and,
-  without `--root`, reads the templates from its default branch.
+  `--repo OWNER/REPO`, `HOST/OWNER/REPO` or the repository's URL names the
+  repository for `--pr` and `--issue` and, without `--root`, reads the
+  templates from its default branch.
 - With several templates, pass the one the body follows with
   `--template-name`, matching its front matter `name` or its file name.
   Without it the closest fit is used, and a tie is an error. Choose it from

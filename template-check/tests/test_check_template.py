@@ -215,6 +215,34 @@ class RenderedHeadingTests(unittest.TestCase):
                 found = md_headings(f"## A\n\nx\n\n---\n\n{line}\n\n## B\n\ny\n", "pr")
                 self.assertEqual([(h.text, h.has_content) for h in found], [("A", True), ("B", True)])
 
+    def test_a_line_after_the_attribution_in_its_paragraph_is_content(self):
+        note = (
+            '<h2>Related</h2><div class="markdown-alert markdown-alert-note"><p class="markdown-alert-title">Note</p>'
+            "<p>Created on behalf of @someone using Some Model.<br>All tests passed.</p></div>"
+        )
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(note, "issue")], [True])
+
+    def test_a_git_checkout_gh_cannot_place_is_an_error_even_without_remotes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            subprocess.run(["git", "init", "-q", directory], check=True)
+            original = CHECK_TEMPLATE.gh_runner
+
+            def unresolved(args, **options):
+                raise CHECK_TEMPLATE.CheckError("no repository")
+
+            CHECK_TEMPLATE.gh_runner = unresolved
+            try:
+                with self.assertRaises(CHECK_TEMPLATE.CheckError):
+                    CHECK_TEMPLATE.checkout_host(Path(directory))
+            finally:
+                CHECK_TEMPLATE.gh_runner = original
+
+    def test_a_repository_url_names_its_host(self):
+        self.assertEqual(
+            [CHECK_TEMPLATE.repository(name) for name in ("https://ghe.example.com/cli/cli.git", "cli/cli", None)],
+            ["ghe.example.com/cli/cli", "cli/cli", None],
+        )
+
     def test_an_attribution_naming_a_versioned_model_is_dropped(self):
         note = (
             '<h2>Related</h2><div class="markdown-alert markdown-alert-note"><p class="markdown-alert-title">Note</p>'
@@ -293,6 +321,9 @@ class TemplateParsingTests(unittest.TestCase):
             lambda markdown: mini_render(markdown.replace("`", "")),
         )
         self.assertEqual([str(h) for h in template.headings], ["### Run --help"])
+
+    def test_a_name_continues_below_a_comment_after_its_key(self):
+        self.assertEqual(CHECK_TEMPLATE.declared_name("name: # shown in the chooser\n  bug-report\nbody:\n"), "bug-report")
 
     def test_a_type_given_as_a_block_scalar_is_read(self):
         template = CHECK_TEMPLATE.parse_template(
@@ -953,6 +984,23 @@ class CommandTests(unittest.TestCase):
         template = self.write("blank.md", "---\nname: Blank\n---\n")
         code, result = self.run_check("--template", str(template), "--body", "-", stdin="## Summary\n", cwd=self.checkout)
         self.assertEqual((code, result["state"]), (0, "no-template"))
+
+    def test_a_root_named_like_a_cache_key_keeps_body_and_template_hosts_apart(self):
+        log = self.root / "gh.log"
+        self.env["FAKE_GH_LOG"] = str(log)
+        checkout = self.root / "body"
+        (checkout / ".github").mkdir(parents=True)
+        (checkout / ".github" / "pull_request_template.md").write_text("## Summary\n", encoding="utf-8")
+        self.scenario.write_text(json.dumps({
+            f"{checkout} :: repo view --json url --jq .url": "https://github.com/cli/cli\n",
+        }), encoding="utf-8")
+        code, result = self.run_check(
+            "--root", "body", "--repo", "https://ghe.example.com/cli/cli", "--kind", "pr", "--body", "-",
+            stdin="## Summary\n\nDone.\n",
+        )
+        self.assertEqual((code, result["state"]), (0, "match"))
+        renders = [call[:3] for call in map(json.loads, log.read_text().splitlines()) if call[-3:] == ["markdown", "--input", "-"]]
+        self.assertEqual(renders, [["api", "--hostname", "github.com"], ["api", "--hostname", "ghe.example.com"]])
 
     def test_live_pull_request_body_against_its_repository_template(self):
         repo = "owner/project"
