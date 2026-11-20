@@ -1471,7 +1471,7 @@ def repository(name: str | None) -> str | None:
     if not name:
         return name
     scp = re.fullmatch(r"[\w.-]+@([\w.-]+):(?!//)(.+)", name)
-    if scp:  # An SSH clone URL such as a private repository.
+    if scp:  # An SSH clone URL, such as git@github.com:cli/cli.git.
         name = f"ssh://{scp.group(1)}/{scp.group(2)}"
     if "://" not in name:
         parts = name.split("/")
