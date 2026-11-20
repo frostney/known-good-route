@@ -180,6 +180,8 @@ def workflow_run(
     check_suite_id: int | None = None,
     attempt: int = 1,
     branch: str = "feature",
+    head_repository: int = 1,
+    started_at: str | None = None,
     created_at: str = "2026-08-12T08:00:00Z",
     updated_at: str = "2026-08-12T08:05:00Z",
 ) -> dict:
@@ -193,7 +195,9 @@ def workflow_run(
             "run_attempt": attempt,
             "head_sha": head,
             "head_branch": branch,
+            "head_repository": {"id": head_repository},
             "created_at": created_at,
+            "run_started_at": started_at or created_at,
             "updated_at": updated_at,
             "status": status,
             "conclusion": conclusion,
@@ -1276,6 +1280,8 @@ class WaitCommandsTest(unittest.TestCase):
             ("cancelled after the older run finished", {"updated_at": "2026-08-12T09:00:00Z"}),
             # Another pull request whose branch points at the same commit.
             ("another branch", {"branch": "other"}),
+            # A fork's pull request whose branch has the same name.
+            ("another repository", {"head_repository": 2}),
             # A job failed before the rest were cancelled.
             ("a job failed", {"jobs": [
                 workflow_job(1001, "build", conclusion="failure", run_id=102),
@@ -1288,6 +1294,38 @@ class WaitCommandsTest(unittest.TestCase):
                 _, output = self.census_wait()
                 self.assertEqual(output["state"], "changed")
                 self.assertFalse(any(run.get("cancelledDuplicate") for run in output["observation"]["runs"]))
+
+    def test_an_older_run_that_started_after_the_cancellation_did_not_race(self) -> None:
+        # Created first, but it waited in a queue until after the cancellation.
+        older = workflow_run(101, [workflow_job(1000, "build")], workflow_id=9, check_suite_id=501, started_at="2026-08-12T08:01:00Z")
+        self.write_scenario(census=[census(*self.cancelled_duplicate(older))])
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "changed")
+
+    def test_a_superseded_run_still_going_holds_the_rerun(self) -> None:
+        # Its newer run passed, but the active older run could share a group.
+        active = workflow_run(103, [], status="in_progress", conclusion=None, workflow_id=10, name="Lint")
+        replaced = workflow_run(104, [workflow_job(1004, "lint", run_id=104)], workflow_id=10, name="Lint")
+        self.write_scenario(census=[census(*self.cancelled_duplicate(), active, replaced)])
+        _, output = self.run_json(
+            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
+            "--pr", "7", "--head", "head-1", "--all-workflows",
+        )
+        self.assertEqual(output["state"], "waiting")
+        self.assertIn("can be rerun once", output["reason"])
+
+    def test_a_cancelled_named_check_left_from_before_a_passed_rerun_is_stale(self) -> None:
+        # The rollup is read before the runs and still shows the first attempt.
+        older = self.cancelled_duplicate()[0]
+        passed = workflow_run(102, [workflow_job(1003, "build", run_id=102)], workflow_id=9, check_suite_id=502, attempt=2)
+        stale = check("build", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=502, workflow=9)
+        fresh = check("build", "COMPLETED", "SUCCESS", app="github-actions", event="pull_request", suite_id=502, workflow=9)
+        self.write_scenario(
+            pullsByRequest=[pull("head-1", [stale])] * 3 + [pull("head-1", [fresh])],
+            census=[census(older, passed)],
+        )
+        _, output = self.census_wait("--check", "build")
+        self.assertEqual(output["state"], "satisfied")
 
     def test_an_older_run_that_was_rerun_cannot_show_the_race(self) -> None:
         # Its creation and its latest update span two attempts.

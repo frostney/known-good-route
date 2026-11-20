@@ -48,8 +48,9 @@ other app's check on it. Where nothing runs in Actions, or policy declares an
 Actions workflow advisory, name every other check with `--check` instead,
 because `--all-workflows` waits for a run to appear and counts every
 workflow. A `recoverable` result names a cancelled duplicate run that GitHub
-counts in place of an older run that passed: rerun each with the command the
-result gives and await `checks-terminal` again on the same head. The PR
+counts in place of an older run that passed: rerun it with the command the
+result gives and await `checks-terminal` again on the same head, one rerun
+at a time when it names several. The PR
 stays pending until that wait reports `satisfied`. The rerun needs no
 decision from the person, and the cancelled run never justifies bypassing a
 required check.

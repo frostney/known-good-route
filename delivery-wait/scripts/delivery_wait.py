@@ -336,7 +336,8 @@ def workflow_census(gh: Gh, repo: str, number: int, head: str, checks: bool, res
             "event": run.get("event"),
             "checkSuiteId": run.get("check_suite_id"),
             "headBranch": run.get("head_branch"),
-            "createdAt": run.get("created_at"),
+            "headRepositoryId": (run.get("head_repository") or {}).get("id"),
+            "runStartedAt": run.get("run_started_at"),
             "updatedAt": run.get("updated_at"),
             "attempt": run.get("run_attempt"),
             "status": run.get("status"),
@@ -438,14 +439,21 @@ def mark_cancelled_duplicates(runs: list[dict[str, Any]], repo: str) -> None:
 def raced(older: dict[str, Any], cancelled: dict[str, Any]) -> bool:
     """Whether the older run was running from the same branch when the newer one was cancelled.
 
-    A rerun older run reports its first creation and its latest update, which
-    span attempts, so its overlap cannot be shown and it does not count.
+    The branch counts with its repository, since forks can share a branch
+    name. A rerun older run's start and latest update can span attempts, so
+    its overlap cannot be shown and it does not count; neither does a run
+    whose branch or times are missing.
     """
-    if older.get("headBranch") != cancelled.get("headBranch") or (older.get("attempt") or 1) > 1:
+    if (
+        older.get("headBranch") is None
+        or (older.get("headBranch"), older.get("headRepositoryId"))
+        != (cancelled.get("headBranch"), cancelled.get("headRepositoryId"))
+        or (older.get("attempt") or 1) > 1
+    ):
         return False
     try:
         cancelled_at = parse_time(str(cancelled.get("updatedAt")))
-        started = parse_time(str(older.get("createdAt")))
+        started = parse_time(str(older.get("runStartedAt")))
         finished = parse_time(str(older.get("updatedAt"))) if older.get("status") == "completed" else None
     except WaitError:
         return False
@@ -497,16 +505,20 @@ class WorkflowCensusGate:
     def failures(self, observation: dict[str, Any]) -> list[str]:
         failures = workflow_failures(observation)
         # A named check from a cancelled duplicate run fails with that run. A
-        # cancelled one from a run that has not finished is left from an
-        # earlier attempt, such as before a rerun whose new attempt has no
-        # check runs yet; the run's jobs decide once they end.
+        # cancelled one from a run that has not finished, or that passed on a
+        # later attempt, is left from an earlier attempt: the check rollup is
+        # read before the runs and can lag behind a rerun. The run's jobs
+        # decide, and a stable census needs a second observation.
         duplicate_suites = {
             run.get("checkSuiteId") for run in deciding_runs(observation)
             if run.get("cancelledDuplicate") and run.get("checkSuiteId") is not None
         }
         running_suites = {
             run.get("checkSuiteId") for run in deciding_runs(observation)
-            if run.get("status") != "completed" and run.get("checkSuiteId") is not None
+            if run.get("checkSuiteId") is not None and (
+                run.get("status") != "completed"
+                or ((run.get("attempt") or 1) > 1 and run.get("conclusion") in PASSING_WORKFLOW_CONCLUSIONS)
+            )
         }
         observed = {
             name: [
@@ -533,7 +545,11 @@ class WorkflowCensusGate:
             self.previous = None
             return "changed", "a workflow run, job or check reached a non-success terminal result: " + "; ".join(failures)
         runs = deciding_runs(observation)
-        others_running = [run for run in runs if run.get("status") != "completed" or not run.get("conclusion")]
+        # Superseded runs count too: a rerun could cancel any active run.
+        others_running = [
+            run for run in observation.get("runs", [])
+            if run.get("status") != "completed" or not run.get("conclusion")
+        ]
         recoverable = cancelled_duplicates(observation, "passed")
         if recoverable and others_running:
             # A rerun can join a concurrency group another workflow shares and

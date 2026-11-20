@@ -172,8 +172,9 @@ readiness. Recording a walkthrough does not replace behavior testing.
     substitute repeated model turns for a passive wait, and report an
     unavailable host capability. Inspect failed logs and return established
     in-scope causes to step 11. A `recoverable` result is a cancelled
-    duplicate run, not a failure of the change: rerun each run it names
-    with the command it gives and wait again on the same head. If expected
+    duplicate run, not a failure of the change: rerun a run it names with
+    the command it gives and wait again on the same head, one rerun at a
+    time. If expected
     PR checks have no run, inspect mergeability and resolve an established
     conflict through `/update-pr` before considering a retrigger. An
     unavailable external dependency remains pending or blocked, never a

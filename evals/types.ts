@@ -87,6 +87,10 @@ export interface EvalFixture {
     // refused attempt does not apply what only a successful one changes.
     // Without an occurrence, every matching call fires it.
     whenResult?: string;
+    // Fire only when this call carries every value, matched as for
+    // requiredActionValues, such as a wait on one exact head. Without an
+    // occurrence, every matching call fires it.
+    whenCarries?: { values: ExactValue[]; fields?: string[] };
     evidence: Record<string, string>;
     // Overrides affect subsequent calls. A sequence starts at its first
     // response on the next call; a scalar replaces whatever was there.

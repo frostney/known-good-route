@@ -104,7 +104,7 @@ function commandCarries(command: unknown, field: string, value: string, anywhere
   return anywhere ? given.includes(value) : given.length > 0 && given.every((one) => one === value);
 }
 
-function actionCarries(
+export function actionCarries(
   record: RunLedger["actions"][number],
   value: ExactValue,
   fields: string[] | undefined,
@@ -731,6 +731,8 @@ export function validateCases(
       if (transition.whenResult !== undefined &&
           (typeof transition.whenResult !== "string" || !transition.whenResult.trim()))
         throw new Error(`${evalCase.id}: invalid transition result condition`);
+      if (transition.whenCarries !== undefined && !transition.whenCarries.values?.length)
+        throw new Error(`${evalCase.id}: invalid transition action-value condition`);
       for (const response of Object.values(transition.actionResponses ?? {}))
         if (Array.isArray(response) && response.length === 0)
           throw new Error(`${evalCase.id}: empty action response sequence`);

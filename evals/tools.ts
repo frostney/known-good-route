@@ -127,7 +127,7 @@ export function createEvalTools(
         return {
           ok: true,
           isolated: true,
-          result: fixtureState.record(action, data) ?? recordedActionAcknowledgment,
+          result: fixtureState.record(action, data, details) ?? recordedActionAcknowledgment,
         };
       },
     }),

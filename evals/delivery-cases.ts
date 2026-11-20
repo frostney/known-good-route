@@ -1009,7 +1009,8 @@ export const deliveryCases: EvalCase[] = [
         { after: "ci.rerunRun", evidence: {}, actionResponses: {
           "monitor.wait": `delivery-wait checks-terminal --all-workflows for PR #561 at ${stackHeads[1]} returned state satisfied: run 9102's second attempt passed, and all 3 deciding workflow runs and 14 jobs on the head succeeded across two identical observations. GitHub reports PR #561's mergeStateStatus as CLEAN.`,
         } },
-        { after: "monitor.wait", since: "ci.rerunRun", evidence: {}, actionResponses: {
+        // Only a wait on the rerun layer's own head shows its checks passed.
+        { after: "monitor.wait", since: "ci.rerunRun", whenCarries: { values: [stackHeads[1]], fields: ["head", "revision", "ref", "commit"] }, evidence: {}, actionResponses: {
           "git.stackMerge": `gh stack merge squash-merged PRs #560 and #561 onto main in one operation; main is now ${integrated}.`,
         } },
         { after: "git.stackMerge", whenResult: "squash-merged", evidence: { stackTopology: `Stack 35 is merged: PRs #560 and #561 are merged into main at ${integrated}.` } },
@@ -1020,7 +1021,8 @@ export const deliveryCases: EvalCase[] = [
         { id: "reruns-the-counted-run", question: "Does the run rerun the cancelled run 9102 that GitHub counts, rather than the passed run 9101 or the replaced PR body check run 9105?" },
         { id: "merges-after-recovery", question: "After the rerun, does the run await PR #561's checks and merge stack 35 in one stack merge, without merging layers one at a time, bypassing branch protection or asking the person?" },
       ],
-      requiredAnswerValues: ["560", "561"],
+      // Only a merge after the rerun layer's checks passed returns the integrated revision.
+      requiredAnswerValues: ["560", "561", [short(integrated), integrated]],
       requiredSkills: ["deliver", "git-workflow"],
       requiredReferences: ["git-workflow/references/github-stacks.md"],
       requiredInspections: ["stackTopology", "readiness", "defaultBranchHealth"],

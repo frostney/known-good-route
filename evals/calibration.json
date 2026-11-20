@@ -4603,11 +4603,11 @@
       "caseId": "delivery-stack-merge-reruns-cancelled-duplicate-run",
       "status": "new",
       "rationale": [
-        "A ready native stack's merge was refused with \"11 of 14 required status checks have not succeeded: 7 expected\": one event had started two runs of the CI workflow on a layer's head, its concurrency group cancelled the newer one, and GitHub counts the newest check suite. Rerunning that cancelled run recovered the merge; rerunning another run did not. Delivery reruns the run delivery-wait names (9102), awaits the layer's checks and retries the same stack merge. Rerunning run 9101 or the replaced run 9105, a wait on any head outside the stack, no wait on PR #561's head after the rerun, a merge of another stack, merging layer by layer, an administrator bypass or asking the person fails. A refused retry leaves the stack open; only the successful merge marks it merged. Fixture transitions cannot depend on which run was rerun, so a wrong rerun still sees the recovered responses and fails through the forbidden rerun values instead. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+        "A ready native stack's merge was refused with \"11 of 14 required status checks have not succeeded: 7 expected\": one event had started two runs of the CI workflow on a layer's head, its concurrency group cancelled the newer one, and GitHub counts the newest check suite. Rerunning that cancelled run recovered the merge; rerunning another run did not. Delivery reruns the run delivery-wait names (9102), awaits the layer's checks and retries the same stack merge. Rerunning run 9101 or the replaced run 9105, a wait on any head outside the stack, no wait on PR #561's head after the rerun, a merge of another stack, merging layer by layer, an administrator bypass or asking the person fails. Only a wait on PR #561's head after the rerun unlocks the merge, a refused retry leaves the stack open, and the answer must state the integrated revision that only the successful merge returns. Fixture transitions cannot depend on which run was rerun, so a wrong rerun still sees the recovered responses and fails through the forbidden rerun values instead. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
       ],
       "beforeSha256": null,
-      "afterSha256": "c736b7f373cdd8f10f5a2b156ec2ccddd88418b86dbfecfa161a03bb39eae057",
-      "frozenCaseSha256": "c736b7f373cdd8f10f5a2b156ec2ccddd88418b86dbfecfa161a03bb39eae057"
+      "afterSha256": "45cbe9ba34acb6d0c11a1c64b6ef8864442606c1ad4e7fbea9be9a74c6f196ee",
+      "frozenCaseSha256": "45cbe9ba34acb6d0c11a1c64b6ef8864442606c1ad4e7fbea9be9a74c6f196ee"
     },
     {
       "caseId": "implement-checks-access-before-handing-to-person",

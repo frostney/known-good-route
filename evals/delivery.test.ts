@@ -452,9 +452,16 @@ test("a stack merge blocked by a cancelled duplicate run is retried after that r
   for (const step of [refusedStackMerge, duplicateRerun]) fixture.record(step.action, step.data);
   expect(fixture.record("git.stackMerge")).toContain("refused");
   expect(fixture.evidence.stackTopology).toBe(open);
-  fixture.record("monitor.wait");
+  fixture.record("monitor.wait", { head: duplicateHead });
   expect(fixture.record("git.stackMerge")).toContain("squash-merged");
   expect(fixture.evidence.stackTopology).toContain("Stack 35 is merged");
+  // A wait on the lower layer after the rerun does not unlock the merge.
+  const lowerFirst = createFixtureState(c.fixture);
+  for (const step of [refusedStackMerge, duplicateRerun]) lowerFirst.record(step.action, step.data);
+  lowerFirst.record("monitor.wait", { head: "c1c1c1c7d0d632e3b438d4ec80a33536673ba1d4" });
+  expect(lowerFirst.record("git.stackMerge")).toContain("refused");
+  lowerFirst.record("monitor.wait", { head: duplicateHead });
+  expect(lowerFirst.record("git.stackMerge")).toContain("squash-merged");
   // A wait on the rerun layer before the rerun does not stand in for one after it.
   const lowerWait = { ...duplicateWait, data: { head: "c1c1c1c7d0d632e3b438d4ec80a33536673ba1d4", kind: "checks-terminal" } };
   expect(await failed([refusedStackMerge, duplicateWait, duplicateRerun, lowerWait, refusedStackMerge])).toEqual(["monitor.wait carries c2c2c2ceea303cffdf47026cc3a74be44d511410 after ci.rerunRun"]);

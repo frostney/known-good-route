@@ -176,9 +176,9 @@ update, merge the freshly fetched remote base and push normally.
   looked green, run `delivery-wait`'s `inspect checks-terminal
   --all-workflows` on each layer's exact head. `recoverable` means GitHub
   counts a cancelled duplicate run on that head in place of an older run that
-  passed. Rerun each run the result names with its `gh run rerun` command,
-  await `wait checks-terminal` on the unchanged head, then retry the same
-  merge. Rerunning any other run does not help: GitHub counts the newest
+  passed. Rerun a run the result names with its `gh run rerun` command and
+  await `wait checks-terminal` on the unchanged head, one rerun at a time
+  until the wait is satisfied, then retry the same merge. Rerunning any other run does not help: GitHub counts the newest
   check suite of each workflow and event, so only a rerun of that cancelled
   run replaces its result. This refusal is a readiness gate: it never
   justifies the layer fallback below, an administrator merge or any other
