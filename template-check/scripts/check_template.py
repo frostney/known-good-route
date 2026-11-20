@@ -98,7 +98,11 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
     after_blank = True
     list_indent = 0  # Content column of the list item the line may belong to.
     fence_indent = 0  # The open code block's container column.
+    empty_item = False  # The last line was a list marker with nothing after it.
     for number, line in enumerate(lines, start=1):
+        # Markdown measures indentation in columns, with tab stops every four.
+        margin = len(line) - len(line.lstrip(" \t"))
+        line = line[:margin].expandtabs(4) + line[margin:]
         if not fence:
             # A line that starts a comment, or closes one, belongs to an HTML
             # block: what else it holds is text, never a heading.
@@ -115,6 +119,9 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
             line = COMMENT.sub("", line)
             if not line.strip():
                 after_blank = True
+                # A list item that starts empty ends at the first blank line.
+                if empty_item:
+                    list_indent, empty_item = 0, False
                 continue
             if kind == "pr" and after_blank and NOTE_RULE.match(line):
                 following = next((rest for rest in lines[number:] if rest.strip()), "")
@@ -130,6 +137,7 @@ def headings(text: str, kind: str | None = "pr") -> list[Heading]:
         container = list_indent  # Before this line can start a nested item.
         if not fence:
             item = LIST_ITEM.match(line)
+            empty_item = bool(item) and not line[len(item.group(0)) :].strip()
             if item:
                 list_indent = len(item.group(0))
             elif indent < list_indent:
@@ -188,7 +196,7 @@ def front_matter(text: str) -> tuple[dict[str, str], str]:
         return {}, text
     for index, line in enumerate(lines[1:], start=1):
         if line.strip() == "---":
-            block = [entry for entry in lines[1:index] if entry.strip()]
+            block = [entry for entry in lines[1:index] if entry.strip() and entry.rstrip() != "..."]
             # Front matter holds YAML keys; an opening `---` rule over Markdown
             # is part of the body.
             if not any(YAML_KEY.match(entry) for entry in block) or not all(
@@ -220,12 +228,23 @@ def scalar(value: str) -> str:
 
 
 def top_level(text: str, separator: str) -> list[str]:
-    """Split text at each separator outside quotes and nested brackets."""
-    parts, current, depth, quote = [], "", 0, ""
-    for char in text:
-        if quote:
+    """Split text at each separator outside quotes and nested brackets.
+
+    A quote opens a quoted scalar only where a scalar starts, so the
+    apostrophe in a plain `What's wrong?` is text. Inside quotes, `\\"` and
+    `''` escape the closing quote.
+    """
+    parts, current, depth, quote, escaped = [], "", 0, "", False
+    for index, char in enumerate(text):
+        if escaped:
+            escaped = False
+        elif quote == '"' and char == "\\":
+            escaped = True
+        elif quote == "'" and char == "'" and text[index + 1 : index + 2] == "'":
+            escaped = True
+        elif quote:
             quote = "" if char == quote else quote
-        elif char in "\"'":
+        elif char in "\"'" and (not current.strip() or current.rstrip().endswith(":")):
             quote = char
         elif char in "{[":
             depth += 1
@@ -266,7 +285,13 @@ def form_template(path: str, text: str) -> Template:
     form with a field whose label cannot be read is an error, so a body is
     never checked against part of a form.
     """
-    name = Path(path).stem
+    # The declared name comes first, so an error in a field still carries it.
+    declared = [
+        scalar(line.partition(":")[2])
+        for line in text.replace("\r\n", "\n").split("\n")
+        if not line.startswith((" ", "\t", "-")) and scalar(line.partition(":")[0]) == "name" and ":" in line
+    ]
+    name = declared[0] if declared and declared[0] else Path(path).stem
     found: list[Heading] = []
     in_body = False
     item_indent: int | None = None
@@ -305,9 +330,7 @@ def form_template(path: str, text: str) -> Template:
         # A list item under `body:` may start at the same indent as the key.
         if indent == 0 and not (in_body and content.startswith("- ")):
             key, _, value = content.partition(":")
-            if key == "name":
-                name = scalar(value) or name
-            in_body = key == "body"
+            in_body = scalar(key) == "body"
             continue
         if not in_body:
             continue
@@ -321,7 +344,7 @@ def form_template(path: str, text: str) -> Template:
         key, separator, value = content.partition(":")
         if not separator:
             continue
-        key = key.strip()
+        key = scalar(key)
         if indent == item_indent + 2:
             attributes_indent = indent if key == "attributes" else None
             label_indent = None

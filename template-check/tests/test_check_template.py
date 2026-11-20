@@ -229,6 +229,37 @@ class HeadingTests(unittest.TestCase):
         )
         self.assertEqual([str(h) for h in template.headings], ["### Steps"])
 
+    def test_a_tab_counts_to_the_next_four_column_stop(self):
+        found = CHECK_TEMPLATE.headings("- item\n\n  ```\n  ## In code\n\t```\n\n## Next\n")
+        self.assertEqual([str(h) for h in found], ["## Next"])
+
+    def test_an_empty_list_item_ends_at_a_blank_line(self):
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings("## A\n\n-\n\n    -\n")], [True])
+
+    def test_flow_mapping_quotes_open_only_where_a_scalar_starts(self):
+        self.assertEqual(
+            [
+                CHECK_TEMPLATE.flow_mapping(text)["label"]
+                for text in (
+                    "{label: What's wrong?, description: Details}",
+                    "{label: 'It''s, ok', description: x}",
+                    '{label: "a \\" b, c", description: x}',
+                )
+            ],
+            ["What's wrong?", "It's, ok", 'a " b, c'],
+        )
+
+    def test_issue_form_keys_may_be_quoted_and_its_name_may_follow_the_body(self):
+        form = 'body:\n  - "type": markdown\n    attributes:\n      value: hi\n  - type: input\n    attributes:\n      label: A\nname: Late\n'
+        template = CHECK_TEMPLATE.parse_template("form.yml", form)
+        self.assertEqual((template.name, [str(h) for h in template.headings]), ("Late", ["### A"]))
+        with self.assertRaises(CHECK_TEMPLATE.CheckError) as raised:
+            CHECK_TEMPLATE.parse_template("form.yml", form.replace("value: hi", "value: hi\n  - type: input\n    attributes: [odd]"))
+        self.assertEqual(raised.exception.name, "Late")
+
+    def test_front_matter_may_end_its_yaml_document_with_dots(self):
+        self.assertEqual(CHECK_TEMPLATE.parse_template("x.md", "---\nname: Bug\n...\n---\n## A\n").name, "Bug")
+
     def test_issue_form_fields_become_level_three_headings(self):
         template = CHECK_TEMPLATE.parse_template("bug.yml", BUG_FORM)
 
