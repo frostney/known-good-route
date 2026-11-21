@@ -108,10 +108,11 @@ run only `status`, with every exact `PR=SHA`.
    with `draftOnly` and the reason, checked again just before the push.
 9. When another [review round on local commits](../SKILL.md#review-rounds-on-local-commits)
    will read the restacked local heads, commit and restack locally, run that
-   round on them, and publish below once, after the last round. A layer can
-   freeze while its fixes wait: before that push, read each layer's frozen
-   state again, and move a fix whose layer froze to where step 7 places it
-   now. Enforce the
+   round on them, and publish below once, after the last round. Layers can
+   freeze while the fixes wait, and a restack moves every layer above a fix:
+   before that push, read the live stack again, place every waiting fix anew
+   under step 7 against it, keep every frozen head, and rerun step 8 on any
+   tree the new placement changes. Enforce the
    native-stack reference's push-boundary checks for the frozen
    prefix and every branch the push moves or creates; preserve the frozen PR
    heads and metadata. Publish a fix made in place through the native-stack

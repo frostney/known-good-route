@@ -1454,7 +1454,13 @@ export const evalCases: EvalCase[] = [
       requiredInspections: ["pullRequest", "reviewRound1"],
       requiredActions: ["file.edit", "git.commit", "codeReview.run", "git.push"],
       requiredActionSequence: ["file.edit", "git.commit", "codeReview.run", "git.push"],
-      maxActionCounts: { "git.push": 1 },
+      // The round-2 review and the push must both name the one fix commit, so
+      // a review of the old head or a push of another commit cannot pass.
+      requiredActionValues: [
+        { action: "codeReview.run", values: ["5b01040"], after: { action: "git.commit" } },
+        { action: "git.push", values: ["5b01040"], every: true },
+      ],
+      maxActionCounts: { "git.push": 1, "git.commit": 1 },
       forbiddenActions: [
         "forge.mergePr",
         "git.amend",
