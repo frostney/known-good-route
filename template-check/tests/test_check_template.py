@@ -872,6 +872,16 @@ class RendererParityTests(unittest.TestCase):
         with self.assertRaises(CHECK_TEMPLATE.CheckError):
             CHECK_TEMPLATE.parse_template("t.md", "---\n? name\n: Bug\nabout: [open\n---\n## A\n", REAL_RENDER)
 
+    def test_broken_front_matter_opening_with_an_anchor_or_tag_is_an_error(self):
+        for opening in ("&root\nname: Bug", "!!map\nname: Bug", "&root name: Bug"):
+            with self.subTest(opening=opening), self.assertRaises(CHECK_TEMPLATE.CheckError) as raised:
+                CHECK_TEMPLATE.parse_template("t.md", f"---\n{opening}\nabout: [open\n---\n## A\n", REAL_RENDER)
+            self.assertEqual(raised.exception.name, "Bug")
+
+    def test_an_image_between_two_rules_stays_markdown(self):
+        text = "---\n![x](y) about: [open\n---\n## A\n"
+        self.assertEqual(CHECK_TEMPLATE.front_matter(text), ({}, text))
+
     def test_an_attribution_quoted_in_code_is_content(self):
         body = "## Related\n\n> [!NOTE]\n> `Created on behalf of @someone using Some Model.`\n"
         self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(REAL_RENDER(body), "issue", body, github=False)], [True])
@@ -1075,6 +1085,8 @@ class TemplateParsingTests(unittest.TestCase):
             "? name # shown in the chooser\n: Other\nabout: [open\n": "Other",
             "description: |\n  name: Legacy\nname: Bug\nbody: [open\n": "Bug",
             "name: Bug\nname: Other\nbody: [open\n": None,
+            'name: Other\nname: "Bug\n': None,
+            "name: Other\nname: [Bug\n": None,
             "name: [Bug]\nbody: [open\n": None,
             "body: [open\nname: Bug\n": None,
         }

@@ -794,7 +794,7 @@ def root_name(text: str) -> str | None:
         return event.tag
 
     names: list[str | None] = []
-    depth, entries, naming, read = 0, 0, False, []
+    depth, entries, naming, read, twice = 0, 0, False, [], False
     try:
         for event in yaml.parse(text, Loader=yaml.SafeLoader):
             names += read  # The parser read on past the name.
@@ -814,13 +814,14 @@ def root_name(text: str) -> str | None:
             if isinstance(event, (yaml.MappingEndEvent, yaml.SequenceEndEvent)):
                 depth -= 1
                 if depth == 0:
-                    return (names or [""])[0] if len(names) <= 1 else None
+                    return None if twice else (names or [""])[0]
                 entries += depth == 1
                 continue
             if depth == 1:  # A scalar or alias entry of the root mapping.
                 scalar = isinstance(event, yaml.ScalarEvent)
                 if entries % 2 == 0:
                     naming = scalar and tag(event) == "tag:yaml.org,2002:str" and event.value == "name"
+                    twice = twice or (naming and bool(names))  # A second name, whatever its value, leaves it open.
                 elif naming:
                     kind = tag(event) if scalar else ""
                     read = [event.value if kind == "tag:yaml.org,2002:str" else "" if kind == "tag:yaml.org,2002:null" else None]
@@ -828,7 +829,7 @@ def root_name(text: str) -> str | None:
                 entries += 1
     except (yaml.YAMLError, ValueError, OverflowError, RecursionError):
         pass
-    return names[0] if len(names) == 1 else None
+    return None if twice or not names else names[0]
 
 
 def load_yaml(text: str) -> Any:
@@ -877,7 +878,11 @@ def front_matter(text: str) -> tuple[dict[str, Any], str]:
                 # Markdown between two rules is often not YAML; a block that opens with a
                 # plain key at the margin, such as `name:`, says it was meant to be.
                 opening = next((line for line in block.split("\n") if line.strip() and not line.lstrip().startswith("#")), "").lstrip()
-                if opening.startswith("{") or re.match(r"\?(?:[ \t]|$)", opening) or re.match(r"""(?:\w[\w .-]*|"[^"\n]*"|'[^'\n]*')[ \t]*:(?:[ \t]|$)""", opening):
+                # An anchor or tag, such as `&root` or `!!map`, opens a YAML node, alone or before
+                # its key on that line; `![` is an image.
+                properties = re.match(r"(?:[&!][^\s\[\]{},]*(?:[ \t]+|$))+", opening)
+                opening = opening[properties.end() :] if properties else opening
+                if (properties and not opening) or opening.startswith("{") or re.match(r"\?(?:[ \t]|$)", opening) or re.match(r"""(?:\w[\w .-]*|"[^"\n]*"|'[^'\n]*')[ \t]*:(?:[ \t]|$)""", opening):
                     raise BrokenYaml(f"cannot read the front matter: {error}", error.name) from error
                 return {}, text
             if isinstance(data, dict):
