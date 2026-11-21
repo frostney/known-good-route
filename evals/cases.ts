@@ -1400,6 +1400,70 @@ export const evalCases: EvalCase[] = [
     },
   },
   {
+    id: "address-pr-feedback-local-review-round-pushes-once",
+    description:
+      "When the next review round reads a local commit, the round's fix is committed, reviewed there, and pushed once after the last round.",
+    prompt:
+      "/address-feedback 1040. Review round 1 found one issue; its report is in the review evidence.",
+    fixture: {
+      environment: {
+        orchestration: { endpoint: "ready-to-merge", entryPoints: "stop" },
+        standingInstructions:
+          "Pull requests get at most two review rounds. You run each round yourself with codeReview.run on the committed diff `git diff origin/main...SHA` of one commit, which can be local; the reviewer posts nothing to GitHub. Fix a round's valid findings, then run the next round, unless the round was clean or was the last.",
+      },
+      evidence: {
+        repositoryStatus:
+          "Clean checkout of example/project on branch fix/retry-budget, the head branch of PR #1040, at 4a01040, equal to the remote branch. No other local work.",
+        pullRequest:
+          "PR #1040 in example/project, ready for review at head 4a01040, links issue #94. Every CI check passed on 4a01040. CI PR cancels a run still in progress when a newer commit is pushed to the PR. No review threads exist.",
+        reviewRound1:
+          "Review round 1 of 2 on 4a01040 (`git diff origin/main...4a01040`): one finding. src/retry.ts:14 retries while attempts <= maxAttempts, so a budget of 3 makes 4 attempts; issue #94 caps attempts at the budget.",
+        specification:
+          "Issue #94: a request is attempted at most maxAttempts times in total, and a non-retryable error stops at once.",
+        projectGate:
+          "The repository declares `bun run check` as its local gate; it covers src/retry.ts's unit tests.",
+      },
+      actionResponses: {
+        "codeReview.run":
+          "Review of the committed diff completed with no findings.",
+        "behaviorTest.run":
+          "Observed on the current content: a budget of 3 makes 3 attempts, and a non-retryable error stops after 1. Both requirements pass.",
+        "validation.focused": "src/retry.ts unit tests pass, including the new budget-boundary test.",
+        "validation.run": "bun run check passes on the current content.",
+        "git.commit": "Committed 5b01040 on fix/retry-budget.",
+        "git.push":
+          "Pushed fix/retry-budget. PR #1040's head is now the pushed commit; CI started on it.",
+        "monitor.wait":
+          "Every CI check passed on PR #1040's current head.",
+      },
+      transitions: [
+        {
+          after: "git.push",
+          evidence: {
+            pullRequest:
+              "PR #1040 in example/project, ready for review at the pushed head. CI started on it; CI on 4a01040 is no longer the current head's. No review threads exist.",
+          },
+        },
+      ],
+    },
+    expected: {
+      rubric: [
+        { id: "fix-reviewed-locally-then-pushed-once", question: "Does the answer report that the retry-budget fix was committed, that review round 2 ran on that commit before it was pushed and found nothing, and that the fix was then pushed to PR #1040 once?" },
+      ],
+      requiredSkills: ["address-feedback"],
+      requiredInspections: ["pullRequest", "reviewRound1"],
+      requiredActions: ["file.edit", "git.commit", "codeReview.run", "git.push"],
+      requiredActionSequence: ["file.edit", "git.commit", "codeReview.run", "git.push"],
+      maxActionCounts: { "git.push": 1 },
+      forbiddenActions: [
+        "forge.mergePr",
+        "git.amend",
+        "git.forcePush",
+        "git.rebase",
+      ],
+    },
+  },
+  {
     id: "address-pr-feedback-terminal-check-does-not-hide-finding",
     description:
       "A terminal neutral automation check cannot substitute for inspecting its exact-head finding surfaces.",

@@ -106,7 +106,10 @@ run only `status`, with every exact `PR=SHA`.
    is ready for review or a draft whose GitHub Actions CI passed; for such a
    draft that the frozen rule does not freeze, list its ref under `rewrite`
    with `draftOnly` and the reason, checked again just before the push.
-9. Enforce the native-stack reference's push-boundary checks for the frozen
+9. When another [review round on local commits](../SKILL.md#review-rounds-on-local-commits)
+   will read the restacked local heads, commit and restack locally, run that
+   round on them, and publish below once, after the last round. Enforce the
+   native-stack reference's push-boundary checks for the frozen
    prefix and every branch the push moves or creates; preserve the frozen PR
    heads and metadata. Publish a fix made in place through the native-stack
    reference's in-place repair path: commit it on its layer, restack only the
