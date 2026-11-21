@@ -868,6 +868,14 @@ class RendererParityTests(unittest.TestCase):
             CHECK_TEMPLATE.parse_template("t.md", "---\n{name: Bug, about: *missing}\n---\n## A\n", REAL_RENDER)
         self.assertEqual(raised.exception.name, "Bug")
 
+    def test_broken_explicit_key_front_matter_is_an_error(self):
+        with self.assertRaises(CHECK_TEMPLATE.CheckError):
+            CHECK_TEMPLATE.parse_template("t.md", "---\n? name\n: Bug\nabout: [open\n---\n## A\n", REAL_RENDER)
+
+    def test_an_attribution_quoted_in_code_is_content(self):
+        body = "## Related\n\n> [!NOTE]\n> `Created on behalf of @someone using Some Model.`\n"
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(REAL_RENDER(body), "issue", body, github=False)], [True])
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
@@ -1027,6 +1035,12 @@ class TemplateParsingTests(unittest.TestCase):
         text = "a: &a '" + "x" * 1000 + "'\nb: [" + ", ".join(["*a"] * 2000) + "]\n"
         with self.assertRaisesRegex(ValueError, "expands to more than"):
             CHECK_TEMPLATE.load_yaml(text)
+
+    def test_a_form_with_a_disallowed_character_keeps_its_name(self):
+        self.assertEqual(CHECK_TEMPLATE.declared_name("name: Legacy\nbody: \x07\n"), "Legacy")
+
+    def test_a_broken_flow_form_after_a_preamble_keeps_its_name(self):
+        self.assertEqual(CHECK_TEMPLATE.declared_name("---\n# form\n{name: Legacy, body: [*missing]}\n"), "Legacy")
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):

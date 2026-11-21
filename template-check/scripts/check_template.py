@@ -391,6 +391,10 @@ def elements(nodes: list[Node | str]) -> list[Node]:
     return [node for node in nodes if isinstance(node, Node)]
 
 
+def contains(node: Node, tag: str) -> bool:
+    return any(child.tag == tag or contains(child, tag) for child in elements(node.children))
+
+
 def has_media(node: Node) -> bool:
     return any(child.tag in MEDIA or has_media(child) for child in elements(node.children))
 
@@ -623,6 +627,8 @@ def headings(html: str, kind: str | None = None, source: str | None = None, gith
         elif not (github and "markdown-alert-note" in last.attrs.get("class", "").split()):
             lines = []
         loose_text = any(isinstance(child, str) and child.strip() for child in last.children)
+        # The note is plain prose; one quoting the sentence in code is an example of it.
+        loose_text = loose_text or any(contains(paragraph, "code") for paragraph in paragraphs)
         if len(lines) == 1 and ATTRIBUTION.fullmatch(" ".join(lines[0].split())) and not has_media(last) and not loose_text:
             holder.children = [node for node in holder.children if node is not last]
             top = [node for node in top if node is not last]
@@ -778,7 +784,10 @@ def jsonable(value: Any) -> Any:
 def load_yaml(text: str) -> Any:
     """YAML read with PyYAML's safe loader, locally or through uv; ValueError for text that is not YAML."""
     if yaml is not None:
-        loader = yaml.SafeLoader(text)
+        try:
+            loader = yaml.SafeLoader(text)  # A character YAML does not allow raises here.
+        except yaml.YAMLError as error:
+            raise ValueError(f"not valid YAML: {error}") from error
         try:
             node = loader.get_single_node()
             if node is not None:
@@ -826,6 +835,12 @@ def name_alone(text: str) -> str | None:
     return flow_name(text)
 
 
+def root_is_flow(text: str) -> bool:
+    """Whether a YAML document's root is a flow mapping, past document markers, directives and comments."""
+    lines = [line for line in text.split("\n") if line.strip() and not re.match(r"\s*(?:#|---|%)", line)]
+    return bool(lines) and lines[0].lstrip().startswith("{")
+
+
 def flow_name(text: str) -> str | None:
     """The `name` of a top-level flow mapping, such as `{name: Bug, body: [...]}`, read on its own."""
     depth, quote, comment = 0, "", False
@@ -844,7 +859,7 @@ def flow_name(text: str) -> str | None:
             depth -= 1
         elif depth == 1 and text[index - 1 : index] in ("{", ",", " ", "\n", "\t") or index == 0:
             entry = re.match(r"""\s*["']?name["']?\s*:\s*("(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[^,}\]\n]+)""", text[index:])
-            if entry and text.lstrip().startswith("{"):
+            if entry and root_is_flow(text):
                 try:
                     return name_in(load_yaml(f"name: {entry.group(1).strip()}")) or None
                 except ValueError:
@@ -879,7 +894,7 @@ def front_matter(text: str) -> tuple[dict[str, Any], str]:
                 # Markdown between two rules is often not YAML; a block that opens with a
                 # plain key at the margin, such as `name:`, says it was meant to be.
                 opening = next((line for line in block.split("\n") if line.strip() and not line.lstrip().startswith("#")), "").lstrip()
-                if opening.startswith("{") or re.match(r"""(?:\w[\w .-]*|"[^"\n]*"|'[^'\n]*')[ \t]*:(?:[ \t]|$)""", opening):
+                if opening.startswith("{") or re.match(r"\?(?:[ \t]|$)", opening) or re.match(r"""(?:\w[\w .-]*|"[^"\n]*"|'[^'\n]*')[ \t]*:(?:[ \t]|$)""", opening):
                     raise BrokenYaml(f"cannot read the front matter: {error}", name_alone(block)) from error
                 return {}, text
             if isinstance(data, dict):
