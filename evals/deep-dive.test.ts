@@ -134,3 +134,53 @@ test("a cause the run had to find is investigated and reviewed before the fix, c
     expect(passes([{ inspect: "gateOutput" }, { act: "file.edit" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { act: "validation.run" }, { act: "forge.openDraftPr" }], 1), id).toBeFalse();
   }
 });
+
+test("the backlog case measures only after reading the earlier thread and runner history, and before the review starts", () => {
+  const scenario = loopCase("deep-dive-earlier-findings-first");
+  const review = deepDiveCases.find((c) => c.id === scenario.worker!.caseId)!;
+  const reviewLedger: RunLedger = {
+    ...empty(),
+    inspections: ["teamThread", "runnerRepoHistory", "runnerStatus", "measurement"],
+    verdict: { path: verdictFile, verdict: "agree", evidence: "added tests and slower older tests explain the growth" },
+  };
+  const measure = { act: "validation.focused" as const, details: "Run scripts/ci-stats --workflow pr --days 10 --median and scripts/ci-profile checkout-e2e --run latest" };
+  type Move = { inspect: string } | typeof measure;
+  const passes = (moves: Move[], startedAtEvent: number, details = measure.details) => {
+    const ledger: RunLedger = { ...empty(), loadedSkills: ["deep-dive"] };
+    for (const move of moves) {
+      if ("inspect" in move) {
+        ledger.inspections.push(move.inspect);
+        ledger.events.push({ kind: "inspection", name: move.inspect });
+      } else {
+        ledger.actions.push({ action: move.act, details });
+        ledger.events.push({ kind: "action", name: move.act });
+      }
+    }
+    ledger.workers = [{ ...worker, caseId: review.id, startedAtEvent, ledger: reviewLedger, grade: gradeRun(review, reviewLedger, "Agree.") }];
+    return gradeRun(scenario, ledger, `checkout-e2e grew; fresh review: agree (${verdictFile}).`).checks.filter((c) => c.name !== "rubric").every((c) => c.passed);
+  };
+  const history: Move[] = [{ inspect: "teamThread" }, { inspect: "runnerRepoHistory" }, { inspect: "runnerStatus" }];
+  expect(passes([...history, measure], 4)).toBeTrue();
+  // Measuring first, or letting the reviewer reveal the profile before measuring, fails.
+  expect(passes([measure, ...history], 4)).toBeFalse();
+  expect(passes([...history, measure], 3)).toBeFalse();
+  // A focused check that runs neither script is not the measurement.
+  expect(passes([...history, measure], 4, "Run targeted lint check")).toBeFalse();
+  // An unrelated check before the review, with the real measurement only after it starts, fails too.
+  const lint = { act: "validation.focused" as const, details: "Run targeted lint check" };
+  const mixed: RunLedger = { ...empty(), loadedSkills: ["deep-dive"] };
+  for (const name of ["teamThread", "runnerRepoHistory", "runnerStatus"]) {
+    mixed.inspections.push(name);
+    mixed.events.push({ kind: "inspection", name });
+  }
+  for (const move of [lint, measure]) {
+    mixed.actions.push({ action: move.act, details: move.details });
+    mixed.events.push({ kind: "action", name: move.act });
+  }
+  mixed.workers = [{ ...worker, caseId: review.id, startedAtEvent: 4, ledger: reviewLedger, grade: gradeRun(review, reviewLedger, "Agree.") }];
+  const grade = gradeRun(scenario, mixed, `checkout-e2e grew; fresh review: agree (${verdictFile}).`);
+  expect(grade.checks.filter((c) => c.name.endsWith("before worker")).every((c) => c.passed)).toBeFalse();
+  mixed.workers[0]!.startedAtEvent = 5;
+  const later = gradeRun(scenario, mixed, `checkout-e2e grew; fresh review: agree (${verdictFile}).`);
+  expect(later.checks.filter((c) => c.name.endsWith("before worker")).every((c) => c.passed)).toBeTrue();
+});

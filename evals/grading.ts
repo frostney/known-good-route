@@ -505,6 +505,25 @@ export function gradeRun(
     });
   }
 
+  for (const required of expected.requiredActionsBeforeWorker ?? []) {
+    const { action, values } = typeof required === "string" ? { action: required, values: [] } : required;
+    const started = ledger.workers?.[0]?.startedAtEvent;
+    // The nth action event records ledger.actions[n].
+    let actionCount = -1;
+    const actionIndex = ledger.events.findIndex((event) => {
+      if (event.kind !== "action") return false;
+      actionCount += 1;
+      const record = ledger.actions[actionCount];
+      return event.name === action && record !== undefined &&
+        values.every((value) => actionCarries(record, value, undefined));
+    });
+    checks.push({
+      name: `${action}${values.length ? ` carrying ${values.map(describe).join(", ")}` : ""} before worker`,
+      passed: started !== undefined && actionIndex >= 0 && actionIndex < started,
+      detail: `workerStartedAtEvent=${started ?? "none"} actionIndex=${actionIndex}`,
+    });
+  }
+
   for (const order of expected.requiredActionsBeforeActions ?? []) {
     const beforeIndex = ledger.events.findIndex(
       (event) => event.kind === "action" && event.name === order.before,
