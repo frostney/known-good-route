@@ -18,6 +18,7 @@ sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from kgr_github import (  # noqa: E402
+    CORE_RESERVE,
     Gh,
     Metrics,
     RateLimited,
@@ -809,7 +810,8 @@ def main() -> int:
         else:
             if not args.repo:
                 raise WaitError("--repo is required")
-            gh = Gh(metrics)
+            # A wait keeps the reserve for other work; one inspection may use it.
+            gh = Gh(metrics, reserve=CORE_RESERVE if args.command == "wait" else None)
             if args.all_workflows and args.kind != "checks-terminal":
                 raise WaitError("--all-workflows applies only to checks-terminal")
             if args.kind in {"checks-terminal", "pr-merged"}:
@@ -899,7 +901,7 @@ def main() -> int:
                 with StateLock(state_path):
                     if args.kind == "checks-terminal" and not args.all_workflows:
                         rekey_legacy_checkpoint(state_path, identity, transition_key)
-                    output = wait_for_transition(kind=args.kind, identity=identity, observe=observe, classify=classify, state_path=state_path, deadline=deadline, interval=args.interval, metrics=metrics, transition_key=transition_key)
+                    output = wait_for_transition(kind=args.kind, identity=identity, observe=observe, classify=classify, state_path=state_path, deadline=deadline, interval=args.interval, metrics=metrics, transition_key=transition_key, pace=gh.pace, not_before=gh.not_before, limits=gh)
         emit(output, args.json)
         return 0
     except WaitError as error:

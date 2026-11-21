@@ -95,15 +95,32 @@ Run [scripts/publication_guard.py](scripts/publication_guard.py) from this
 installed skill with Python 3.11 or newer, using its actual installed path, for
 example `python3 /path/to/git-workflow/scripts/publication_guard.py`. It needs
 `gh` signed in to GitHub. When the repository receiving the content is public,
-it rewrites private GitHub references and local machine paths out of it.
+it rewrites private GitHub references and local machine paths out of it. It
+asks GitHub through REST and, when the account's REST budget is spent, through
+GraphQL, whose budget is separate. Gists are the exception: GraphQL cannot look
+one up by its id, so a gist reference still needs REST.
 
-- Before each commit, write the message to a file, run `staged --message-file
-  FILE`, and commit with `git commit -F FILE`.
+Run the guard as a whole command, or put the command that publishes after
+`--`, as below: the guard then runs it only after a clean check and exits with
+its status. Otherwise, publish only after reading the guard's own exit
+status. Never pipe the guard's output, such as into `| tail -1`, or chain a
+command after a pipe: the pipe's status is the last command's, so a failed
+check would not stop what follows. As a second line of defence, a failed run
+moves each message, title or body file it was given aside and names where, so
+a command that reads the file finds nothing to publish. That cannot stop a
+push, and it fails when the file cannot be moved, which the guard then says.
+
+- Before each commit, write the message to a file and run `staged
+  --message-file FILE -- git commit -F FILE`.
 - Before each push, including `gh stack push`, `gh stack submit` and
-  `gh stack link`, run `outgoing --base BASE`. BASE is `REMOTE/DEFAULT`, or for
-  a stack layer the branch beneath it. Add `--remote NAME` when the push goes
-  to a remote other than the branch's push remote. Commit what it stages
-  through the commit step above, then push.
+  `gh stack link`, run `outgoing --base BASE -- <the push command>`. BASE is
+  `REMOTE/DEFAULT`, or for a stack layer the branch beneath it. Add
+  `--remote NAME` when the push goes to a remote other than the branch's push
+  remote. While the index differs from `HEAD`, as after it stages rewrites,
+  it exits 3 without pushing: commit what is staged through the commit step
+  above, then run the push step again. It also exits 3 when it could not read
+  a file, and so does the commit step; check that file as the
+  `was not checked` warning below says, then commit or push.
 - Before each pull request title or body write, write the title and body to
   files and run `pr --repo OWNER/REPO --title-file FILE --body-file FILE`, where
   `OWNER/REPO` is the repository the pull request is opened in. Then create or
@@ -128,10 +145,19 @@ Act on its result:
 - `warning:` about `.github/publication-guard.json` or a keep pattern: report
   it; the guard used its default keep list for what it could not read.
 - Exit 2: Git or GitHub could not answer a question the guard depends on, or
-  an argument was wrong, and nothing was changed. Fix the cause the error names
-  and rerun. Never publish without a run that exits 0.
-- Any other exit: the guard failed. Stop, do not publish, and report its
-  output.
+  an argument was wrong. Nothing was rewritten, and the files it was given are
+  where its `moved FILE to` lines say, usually `FILE.unchecked`. Fix the cause
+  the error names, move the files back and rerun. A spent REST budget alone is not such a cause, since the guard
+  then asks GraphQL; an error naming both REST and GraphQL means GraphQL could
+  not answer either, because its budget is spent too or it failed. An answer
+  that names no known visibility stops the guard too. Never publish without a
+  run that exits 0.
+- The guard's own refusals print a line starting `Error: publication guard:`
+  on standard error. Exit 3 with such a line from `outgoing` with a push
+  after `--` means the push did not run; see the push step above.
+- With a command after `--` and no such line, the exit is that command's own
+  status. Without a command, any other exit means the guard failed. Stop, do
+  not publish, and report its output.
 
 At the same points, check what you publish against the repository's binding
 guides. A current

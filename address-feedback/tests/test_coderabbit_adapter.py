@@ -2479,5 +2479,30 @@ class RecorderTest(unittest.TestCase):
                 recorder.require_public("o/r")
 
 
+class GitHubHoldTest(unittest.TestCase):
+    def test_a_hold_past_the_deadline_stops_the_review_loop_before_it_reads(self) -> None:
+        clock = [1_000.0]
+
+        class Held:
+            metrics = ADAPTER.Metrics(0.0)
+
+            def pace(self, value: float) -> float:
+                return value
+
+            def not_before(self) -> float:
+                return 2_000.0  # Set by the API-root lookup; the deadline is earlier.
+
+            def __getattr__(self, name: str) -> Any:
+                raise AssertionError(f"read GitHub through {name} during a hold")
+
+        state, reason, _ = ADAPTER.run_review(
+            Held(), "owner/repo", 7, "head-1", 1_100.0, 60.0,
+            clock=lambda: clock[0], sleeper=lambda seconds: clock.__setitem__(0, clock[0] + seconds),
+        )
+        self.assertEqual(state, "pending")
+        self.assertIn("allows no read before", reason)
+        self.assertEqual(clock[0], 1_100.0)
+
+
 if __name__ == "__main__":
     unittest.main()

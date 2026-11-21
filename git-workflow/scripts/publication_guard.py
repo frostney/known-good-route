@@ -12,10 +12,16 @@ session or per-user temporary directory becomes /tmp, and a dash-encoded project
 folder becomes example-project.
 
 Standard library only. Exits 0 after rewriting or finding nothing to rewrite,
-with any warnings in the report, and 2 without changing anything when Git or
-GitHub cannot answer a question the guard depends on. The destination repository
-can keep more JSON free-text lines by listing regular expressions in
-.github/publication-guard.json as {"keep": ["^Ticket:"]}.
+with any warnings in the report, and 2 without rewriting anything when Git or
+GitHub cannot answer a question the guard depends on. When GitHub's REST budget
+is spent, it asks the same questions through GraphQL, whose budget is separate.
+The destination repository can keep more JSON free-text lines by listing
+regular expressions in .github/publication-guard.json as {"keep": ["^Ticket:"]}.
+
+A failed run moves each message, title or body file it was given to
+FILE.unchecked, so a command that ignores the exit status, such as one after
+`| tail -1 &&`, finds nothing to publish. A command after `--` runs only after
+a clean check, and the guard exits with its status.
 """
 from __future__ import annotations
 
@@ -28,6 +34,7 @@ import json
 import os
 from pathlib import Path
 import re
+import signal
 import subprocess
 import sys
 import tempfile
@@ -124,6 +131,13 @@ class GuardError(RuntimeError):
     pass
 
 
+class Parser(argparse.ArgumentParser):
+    """Reports a wrong argument as a guard error, so every refusal carries the guard's marker."""
+
+    def error(self, message):
+        raise GuardError(f"{self.prog}: {message}")
+
+
 def run(args, *, data=None, cwd=None, check=True):
     try:
         result = subprocess.run(args, input=data, cwd=cwd, capture_output=True)
@@ -154,8 +168,76 @@ def slug_of(match):
     return kind, f"{match.group(owner)}/{repo_name}"
 
 
-def gh_api(*args):
-    return run(["gh", "api", "--hostname", "github.com", *args], check=False)
+def gh_api(*args, host="github.com"):
+    return run(["gh", "api", "--hostname", host, *args], check=False)
+
+
+def rate_limited(result):
+    """Whether GitHub refused a REST call because the account's budget is spent."""
+    text = result.stderr.decode(errors="replace").lower()
+    return "rate limit" in text or "http 429" in text
+
+
+def failure(result):
+    return result.stderr.decode(errors="replace").strip()
+
+
+VISIBILITIES = ("public", "private", "internal")
+# A visibility string as given; only without one, an older server's boolean
+# private flag. Anything else prints nothing, which the guard refuses.
+VISIBILITY_JQ = ('if (.visibility | type) == "string" then .visibility '
+                 'elif .visibility == null and (.private | type) == "boolean" then '
+                 '(if .private then "private" else "public" end) else "" end')
+VISIBILITY_QUERY = "query($owner:String!,$name:String!){repository(owner:$owner,name:$name){visibility}}"
+VIEWER_QUERY = ("query($endCursor:String){viewer{login organizations(first:100,after:$endCursor)"
+                "{nodes{login} pageInfo{hasNextPage endCursor}}}}")
+
+
+def graphql_visibility(slug, host="github.com"):
+    """public, private, internal or missing for SLUG through GraphQL, or None with GraphQL's error.
+
+    GraphQL has its own hourly budget, so it still answers while REST's is spent.
+    """
+    owner, name = slug.split("/", 1)
+    result = gh_api("graphql", "-f", f"query={VISIBILITY_QUERY}", "-f", f"owner={owner}", "-f", f"name={name}",
+                    host=host)
+    try:
+        body = json.loads(result.stdout)
+    except ValueError:
+        body = None
+    if isinstance(body, dict) and isinstance(body.get("data"), dict):
+        repository = body["data"].get("repository")
+        if isinstance(repository, dict) and str(repository.get("visibility")).lower() in VISIBILITIES:
+            return repository["visibility"].lower(), None
+        if isinstance(repository, dict):
+            return None, f"GitHub GraphQL gave visibility {repository.get('visibility')!r}"
+        errors = body.get("errors")
+        if repository is None and errors and all(isinstance(e, dict) and e.get("type") == "NOT_FOUND" for e in errors):
+            return "missing", None
+    return None, failure(result) or "GitHub GraphQL gave no visibility"
+
+
+def visibility(slug, host="github.com", name=None):
+    """public, private, internal or missing for SLUG; REST first, GraphQL once REST's budget is spent.
+
+    NAME is how errors name the repository.
+    """
+    name = name or slug
+    # An older GitHub Enterprise Server names no visibility, only whether a repository is private.
+    result = gh_api(f"repos/{slug}", "--jq", VISIBILITY_JQ, host=host)
+    if result.returncode == 0:
+        answer = result.stdout.decode().strip()
+        if answer in VISIBILITIES:
+            return answer
+        raise GuardError(f"cannot ask GitHub whether {name} is public: it gave visibility {answer!r}")
+    if b"HTTP 404" in result.stderr:
+        return "missing"
+    if rate_limited(result):
+        answer, error = graphql_visibility(slug, host)
+        if answer:
+            return answer
+        raise GuardError(f"cannot ask GitHub whether {name} is public: REST: {failure(result)}; GraphQL: {error}")
+    raise GuardError(f"cannot ask GitHub whether {name} is public: {failure(result)}")
 
 
 class Resolver:
@@ -174,23 +256,22 @@ class Resolver:
         key = key.lower()
         if key not in self.cache:
             self.calls += 1
-            gist = key.startswith("gist:")
-            result = gh_api(f"gists/{key[5:]}" if gist else f"repos/{key}")
+            if not key.startswith("gist:"):
+                state = visibility(key)
+                self.cache[key] = state if state in ("public", "missing") else "private"
+                return self.cache[key]
+            result = gh_api(f"gists/{key[5:]}")
             if result.returncode == 0:
                 try:
-                    body = json.loads(result.stdout)
-                    if gist:
-                        public = body["public"] is True
-                    else:
-                        public = body.get("visibility", "private" if body.get("private", True) else "public") == "public"
-                except (ValueError, AttributeError, KeyError, TypeError) as error:
+                    public = json.loads(result.stdout)["public"] is True
+                except (ValueError, KeyError, TypeError) as error:
                     raise GuardError(f"GitHub gave an unreadable answer about {key}") from error
                 self.cache[key] = "public" if public else "private"
             elif b"HTTP 404" in result.stderr:
                 self.cache[key] = "missing"
             else:
-                raise GuardError(f"cannot ask GitHub whether {key} is private: "
-                                 f"{result.stderr.decode(errors='replace').strip()}")
+                # GraphQL finds a gist only through its owner, so a spent REST budget stops here.
+                raise GuardError(f"cannot ask GitHub whether {key} is private: {failure(result)}")
         return self.cache[key]
 
     def own_owners(self):
@@ -198,9 +279,15 @@ class Resolver:
             names = []
             for args in (("user", "--jq", ".login"), ("--paginate", "user/orgs", "--jq", ".[].login")):
                 result = gh_api(*args)
+                if result.returncode and rate_limited(result):
+                    result = gh_api("graphql", "--paginate", "-f", f"query={VIEWER_QUERY}", "--jq",
+                                    ".data.viewer.login, .data.viewer.organizations.nodes[].login")
+                    names = []
+                    if result.returncode == 0:
+                        names = result.stdout.decode().split()
+                        break
                 if result.returncode:
-                    raise GuardError(f"cannot ask GitHub which accounts the current user owns: "
-                                     f"{result.stderr.decode(errors='replace').strip()}")
+                    raise GuardError(f"cannot ask GitHub which accounts the current user owns: {failure(result)}")
                 names += result.stdout.decode().split()
             self.owners = {name.lower() for name in names}
         return self.owners
@@ -860,10 +947,10 @@ def destination(args, root):
     else:
         host, slug = remote_repository(root, args.remote or push_remote(root))
     name = slug if host == "github.com" else f"{host}/{slug}"
-    result = run(["gh", "api", "--hostname", host, f"repos/{slug}", "--jq", ".visibility"], check=False)
-    if result.returncode:
-        raise GuardError(f"cannot ask GitHub whether {name} is public: {result.stderr.decode(errors='replace').strip()}")
-    return host, slug, name, result.stdout.decode().strip()
+    state = visibility(slug, host, name)
+    if state == "missing":
+        raise GuardError(f"cannot ask GitHub whether {name} is public: it answers that no such repository exists")
+    return host, slug, name, state
 
 
 def read_argument(path):
@@ -987,27 +1074,118 @@ def render(report):
     return "\n".join(lines)
 
 
-def main(argv=None):
+FILE_OPTIONS = ("--message-file", "--title-file", "--body-file")
+
+
+def named_files(argv):
+    """The message, title and body files ARGV names, including under a mistyped prefix of an option."""
+    files = []
+    for at, argument in enumerate(argv):
+        name, equals, value = argument.partition("=")
+        if len(name) > 2 and any(option.startswith(name) for option in FILE_OPTIONS):
+            if not equals:
+                # A missing value leaves the next option in its place, never a file name.
+                value = argv[at + 1] if at + 1 < len(argv) and not argv[at + 1].startswith("-") else ""
+            if value:
+                files.append(value)
+    return files
+
+
+def withhold(argv):
+    """Moves each file ARGV names aside, so a command that ignores the guard's exit status publishes nothing."""
+    paths = named_files(argv)
+    # No file moves onto another input's path, where a later command would read it.
+    inputs = {os.path.abspath(path) for path in paths}
+    for path in paths:
+        if not os.path.isfile(path):
+            continue
+        target, number = f"{path}.unchecked", 1
+        while os.path.lexists(target) or os.path.abspath(target) in inputs:  # Keeps an earlier run's copy.
+            number += 1
+            target = f"{path}.unchecked.{number}"
+        try:
+            os.rename(path, target)  # Moves a symlink itself, never its target.
+            print(f"publication guard: moved {path} to {target}; nothing checked it", file=sys.stderr)
+        except OSError as error:
+            print(f"publication guard: cannot move {path} aside ({error}); it is unchecked, do not publish it",
+                  file=sys.stderr)
+
+
+def check(argv):
     if sys.version_info < (3, 11):
         raise GuardError("Python 3.11 or newer is required")
-    parser = argparse.ArgumentParser(description=__doc__)
+    # No abbreviated options, so every file the guard reads is one withhold() finds.
+    parser = Parser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     usage="%(prog)s {staged,outgoing,pr} ... [-- COMMAND ...]", allow_abbrev=False)
     commands = parser.add_subparsers(dest="operation", required=True)
-    staged = commands.add_parser("staged", help="rewrite the staged diff and, optionally, the commit message file")
+    staged = commands.add_parser("staged", allow_abbrev=False, help="rewrite the staged diff and, optionally, the commit message file")
     staged.add_argument("--message-file")
-    outgoing = commands.add_parser("outgoing", help="rewrite and stage files the branch changes since BASE")
+    outgoing = commands.add_parser("outgoing", allow_abbrev=False, help="rewrite and stage files the branch changes since BASE")
     outgoing.add_argument("--base", required=True)
     for command in (staged, outgoing):
         command.add_argument("--remote", help="the remote being pushed to; defaults to the branch's push remote")
-    pr = commands.add_parser("pr", help="rewrite PR title and body files in place")
+    pr = commands.add_parser("pr", allow_abbrev=False, help="rewrite PR title and body files in place")
     pr.add_argument("--repo", required=True, help="the pull request's base repository, [HOST/]OWNER/REPO")
     pr.add_argument("--title-file")
     pr.add_argument("--body-file")
     for command in (staged, outgoing, pr):
         command.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
-    report = guard(args)
-    print(json.dumps(report) if args.json else render(report))
-    return 0
+    return args, guard(args)
+
+
+def publish_refusal(args, report):
+    """Why the command after -- must not run although the check passed, or None."""
+    if not report["public"] or args.operation == "pr":
+        return None
+    if args.operation == "staged":
+        if report["unchecked"]:
+            return ("the guard could not read " + ", ".join(report["unchecked"])
+                    + "; check them yourself, then commit without the guard's --")
+        return None
+    root, _ = repository_root()
+    staged = run(["git", "diff", "--cached", "--quiet"], cwd=root, check=False).returncode
+    if report["rewritten"] or staged:
+        # A push sends commits, not the index, so staged rewrites are not in it yet.
+        return "the push would publish the commits as they are; commit what is staged through `staged` and rerun"
+    if report["unchecked"]:
+        return ("the guard could not read " + ", ".join(report["unchecked"])
+                + "; check them yourself, then run the push without the guard's --")
+    return None
+
+
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    # Everything after -- is the command that publishes, run only after a clean check.
+    publish = argv[argv.index("--") + 1:] if "--" in argv else []
+    argv = argv[:argv.index("--")] if "--" in argv else argv
+    try:
+        args, report = check(argv)
+    except BaseException as error:
+        if not (isinstance(error, SystemExit) and error.code in (0, None)):  # --help exits 0.
+            withhold(argv)
+        raise
+    print(json.dumps(report) if args.json else render(report), flush=True)
+    if not publish:
+        return 0
+    refusal = publish_refusal(args, report)
+    if refusal:
+        print(f"Error: publication guard: {refusal}; nothing was run", file=sys.stderr)
+        return 3
+    try:
+        code = subprocess.run(publish).returncode
+    except OSError as error:
+        print(f"Error: publication guard: cannot run {publish[0]}: {error}", file=sys.stderr)
+        return 127
+    if code < 0:
+        # Ends the guard by the same signal, so the caller sees what ended the command.
+        try:
+            signal.signal(-code, signal.SIG_DFL)
+        except (OSError, ValueError):  # SIGKILL and SIGSTOP keep their default.
+            pass
+        os.kill(os.getpid(), -code)
+        return 128 - code
+    return code
 
 
 if __name__ == "__main__":

@@ -36,6 +36,10 @@ longer. These rules keep a wait armed for as long as the transition needs:
 - Keep one running wait per state file. Never detach a wait from the host, for
   example with `setsid`, `nohup` or `&`: a detached process cannot resume the
   session.
+- Leave pacing to the helper. It keeps its own use of the account's shared
+  REST budget low, as [GitHub budget](#github-budget) describes, so do not
+  poll the same state beside it with `gh run list`, `gh api` or `gh pr checks`
+  loops.
 - While a wait runs, do not inspect the state it covers. Act on its result.
 
 The `address-feedback` CodeRabbit adapter's `run` follows the same rules. It
@@ -231,3 +235,37 @@ raw API payloads.
 The helper uses authenticated `gh` transport. GraphQL is primary. A REST
 fallback is used only when GraphQL is rate-limited and REST preserves the same
 fact, or when GitHub exposes the fact only through REST.
+
+## GitHub budget
+
+Every agent and person signed in to one GitHub account shares its hourly REST
+budget of 5,000 requests, and the publication guard and reviews need some of
+it. A workflow census reads the head's runs and each run's jobs through REST,
+so the helper keeps that use low:
+
+- Each REST read repeats the ETag of its last answer. GitHub answers an
+  unchanged resource with 304 Not Modified, which its rate limit does not
+  count, so runs that sit in a queue cost next to nothing after the first
+  observation. `metrics.notModified` counts these reads.
+- Each REST answer reports how much of the budget is left. A wait's
+  allowance in each hourly window is a quarter of what was left above 1,000
+  when it first saw that window. After an observation that spent budget, the
+  wait stretches `--interval` to spread the rest of its allowance evenly up to
+  the reset. The allowance is checked between observations, so one
+  observation can go past it. Once the allowance is used up, the wait reads
+  nothing more until the reset. With fewer than 1,000 requests left it makes
+  no REST read at all until the reset, not even the next page of a census. Several waits on one account therefore slow each other
+  down instead of emptying the budget. An observation that spent nothing
+  keeps `--interval`.
+- A rate-limited read, including a 429 or a secondary limit, retries after
+  the reset or the `Retry-After` GitHub gives, or a minute later when a
+  secondary limit names no time, rather than every `--interval`. When that falls after `--deadline`, the wait ends at the
+  deadline without another read and names the time in its reason. The
+  checkpoint keeps that time and the window's allowance under
+  `githubLimits`, so a wait run again with the same `--state` honours them
+  before its first read.
+- The reserve is 1,000, or a fifth of a smaller budget such as a GitHub
+  Actions token's 1,000 an hour.
+- `inspect` takes its one snapshot even below the reserve.
+
+The checkpoint's `nextAttemptAt` shows when the next observation is due.

@@ -11,9 +11,12 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
+import unittest.mock
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -30,12 +33,48 @@ counter = int(counter_path.read_text()) if counter_path.exists() else 0
 counter_path.write_text(str(counter + 1))
 args = sys.argv[1:]
 stdin = sys.stdin.read() if "--input" in args else ""
+# A REST GET asks for headers and may repeat an ETag, as GitHub's API answers them.
+include = "--include" in args
+sent_etag = None
+if "--header" in args:
+    at = args.index("--header")
+    sent_etag = args[at + 1].split(":", 1)[1].strip()
+    del args[at:at + 2]
+args = [arg.removeprefix("https://api.github.com/") for arg in args if arg != "--include"]
+with open(os.environ["FAKE_GH_COUNTER"] + ".log", "a") as log:
+    log.write(json.dumps({"args": args, "etag": sent_etag}) + "\n")
 if counter < scenario.get("transientFailures", 0):
     print("connection reset by peer", file=sys.stderr)
     sys.exit(1)
 
-def output(value):
-    print(json.dumps(value))
+def output(value=None, pages=None):
+    """VALUE, or one page of PAGES as the endpoint's page parameter selects."""
+    following = None
+    if pages is not None:
+        from urllib.parse import parse_qsl, urlencode, urlsplit
+        path, _, query = endpoint.partition("?")
+        params = [(key, item) for key, item in parse_qsl(query) if key != "page"]
+        page = int(dict(parse_qsl(query)).get("page", 1))
+        value = pages[page - 1]
+        if page < len(pages):
+            following = "https://api.github.com/" + path + "?" + urlencode(params + [("page", page + 1)])
+    body = json.dumps(value)
+    if not include:
+        print(body)
+        sys.exit(0)
+    import hashlib
+    etag = 'W/"' + hashlib.sha256(body.encode()).hexdigest() + '"'
+    headers = ["ETag: " + etag]
+    if following:
+        headers.append(f'Link: <{following}>; rel="next"')
+    if sent_etag == etag:
+        print("HTTP/2.0 304 Not Modified\n" + "\r\n".join(headers) + "\r\n\r\n", end="")
+        print("gh: HTTP 304", file=sys.stderr)
+        sys.exit(1)
+    if "coreRemaining" in scenario:
+        headers += ["X-Ratelimit-Remaining: " + str(scenario["coreRemaining"]),
+                    "X-Ratelimit-Reset: " + str(scenario["coreReset"]), "X-Ratelimit-Resource: core"]
+    print("HTTP/2.0 200 OK\n" + "\r\n".join(headers) + "\r\n\r\n" + body)
     sys.exit(0)
 
 def with_connection_counts(value):
@@ -77,6 +116,16 @@ if args[:2] == ["api", "graphql"]:
     output({"data":{"repository":{"pullRequest":selected}}})
 
 endpoint = next((arg for arg in args if arg.startswith("repos/")), "")
+import time
+if scenario.get("restSecondaryLimited") and include:
+    print("HTTP/2.0 403 Forbidden\nRetry-After: 25\r\n\r\n" + json.dumps({"message": "secondary rate limit"}))
+    print("gh: You have exceeded a secondary rate limit. (HTTP 403)", file=sys.stderr)
+    sys.exit(1)
+if scenario.get("restRateLimited") and include and time.time() < scenario["coreReset"]:
+    print("HTTP/2.0 403 Forbidden\nX-Ratelimit-Remaining: 0\r\nX-Ratelimit-Reset: " + str(scenario["coreReset"])
+          + "\r\nX-Ratelimit-Resource: core\r\n\r\n" + json.dumps({"message": "API rate limit exceeded"}))
+    print("gh: API rate limit exceeded for user ID 1. (HTTP 403)", file=sys.stderr)
+    sys.exit(1)
 if "per_page=" in endpoint and "expectedRestPageSize" in scenario:
     from urllib.parse import parse_qs, urlsplit
     size = int(parse_qs(urlsplit(endpoint).query)["per_page"][0])
@@ -90,27 +139,28 @@ if endpoint.endswith("/pulls/comments/10"):
 if endpoint.endswith("/pulls/7"):
     output(scenario["restPull"])
 if "/check-runs" in endpoint:
-    value = scenario.get("restChecks", {"check_runs":[]})
-    output([value] if "--slurp" in args else value)
+    output(pages=[scenario.get("restChecks", {"check_runs":[]})])
 if "/statuses" in endpoint:
-    value = scenario.get("restStatuses", [])
-    output([value] if "--slurp" in args else value)
+    output(pages=[scenario.get("restStatuses", [])])
 if endpoint.endswith("/comments?per_page=100"):
-    output([scenario.get("comments", [])] if "--slurp" in args else scenario.get("comments", []))
+    output(pages=[scenario.get("comments", [])])
 if endpoint.endswith("/replies"):
     output({"id":901,"body":"created"})
 if "/actions/runs?" in endpoint:
     census_path = pathlib.Path(os.environ["FAKE_GH_COUNTER"] + ".census")
     index = int(census_path.read_text()) if census_path.exists() else 0
-    census_path.write_text(str(index + 1))
+    if "&page=" not in endpoint:
+        census_path.write_text(str(index + 1))
+    else:
+        index -= 1
     states = scenario.get("census") or [{"runPages": [scenario.get("restWorkflowRuns", {"total_count": 0, "workflow_runs": []})]}]
-    output(states[min(index, len(states) - 1)]["runPages"])
+    output(pages=states[min(index, len(states) - 1)]["runPages"])
 if "/actions/runs/" in endpoint and "/jobs" in endpoint:
     census_path = pathlib.Path(os.environ["FAKE_GH_COUNTER"] + ".census")
     index = int(census_path.read_text()) - 1
     states = scenario["census"]
     run_id = endpoint.split("/actions/runs/", 1)[1].split("/", 1)[0]
-    output(states[min(index, len(states) - 1)]["jobPages"][run_id])
+    output(pages=states[min(index, len(states) - 1)]["jobPages"][run_id])
 if "/actions/runs/" in endpoint:
     output(scenario["workflow"])
 print("unexpected fake gh invocation: " + repr(args), file=sys.stderr)
@@ -207,6 +257,26 @@ def workflow_run(
         },
         "jobs": jobs,
     }
+
+
+QUEUED_GH = r'''#!/usr/bin/env python3
+import json, os, sys
+path = os.environ["QUEUED_GH"]
+queue = json.loads(open(path).read())
+response = queue.pop(0)
+open(path, "w").write(json.dumps(queue))
+reason = {200: "OK", 304: "Not Modified", 403: "Forbidden", 429: "Too Many Requests"}[response["status"]]
+head = "\r\n".join(f"{key}: {value}" for key, value in response["headers"].items())
+body = json.dumps(response["body"]) if "body" in response else ""
+print(f"HTTP/2.0 {response['status']} {reason}\n{head}\r\n\r\n{body}", end="")
+if response["status"] >= 300:
+    print(f"gh: {reason} (HTTP {response['status']})", file=sys.stderr)
+    sys.exit(1)
+'''
+
+
+def parse_time(value: str) -> float:
+    return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
 
 
 def census(*runs: dict) -> dict:
@@ -1055,6 +1125,217 @@ class WaitCommandsTest(unittest.TestCase):
             "--head", "head-1", "--all-workflows", *extra,
             "--deadline", deadline or self.deadline(), "--interval", "0.01",
         )
+
+    def rest_requests(self) -> list[dict]:
+        log = self.counter.with_name("counter.log")
+        return [entry for entry in map(json.loads, log.read_text().splitlines()) if entry["args"][1] != "graphql"]
+
+    def test_an_unchanged_census_is_revalidated_without_spending_the_rest_budget(self) -> None:
+        # Two pages of runs, so the next page GitHub links to is revalidated too.
+        runs = census(workflow_run(101, matrix_jobs(2)), workflow_run(102, matrix_jobs(1, start=5, run_id=102), workflow_id=8))
+        first, second = runs["runPages"][0]["workflow_runs"]
+        runs["runPages"] = [{"total_count": 2, "workflow_runs": [first]}, {"total_count": 2, "workflow_runs": [second]}]
+        self.write_scenario(census=[runs])
+        result, output = self.census_wait()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output["state"], "satisfied")
+        self.assertEqual(output["metrics"]["observations"], 2)
+        requests = self.rest_requests()
+        # Two pages of runs and the jobs of two runs, once each observation.
+        self.assertEqual(len(requests), 8)
+        self.assertEqual([entry["etag"] is not None for entry in requests], [False] * 4 + [True] * 4)
+        self.assertEqual(output["metrics"]["notModified"], 4)
+
+    def test_a_changed_resource_is_read_again_in_full(self) -> None:
+        self.write_scenario(census=[
+            census(workflow_run(101, matrix_jobs(1, status="in_progress", conclusion=None), status="in_progress", conclusion=None)),
+            census(workflow_run(101, matrix_jobs(1))),
+        ])
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "satisfied")
+        # The changed census answered in full; only the third observation was unchanged.
+        self.assertEqual(output["metrics"]["observations"], 3)
+        self.assertEqual(output["metrics"]["notModified"], 2)
+
+    def rest_budget_wait(self, remaining: int, reset_in: float, seconds: float = 1.0, **scenario: object) -> dict:
+        reset = int(datetime.now(timezone.utc).timestamp() + reset_in)
+        running = {"id": 44, "head_sha": "head-1", "status": "in_progress", "conclusion": None, "html_url": "https://example.invalid/run"}
+        self.write_scenario(**{"workflow": running, "coreRemaining": remaining, "coreReset": reset, **scenario})
+        self.counter.unlink(missing_ok=True)
+        _, output = self.run_json(
+            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "head-1",
+            "--deadline", (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat(), "--interval", "0.05",
+            "--state", str(self.directory / f"budget-{remaining}.json"),
+        )
+        return output
+
+    def test_a_wait_stops_spending_the_rest_budget_below_the_reserve(self) -> None:
+        self.assertGreater(self.rest_budget_wait(4_900, reset_in=30)["metrics"]["observations"], 5)
+        # Below the reserve kept for other work, the next observation would come
+        # after the reset, past the deadline, so the wait ends without it.
+        output = self.rest_budget_wait(900, reset_in=3600)
+        self.assertEqual(output["state"], "timed-out")
+        self.assertIn("REST budget held", output["reason"])
+        self.assertEqual(output["metrics"]["observations"], 1)
+
+    def test_a_census_reads_no_further_page_below_the_reserve(self) -> None:
+        reset = int(datetime.now(timezone.utc).timestamp() + 3600)
+        runs = census(workflow_run(101, matrix_jobs(1)), workflow_run(102, matrix_jobs(1, start=5, run_id=102), workflow_id=8))
+        first, second = runs["runPages"][0]["workflow_runs"]
+        runs["runPages"] = [{"total_count": 2, "workflow_runs": [first]}, {"total_count": 2, "workflow_runs": [second]}]
+        self.write_scenario(census=[runs], coreRemaining=999, coreReset=reset)
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "timed-out")
+        self.assertEqual(len(self.rest_requests()), 1)  # The first page told it 999 were left.
+
+    def test_a_wait_spends_at_most_its_allowance_in_a_budget_window(self) -> None:
+        sys.path.insert(0, str(DELIVERY.parent))
+        from kgr_github import Gh, Metrics
+
+        gh = Gh(Metrics(0.0))
+        self.assertEqual(gh.pace(30, now=0), 30)  # Nothing known about the budget yet.
+        now, remaining, spent = 0.0, 1_500, 0
+        while now < 3_600:
+            for _ in range(4):  # Four counted GETs an observation.
+                remaining -= 1
+                spent += 1
+                gh.spent += 1
+                gh.note_rate({"x-ratelimit-remaining": str(remaining), "x-ratelimit-reset": "3600"})
+            now += gh.pace(30, now=now)
+        # A quarter of the 500 above the reserve of 1,000, instead of spending
+        # faster as the reset nears.
+        self.assertLessEqual(spent, 125)
+        self.assertGreater(spent, 100)
+        self.assertEqual(gh.pace(30, now=3_601), 30)  # The budget has reset.
+
+    def test_a_wait_honours_retry_after(self) -> None:
+        sys.path.insert(0, str(DELIVERY.parent))
+        from kgr_github import Gh, Metrics
+
+        gh = Gh(Metrics(0.0))
+        gh.note_rate({"retry-after": "120"})
+        self.assertGreater(gh.pace(30), 110)
+
+    def test_a_rate_limited_rest_read_retries_after_the_reset(self) -> None:
+        reset = int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
+        self.write_scenario(restRateLimited=True, coreReset=reset)
+        _, output = self.run_json(
+            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "head-1",
+            "--deadline", (datetime.now(timezone.utc) + timedelta(seconds=1)).isoformat(), "--interval", "0.05",
+        )
+        self.assertEqual(output["state"], "timed-out")
+        self.assertEqual(len(self.rest_requests()), 1)  # The reset falls after the deadline.
+
+    def test_a_rate_limited_wait_recovers_once_the_budget_resets(self) -> None:
+        reset = int(datetime.now(timezone.utc).timestamp()) + 2
+        self.write_scenario(restRateLimited=True, coreReset=reset)
+        _, output = self.run_json(
+            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "head-1",
+            "--deadline", (datetime.now(timezone.utc) + timedelta(seconds=5)).isoformat(), "--interval", "0.05",
+        )
+        self.assertEqual(output["state"], "satisfied")
+        self.assertEqual(len(self.rest_requests()), 2)
+
+    def test_a_retry_after_past_the_deadline_ends_the_wait_without_another_read(self) -> None:
+        self.write_scenario(restSecondaryLimited=True)
+        _, output = self.run_json(
+            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "head-1",
+            "--deadline", (datetime.now(timezone.utc) + timedelta(seconds=1)).isoformat(), "--interval", "30",
+        )
+        self.assertEqual(output["state"], "timed-out")
+        self.assertIn("held the next observation until", output["reason"])
+        self.assertEqual(len(self.rest_requests()), 1)
+
+    def queued_gh(self, responses: list[dict]) -> "Any":
+        """A Gh whose `gh` answers RESPONSES in order, as `gh api --include` prints them."""
+        sys.path.insert(0, str(DELIVERY.parent))
+        from kgr_github import Gh, Metrics
+
+        queue = self.directory / "queue.json"
+        queue.write_text(json.dumps(responses))
+        script = self.directory / "queued" / "gh"
+        script.parent.mkdir(exist_ok=True)
+        script.write_text(QUEUED_GH)
+        script.chmod(script.stat().st_mode | stat.S_IXUSR)
+        patch = unittest.mock.patch.dict(os.environ, {
+            "PATH": f"{script.parent}{os.pathsep}{os.environ['PATH']}", "QUEUED_GH": str(queue)})
+        patch.start()
+        self.addCleanup(patch.stop)
+        return Gh(Metrics(time.monotonic()), reserve=1_000)
+
+    def test_a_304_refreshes_the_budget_and_the_page_links(self) -> None:
+        reset = str(int(time.time()) + 3600)
+        rate = lambda left: {"X-Ratelimit-Remaining": str(left), "X-Ratelimit-Reset": reset}
+        gh = self.queued_gh([
+            {"status": 200, "headers": {"ETag": "one", "Link": '<https://api.github.com/x?page=2>; rel="next"', **rate(1_500)}, "body": [1]},
+            {"status": 200, "headers": {"ETag": "two", **rate(1_499)}, "body": [2]},
+            # The list shrank to one page, and other work spent the budget meanwhile.
+            {"status": 304, "headers": {"Link": '<https://api.github.com/x?page=1>; rel="first"', **rate(999)}},
+            {"status": 304, "headers": {}},
+        ])
+        self.assertEqual(gh.rest_pages("x"), [[1], [2]])
+        self.assertEqual(gh.rest_pages("x"), [[1]])
+        self.assertEqual(gh.metrics.not_modified, 1)
+        self.assertEqual(gh.spent, 2)  # A 304 is not spent.
+        self.assertIsNotNone(gh.not_before())
+        with self.assertRaises(Exception) as raised:
+            gh.rest_pages("x")  # Below the reserve, no read goes out.
+        self.assertIn("under the 1000", str(raised.exception))
+        self.assertEqual(len(json.loads((self.directory / "queue.json").read_text())), 1)
+
+    def test_a_secondary_limit_without_a_retry_time_backs_off_a_minute(self) -> None:
+        gh = self.queued_gh([{"status": 429, "headers": {}, "body": {"message": "Too Many Requests"}}])
+        with self.assertRaises(Exception):
+            gh.rest("x")
+        self.assertGreater(gh.not_before() - time.time(), 55)
+        self.assertGreater(gh.pace(30), 55)
+
+    def test_a_resumed_wait_honours_the_hold_an_earlier_run_learned(self) -> None:
+        state = str(self.directory / "held.json")
+        command = [DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "head-1",
+                   "--interval", "0.05", "--state", state, "--deadline"]
+        self.write_scenario(restSecondaryLimited=True)
+        _, first = self.run_json(*command, (datetime.now(timezone.utc) + timedelta(seconds=0.5)).isoformat())
+        self.assertIn("held the next observation until", first["reason"])
+        self.write_scenario()  # GitHub would answer now, but asked for 25 seconds.
+        _, second = self.run_json(*command, (datetime.now(timezone.utc) + timedelta(seconds=0.5)).isoformat())
+        self.assertEqual(second["state"], "timed-out")
+        self.assertIn("held the next observation until", second["reason"])
+        self.assertEqual(len(self.rest_requests()), 1)
+
+    def test_a_smaller_budget_keeps_a_proportionate_reserve(self) -> None:
+        sys.path.insert(0, str(DELIVERY.parent))
+        from kgr_github import Gh, Metrics
+
+        gh = Gh(Metrics(0.0), reserve=1_000)
+        reset = str(int(time.time()) + 3600)
+        # A GitHub Actions token's 1,000 an hour: a fifth of it is kept, so a wait can still read.
+        gh.note_rate({"x-ratelimit-limit": "1000", "x-ratelimit-remaining": "999", "x-ratelimit-reset": reset})
+        self.assertEqual(gh.kept(), 200)
+        self.assertFalse(gh.below_reserve())
+        gh.note_rate({"x-ratelimit-limit": "5000", "x-ratelimit-remaining": "999", "x-ratelimit-reset": reset})
+        self.assertTrue(gh.below_reserve())
+
+    def test_a_paced_wait_stops_promptly_when_asked(self) -> None:
+        reset = int(datetime.now(timezone.utc).timestamp() + 3600)
+        running = {"id": 44, "head_sha": "head-1", "status": "in_progress", "conclusion": None, "html_url": "https://example.invalid/run"}
+        # 1,100 left: the allowance paces the next observation minutes away, inside the deadline.
+        self.write_scenario(workflow=running, coreRemaining=1_100, coreReset=reset)
+        process = subprocess.Popen(
+            [sys.executable, str(DELIVERY), "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44",
+             "--head", "head-1", "--deadline", (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat(),
+             "--interval", "0.05", "--json"],
+            cwd=self.directory, env=self.environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        )
+        log = self.counter.with_name("counter.log")
+        for _ in range(100):
+            if log.exists():
+                break
+            time.sleep(0.05)
+        time.sleep(0.3)
+        process.terminate()
+        stdout, _ = process.communicate(timeout=3)
+        self.assertEqual(json.loads(stdout)["state"], "cancelled")
 
     def test_checks_terminal_without_a_selector_names_all_workflows(self) -> None:
         self.write_scenario()

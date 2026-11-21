@@ -68,6 +68,7 @@ sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "delivery-wait" / "scripts"))
 
 from kgr_github import (  # noqa: E402
+    CORE_RESERVE,
     Gh,
     Metrics,
     RateLimited,
@@ -1502,7 +1503,32 @@ def run_review(
     """Trigger, wait and poll until the head reaches a final state or the deadline."""
     posted: list[dict[str, Any]] = []
     last: dict[str, Any] = {}
+    # The shared client stretches the interval while the REST budget runs low,
+    # and names the earliest time GitHub's limits let the next read go.
+    pace = getattr(gh, "pace", lambda value: value)
+    not_before = getattr(gh, "not_before", lambda: None)
+
+    def held() -> str | None:
+        """Why no read may go before the deadline, after sleeping until it, or None."""
+        blocked = not_before()
+        if blocked is None or blocked < deadline:
+            return None
+        sleeper(max(0.0, deadline - clock()))
+        return f"GitHub's REST budget allows no read before {format_timestamp(blocked)}, after the deadline"
+
+    def after_limits(delay: float) -> float:
+        blocked = not_before()
+        return max(delay, blocked - clock()) if blocked is not None else delay
+
     while True:
+        # A hold GitHub set, even on the API-root lookup before this loop, comes before a read.
+        reason = held()
+        if reason:
+            last["triggers"] = public_posted(posted)
+            return "pending", reason, last
+        blocked = not_before()
+        if blocked is not None and blocked > clock():
+            sleeper(blocked - clock())
         try:
             evidence = pull_evidence(ObservationCache(gh), repo, pr)  # type: ignore[arg-type]
         except (RateLimited, TransientError):
@@ -1510,7 +1536,12 @@ def run_review(
             if clock() >= deadline:
                 last["triggers"] = public_posted(posted)
                 return "pending", "GitHub transport remained unavailable until the deadline", last
-            sleeper(min(interval, max(0.0, deadline - clock())))
+            delay = pace(interval)
+            reason = held()
+            if reason:
+                last["triggers"] = public_posted(posted)
+                return "pending", reason, last
+            sleeper(min(after_limits(delay), max(0.0, deadline - clock())))
             continue
         item = decide(with_posted(evidence, posted), head, clock())
         permitted = item["state"].startswith("trigger-")
@@ -1537,9 +1568,13 @@ def run_review(
         if clock() >= deadline:
             return state, f"deadline reached; {reason}", last
         # Wake when the state can next change: a stated wait ends or a bound passes.
-        wakes = [interval, deadline - clock()]
+        wakes = [pace(interval), deadline - clock()]
         wakes += [parse_time(item[key]) - clock() for key in ("retryAt", "boundAt") if item.get(key)]
-        sleeper(max(0.0, min(wakes)))
+        # A bot's wake time never moves a read ahead of what GitHub's limits allow.
+        hold = held()
+        if hold:
+            return state, f"deadline reached; {reason}; {hold}", last
+        sleeper(max(0.0, min(after_limits(min(wakes)), deadline - clock())))
 
 
 def parser() -> argparse.ArgumentParser:
@@ -1612,6 +1647,7 @@ def main() -> int:
         else:
             args.pr = positive_pr(args.pr)
             args.interval = positive_interval(args.interval)
+            gh.reserve = CORE_RESERVE
             deadline = parse_time(args.deadline)
             identity = {"repo": args.repo, "prs": [args.pr], "heads": {args.pr: args.head}}
             holder = {"repo": args.repo, "pr": args.pr, "head": args.head}
