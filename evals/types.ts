@@ -185,8 +185,9 @@ export interface EvalExpectations {
   // The native worker must have started before the first of each action.
   requiredWorkerBeforeActions?: ActionName[];
   // Each action must be recorded before the native worker started, so what the
-  // worker can see cannot stand in for the action.
-  requiredActionsBeforeWorker?: ActionName[];
+  // worker can see cannot stand in for the action. With values, only a record
+  // carrying all of them, matched as for requiredActionValues, counts.
+  requiredActionsBeforeWorker?: Array<ActionName | { action: ActionName; values: ExactValue[] }>;
   requiredActionSequence?: ActionName[];
   requiredActions?: ActionName[];
   requiredAnyActions?: ActionName[];

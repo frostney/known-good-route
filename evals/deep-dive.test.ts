@@ -166,4 +166,21 @@ test("the backlog case measures only after reading the earlier thread and runner
   expect(passes([...history, measure], 3)).toBeFalse();
   // A focused check that runs neither script is not the measurement.
   expect(passes([...history, measure], 4, "Run targeted lint check")).toBeFalse();
+  // An unrelated check before the review, with the real measurement only after it starts, fails too.
+  const lint = { act: "validation.focused" as const, details: "Run targeted lint check" };
+  const mixed: RunLedger = { ...empty(), loadedSkills: ["deep-dive"] };
+  for (const name of ["teamThread", "runnerRepoHistory", "runnerStatus"]) {
+    mixed.inspections.push(name);
+    mixed.events.push({ kind: "inspection", name });
+  }
+  for (const move of [lint, measure]) {
+    mixed.actions.push({ action: move.act, details: move.details });
+    mixed.events.push({ kind: "action", name: move.act });
+  }
+  mixed.workers = [{ ...worker, caseId: review.id, startedAtEvent: 4, ledger: reviewLedger, grade: gradeRun(review, reviewLedger, "Agree.") }];
+  const grade = gradeRun(scenario, mixed, `checkout-e2e grew; fresh review: agree (${verdictFile}).`);
+  expect(grade.checks.filter((c) => c.name.endsWith("before worker")).every((c) => c.passed)).toBeFalse();
+  mixed.workers[0]!.startedAtEvent = 5;
+  const later = gradeRun(scenario, mixed, `checkout-e2e grew; fresh review: agree (${verdictFile}).`);
+  expect(later.checks.filter((c) => c.name.endsWith("before worker")).every((c) => c.passed)).toBeTrue();
 });

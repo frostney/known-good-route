@@ -608,8 +608,11 @@ export const deepDiveCases: EvalCase[] = [
         { action: "validation.focused", values: ["scripts/ci-stats"] },
         { action: "validation.focused", values: ["scripts/ci-profile"] },
       ],
-      // The reviewer sees the measurement, so the parent must measure before it starts.
-      requiredActionsBeforeWorker: ["validation.focused"],
+      // The reviewer sees the measurement, so the parent must run both scripts before it starts.
+      requiredActionsBeforeWorker: [
+        { action: "validation.focused", values: ["scripts/ci-stats"] },
+        { action: "validation.focused", values: ["scripts/ci-profile"] },
+      ],
       requiredInspectionsBeforeActions: [
         { inspection: "teamThread", action: "validation.focused" },
         { inspection: "runnerRepoHistory", action: "validation.focused" },
