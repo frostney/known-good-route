@@ -28,19 +28,35 @@ counter = int(counter_path.read_text()) if counter_path.exists() else 0
 counter_path.write_text(str(counter + 1))
 args = sys.argv[1:]
 endpoint = next((arg for arg in args if arg.startswith("repos/")), "")
-if args[:3] != ["api", "--method", "GET"]:
+# A REST GET asks for headers and may repeat an ETag, as GitHub's API answers them.
+sent_etag = None
+if args[1:2] == ["--header"]:
+    sent_etag = args[2].split(":", 1)[1].strip()
+    del args[1:3]
+if args[:2] != ["api", "--include"]:
     print("unexpected fake gh invocation: " + repr(args), file=sys.stderr)
     sys.exit(3)
+
+def output(value):
+    import hashlib
+    body = json.dumps(value)
+    etag = 'W/"' + hashlib.sha256(body.encode()).hexdigest() + '"'
+    if sent_etag == etag:
+        print("HTTP/2.0 304 Not Modified\nETag: " + etag + "\r\n\r\n", end="")
+        print("gh: HTTP 304", file=sys.stderr)
+        sys.exit(1)
+    print("HTTP/2.0 200 OK\nETag: " + etag + "\r\n\r\n" + body)
+
 states = scenario.get("states", [scenario["stack"]])
 value = states[min(counter // 4, len(states) - 1)]
 if endpoint == "repos/owner/repo/stacks/7":
-    print(json.dumps(value))
+    output(value)
 elif endpoint.startswith("repos/owner/repo/git/ref/heads/"):
     ref = value["base"]["ref"]
     sha = value.get("resolvedBase", "a"*40)
     if counter % 4 == 3 and (scenario.get("racyReads") == "always" or (scenario.get("racyReads") and counter < 4)):
         sha = "b"*40
-    print(json.dumps({"ref": "refs/heads/"+ref, "object": {"type":"commit", "sha":sha}}))
+    output({"ref": "refs/heads/"+ref, "object": {"type":"commit", "sha":sha}})
 else:
     print("unexpected fake gh endpoint: " + endpoint, file=sys.stderr)
     sys.exit(3)

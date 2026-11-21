@@ -36,6 +36,10 @@ longer. These rules keep a wait armed for as long as the transition needs:
 - Keep one running wait per state file. Never detach a wait from the host, for
   example with `setsid`, `nohup` or `&`: a detached process cannot resume the
   session.
+- Leave pacing to the helper. It keeps its own use of the account's shared
+  REST budget low, as [GitHub budget](#github-budget) describes, so do not
+  poll the same state beside it with `gh run list`, `gh api` or `gh pr checks`
+  loops.
 - While a wait runs, do not inspect the state it covers. Act on its result.
 
 The `address-feedback` CodeRabbit adapter's `run` follows the same rules. It
@@ -231,3 +235,25 @@ raw API payloads.
 The helper uses authenticated `gh` transport. GraphQL is primary. A REST
 fallback is used only when GraphQL is rate-limited and REST preserves the same
 fact, or when GitHub exposes the fact only through REST.
+
+## GitHub budget
+
+Every agent and person signed in to one GitHub account shares its hourly REST
+budget of 5,000 requests, and the publication guard and reviews need some of
+it. A workflow census reads the head's runs and each run's jobs through REST,
+so the helper keeps that use low:
+
+- Each REST read repeats the ETag of its last answer. GitHub answers an
+  unchanged resource with 304 Not Modified, which its rate limit does not
+  count, so runs that sit in a queue cost next to nothing after the first
+  observation. `metrics.notModified` counts these reads.
+- Each REST answer reports how much of the budget is left. After an
+  observation that spent some of it, the wait stretches `--interval` so that
+  it would spend at most a quarter of what is left above 1,000 before the
+  budget resets. With fewer than 1,000 left, it observes again only after the
+  reset, and a rate-limited read retries after the reset rather than every
+  `--interval`. Several waits on one account therefore slow each other down
+  instead of emptying the budget. An observation that spent nothing keeps
+  `--interval`.
+
+The checkpoint's `nextAttemptAt` shows when the next observation is due.

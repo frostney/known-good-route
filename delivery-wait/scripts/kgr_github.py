@@ -3,10 +3,12 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import math
 import os
+import re
 import signal
 import subprocess
 import tempfile
@@ -27,6 +29,16 @@ class RateLimited(WaitError):
 
 class TransientError(WaitError):
     """A temporary transport failure that may recover before the deadline."""
+
+
+# REST core requests a wait leaves unspent for the account's other work: the
+# publication guard, reviews and people. Below it, a wait observes nothing
+# more until the budget resets.
+CORE_RESERVE = 1000
+# A wait paces itself to spend at most this share of the core budget left above
+# the reserve before the reset, so several waits on one account fit together.
+CORE_SHARE = 0.25
+NEXT_LINK = re.compile(r'<([^>]+)>\s*;\s*rel="next"')
 
 
 def utc_now() -> str:
@@ -56,6 +68,7 @@ class Metrics:
     api_requests: int = 0
     retries: int = 0
     rate_limit_fallbacks: int = 0
+    not_modified: int = 0
 
     def result(self) -> dict[str, int]:
         return {
@@ -64,18 +77,46 @@ class Metrics:
             "apiRequests": self.api_requests,
             "retries": self.retries,
             "rateLimitFallbacks": self.rate_limit_fallbacks,
+            "notModified": self.not_modified,
         }
 
 
+def parse_included(stdout: str) -> tuple[int | None, dict[str, str], str]:
+    """The status, lower-cased headers and body of `gh api --include` output."""
+    lines = stdout.split("\n")
+    match = re.match(r"HTTP/\S+\s+(\d{3})", lines[0]) if lines else None
+    if not match:
+        return None, {}, stdout
+    headers: dict[str, str] = {}
+    for index, line in enumerate(lines[1:], 1):
+        line = line.rstrip("\r")
+        if not line:
+            return int(match.group(1)), headers, "\n".join(lines[index + 1:])
+        name, _, value = line.partition(":")
+        headers[name.strip().lower()] = value.strip()
+    return int(match.group(1)), headers, ""
+
+
 class Gh:
+    """`gh` calls that spend as little of the account's REST core budget as they can.
+
+    A GET repeats its last ETag, and GitHub answers an unchanged resource with
+    304 Not Modified, which its primary rate limit does not count. Each REST
+    answer reports the core budget left, which `pace` uses to slow a wait down.
+    """
+
     def __init__(self, metrics: Metrics, timeout: int = 30) -> None:
         self.metrics = metrics
         self.timeout = timeout
+        self.cached: dict[str, tuple[str, Any, str | None]] = {}
+        self.core: tuple[int, float] | None = None  # (remaining, reset epoch)
+        self.spent = 0  # REST requests GitHub counted against the core budget
+        self.paced_spent = 0
 
-    def run(self, args: list[str], stdin: str | None = None) -> Any:
+    def call(self, args: list[str], stdin: str | None = None) -> subprocess.CompletedProcess[str]:
         self.metrics.api_requests += 1
         try:
-            completed = subprocess.run(
+            return subprocess.run(
                 ["gh", *args],
                 input=stdin,
                 text=True,
@@ -87,16 +128,21 @@ class Gh:
             raise WaitError("gh is not installed or not on PATH") from error
         except subprocess.TimeoutExpired as error:
             raise TransientError(f"gh request timed out after {self.timeout}s") from error
-        if completed.returncode != 0:
-            message = (completed.stderr or completed.stdout).strip()
-            lowered = message.lower()
-            if "rate limit" in lowered or "rate-limit" in lowered or "quota" in lowered:
-                raise RateLimited(message or "GitHub GraphQL rate limit exceeded")
-            if any(marker in lowered for marker in ("timeout", "timed out", "connection reset", "temporary failure", "could not resolve host", "http 502", "http 503", "http 504")):
-                raise TransientError(message or "temporary GitHub transport failure")
-            raise WaitError(message or f"gh exited {completed.returncode}")
+
+    @staticmethod
+    def fail(completed: subprocess.CompletedProcess[str], body: str | None = None) -> None:
+        message = (completed.stderr or (completed.stdout if body is None else body)).strip()
+        lowered = message.lower()
+        if "rate limit" in lowered or "rate-limit" in lowered or "quota" in lowered:
+            raise RateLimited(message or "GitHub API rate limit exceeded")
+        if any(marker in lowered for marker in ("timeout", "timed out", "connection reset", "temporary failure", "could not resolve host", "http 502", "http 503", "http 504")):
+            raise TransientError(message or "temporary GitHub transport failure")
+        raise WaitError(message or f"gh exited {completed.returncode}")
+
+    @staticmethod
+    def decode(text: str) -> Any:
         try:
-            payload = json.loads(completed.stdout)
+            payload = json.loads(text)
         except json.JSONDecodeError as error:
             raise WaitError("gh returned malformed JSON") from error
         if isinstance(payload, dict) and payload.get("errors"):
@@ -107,6 +153,43 @@ class Gh:
             raise WaitError(f"GitHub GraphQL error: {message}")
         return payload
 
+    def run(self, args: list[str], stdin: str | None = None) -> Any:
+        completed = self.call(args, stdin)
+        if completed.returncode != 0:
+            self.fail(completed)
+        return self.decode(completed.stdout)
+
+    def note_rate(self, headers: dict[str, str]) -> None:
+        if headers.get("x-ratelimit-resource", "core") != "core":
+            return
+        try:
+            self.core = (int(headers["x-ratelimit-remaining"]), float(headers["x-ratelimit-reset"]))
+        except (KeyError, ValueError):
+            pass
+
+    def get(self, endpoint: str) -> tuple[Any, str | None]:
+        """One REST page and the URL of the next, revalidated against its last ETag."""
+        cached = self.cached.get(endpoint)
+        args = ["api", "--include", endpoint]
+        if cached:
+            args[1:1] = ["--header", f"If-None-Match: {cached[0]}"]
+        completed = self.call(args)
+        status, headers, body = parse_included(completed.stdout)
+        if status == 304 and cached:
+            self.metrics.not_modified += 1
+            return copy.deepcopy(cached[1]), cached[2]
+        if status is not None:
+            self.spent += 1
+            self.note_rate(headers)
+        if completed.returncode != 0 or status is None or not 200 <= status < 300:
+            self.fail(completed, body)
+        payload = self.decode(body)
+        link = NEXT_LINK.search(headers.get("link", ""))
+        following = link.group(1) if link else None
+        if headers.get("etag"):
+            self.cached[endpoint] = (headers["etag"], copy.deepcopy(payload), following)
+        return payload, following
+
     def graphql(self, query: str, variables: dict[str, str | int]) -> dict[str, Any]:
         args = ["api", "graphql", "--input", "-"]
         payload = self.run(args, json.dumps({"query": query, "variables": variables}))
@@ -115,16 +198,43 @@ class Gh:
         return payload["data"]
 
     def rest(self, endpoint: str, method: str = "GET", fields: dict[str, str] | None = None) -> Any:
+        if method == "GET" and not fields:
+            return self.get(endpoint)[0]
         args = ["api", "--method", method, endpoint]
         for key, value in (fields or {}).items():
             args.extend(["--raw-field", f"{key}={value}"])
         return self.run(args)
 
     def rest_pages(self, endpoint: str) -> list[Any]:
-        payload = self.run(["api", "--paginate", "--slurp", endpoint])
-        if not isinstance(payload, list):
-            raise WaitError("paginated GitHub REST response is not an array")
-        return payload
+        """Every page of a REST list, following GitHub's next links."""
+        pages: list[Any] = []
+        following: str | None = endpoint
+        while following:
+            if len(pages) >= 1000:
+                raise WaitError(f"more than 1000 pages of {endpoint}")
+            page, following = self.get(following)
+            pages.append(page)
+        return pages
+
+    def pace(self, interval: float, now: float | None = None) -> float:
+        """The pause before the next observation, stretched while the core budget runs low.
+
+        At the last observation's cost, it spends at most CORE_SHARE of the
+        budget above CORE_RESERVE before the reset, and none below the
+        reserve. An observation that cost nothing, such as one answered by
+        304s or GraphQL alone, keeps the interval.
+        """
+        now = time.time() if now is None else now
+        cost = self.spent - self.paced_spent
+        self.paced_spent = self.spent
+        if not cost or self.core is None or now >= self.core[1]:
+            return interval
+        remaining, reset = self.core
+        until_reset = reset - now + 1
+        headroom = remaining - CORE_RESERVE
+        if headroom < cost:
+            return max(interval, until_reset)
+        return max(interval, min(until_reset, until_reset * cost / (headroom * CORE_SHARE)))
 
 
 def stable_digest(value: Any) -> str:
@@ -268,7 +378,9 @@ def wait_for_transition(
     transition_key: Callable[[dict[str, Any]], Any] | None = None,
     deadline_result: tuple[str, str] = ("timed-out", "deadline reached"),
     change_precedes_terminal: bool = False,
+    pace: Callable[[float], float] | None = None,
 ) -> dict[str, Any]:
+    """Observe until a transition, sleeping `pace(interval)`, or `interval`, between observations."""
     stopped = False
 
     def stop(_signum: int, _frame: Any) -> None:
@@ -329,7 +441,8 @@ def wait_for_transition(
                         },
                     )
                     return result
-                retry_at = min(deadline, time.time() + interval)
+                delay = pace(interval) if pace else interval
+                retry_at = min(deadline, time.time() + delay)
                 write_state(
                     state_path,
                     {
@@ -348,9 +461,10 @@ def wait_for_transition(
                         ).isoformat().replace("+00:00", "Z"),
                     },
                 )
-                time.sleep(min(interval, max(0.0, deadline - time.time())))
+                time.sleep(min(delay, max(0.0, deadline - time.time())))
                 continue
             metrics.observations += 1
+            delay = pace(interval) if pace else interval
             terminal, reason = classify(observation)
             digest = stable_digest(transition_key(observation) if transition_key else observation)
             checkpoint = {
@@ -361,7 +475,7 @@ def wait_for_transition(
                 "digest": digest,
                 "updatedAt": utc_now(),
                 "nextAttemptAt": datetime.fromtimestamp(
-                    min(deadline, time.time() + interval), timezone.utc
+                    min(deadline, time.time() + delay), timezone.utc
                 ).isoformat().replace("+00:00", "Z"),
                 "connectivity": {"state": "connected", "error": None},
             }
@@ -396,7 +510,7 @@ def wait_for_transition(
                 write_state(state_path, checkpoint)
                 return result
             prior = checkpoint
-            time.sleep(min(interval, max(0.0, deadline - time.time())))
+            time.sleep(min(delay, max(0.0, deadline - time.time())))
     finally:
         for number, handler in previous_handlers.items():
             signal.signal(number, handler)

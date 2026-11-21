@@ -30,12 +30,48 @@ counter = int(counter_path.read_text()) if counter_path.exists() else 0
 counter_path.write_text(str(counter + 1))
 args = sys.argv[1:]
 stdin = sys.stdin.read() if "--input" in args else ""
+# A REST GET asks for headers and may repeat an ETag, as GitHub's API answers them.
+include = "--include" in args
+sent_etag = None
+if "--header" in args:
+    at = args.index("--header")
+    sent_etag = args[at + 1].split(":", 1)[1].strip()
+    del args[at:at + 2]
+args = [arg.removeprefix("https://api.github.com/") for arg in args if arg != "--include"]
+with open(os.environ["FAKE_GH_COUNTER"] + ".log", "a") as log:
+    log.write(json.dumps({"args": args, "etag": sent_etag}) + "\n")
 if counter < scenario.get("transientFailures", 0):
     print("connection reset by peer", file=sys.stderr)
     sys.exit(1)
 
-def output(value):
-    print(json.dumps(value))
+def output(value=None, pages=None):
+    """VALUE, or one page of PAGES as the endpoint's page parameter selects."""
+    following = None
+    if pages is not None:
+        from urllib.parse import parse_qsl, urlencode, urlsplit
+        path, _, query = endpoint.partition("?")
+        params = [(key, item) for key, item in parse_qsl(query) if key != "page"]
+        page = int(dict(parse_qsl(query)).get("page", 1))
+        value = pages[page - 1]
+        if page < len(pages):
+            following = "https://api.github.com/" + path + "?" + urlencode(params + [("page", page + 1)])
+    body = json.dumps(value)
+    if not include:
+        print(body)
+        sys.exit(0)
+    import hashlib
+    etag = 'W/"' + hashlib.sha256(body.encode()).hexdigest() + '"'
+    headers = ["ETag: " + etag]
+    if following:
+        headers.append(f'Link: <{following}>; rel="next"')
+    if sent_etag == etag:
+        print("HTTP/2.0 304 Not Modified\n" + "\r\n".join(headers) + "\r\n\r\n", end="")
+        print("gh: HTTP 304", file=sys.stderr)
+        sys.exit(1)
+    if "coreRemaining" in scenario:
+        headers += ["X-Ratelimit-Remaining: " + str(scenario["coreRemaining"]),
+                    "X-Ratelimit-Reset: " + str(scenario["coreReset"]), "X-Ratelimit-Resource: core"]
+    print("HTTP/2.0 200 OK\n" + "\r\n".join(headers) + "\r\n\r\n" + body)
     sys.exit(0)
 
 def with_connection_counts(value):
@@ -77,6 +113,11 @@ if args[:2] == ["api", "graphql"]:
     output({"data":{"repository":{"pullRequest":selected}}})
 
 endpoint = next((arg for arg in args if arg.startswith("repos/")), "")
+if scenario.get("restRateLimited") and include:
+    print("HTTP/2.0 403 Forbidden\nX-Ratelimit-Remaining: 0\r\nX-Ratelimit-Reset: " + str(scenario["coreReset"])
+          + "\r\nX-Ratelimit-Resource: core\r\n\r\n" + json.dumps({"message": "API rate limit exceeded"}))
+    print("gh: API rate limit exceeded for user ID 1. (HTTP 403)", file=sys.stderr)
+    sys.exit(1)
 if "per_page=" in endpoint and "expectedRestPageSize" in scenario:
     from urllib.parse import parse_qs, urlsplit
     size = int(parse_qs(urlsplit(endpoint).query)["per_page"][0])
@@ -90,27 +131,28 @@ if endpoint.endswith("/pulls/comments/10"):
 if endpoint.endswith("/pulls/7"):
     output(scenario["restPull"])
 if "/check-runs" in endpoint:
-    value = scenario.get("restChecks", {"check_runs":[]})
-    output([value] if "--slurp" in args else value)
+    output(pages=[scenario.get("restChecks", {"check_runs":[]})])
 if "/statuses" in endpoint:
-    value = scenario.get("restStatuses", [])
-    output([value] if "--slurp" in args else value)
+    output(pages=[scenario.get("restStatuses", [])])
 if endpoint.endswith("/comments?per_page=100"):
-    output([scenario.get("comments", [])] if "--slurp" in args else scenario.get("comments", []))
+    output(pages=[scenario.get("comments", [])])
 if endpoint.endswith("/replies"):
     output({"id":901,"body":"created"})
 if "/actions/runs?" in endpoint:
     census_path = pathlib.Path(os.environ["FAKE_GH_COUNTER"] + ".census")
     index = int(census_path.read_text()) if census_path.exists() else 0
-    census_path.write_text(str(index + 1))
+    if "&page=" not in endpoint:
+        census_path.write_text(str(index + 1))
+    else:
+        index -= 1
     states = scenario.get("census") or [{"runPages": [scenario.get("restWorkflowRuns", {"total_count": 0, "workflow_runs": []})]}]
-    output(states[min(index, len(states) - 1)]["runPages"])
+    output(pages=states[min(index, len(states) - 1)]["runPages"])
 if "/actions/runs/" in endpoint and "/jobs" in endpoint:
     census_path = pathlib.Path(os.environ["FAKE_GH_COUNTER"] + ".census")
     index = int(census_path.read_text()) - 1
     states = scenario["census"]
     run_id = endpoint.split("/actions/runs/", 1)[1].split("/", 1)[0]
-    output(states[min(index, len(states) - 1)]["jobPages"][run_id])
+    output(pages=states[min(index, len(states) - 1)]["jobPages"][run_id])
 if "/actions/runs/" in endpoint:
     output(scenario["workflow"])
 print("unexpected fake gh invocation: " + repr(args), file=sys.stderr)
@@ -207,6 +249,10 @@ def workflow_run(
         },
         "jobs": jobs,
     }
+
+
+def parse_time(value: str) -> float:
+    return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
 
 
 def census(*runs: dict) -> dict:
@@ -1055,6 +1101,82 @@ class WaitCommandsTest(unittest.TestCase):
             "--head", "head-1", "--all-workflows", *extra,
             "--deadline", deadline or self.deadline(), "--interval", "0.01",
         )
+
+    def rest_requests(self) -> list[dict]:
+        log = self.counter.with_name("counter.log")
+        return [entry for entry in map(json.loads, log.read_text().splitlines()) if entry["args"][1] != "graphql"]
+
+    def test_an_unchanged_census_is_revalidated_without_spending_the_rest_budget(self) -> None:
+        # Two pages of runs, so the next page GitHub links to is revalidated too.
+        runs = census(workflow_run(101, matrix_jobs(2)), workflow_run(102, matrix_jobs(1, start=5, run_id=102), workflow_id=8))
+        first, second = runs["runPages"][0]["workflow_runs"]
+        runs["runPages"] = [{"total_count": 2, "workflow_runs": [first]}, {"total_count": 2, "workflow_runs": [second]}]
+        self.write_scenario(census=[runs])
+        result, output = self.census_wait()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output["state"], "satisfied")
+        self.assertEqual(output["metrics"]["observations"], 2)
+        requests = self.rest_requests()
+        # Two pages of runs and the jobs of two runs, once each observation.
+        self.assertEqual(len(requests), 8)
+        self.assertEqual([entry["etag"] is not None for entry in requests], [False] * 4 + [True] * 4)
+        self.assertEqual(output["metrics"]["notModified"], 4)
+
+    def test_a_changed_resource_is_read_again_in_full(self) -> None:
+        self.write_scenario(census=[
+            census(workflow_run(101, matrix_jobs(1, status="in_progress", conclusion=None), status="in_progress", conclusion=None)),
+            census(workflow_run(101, matrix_jobs(1))),
+        ])
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "satisfied")
+        # The changed census answered in full; only the third observation was unchanged.
+        self.assertEqual(output["metrics"]["observations"], 3)
+        self.assertEqual(output["metrics"]["notModified"], 2)
+
+    def rest_budget_wait(self, remaining: int, reset_in: float) -> dict:
+        reset = int(datetime.now(timezone.utc).timestamp() + reset_in)
+        running = {"id": 44, "head_sha": "head-1", "status": "in_progress", "conclusion": None, "html_url": "https://example.invalid/run"}
+        self.write_scenario(workflow=running, coreRemaining=remaining, coreReset=reset)
+        self.counter.unlink(missing_ok=True)
+        _, output = self.run_json(
+            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "head-1",
+            "--deadline", (datetime.now(timezone.utc) + timedelta(seconds=1)).isoformat(), "--interval", "0.05",
+            "--state", str(self.directory / f"budget-{remaining}.json"),
+        )
+        self.assertEqual(output["state"], "timed-out")
+        return output
+
+    def test_a_wait_stops_spending_the_rest_budget_below_the_reserve(self) -> None:
+        self.assertGreater(self.rest_budget_wait(4_900, reset_in=30)["metrics"]["observations"], 5)
+        # Below the reserve kept for other work, the next observation waits for
+        # the reset, so only the last one at the deadline follows the first.
+        self.assertEqual(self.rest_budget_wait(900, reset_in=3600)["metrics"]["observations"], 2)
+
+    def test_a_wait_slows_down_as_the_rest_budget_runs_low(self) -> None:
+        sys.path.insert(0, str(DELIVERY.parent))
+        from kgr_github import Gh, Metrics
+
+        gh = Gh(Metrics(0.0))
+        self.assertEqual(gh.pace(30, now=0), 30)  # Nothing known about the budget yet.
+        pauses = []
+        for remaining in (5_000, 3_000, 1_500, 1_100, 1_001, 900):
+            gh.core, gh.spent = (remaining, 3_600.0), gh.spent + 4
+            pauses.append(gh.pace(30, now=0))
+        # 4 requests a poll: a quarter of what is left above the reserve of 1,000 lasts to the reset.
+        self.assertEqual([round(pause) for pause in pauses], [30, 30, 115, 576, 3601, 3601])
+        self.assertEqual(gh.pace(30, now=0), 30)  # The last observation spent nothing.
+        self.assertEqual(gh.pace(30, now=3_601), 30)  # The budget has reset.
+
+    def test_a_rate_limited_rest_read_retries_after_the_reset(self) -> None:
+        reset = int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
+        self.write_scenario(restRateLimited=True, coreReset=reset)
+        _, output = self.run_json(
+            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "head-1",
+            "--deadline", (datetime.now(timezone.utc) + timedelta(seconds=1)).isoformat(), "--interval", "0.05",
+        )
+        self.assertEqual(output["state"], "timed-out")
+        # One read, and one more at the deadline, instead of one every interval.
+        self.assertEqual(len(self.rest_requests()), 2)
 
     def test_checks_terminal_without_a_selector_names_all_workflows(self) -> None:
         self.write_scenario()
