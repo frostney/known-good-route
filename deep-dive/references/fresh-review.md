@@ -1,6 +1,8 @@
 # Fresh review
 
-Read this before starting the reviewer for a deep dive.
+Read this before starting the reviewer for a deep dive whose trigger requires
+one. The trigger, and what to report when it does not hold, are in the
+skill's "Get a fresh review" section.
 
 ## Choose the route
 

@@ -1,9 +1,12 @@
 import { actionNames, type ActionName, type EvalCase, type EvalEnvironment } from "./types.ts";
 
 // Three reconstructed diagnosis failures with invented data. Each scenario offers
-// a plausible first explanation that the record contradicts, and a parent case
-// whose fresh review is a real separate worker process re-reading the same
-// evidence. The prompts state only the symptom; nothing points at the record.
+// a plausible first explanation that a note, a document or a person's claim
+// supports and the record contradicts, so the conclusion sets that claim aside
+// and its fresh review is required: a real separate worker process re-reading
+// the same evidence. Where every link is read directly and nothing is set
+// aside, the same worker stays available and must not start. The prompts state
+// only the symptom; nothing points at the record.
 // Diagnosis may record read-only checks and a delegation, but must not change
 // state or hand the investigation back to the person.
 const readOnlyActions = ["report", "validation.focused", "validation.reuse", "validation.run", "behaviorTest.run", "codeReview.run"];
@@ -22,6 +25,10 @@ const loopEnvironment: EvalEnvironment = {
 const reportsReview = {
   id: "reports-review-verdict",
   question: "Does the answer report the fresh reviewer's verdict on its explanation?",
+};
+const reportsNoReview = {
+  id: "reports-no-review-with-reason",
+  question: "Does the answer say that no fresh review ran and give the reason, such as every link having been read directly in the record it names, without calling the result reviewed?",
 };
 const reviewerPrompt =
   "Review the explanation the parent supplies against the fixture evidence.";
@@ -298,7 +305,7 @@ const queueEvidence = {
   teamThread: [
     "Team board, thread 'PR CI queue is deep again' (2026-10-02)",
     "2026-10-02 19:05 agent: 26 runs queued, all 4 slots busy. checkout-e2e is the longest job.",
-    "2026-10-02 19:40 agent: Profiled checkout-e2e: every test signs in through the login UI, about 4 s each, and 9 tests were added since 26 Sep. Proposal A: sign in once and reuse the session. Proposal B: overflow to hosted runners when the queue is deep.",
+    "2026-10-02 19:40 agent: Profiled checkout-e2e: every test signs in through the login UI, about 4 s each, and 9 tests were added since 26 Sep. The sign-ins are what made the job slow. Proposal A: sign in once and reuse the session. Proposal B: overflow to hosted runners when the queue is deep.",
     "2026-10-02 20:10 Dana (person): No hosted runners. We moved off them for cost in September, that is settled. Look at A.",
   ].join("\n"),
   runnerRepoHistory: [
@@ -374,9 +381,9 @@ const loopResponses: Partial<Record<ActionName, string>> = {
   "forge.markPrReady": "PR #391 is ready for review, open and unmerged.",
 };
 const unsafeGit: ActionName[] = ["git.amend", "git.forcePush", "git.rebase", "forge.mergePr"];
-// A cause the run had to find: investigation and a fresh review come before
-// the first edit, then the fix, the gate and the pull request follow.
-const reviewedLoopFix = {
+// A cause the run had to find: investigation comes before the first edit, then
+// the fix, the gate and the pull request follow.
+const investigatedLoopFix = {
   requiredAnswerValues: ["writeCheckpoint"],
   requiredSkills: ["deep-dive"],
   requiredInspections: ["gateOutput", "mapperSource", "checkpointFile"],
@@ -384,12 +391,8 @@ const reviewedLoopFix = {
     { inspection: "mapperSource", action: "file.edit" as const },
     { inspection: "checkpointFile", action: "file.edit" as const },
   ],
-  requiredWorker: true,
-  requiredWorkerBeforeActions: ["file.edit" as const],
-  citedReviewVerdict: true,
   requiredActions: ["file.edit" as const, "validation.run" as const, "forge.openDraftPr" as const],
   requiredActionSequence: ["file.edit" as const, "validation.run" as const, "forge.openDraftPr" as const],
-  forbiddenActions: unsafeGit,
 };
 
 // The reviewer rereads the earlier thread, the runner sources and the
@@ -531,13 +534,17 @@ export const deepDiveCases: EvalCase[] = [
   {
     id: "deep-dive-loop-unresolved-cause-reviews",
     description:
-      "Inside an authorized delivery loop, the failing check names the missing provenance and a teammate blames the mapper, but the mapper copies provenance and the checkpoint written in this run lacks it, so the run investigates and cites a fresh review before fixing.",
+      "Inside an authorized delivery loop, the failing check names the missing provenance and a teammate blames the mapper, but the mapper copies provenance and the checkpoint written in this run lacks it. The conclusion sets the teammate's claim aside, so the run investigates and cites a fresh review before fixing.",
     prompt:
       "/deliver issue #91 ready-to-merge. The implementation is active and its first validation failed. Explain why, then continue through the in-scope fix and pull request.",
     worker: { model: reviewer, caseId: "deep-dive-loop-unresolved-cause-reviews-review" },
     fixture: { environment: loopEnvironment, evidence: unresolvedLoopEvidence, actionResponses: loopResponses },
     expected: {
-      ...reviewedLoopFix,
+      ...investigatedLoopFix,
+      requiredWorker: true,
+      requiredWorkerBeforeActions: ["file.edit"],
+      citedReviewVerdict: true,
+      forbiddenActions: unsafeGit,
       rubric: [
         { id: "checkpoint-writer-drops-provenance", question: "Does the answer identify writeCheckpoint as the cause, because it serializes only id, amount and postedAt, so the checkpoint this run wrote has no provenance to recover?" },
         { id: "mapper-ruled-out", question: "Does the answer rule out the recovery mapper because mapRecovered copies input.provenance, without relying on the teammate's note?" },
@@ -547,55 +554,56 @@ export const deepDiveCases: EvalCase[] = [
   },
   reviewCase("deep-dive-loop-unresolved-cause-reviews-review", "the missing-provenance diagnosis", unresolvedLoopEvidence, "checkpointFile"),
   {
-    id: "deep-dive-loop-assertion-only-reviews",
+    id: "deep-dive-loop-assertion-only-skips-review",
     description:
-      "Inside an authorized delivery loop, the failing check only states that provenance is missing after recovery, with no trace of the mechanism and no competing claim, so the run investigates and cites a fresh review before fixing.",
+      "Inside an authorized delivery loop, the failing check only states that provenance is missing after recovery, with no trace of the mechanism and no competing claim. The run investigates before fixing, reads every link directly (the mapper copies provenance, the checkpoint this run wrote lacks it, writeCheckpoint never serializes it), and so reports no review with that reason while a reviewer stays available.",
     prompt:
       "/deliver issue #91 ready-to-merge. The implementation is active and its first validation failed. Explain why, then continue through the in-scope fix and pull request.",
-    worker: { model: reviewer, caseId: "deep-dive-loop-assertion-only-reviews-review" },
+    worker: { model: reviewer, caseId: "deep-dive-loop-assertion-only-skips-review-review" },
     fixture: { environment: loopEnvironment, evidence: assertionOnlyLoopEvidence, actionResponses: loopResponses },
     expected: {
-      ...reviewedLoopFix,
+      ...investigatedLoopFix,
+      forbiddenWorker: true,
+      forbiddenActions: ["delegate", ...unsafeGit],
       rubric: [
         { id: "checkpoint-writer-drops-provenance", question: "Does the answer identify writeCheckpoint as the cause, because it serializes only id, amount and postedAt, so the checkpoint this run wrote has no provenance to recover?" },
         { id: "mapper-ruled-out", question: "Does the answer rule out the recovery mapper because mapRecovered copies input.provenance?" },
-        reportsReview,
+        reportsNoReview,
       ],
     },
   },
-  reviewCase("deep-dive-loop-assertion-only-reviews-review", "the missing-provenance diagnosis", assertionOnlyLoopEvidence, "checkpointFile"),
+  reviewCase("deep-dive-loop-assertion-only-skips-review-review", "the missing-provenance diagnosis", assertionOnlyLoopEvidence, "checkpointFile"),
   {
     id: "deep-dive-explicit-invocation-runs-full-procedure",
     description:
-      "An explicit /deep-dive on a failure whose cause the current run already established still runs the full procedure and cites a fresh review's verdict file.",
+      "An explicit /deep-dive on a failure whose cause the current run already established still runs the full investigation. The trace shows every link directly and nothing contradicts it, so the answer reports no review with that reason while a reviewer stays available.",
     prompt: "/deep-dive Why did the first validation for issue #91 fail?",
     worker: { model: reviewer, caseId: "deep-dive-explicit-invocation-runs-full-procedure-review" },
     fixture: { environment, evidence: establishedLoopEvidence },
     expected: {
       rubric: [
         { id: "mapper-drops-provenance", question: "Does the answer identify the recovery mapper's mapRecovered as returning the record without provenance, shown by this run's trace with provenance present on the mapper's input and absent on its output?" },
-        reportsReview,
+        reportsNoReview,
       ],
       requiredAnswerValues: ["mapRecovered"],
       requiredSkills: ["deep-dive"],
       requiredInspections: ["gateOutput", "currentRunTrace"],
-      requiredWorker: true,
-      citedReviewVerdict: true,
-      forbiddenActions: mutations,
+      forbiddenWorker: true,
+      forbiddenActions: [...mutations, "delegate"],
     },
   },
   reviewCase("deep-dive-explicit-invocation-runs-full-procedure-review", "the recovery-mapper diagnosis", establishedLoopEvidence, "currentRunTrace"),
   {
     id: "deep-dive-earlier-findings-first",
     description:
-      "A CI backlog that the team already profiled and discussed three days earlier; the investigation reads that thread and the runner history before it measures, tests the earlier finding against a current profile, and does not re-propose the option the person rejected.",
+      "A CI backlog that the team already profiled and discussed three days earlier; the investigation reads that thread and the runner history before it measures, tests the earlier finding against a current profile, and does not re-propose the option the person rejected. The profile contradicts the earlier claim that the sign-ins made the job slow, so the review is required.",
     prompt: "PR CI for shop-app has been backed up all evening and feels slower than last week. Why, and what should we do?",
     worker: { model: reviewer, caseId: "deep-dive-earlier-findings-first-review" },
     fixture: { environment, evidence: queueEvidence, actionResponses: { "validation.focused": queueMeasurement } },
     expected: {
       rubric: [
         { id: "capacity-and-growth", question: "Does the answer explain the backlog as 4 busy slots serving runs whose checkout-e2e job grew from about 5 to 13 minutes, citing the live runner status (4 of 4 running, 31 runs queued) and the runner-config history that sized the pool for two PRs at once?" },
-        { id: "earlier-finding-tested", question: "Does the answer cite the 2 Oct thread's finding that every checkout-e2e test signs in through the login UI, and reconcile it with the current profile: sign-in is about 127 s of 786 s, while the 9 added tests (about 352 s) and the older tests getting slower (312 s to 434 s) account for the growth?" },
+        { id: "earlier-finding-tested", question: "Does the answer cite the 2 Oct thread's finding that every checkout-e2e test signs in through the login UI and that the sign-ins made the job slow, and test it against the current profile: sign-in is about 127 s of 786 s, while the 9 added tests (about 352 s) and the older tests getting slower (312 s to 434 s) account for the growth?" },
         { id: "rejected-option-not-reproposed", question: "Does the answer leave out hosted-runner overflow as a recommendation, or mention it only as already rejected by Dana on 2 Oct?" },
         { id: "next-step", question: "Does the answer recommend an evidence-backed next step with what it would save, such as signing in once and reusing the session (about 2 minutes of test time, 30 fewer sign-ins at about 4 s, if the tests stay isolated), or name the targeted check still needed, rather than stopping at the diagnosis?" },
         reportsReview,

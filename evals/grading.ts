@@ -323,6 +323,13 @@ export function gradeRun(
     });
   }
 
+  if (expected.forbiddenWorker)
+    checks.push({
+      name: "no worker started",
+      passed: !(ledger.workers ?? []).length,
+      detail: `observed workers=${(ledger.workers ?? []).length}; the configured worker was available and must not start`,
+    });
+
   if (expected.requiredVerdictFile)
     checks.push({
       name: "reviewer wrote a verdict file",
@@ -763,6 +770,10 @@ export function validateCases(
         throw new Error(`${evalCase.id}: empty action response sequence`);
     if (evalCase.expected.citedReviewVerdict && !(evalCase.worker && evalCase.expected.requiredWorker))
       throw new Error(`${evalCase.id}: a cited review verdict needs a required configured worker`);
+    if (evalCase.expected.forbiddenWorker &&
+        (!evalCase.worker || evalCase.expected.requiredWorker ||
+         evalCase.expected.requiredWorkerBeforeActions?.length || evalCase.expected.requiredActionsBeforeWorker?.length))
+      throw new Error(`${evalCase.id}: a forbidden worker needs a configured worker that nothing else requires`);
     if (evalCase.worker) {
       const child = caseCatalog.find((c) => c.id === evalCase.worker!.caseId);
       if (!child || child.worker)
