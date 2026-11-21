@@ -565,7 +565,7 @@ class WorkflowCensusGate:
 
         # A possible duplicate still finishing decides once its run completes.
         finishing_suites = {
-            run.get("checkSuiteId") for run in observation.get("runs", [])
+            run.get("checkSuiteId") for run in deciding_runs(observation)
             if run["id"] in possible_duplicates(observation) and run.get("checkSuiteId") is not None
         }
 

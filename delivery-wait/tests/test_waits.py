@@ -1408,6 +1408,18 @@ class WaitCommandsTest(unittest.TestCase):
         _, output = self.census_wait("--check", "build")
         self.assertEqual(output["state"], "recoverable")
 
+    def test_a_cancelled_named_check_of_a_superseded_run_does_not_wait(self) -> None:
+        # Run 102 is superseded by 103, so it can never be a cancelled duplicate.
+        first = workflow_run(101, [workflow_job(1000, "build")], workflow_id=9, check_suite_id=501)
+        superseded = workflow_run(102, [workflow_job(1001, "lint", conclusion="cancelled", run_id=102)], status="in_progress", conclusion=None, workflow_id=9, check_suite_id=502)
+        newest = workflow_run(103, [workflow_job(1002, "build", run_id=103)], workflow_id=9, check_suite_id=503)
+        self.write_scenario(
+            pull=pull("head-1", [check("lint", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=502, workflow=9)]),
+            census=[census(first, superseded, newest)],
+        )
+        _, output = self.census_wait("--check", "lint")
+        self.assertEqual(output["state"], "changed")
+
     def test_a_cancelled_named_check_a_passed_rerun_did_not_replace_is_changed(self) -> None:
         # The rerun's matrix no longer has the shard, so its cancellation is current.
         older = self.cancelled_duplicate()[0]
