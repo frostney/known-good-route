@@ -369,7 +369,13 @@ def page(items, broken=None):
 
 
 if "checkSuites" in query:
-    answer = {"object": {"checkSuites": page(state["suites"].get(fields["oid"], []), state.get("suitePageInfo"))}}
+    suites = state["suites"].get(fields["oid"], [])
+    found = page(suites, state.get("suitePageInfo"))
+    # suiteGrows: a suite that arrives after the first page, as on a live commit.
+    if state.get("suiteGrows") and "after" in fields:
+        suites = suites + [state["suiteGrows"]]
+    found["totalCount"] = len(suites)
+    answer = {"object": {"checkSuites": found}}
 elif "pullRequests" in query:
     answer = {"pullRequests": page([p for p in state["pulls"] if p["headRefName"] == fields["branch"]])}
 else:
@@ -508,6 +514,24 @@ class SpentRestTests(unittest.TestCase):
         with self.assertRaisesRegex(guard.GuardError, "more than 10 pages"):
             guard.check_rewrites(self.one)
 
+    def test_a_suite_list_that_changes_while_read_refuses(self):
+        # A passed run arriving between pages would otherwise go unseen.
+        self.answer([graph_pull(12, "stack/one", "b" * 40)],
+                    {"b" * 40: [suite(conclusion="FAILURE", workflow=2)] + [suite() for _ in range(149)]},
+                    suiteGrows=suite(workflow=2))
+        with self.assertRaisesRegex(guard.GuardError, "changed while they were read"):
+            guard.check_rewrites(self.one)
+
+    def test_a_count_cut_short_is_a_lower_bound(self):
+        self.answer([graph_pull(12, "stack/one", "b" * 40)],
+                    {"b" * 40: [suite("QUEUED")] + [other_app() for _ in range(3100)]})
+        observed = guard.check_rewrites(self.one)[0]
+        self.assertEqual((observed["workflowRuns"], observed["ciPassed"], observed["runsListed"]), (1, False, False))
+        self.answer([graph_pull(12, "stack/one", "b" * 40, draft=False)],
+                    {"b" * 40: [suite("QUEUED")] + [other_app() for _ in range(3100)]})
+        with self.assertRaisesRegex(guard.GuardError, "ready for review, at least 1 workflow runs on its head"):
+            guard.check_rewrites(self.one)
+
     def test_spent_graphql_or_another_rest_failure_still_refuses(self):
         self.answer([graph_pull(12, "stack/one", "b" * 40)], graphql="API rate limit exceeded")
         with self.assertRaisesRegex(guard.GuardError, "REST refused it .*rate limit.*GraphQL did too: API rate limit"):
@@ -532,28 +556,56 @@ class SpentRestTests(unittest.TestCase):
                 guard.github_api("github.com", path)
 
 
+def rest_only(host, path):
+    """A REST answer, never the fallback's: a live comparison needs both sides."""
+    result = guard.gh_api(host, path)
+    if result.returncode:
+        raise unittest.SkipTest("REST did not answer: " + guard.last_line(result))
+    return json.loads(result.stdout)
+
+
 @unittest.skipUnless(os.environ.get("KGR_LIVE_GITHUB"), "set KGR_LIVE_GITHUB=1 to ask GitHub itself")
 class LiveGraphQLTests(unittest.TestCase):
     """GitHub accepts the fallback's queries, and they give the decision REST gives.
     Reads a public repository with a signed-in gh; set KGR_LIVE_REPOSITORY to choose it."""
 
+    repository = os.environ.get("KGR_LIVE_REPOSITORY", "cli/cli")
+
+    @staticmethod
+    def graphql(host, path):
+        return guard.graphql_lookup(host, path, "live check")
+
+    def test_github_accepts_the_queries(self):
+        # Needs no REST budget: it runs while REST is spent too.
+        name = self.graphql("github.com", "repos/" + self.repository)["full_name"]
+        self.assertEqual(name.lower(), self.repository.lower())
+        head = urllib.parse.quote(self.repository.split("/")[0] + ":main", safe="")
+        self.assertIsInstance(self.graphql("github.com", f"repos/{name}/pulls?state=open&per_page=100&head={head}"), list)
+        sha = json.loads(subprocess.run(["gh", "api", "graphql", "-f", "query=query($o:String!,$n:String!){repository("
+                                         "owner:$o,name:$n){defaultBranchRef{target{oid}}}}",
+                                         "-f", "o=" + name.split("/")[0], "-f", "n=" + name.split("/")[1]],
+                                        capture_output=True, check=True).stdout)
+        sha = sha["data"]["repository"]["defaultBranchRef"]["target"]["oid"]
+        self.assertTrue(guard.head_runs(self.graphql, "github.com", name, sha, 0)[2])
+
     def test_graphql_answers_as_rest_does(self):
-        budget = json.loads(subprocess.run(["gh", "api", "rate_limit"], capture_output=True, check=True).stdout)
-        if budget["resources"]["core"]["remaining"] < 50:
-            self.skipTest("the REST budget is spent, so there is no REST answer to compare")
-        repository = os.environ.get("KGR_LIVE_REPOSITORY", "cli/cli")
-        graphql = lambda host, path: guard.graphql_lookup(host, path, "live check")
-        self.assertEqual(graphql("github.com", "repos/" + repository), guard.github_api("github.com", "repos/" + repository))
-        pulls = guard.github_api("github.com", f"repos/{repository}/pulls?state=open&per_page=5")
-        self.assertTrue(pulls, "the repository needs an open pull request")
-        pull = pulls[0]
+        repository = self.repository
+        self.assertEqual(self.graphql("github.com", "repos/" + repository)["full_name"],
+                         rest_only("github.com", "repos/" + repository)["full_name"])
+        pulls = rest_only("github.com", f"repos/{repository}/pulls?state=open&per_page=30")
+        with_runs = [p for p in pulls if p["head"]["repo"] and rest_only(
+            "github.com", f"repos/{repository}/actions/runs?per_page=1&head_sha={p['head']['sha']}")["total_count"]]
+        if not with_runs:
+            self.skipTest("no open pull request with workflow runs to compare")
+        pull = with_runs[0]
         head = urllib.parse.quote(pull["head"]["repo"]["owner"]["login"] + ":" + pull["head"]["ref"], safe="")
         path = f"repos/{repository}/pulls?state=open&per_page=100&head={head}"
         shape = lambda found: [(p["number"], p["draft"], p["head"]["ref"], p["head"]["sha"],
                                 (p["head"]["repo"] or {}).get("full_name")) for p in found]
-        self.assertEqual(shape(graphql("github.com", path)), shape(guard.github_api("github.com", path)))
-        rest = guard.head_runs(guard.github_api, "github.com", repository, pull["head"]["sha"], pull["number"])
-        fallback = guard.head_runs(graphql, "github.com", repository, pull["head"]["sha"], pull["number"])
+        self.assertEqual(shape(self.graphql("github.com", path)), shape(rest_only("github.com", path)))
+        rest = guard.head_runs(rest_only, "github.com", repository, pull["head"]["sha"], pull["number"])
+        fallback = guard.head_runs(self.graphql, "github.com", repository, pull["head"]["sha"], pull["number"])
+        self.assertTrue(rest[1])
         self.assertEqual(sorted(r["id"] for r in fallback[1]), sorted(r["id"] for r in rest[1]))
         self.assertEqual(guard.ci_state(*fallback, pull["number"]), guard.ci_state(*rest, pull["number"]))
 

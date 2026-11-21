@@ -220,7 +220,7 @@ PULLS_QUERY = """query($owner:String!,$name:String!,$branch:String!,$after:Strin
 pullRequests(states:OPEN,headRefName:$branch,first:100,after:$after){pageInfo{hasNextPage endCursor}
 nodes{number isDraft headRefName headRefOid headRepository{nameWithOwner}}}}}"""
 SUITES_QUERY = """query($owner:String!,$name:String!,$oid:GitObjectID!,$after:String){
-repository(owner:$owner,name:$name){object(oid:$oid){... on Commit{checkSuites(first:100,after:$after){
+repository(owner:$owner,name:$name){object(oid:$oid){... on Commit{checkSuites(first:100,after:$after){totalCount
 pageInfo{hasNextPage endCursor} nodes{status conclusion app{slug} workflowRun{databaseId event
 workflow{databaseId name}}}}}}}}"""
 REST_PATH = re.compile(r"repos/([^/?]+)/([^/?]+)(?:/(pulls|actions/runs)\?(.*))?")
@@ -263,7 +263,7 @@ def connection(found, name, what):
         raise GuardError("GitHub lookup returned no " + what)
     if any(not isinstance(node, dict) for node in found["nodes"]):
         raise GuardError("GitHub lookup returned an incomplete " + what)
-    return found["nodes"], info["endCursor"] if info["hasNextPage"] else None
+    return found["nodes"], info["endCursor"] if info["hasNextPage"] else None, found.get("totalCount")
 
 
 def graphql_lookup(host, path, why):
@@ -296,7 +296,7 @@ def graphql_pulls(host, path, why, owner, name, parameters):
     answer, after = [], None
     for _ in range(GRAPHQL_PAGES):
         found = graphql(host, path, why, PULLS_QUERY, owner=owner, name=name, branch=branch, after=after)
-        nodes, after = connection(found.get("repository"), "pullRequests",
+        nodes, after, _ = connection(found.get("repository"), "pullRequests",
                                   "pull request list for refs/heads/" + branch)
         for node in nodes:
             source = (node.get("headRepository") or {}).get("nameWithOwner")
@@ -317,12 +317,16 @@ def graphql_runs(host, path, why, owner, name, sha):
     for good, so they are left out, as REST's list leaves them out; an Actions
     suite whose run is missing refuses. The whole list comes from GraphQL, marked
     so head_runs never mixes it with pages REST read before."""
-    runs, after = [], None
+    runs, after, total, seen = [], None, None, 0
     for _ in range(GRAPHQL_PAGES):
         found = graphql(host, path, why, SUITES_QUERY, owner=owner, name=name, oid=sha, after=after)
         found = found.get("repository")
-        nodes, after = connection(found.get("object") if isinstance(found, dict) else None, "checkSuites",
-                                  f"check suites for commit {sha}")
+        nodes, after, count = connection(found.get("object") if isinstance(found, dict) else None, "checkSuites",
+                                         f"check suites for commit {sha}")
+        # A cursor walks on over a list that changes; the count shows that it did.
+        if type(count) is not int or (total is not None and count != total):
+            raise GuardError(f"the check suites of commit {sha} changed while they were read")
+        total, seen = count, seen + len(nodes)
         for suite in nodes:
             app = (suite.get("app") or {}).get("slug")
             if not isinstance(app, str):
@@ -339,11 +343,14 @@ def graphql_runs(host, path, why, owner, name, sha):
                          "conclusion": conclusion.lower() if isinstance(conclusion, str) else None,
                          "workflow_id": workflow.get("databaseId")})
         if after is None:
-            return {"total_count": len(runs), "workflow_runs": runs, "graphql": True}
+            if seen != total:
+                raise GuardError(f"the check suites of commit {sha} changed while they were read")
+            return {"total_count": len(runs), "workflow_runs": runs, "graphql": True, "complete": True}
         if len(runs) > RUN_PAGES * 100:
             break
-    # Cut short like REST's tenth page: head_runs keeps it only when a run is still going.
-    return {"total_count": len(runs) + 1, "workflow_runs": runs, "graphql": True}
+    # Cut short, like REST past its tenth page: head_runs keeps the list only when
+    # a run in it is still going, and its count is then only a lower bound.
+    return {"total_count": len(runs), "workflow_runs": runs, "graphql": True, "complete": False}
 
 
 def check_rewrites(c, api=github_api):
@@ -393,7 +400,8 @@ def check_rewrites(c, api=github_api):
     if blocked:
         details = ", ".join(f"#{o['pullRequest']} ({o['ref'].removeprefix('refs/heads/')}: "
                             + ("ready for review" if not o["draft"] else "draft, CI passed on its head")
-                            + (f", {o['workflowRuns']} workflow runs on its head" if o["workflowRuns"] else "") + ")"
+                            + (f", {'' if o['runsListed'] else 'at least '}{o['workflowRuns']} workflow runs on its head"
+                               if o["workflowRuns"] else "") + ")"
                             for o in blocked)
         restarted = sum(1 for o in blocked if o["workflowRuns"])
         raise GuardError(f"refusing to move the head of {len(blocked)} open pull request(s): {details}. "
@@ -440,7 +448,7 @@ def head_runs(api, host, repository, sha, number):
                 raise GuardError(f"the workflow runs of pull request #{number} changed while they were read")
             ids.add(run["id"])
         runs.extend(found["workflow_runs"])
-        if found.get("graphql") is True and len(runs) < total:
+        if found.get("graphql") is True and found.get("complete") is not True:
             break
         if len(runs) >= total:
             if len(runs) > total:
@@ -495,7 +503,7 @@ def prepare(value, api=github_api):
                       "concurrency group did not: " + ", ".join(o["runsGoing"])
                       + ("" if o["runsListed"] else f", and others past the first {RUN_PAGES} pages"))
                      if o["runsGoing"] else "")
-            print(f"Push guard: moving draft #{o['pullRequest']} restarts its CI ({o['workflowRuns']} workflow runs "
+            print(f"Push guard: moving draft #{o['pullRequest']} restarts its CI ({'' if o['runsListed'] else 'at least '}{o['workflowRuns']} workflow runs "
                   f"on its current head){going}", file=sys.stderr)
     count = config_count(os.environ)
     git_dir = Path(git(directory, "rev-parse", "--absolute-git-dir"))
