@@ -22,6 +22,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import textwrap
 from dataclasses import dataclass, field
 from html import escape
 from html.parser import HTMLParser
@@ -63,19 +64,38 @@ RENDER = (
 # PyYAML's safe loader as plain JSON, as jsonable() makes it in this process.
 LOAD = (
     "import json, sys, yaml\n"
-    "budget = [int(sys.argv[1])]\n"
+    "limit = int(sys.argv[1])\n"
+    "def expanded(node, sizes, active):\n"
+    "    key = id(node)\n"
+    "    if key in sizes:\n"
+    "        return sizes[key]\n"
+    "    if key in active:\n"
+    "        raise ValueError('a YAML alias refers to itself')\n"
+    "    active.add(key)\n"
+    "    parts = [part for item in node.value for part in (item if isinstance(item, tuple) else (item,))] if isinstance(node.value, list) else []\n"
+    "    total = 1 + sum(expanded(part, sizes, active) for part in parts)\n"
+    "    active.discard(key)\n"
+    "    if total > limit:\n"
+    "        raise ValueError(f'the YAML expands to more than {limit} values')\n"
+    "    sizes[key] = total\n"
+    "    return total\n"
     "def plain(value):\n"
-    "    budget[0] -= 1\n"
-    "    if budget[0] < 0:\n"
-    "        raise ValueError(f'the YAML expands to more than {sys.argv[1]} values')\n"
     "    if isinstance(value, dict):\n"
     "        return {str(key): plain(item) for key, item in value.items()}\n"
     "    if isinstance(value, list):\n"
     "        return [plain(item) for item in value]\n"
     "    return value if value is None or isinstance(value, (str, int, float, bool)) else {'!': type(value).__name__}\n"
     "try:\n"
-    "    result = {'value': plain(yaml.safe_load(sys.stdin.buffer.read().decode('utf-8')))}\n"
-    "except (yaml.YAMLError, ValueError, OverflowError) as error:\n"
+    "    loader = yaml.SafeLoader(sys.stdin.buffer.read().decode('utf-8'))\n"
+    "    try:\n"
+    "        node = loader.get_single_node()\n"
+    "        if node is not None:\n"
+    "            expanded(node, {}, set())\n"
+    "        value = None if node is None else loader.construct_document(node)\n"
+    "    finally:\n"
+    "        loader.dispose()\n"
+    "    result = {'value': plain(value)}\n"
+    "except (yaml.YAMLError, ValueError, OverflowError, RecursionError) as error:\n"
     "    result = {'error': str(error)}\n"
     "sys.stdout.buffer.write(json.dumps(result).encode('utf-8'))"
 )
@@ -615,7 +635,10 @@ def headings(html: str, kind: str | None = None, source: str | None = None, gith
             if level and not nested:
                 line = source_line(child)
                 written = written_heading(source_lines, child, int(level.group(1))) if source is not None else ""
-                text = COLLAPSIBLE.sub(" ", heading_text(child, github=github)).strip(" ")
+                # A newline beside an explicit break, as after a setext hard break, shows nothing more.
+                # Text writes a break as `<br>`; a literal one is escaped, so this is only a break.
+                text = re.sub(r"[ \t\n\r\f]*(?<!\\)<br>[ \t\n\r\f]*", "<br>", heading_text(child, github=github))
+                text = COLLAPSIBLE.sub(" ", text).strip(" ")
                 text = re.sub(f"{CODE_SPACE}([0-9a-f]+){CODE_SPACE}", lambda match: chr(int(match.group(1), 16)), text)
                 # A closing run of `#` would end the heading where it is written back.
                 text = re.sub(r"(^|\s)(#+)$", r"\1\\\2", text)
@@ -694,23 +717,42 @@ def isolated(program: str, text: str, package: str, what: str, *args: str) -> st
     return completed.stdout
 
 
-# Nodes a template's YAML may expand to; aliases can repeat data exponentially.
+# Nodes a template's YAML may stand for; aliases and merges can repeat data exponentially.
 YAML_NODES = 100_000
 
 
-def jsonable(value: Any, budget: list[int] | None = None) -> Any:
-    """A loaded YAML value as plain data: mappings with string keys, lists and scalars.
+def expanded(node: Any, sizes: dict[int, int], active: set[int]) -> int:
+    """How many nodes a composed YAML node stands for once its aliases are copied out.
 
-    ValueError past YAML_NODES nodes, as an alias that repeats nested aliases expands.
+    Counted on the node graph before anything is built, so neither an alias
+    that repeats nested aliases nor a merge can use memory past YAML_NODES;
+    ValueError past it, or for an alias inside its own anchor.
     """
-    budget = budget if budget is not None else [YAML_NODES]
-    budget[0] -= 1
-    if budget[0] < 0:
+    key = id(node)
+    if key in sizes:
+        return sizes[key]
+    if key in active:
+        raise ValueError("a YAML alias refers to itself")
+    active.add(key)
+    parts = (
+        [part for item in node.value for part in (item if isinstance(item, tuple) else (item,))]
+        if isinstance(node.value, list)
+        else []
+    )
+    total = 1 + sum(expanded(part, sizes, active) for part in parts)
+    active.discard(key)
+    if total > YAML_NODES:
         raise ValueError(f"the YAML expands to more than {YAML_NODES} values")
+    sizes[key] = total
+    return total
+
+
+def jsonable(value: Any) -> Any:
+    """A loaded YAML value as plain data: mappings with string keys, lists and scalars."""
     if isinstance(value, dict):
-        return {str(key): jsonable(item, budget) for key, item in value.items()}
+        return {str(key): jsonable(item) for key, item in value.items()}
     if isinstance(value, list):
-        return [jsonable(item, budget) for item in value]
+        return [jsonable(item) for item in value]
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
     return {"!": type(value).__name__}  # A date or another YAML type, which is no text where text belongs.
@@ -719,10 +761,17 @@ def jsonable(value: Any, budget: list[int] | None = None) -> Any:
 def load_yaml(text: str) -> Any:
     """YAML read with PyYAML's safe loader, locally or through uv; ValueError for text that is not YAML."""
     if yaml is not None:
+        loader = yaml.SafeLoader(text)
         try:
-            return jsonable(yaml.safe_load(text))
-        except (yaml.YAMLError, ValueError, OverflowError) as error:  # An escape past the last code point raises the others.
+            node = loader.get_single_node()
+            if node is not None:
+                expanded(node, {}, set())
+            return jsonable(None if node is None else loader.construct_document(node))
+        # An escape past the last code point raises ValueError or OverflowError; deep nesting, RecursionError.
+        except (yaml.YAMLError, ValueError, OverflowError, RecursionError) as error:
             raise ValueError(f"not valid YAML: {error}") from error
+        finally:
+            loader.dispose()
     result = json.loads(isolated(LOAD, text, PYYAML, "the YAML reader", str(YAML_NODES)))
     if "error" in result:
         raise ValueError(f"not valid YAML: {result['error']}")
@@ -744,11 +793,16 @@ def name_alone(text: str) -> str | None:
     continued on indented lines is read whole; None when even that fails.
     """
     lines = text.split("\n")
+    keys = [line for line in lines if line.strip() and not line.lstrip().startswith("#")]
+    margin = min((len(line) - len(line.lstrip()) for line in keys), default=0)
     for index, line in enumerate(lines):
-        if re.match(r"""["']?name["']?[ \t]*:""", line):
-            end = next((n for n in range(index + 1, len(lines)) if lines[n].strip() and lines[n][:1] not in " \t"), len(lines))
+        if len(line) - len(line.lstrip()) == margin and re.match(r"""["']?name["']?[ \t]*:""", line.lstrip()):
+            end = next(
+                (n for n in range(index + 1, len(lines)) if lines[n].strip() and len(lines[n]) - len(lines[n].lstrip()) <= margin),
+                len(lines),
+            )
             try:
-                return name_in(load_yaml("\n".join(lines[index:end]))) or None
+                return name_in(load_yaml(textwrap.dedent("\n".join(lines[index:end])))) or None
             except ValueError:
                 return None
     return None
@@ -780,7 +834,7 @@ def front_matter(text: str) -> tuple[dict[str, Any], str]:
             except ValueError as error:
                 # Markdown between two rules is often not YAML; a block that opens with a
                 # plain key at the margin, such as `name:`, says it was meant to be.
-                opening = next((line for line in block.split("\n") if line.strip() and not line.lstrip().startswith("#")), "")
+                opening = next((line for line in block.split("\n") if line.strip() and not line.lstrip().startswith("#")), "").lstrip()
                 if re.match(r"""(?:\w[\w .-]*|"[^"\n]*"|'[^'\n]*')[ \t]*:(?:[ \t]|$)""", opening):
                     raise BrokenYaml(f"cannot read the front matter: {error}", name_alone(block)) from error
                 return {}, text

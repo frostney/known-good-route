@@ -837,6 +837,22 @@ class RendererParityTests(unittest.TestCase):
         with self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, "expands to more than"):
             CHECK_TEMPLATE.form_template("f.yml", form)
 
+    def test_a_setext_hard_break_matches_an_atx_break(self):
+        texts = {CHECK_TEMPLATE.headings(REAL_RENDER(h))[0].text for h in ("Rollout\\\nplan\n-------\n", "## Rollout<br>plan\n")}
+        self.assertEqual(len(texts), 1)
+
+    def test_yaml_merges_and_self_references_past_the_bound_are_errors(self):
+        merges = ["a0: &a0 {k0: x}"] + [f"a{n}: &a{n} {{<<: [*a{n - 1}, *a{n - 1}], k{n}: x}}" for n in range(1, 40)]
+        for yaml_text in ("\n".join(merges), "a: &a [*a]"):
+            with self.subTest(yaml_text=yaml_text[:30]):
+                with self.assertRaises(ValueError):
+                    CHECK_TEMPLATE.load_yaml(yaml_text)
+
+    def test_an_indented_broken_front_matter_keeps_its_name(self):
+        with self.assertRaises(CHECK_TEMPLATE.CheckError) as raised:
+            CHECK_TEMPLATE.parse_template("t.md", "---\n  name: Bug\n  labels: [open\n---\n## A\n", REAL_RENDER)
+        self.assertEqual(raised.exception.name, "Bug")
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
