@@ -365,6 +365,17 @@ def heading_text(node: Node | str, github: bool = True) -> str:
     if node.tag in INLINE_TAGS:
         return f"<{node.tag}>{inner}</{node.tag}>"
     marker = INLINE_MARKERS.get(node.tag, "")
+    if not marker:
+        return inner
+    # Spaces just inside emphasis show as plain spaces beside it, so they sit outside its markers.
+    body = inner.strip(" \t\n\r\f")
+    before = inner[: len(inner) - len(inner.lstrip(" \t\n\r\f"))]
+    after = inner[len(inner.rstrip(" \t\n\r\f")) :]
+    return before + wrap(marker, body) + after
+
+
+def wrap(marker: str, inner: str) -> str:
+    """Inline text inside an emphasis marker, switched to `_` beside a `*` it would merge with."""
     if marker.startswith("*") and (inner.startswith("*") or inner.endswith("*")):
         # Around emphasis written with `*`, so `*_x_*` and `**x**` stay apart and read back as written.
         marker = marker.replace("*", "_")
@@ -809,6 +820,28 @@ def name_alone(text: str) -> str | None:
                 return name_in(load_yaml(textwrap.dedent("\n".join(lines[index:end])))) or None
             except ValueError:
                 return None
+    return flow_name(text)
+
+
+def flow_name(text: str) -> str | None:
+    """The `name` of a top-level flow mapping, such as `{name: Bug, body: [...]}`, read on its own."""
+    depth, quote = 0, ""
+    for index, char in enumerate(text):
+        if quote:
+            quote = "" if char == quote else quote
+        elif char in "\"'":
+            quote = char
+        elif char in "{[":
+            depth += 1
+        elif char in "}]":
+            depth -= 1
+        elif depth == 1 and text[index - 1 : index] in ("{", ",", " ", "\n", "\t") or index == 0:
+            entry = re.match(r"""\s*["']?name["']?\s*:\s*("(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[^,}\]\n]+)""", text[index:])
+            if entry and text.lstrip().startswith("{"):
+                try:
+                    return name_in(load_yaml(f"name: {entry.group(1).strip()}")) or None
+                except ValueError:
+                    return None
     return None
 
 
@@ -839,7 +872,7 @@ def front_matter(text: str) -> tuple[dict[str, Any], str]:
                 # Markdown between two rules is often not YAML; a block that opens with a
                 # plain key at the margin, such as `name:`, says it was meant to be.
                 opening = next((line for line in block.split("\n") if line.strip() and not line.lstrip().startswith("#")), "").lstrip()
-                if re.match(r"""(?:\w[\w .-]*|"[^"\n]*"|'[^'\n]*')[ \t]*:(?:[ \t]|$)""", opening):
+                if opening.startswith("{") or re.match(r"""(?:\w[\w .-]*|"[^"\n]*"|'[^'\n]*')[ \t]*:(?:[ \t]|$)""", opening):
                     raise BrokenYaml(f"cannot read the front matter: {error}", name_alone(block)) from error
                 return {}, text
             if isinstance(data, dict):

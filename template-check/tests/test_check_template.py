@@ -859,6 +859,15 @@ class RendererParityTests(unittest.TestCase):
         [heading] = CHECK_TEMPLATE.parse_template("t.md", "Deploy\nplan\n------\n", REAL_RENDER).headings
         self.assertEqual(str(heading), "## Deploy<br>plan")
 
+    def test_spaces_just_inside_emphasis_do_not_change_a_heading(self):
+        texts = {CHECK_TEMPLATE.headings(REAL_RENDER(h))[0].text for h in ("## <em> Steps </em>\n", "## *Steps*\n")}
+        self.assertEqual(len(texts), 1)
+
+    def test_broken_flow_front_matter_is_an_error_naming_its_template(self):
+        with self.assertRaises(CHECK_TEMPLATE.CheckError) as raised:
+            CHECK_TEMPLATE.parse_template("t.md", "---\n{name: Bug, about: *missing}\n---\n## A\n", REAL_RENDER)
+        self.assertEqual(raised.exception.name, "Bug")
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
@@ -1002,6 +1011,10 @@ class TemplateParsingTests(unittest.TestCase):
 
     def test_a_broken_form_after_a_document_marker_keeps_its_indented_name(self):
         self.assertEqual(CHECK_TEMPLATE.declared_name("---\n  name: Legacy\n  body: [unclosed\n"), "Legacy")
+
+    def test_a_broken_flow_form_keeps_its_name(self):
+        form = "{name: Legacy, body: [{type: input, attributes: {label: *missing}}]}\n"
+        self.assertEqual(CHECK_TEMPLATE.declared_name(form), "Legacy")
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):
