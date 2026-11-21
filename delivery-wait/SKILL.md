@@ -124,18 +124,43 @@ requires its own identity flags:
   - `--all-workflows` needs no check names. It finds every GitHub Actions
     workflow run for the exact head and every job in each run's latest attempt.
     Of several runs of one workflow for the same event, only the newest
-    counts: a run that a later event cancelled, or that was triggered again,
-    is reported with `superseded` and decides nothing.
+    counts, as for GitHub's own merge checks: GitHub numbers runs and check
+    suites in creation order, whichever run was cancelled. An older run is
+    reported with `superseded` and decides nothing.
     It waits while there is no run, or while any run or job is queued, in
     progress, waiting, pending or requested. It reports `changed` as soon as a
     run or job ends in failure, cancelled, timed out, action required or
-    another non-success conclusion. It reports `satisfied` only when every run
+    another non-success conclusion, except a cancelled duplicate run, below.
+    It reports `satisfied` only when every run
     and job succeeded, was skipped or was neutral, and two consecutive
     observations one interval apart show the same census. Jobs added by later
     matrix or `needs` stages keep their run in progress. A run started after
     another run finishes shows up in the second observation. `inspect` cannot
     confirm a stable census, so it reports `waiting` instead of `satisfied` for
     an all-success snapshot.
+  - One event can start two runs of a workflow on the same head, and a
+    `concurrency` group with `cancel-in-progress` cancels whichever joined it
+    first, which can be the newer run. GitHub then counts that cancelled run
+    and blocks merging, although the older run passed. The wait marks such a
+    newest run with `cancelledDuplicate` instead of counting it as a failure
+    when it raced the older run: both come from the same branch of the same
+    repository and, where GitHub names their pull requests, belong to this
+    one, the older run, on its first attempt, had started before the
+    newer one was cancelled and was still running then, and no job of the
+    cancelled run failed another way. While that older run has not finished,
+    the wait waits for it. Once it has passed and every other run on the
+    head has finished, so that a rerun cannot cancel a workflow sharing its
+    concurrency group, the wait reports `recoverable` after the same two
+    identical observations that `satisfied` needs, unless another run,
+    job or named check failed, which is `changed`. A cancelled newest run
+    beside only failed older runs is an ordinary failure, and so is one
+    cancelled after the older run finished, one with a failed job and one
+    cancelled again after its rerun. A cancelled named check left from an
+    earlier attempt, of a rerun that has not finished or that passed with a
+    job of that name, waits for that run's jobs. A cancelled job or named
+    check of a first attempt that has an older run of its source waits for
+    its run to complete. `inspect` reports a cancelled duplicate as `waiting`, naming
+    the rerun.
   - `--all-workflows` does not cover commit statuses or check runs from other
     apps, such as CodeRabbit or Vercel. Add a `--check` for each one the caller
     needs; the wait then also requires those contexts to succeed.
@@ -147,7 +172,10 @@ requires its own identity flags:
     needs both runs to pass. From one source only the newest check suite
     counts, so a re-run, a run cancelled by a newer one or a re-check after an
     edit replaces the older run, whichever started first. A commit status
-    counts by its latest state.
+    counts by its latest state. Telling a cancelled duplicate run from a
+    cancelled check needs the run census, so only `--all-workflows` reports
+    it as `recoverable`; with `--all-workflows`, a named check from that run
+    fails with it.
   - `--check` alone judges only the named contexts, whatever else is still
     running for the head. Use it only when the complete expected set is known,
     such as the repository's required status checks. Checks visible at wait
@@ -177,10 +205,20 @@ an existing wait can resume with a different REST page size.
 `--json` prints one envelope whose `state` is the result. Only `satisfied`
 establishes the awaited fact. `changed` means a check or workflow reached a
 non-success terminal result or other relevant state moved; inspect it before
-deciding. `invalidated` means the expected head, ref, or saved identity no
-longer matches, `timed-out` means the deadline passed, and `cancelled` means
-the wait was interrupted. These exit 0; `operational-error` exits 2. `inspect`
-can also report `waiting`.
+deciding. `recoverable`, from `checks-terminal --all-workflows`, means a run
+is a cancelled duplicate whose older run passed, nothing else has failed and
+no other run on the head is still running. Each such run's
+`cancelledDuplicate.rerun` holds the `gh run rerun` command that replaces its
+result. Run one, wait again on the same head, and run the next one the new
+result names: reruns that share a concurrency group would cancel each other.
+If `gh run rerun` reports that the run is already running, the rerun was
+accepted; wait again. The wait sees only the head's own runs, so a group that
+spans other branches can still lose a run elsewhere to the rerun. A rerun
+retries the same commit; it is never a reason to bypass a required check or
+merge protection. `invalidated` means the
+expected head, ref, or saved identity no longer matches, `timed-out` means the
+deadline passed, and `cancelled` means the wait was interrupted. These exit 0;
+`operational-error` exits 2. `inspect` can also report `waiting`.
 
 Use `inspect` for a single authoritative delivery snapshot and `wait` to
 await a transition. Supported predicates are exact-head checks,

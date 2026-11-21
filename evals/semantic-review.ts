@@ -118,7 +118,7 @@ export function buildSemanticPacket(
       if (!action || action.action !== event.name)
         throw new Error("Action ledger and event order disagree");
       sources.push({ id: "action:" + eventIndex, text: JSON.stringify(action) });
-      const result = fixtureState.record(action.action, action.data);
+      const result = fixtureState.record(action.action, action.data, action.details);
       sources.push({ id: "result:" + eventIndex, text: result ?? recordedActionAcknowledgment });
     }
   }

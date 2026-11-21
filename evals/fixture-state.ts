@@ -1,3 +1,4 @@
+import { actionCarries } from "./grading.ts";
 import type { ActionName, EvalFixture } from "./types.ts";
 
 // One run's scripted fixture state: the evidence a source returns and the
@@ -18,7 +19,7 @@ export function createFixtureState(fixture: EvalFixture) {
     evidence,
     // Returns the scripted result of this call, or undefined when the fixture
     // scripts none. A transition changes future results, not its trigger's.
-    record(action: ActionName, data?: Record<string, unknown>) {
+    record(action: ActionName, data?: Record<string, unknown>, details = "") {
       recorded.push({ action, path: data?.path });
       const response = responses[action];
       const result = Array.isArray(response)
@@ -31,10 +32,14 @@ export function createFixtureState(fixture: EvalFixture) {
         if (transition.after !== action ||
             (transition.editPath !== undefined &&
              (action !== "file.edit" || data?.path !== transition.editPath))) continue;
+        if (transition.whenResult !== undefined && !String(result ?? "").includes(transition.whenResult)) continue;
+        const carries = transition.whenCarries;
+        if (carries && !carries.values.every((value) => actionCarries({ action, details, ...(data ? { data } : {}) }, value, carries.fields))) continue;
         const since = transition.since === undefined ? -1 :
           recorded.findIndex((r) => r.action === transition.since);
         if (transition.since !== undefined && since < 0) continue;
-        if ((transition.occurrence ?? 1) !== count(since + 1, action, transition.editPath)) continue;
+        if ((transition.whenResult === undefined && transition.whenCarries === undefined || transition.occurrence !== undefined) &&
+            (transition.occurrence ?? 1) !== count(since + 1, action, transition.editPath)) continue;
         Object.assign(evidence, transition.evidence);
         for (const [name, value] of Object.entries(transition.actionResponses ?? {}) as Array<[ActionName, string | string[]]>) {
           responses[name] = value;

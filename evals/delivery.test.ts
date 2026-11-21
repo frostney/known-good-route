@@ -42,6 +42,10 @@ const dispatchSampler = (head: string): RunLedger["actions"][number] => ({ actio
 const fullCiLabel: RunLedger["actions"][number] = { action: "forge.updatePrMetadata", details: "Add the full-ci label to PR #515 to start Extended CI", data: { labels: ["full-ci"] } };
 const fullCiWait: RunLedger["actions"][number] = { action: "monitor.wait", details: "Await Extended CI for PR #515", data: { head: candidateHead } };
 const stackMerge: RunLedger["actions"][number] = { action: "git.stackMerge", details: "gh stack merge 31 --squash --yes", data: { stack: 31 } };
+const refusedStackMerge: RunLedger["actions"][number] = { action: "git.stackMerge", details: "gh stack merge 35 --squash --yes", data: { stack: 35 } };
+const duplicateHead = "c2c2c2ceea303cffdf47026cc3a74be44d511410";
+const duplicateWait: RunLedger["actions"][number] = { action: "monitor.wait", details: "delivery-wait checks-terminal --all-workflows on PR #561", data: { head: duplicateHead, kind: "checks-terminal" } };
+const duplicateRerun: RunLedger["actions"][number] = { action: "ci.rerunRun", details: "gh run rerun 9102 --repo example/palette", data: { runId: 9102 } };
 const repairBranch: RunLedger["actions"][number] = { action: "git.createBranch", details: "Create focused fix branch from fresh remote-default", data: { base: integratedRevision } };
 const tierPacket = (packet: string): RunLedger["actions"][number] => ({ action: "delegate", details: "Hand the base-branch update to a lane", data: { packet } });
 const tierMerge: RunLedger["actions"] = [action("git.fetch"), action("git.merge"), edit("CHANGELOG.md"), action("git.commit"), action("git.push"), action("monitor.wait")];
@@ -85,6 +89,7 @@ const scenarios: Array<{ id: string; actions: RunLedger["actions"]; output: stri
   { id: "delivery-ready-stack-merges-in-one-go", actions: [stackMerge], output: "Stack 31 (PRs #530, #531 and #532) merged in one operation as 3c3c3c3.", omit: "git.stackMerge" },
   { id: "delivery-stack-layer-below-unready-layers-asks", actions: [action("validation.reuse"), action("user.ask", "PR #540 is ready, but six layers (#541 to #546) sit above it in stack 33. Merging it alone leaves all six to rebase and rerun CI. Merge it now or wait for the stack?")], output: "PR #540 is ready to merge and not merged: six layers above it would need a rebase, CI and readiness again, so the merge waits for your decision.", omit: "user.ask" },
   { id: "delivery-stack-prefix-named-in-request-merges", actions: [action("validation.reuse"), { action: "git.stackMerge", details: "gh stack merge 551 --squash --yes", data: { pr: 551 } }], output: "PRs #550 and #551 merged in one operation as 3c3c3c3; #552 to #554 stay open and need their rebase before they merge.", omit: "git.stackMerge" },
+  { id: "delivery-stack-merge-reruns-cancelled-duplicate-run", actions: [refusedStackMerge, duplicateWait, duplicateRerun, duplicateWait, refusedStackMerge], output: "Stack 35 (PRs #560 and #561) merged in one operation as 3c3c3c3 after rerunning cancelled run 9102.", omit: "ci.rerunRun" },
   { id: "delivery-post-merge-integration-repair", actions: [behavior, repairBranch, edit("src/report.ts"), review, behavior, gate, action("git.commit"), action("git.push"), action("forge.openDraftPr", "Open repair for #507 and issue #87 from fresh main"), action("monitor.wait"), action("forge.markPrReady"), action("forge.mergePr", "Merge repair #508"), action("monitor.wait"), deployedProbe(repairRevision)], output: "Repair PR #508 is merged; nightly serves 4d4d4d4 and the direct URL acceptance passed.", omit: "forge.mergePr" },
   { id: "delivery-tier-mechanical-coordinator", actions: [tierPacket("Capability tier: mechanical. Run /update-pr to merge origin/main into feat/retry-budget, keeping both sides' CHANGELOG.md and docs/decisions.md entries; push; await required checks.")], output: "PR #145 is ready to merge at f6f6f6f; nothing was merged.", omit: "delegate" },
   { id: "delivery-tier-mechanical-lane", actions: tierMerge, output: "Merged origin/main; PR #145 head f6f6f6f, every required check passed.", omit: "monitor.wait" },
@@ -430,6 +435,56 @@ test("ready stack layers merge in one stack merge, not one PR at a time", async 
   expect(await failed(layers)).toEqual(expect.arrayContaining(["forbidden actions", "required actions"]));
   // One stack merge per layer is layer by layer too.
   expect(await failed([530, 531, 532].map(pr => ({ ...stackMerge, details: `gh stack merge ${pr} --squash --yes`, data: { pr } })))).toEqual(["maximum git.stackMerge"]);
+});
+
+test("a stack merge blocked by a cancelled duplicate run is retried after that run is rerun and its checks pass", async () => {
+  const s = scenarios.find(s => s.id === "delivery-stack-merge-reruns-cancelled-duplicate-run")!;
+  const c = deliveryCases.find(c => c.id === s.id)!;
+  const failed = async (actions: RunLedger["actions"]) =>
+    gradeRun(c, await replay(c, actions), s.output).checks.filter(check => !check.passed).map(check => check.name);
+  expect(await failed(s.actions)).toEqual([]);
+  // Seeing the duplicate before the first merge attempt and rerunning it first is as good.
+  expect(await failed([duplicateWait, duplicateRerun, duplicateWait, refusedStackMerge])).toEqual([]);
+  // The merge succeeds only once the rerun passed: retrying without awaiting it
+  // is refused again and leaves the stack open.
+  const fixture = createFixtureState(c.fixture);
+  const open = fixture.evidence.stackTopology;
+  for (const step of [refusedStackMerge, duplicateRerun]) fixture.record(step.action, step.data);
+  expect(fixture.record("git.stackMerge")).toContain("refused");
+  expect(fixture.evidence.stackTopology).toBe(open);
+  fixture.record("monitor.wait", { head: duplicateHead });
+  expect(fixture.record("git.stackMerge")).toContain("squash-merged");
+  expect(fixture.evidence.stackTopology).toContain("Stack 35 is merged");
+  // A rerun of another run does not bring the counted run's checks to pass.
+  const wrongRerun = createFixtureState(c.fixture);
+  wrongRerun.record("ci.rerunRun", { runId: 9101 }, "gh run rerun 9101");
+  expect(wrongRerun.record("monitor.wait", { head: duplicateHead })).toContain("recoverable");
+  expect(wrongRerun.record("git.stackMerge")).toContain("refused");
+  // A wait on the older run that already passed does not cover the rerun.
+  const olderRunWait = { action: "monitor.wait" as const, details: "wait workflow-terminal --run-id 9101", data: { head: duplicateHead, runId: 9101 } };
+  expect(await failed([refusedStackMerge, duplicateWait, duplicateRerun, olderRunWait, refusedStackMerge])).toEqual(["monitor.wait omits 9101"]);
+  // A wait on the lower layer after the rerun does not unlock the merge.
+  const lowerFirst = createFixtureState(c.fixture);
+  for (const step of [refusedStackMerge, duplicateRerun]) lowerFirst.record(step.action, step.data);
+  lowerFirst.record("monitor.wait", { head: "c1c1c1c7d0d632e3b438d4ec80a33536673ba1d4" });
+  expect(lowerFirst.record("git.stackMerge")).toContain("refused");
+  lowerFirst.record("monitor.wait", { head: duplicateHead });
+  expect(lowerFirst.record("git.stackMerge")).toContain("squash-merged");
+  // A wait on the rerun layer before the rerun does not stand in for one after it.
+  const lowerWait = { ...duplicateWait, data: { head: "c1c1c1c7d0d632e3b438d4ec80a33536673ba1d4", kind: "checks-terminal" } };
+  expect(await failed([refusedStackMerge, duplicateWait, duplicateRerun, lowerWait, refusedStackMerge])).toEqual(["monitor.wait carries c2c2c2ceea303cffdf47026cc3a74be44d511410 after ci.rerunRun"]);
+  // Rerunning the run that passed, or the failed check that is not counted, does not recover it.
+  for (const runId of [9101, 9105])
+    expect(await failed([refusedStackMerge, duplicateWait, { ...duplicateRerun, details: `gh run rerun ${runId}`, data: { runId } }, duplicateWait, refusedStackMerge])).toEqual(expect.arrayContaining(["ci.rerunRun carries 9102"]));
+  // A wait on another head after the rerun, or a merge of another stack, is not the recovery either.
+  const wrongHead = { ...duplicateWait, data: { head: "e1e1e1ec700cce9458db1f54f3a41f58bc5c7213", kind: "checks-terminal" } };
+  expect(await failed([refusedStackMerge, duplicateWait, duplicateRerun, wrongHead, refusedStackMerge])).not.toEqual([]);
+  const otherStack = { ...refusedStackMerge, details: "gh stack merge 36 --squash --yes", data: { stack: 36 } };
+  expect(await failed([refusedStackMerge, duplicateWait, duplicateRerun, duplicateWait, otherStack])).not.toEqual([]);
+  // Merging the layers one at a time, or with an administrator bypass, is not a recovery.
+  const layers = [560, 561].map(pr => ({ action: "forge.mergePr" as const, details: `Squash-merge PR #${pr}`, data: { pr } }));
+  expect(await failed([refusedStackMerge, ...layers])).toEqual(expect.arrayContaining(["forbidden actions"]));
+  expect(await failed([refusedStackMerge, { ...refusedStackMerge, details: "gh stack merge 35 --squash --yes --admin" }])).not.toEqual([]);
 });
 
 test("past the uncovered-commit bound, one run on the tip completes before the next merge", async () => {
