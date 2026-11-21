@@ -135,11 +135,13 @@ it is no gate and its adapter posts no trigger.
    [review round on local commits](../SKILL.md#review-rounds-on-local-commits)
    will read the change, commit it through `git-workflow`'s commit step
    without amending, return that commit as the head for the round, and push
-   only after the last round. Before that push, run step 3's `inspect` on the
-   still-published head and handle any finding that arrived meanwhile from
-   step 4. Otherwise use `/update-pr` to commit and push without amending or
-   force-pushing. If that skill is unavailable, follow its documented
-   workflow directly.
+   only after the last round. Before that push, even when no round remains,
+   run step 3's `inspect` on the still-published head and handle any finding
+   that arrived meanwhile from step 4; a fix it needs returns to step 5, so
+   the pushed content has passed review, behavior testing and the gate. Then
+   push once through `/update-pr`. Otherwise use `/update-pr` to commit and
+   push without amending or force-pushing. If that skill is unavailable,
+   follow its documented workflow directly.
 8. After a push, re-read the exact head, every check on it, terminal
    automation verdicts, actionable findings, unresolved threads, and unanswered
    inline automation threads. Apply the readiness and `retry_at` rules in the reference. A new
