@@ -212,6 +212,37 @@ class RewriteTests(unittest.TestCase):
         self.assertIn("#13 (stack/two: ready for review, 1 workflow runs on its head)", message)
         self.assertIn("restart CI on 2 of them", message)
 
+    def test_the_freeze_rule_for_each_state_of_a_layer(self):
+        # Frozen means ready for review, or CI passed on the exact head with a terminal review;
+        # the guard cannot see the review, so it protects every draft whose CI passed.
+        admission = guard.validate_admission({**self.admission, "refs": self.admission["refs"][:1]})
+        movable = (("no runs", [], "none", "no workflow runs"),
+                   ("failed runs", [run(conclusion="failure"), run(workflow=2)], "failed", "failed or was cancelled"),
+                   ("runs still going", [run("in_progress"), run("queued", workflow=2)], "running", "has not finished"))
+        for case, runs, ci, reason in movable:
+            with self.subTest(case=case):
+                github = FakeGitHub([pull(12, "stack/one", "b" * 40)], runs={"b" * 40: runs})
+                [observed] = guard.check_rewrites(admission, github)
+                self.assertEqual((observed["pullRequest"], observed["ci"], observed["ciPassed"]), (12, ci, False))
+                self.assertIn(reason, observed["reason"])
+                self.assertIn("not frozen", observed["reason"])
+        refused = (("a draft whose runs all passed", True, [run(), run(conclusion="skipped", workflow=2)],
+                    "draft, CI passed on its head", "frozen once its review is terminal"),
+                   ("a ready pull request without runs", False, [], "ready for review)", "ready for review is frozen"),
+                   ("a ready pull request whose CI failed", False, [run(conclusion="failure")], "ready for review,",
+                    "ready for review is frozen"))
+        for case, draft, runs, state, advice in refused:
+            with self.subTest(case=case):
+                github = FakeGitHub([pull(12, "stack/one", "b" * 40, draft=draft)], runs={"b" * 40: runs})
+                with self.assertRaises(guard.GuardError) as caught:
+                    guard.check_rewrites(admission, github)
+                message = str(caught.exception)
+                self.assertIn(f"#12 (stack/one: {state}", message)
+                self.assertIn(advice, message)
+                self.assertIn("new top layer", message)
+                # The listed ref is the explicit override for a protected layer.
+                self.assertEqual(guard.check_rewrites(self.with_rewrite("refs/heads/stack/one"), github), [])
+
     def test_long_run_lists_are_read_page_by_page(self):
         cases = ((many_runs(100) + [run("queued")], False, 2),  # a run still going on page two
                  (many_runs(101, conclusion="failure"), False, 2),
@@ -456,8 +487,11 @@ class StandaloneTests(unittest.TestCase):
         with mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
             prepared = guard.prepare(admission, github)
         record = json.loads((Path(prepared["directory"]) / "admission.json").read_text())["request"]
-        self.assertEqual([(o["pullRequest"], o["ciPassed"]) for o in record["pullRequests"]], [(7, False)])
-        self.assertIn("moving draft #7 restarts its CI (2 workflow runs on its current head); "
+        self.assertEqual([(o["pullRequest"], o["ci"], o["ciPassed"]) for o in record["pullRequests"]],
+                         [(7, "running", False)])
+        self.assertIn("not frozen", record["pullRequests"][0]["reason"])
+        self.assertIn("moving draft #7 in place: draft whose CI on its head has not finished, so it is not frozen; "
+                      "the push supersedes those runs; it restarts its CI (2 workflow runs on its current head); "
                       "once the push lands, cancel any of these pull request runs on the old head that its concurrency "
                       "group did not: Evidence run 42 (in_progress)\n", stderr.getvalue())
 

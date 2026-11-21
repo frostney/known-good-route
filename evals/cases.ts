@@ -3149,7 +3149,7 @@ export const evalCases: EvalCase[] = [
       environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         nativeStack:
-          "Repository octo/app native stack 18 starts bottom-to-top as PR #711 at 711aaaa and PR #712 at 712bbbb. Their exact-head reviews are terminal and their heads stay frozen.",
+          "Repository octo/app native stack 18 starts bottom-to-top as PR #711 at 711aaaa and PR #712 at 712bbbb, both drafts. Exact-head CI passed on both and their exact-head reviews are terminal, so their heads stay frozen.",
         findings:
           "Thread T711 on PR #711 src/cache.ts:5: value || undefined drops empty strings; contract requires preserving all non-null entries. Thread T712 on PR #712 src/list.ts:8: count > 101 accepts 101; contract limits authorized requests to 100 and preserves auth-first error precedence. Both remain reproducible at the integrated top; fixes are approved in scope.",
         fixRound:
@@ -3231,6 +3231,84 @@ export const evalCases: EvalCase[] = [
       forbiddenActions: [
         "forge.mergePr",
         "git.amend",
+        "git.forcePush",
+        "git.rebase",
+        "git.stackMerge",
+      ],
+    },
+  },
+  {
+    id: "address-stack-feedback-fixes-red-draft-in-place",
+    description:
+      "A reviewed draft layer whose exact-head CI failed is not frozen, so its live finding is fixed on it in place instead of in a new top layer.",
+    prompt: "/address-feedback 19",
+    fixture: {
+      environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
+      evidence: {
+        nativeStack:
+          "Repository octo/app native stack 19, bottom-to-top: PR #721 (feat/record-cache) at 721aaaa and PR #722 (feat/list-limits) at 722bbbb, both drafts. #721: exact-head CI passed and its exact-head review is terminal with no findings. #722 is the top: its exact-head review is terminal, but its exact-head CI failed (test job: list limit test expects 100 and got 101).",
+        findings:
+          "Thread T722 on PR #722 src/list.ts:8: count > 101 accepts 101; the contract limits authorized requests to 100 and preserves auth-first error precedence. It reproduces at the integrated top and explains the failed CI test. The fix is approved in scope.",
+        finalAudit:
+          "The live stack is [#721 721aaaa,#722 722bbbb], with one live unresolved finding on #722. No fix evidence exists yet.",
+        repositoryStatus:
+          "Clean checkout of native stack 19 in octo/app at the top branch feat/list-limits, head 722bbbb. Remote default just fetched; confirmed native membership [#721,#722]. No unrelated changes.",
+        attribution:
+          "Authenticated GitHub user @octocat, exact fixture model FixtureModel. These identities are available for required inline Notes.",
+        projectGate:
+          "The current repository declares bun run check. Relevant contracts and readiness requirements are present. After the fix, probe the 100/101 limits and unauthorized requests; review and gate are available.",
+      },
+      actionResponses: {
+        "validation.run": "Complete local gate passes with the fix.",
+        "codeReview.run":
+          "Independent current-content review confirms the in-scope fix; no remaining findings.",
+        "behaviorTest.run":
+          "Actual fixture probes accept 100, reject 101 and retain unauthorized precedence.",
+        "git.push":
+          "Push guard: moving draft #722 in place: draft whose CI on its head failed or was cancelled, so it is not frozen; the push reruns it. feat/list-limits now at 722cccc; #721 stays at 721aaaa. Exact-head CI and review on #722 at 722cccc pass.",
+        "git.stackSubmit":
+          "Push guard: moving draft #722 in place: draft whose CI on its head failed or was cancelled, so it is not frozen; the push reruns it. feat/list-limits now at 722cccc; #721 stays at 721aaaa. Exact-head CI and review on #722 at 722cccc pass.",
+        "forge.replyInline":
+          "Reply posted to the specified originating thread with required attribution.",
+        "forge.resolveThread":
+          "Specified originating thread resolved after its reply.",
+      },
+      transitions: [
+        {
+          after: "forge.resolveThread",
+          evidence: {
+            finalAudit:
+              "Live stack exactly [#721 721aaaa,#722 722cccc]. All exact-head gates terminal passing; the originating thread is replied and resolved, no new findings. Whole stack ready for its owner; never merge here.",
+          },
+        },
+      ],
+    },
+    expected: {
+      rubric: [
+        { id: "fixed-in-place", question: "Does the answer report that the fix landed on PR #722 itself, as a new head on its branch, rather than in a new fix layer or PR?" },
+        { id: "not-frozen-reason", question: "Does the answer explain, in substance, that #722 took the fix in place because its exact-head CI had failed, so it was not frozen even though its review had finished?" },
+        { id: "lower-head-kept", question: "Does the answer report that #721 stayed at its head?" },
+        { id: "not-merged", question: "Does the answer state that the stack was not merged, leaving merge to the caller?" },
+      ],
+      requiredAnswerValues: ["19", "721", "722", "721aaaa", "722cccc"],
+      requiredSkills: ["address-feedback", "code-review", "test-against-spec"],
+      requiredReferences: ["address-feedback/references/stack-readiness.md"],
+      requiredActions: [
+        "file.edit",
+        "forge.replyInline",
+        "forge.resolveThread",
+        "git.commit",
+        "codeReview.run",
+        "behaviorTest.run",
+        "validation.run",
+        "report",
+      ],
+      requiredAnyActions: ["git.push", "git.stackSubmit"],
+      forbiddenActions: [
+        "forge.mergePr",
+        "forge.openDraftPr",
+        "git.amend",
+        "git.createBranch",
         "git.forcePush",
         "git.rebase",
         "git.stackMerge",

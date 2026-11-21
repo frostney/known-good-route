@@ -1,9 +1,13 @@
 # Address stack feedback
 
 Converge review feedback for exactly one native GitHub stack. Review every
-initial layer at its exact head, preserve those frozen heads, collect validated
-live fixes in one new top layer per round, and stop only when the complete live
-stack reaches a clean fixed point or an explicit blocker.
+initial layer at its exact head, preserve the heads of frozen layers, fix a
+layer that is not frozen in place, collect the fixes for frozen layers in one
+new top layer per round, and stop only when the complete live stack reaches a
+clean fixed point or an explicit blocker. A layer is frozen once CI on its
+exact head has passed and its review is terminal, or once it is ready for
+review; [stack-readiness.md](stack-readiness.md#frozen-members-and-invalidation)
+defines it.
 
 Apply the parent SKILL.md shared authority, attribution, and evidence rules.
 Require one repository-scoped native stack number verified through the Stacks
@@ -69,11 +73,16 @@ run only `status`, with every exact `PR=SHA`.
    after its disposition is supported and accepted under repository policy. A
    decline requiring human judgment remains unresolved and blocks readiness.
    Record every live finding with its originating PR and thread or surface.
-7. If live findings remain, check out the current native stack, record every
-   remote head, and create exactly one new branch above the current top with
-   `gh stack add`. Fix all validated live findings there. Group commits by one
+7. If live findings remain, check out the current native stack and record every
+   remote head. Choose where the fixes land. A finding on a layer that is not
+   frozen, with no frozen layer above it, is fixed on that layer in place. Every
+   other fix goes on the top fix layer from an earlier round while that layer
+   is not frozen, and otherwise into exactly one new branch above the current
+   top, created with `gh stack add`. A red or unfinished CI run never freezes a
+   draft, so it never calls for a new layer. Fix every validated live finding
+   where it lands. Group commits by one
    coherent cause or originating PR where that preserves traceability; every
-   source reply must link the exact landing commit and fix-layer PR. For a
+   source reply must link the exact landing commit and the PR it landed in. For a
    documentation finding, search the document and any file that mirrors the
    same fact for sibling statements, and fix them in the same commit; an
    incremental review surfaces each missed sibling one round later.
@@ -88,17 +97,19 @@ run only `status`, with every exact `PR=SHA`.
    available checks and use step 9 to publish the necessary draft fix layer,
    explicitly retaining the missing preview evidence. Test its exact revision
    and resume this loop before readiness. Further repairs still respect frozen
-   members. While the published layer and every layer above it are unfrozen
-   (drafts whose CI has not passed and whose review has not finished), put the
-   repair on that layer through the native-stack reference's in-place repair
-   path, and cancel the superseded runs the helper names.
-   Otherwise append a new fix layer; the push helper refuses to move a layer
-   that is ready for review or a draft whose CI has passed.
+   members. While the published layer and every layer above it are not frozen
+   (drafts whose CI on the exact head failed, was cancelled, is still running
+   or never ran, or whose review has not finished), put the repair on that
+   layer through the native-stack reference's in-place repair path, and cancel
+   the superseded runs the helper names. Only above a frozen layer append a new
+   fix layer. The push helper refuses to move a layer that is ready for review
+   or a draft whose CI passed; for such a draft whose review has not finished,
+   list its ref under `rewrite` with that reason.
 9. Enforce the native-stack reference's push-boundary checks for the frozen
    prefix and new branch. Use its protected `gh stack push` followed by separate
    PR creation and native append procedure; preserve the frozen PR heads and
    metadata. The helper refuses to move a layer that is ready for review or a
-   draft whose CI has passed; never list a frozen member under `rewrite` to land a
+   draft whose CI passed; never list a frozen member under `rewrite` to land a
    fix. Reconcile a partial result before continuing. Immediately replace
    generated metadata with its actual claim, validation, and originating
    finding links, and satisfy the project's PR evidence contract. Keep it draft
@@ -106,8 +117,10 @@ run only `status`, with every exact `PR=SHA`.
    collect its exact-head review under the active provider contract.
 10. Once that fix layer has successful exact-head CI and a terminal review, it
     is frozen. Reply to and resolve the originating threads with the exact fix
-    evidence. If review of the fix layer produces live findings, create another
-    top layer; never push those fixes into any frozen member.
+    evidence. If review of the fix layer produces live findings, fix them on it
+    in place while it is not frozen, as when its CI failed; create another top
+    layer only once it is frozen, and never push those fixes into any frozen
+    member.
 11. After every head, topology, review, or thread transition, reconcile native
     membership through the stack helper. An expected append-only fix layer keeps
     the frozen prefix valid but needs its own review. An unexpected head or

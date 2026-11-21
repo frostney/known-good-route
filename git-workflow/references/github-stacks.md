@@ -69,8 +69,9 @@ push with force-with-lease. They are allowed only when all of these are true:
 - no unrelated branch or worktree is in scope; and
 - the cascade's CI load is accepted: a sync re-fires CI for every rebased layer
   at once, which on a seven-layer stack meant about 25 concurrent jobs and
-  flaked two surfaces. Prefer a new top layer for fixes; after a sync, rerun
-  flaked surfaces one at a time.
+  flaked two surfaces. Put a fix for a frozen layer in a new top layer, and
+  a fix for a layer that is not frozen in place; after a sync, rerun flaked
+  surfaces one at a time.
 
 A stack, like any PR branch, need not be up to date with its trunk: sync it
 onto a moved trunk only under `git-workflow`'s
@@ -80,13 +81,17 @@ layer leaves the layers above it conflicting with the base, so they sync.
 While the layers have open PRs, rewrite them at most once, immediately before
 merging the whole stack, and only when that rule calls for it. A conflict that
 appears earlier waits for that rebase; it never justifies re-pushing reviewed
-layers. A repair on a layer that is not frozen is not such a rewrite: commit it
-on that layer, restack the layers above it with `gh stack rebase`, and push
-through the [protected publication helper](#protected-publication-helper) with
-each moved branch admitted and nothing under `rewrite`. The helper lets the
-push through only while every layer it moves is unfrozen. Rebase locally with `gh stack rebase`, then push through the
-[protected publication helper](#protected-publication-helper) with every member
-listed under `rewrite`. Every rewritten layer reruns its CI once and needs its
+layers. A layer is frozen once CI on its exact head has passed and its review
+is terminal, or once it is ready for review; a draft whose CI failed, was
+cancelled, is still running or never ran is not frozen. A repair on a layer
+that is not frozen is not such a rewrite: commit it on that layer, restack the
+layers above it with `gh stack rebase`, and push through the
+[protected publication helper](#protected-publication-helper) with each moved
+branch admitted and nothing under `rewrite`. The helper lets the push through
+only while no layer it moves is ready for review or a draft whose CI passed.
+For the final rebase, rebase locally with `gh stack rebase`, then push through
+the [protected publication helper](#protected-publication-helper) with every
+member listed under `rewrite`. Every rewritten layer reruns its CI once and needs its
 readiness again on the new head. Only the layer-by-layer merge fallback below
 and a retargeted stack rewrite again, the same way. `gh stack sync` pushes on
 its own, outside the helper, so use it only while no layer has an open PR.
@@ -157,8 +162,9 @@ update, merge the freshly fetched remote base and push normally.
 - Treat every layer as a real PR. Validate its exact head and review its own
   claim; do not let evidence from one layer stand in for another.
 - `/address-feedback` is the explicit review exception for a whole native
-  stack. It may freeze an exact-head reviewed layer and cover a validated live
-  finding with a later top fix layer. A covered lower layer is not independently
+  stack. It may freeze a layer whose exact-head CI passed and whose review is
+  terminal, and cover a validated live finding on it with a later top fix
+  layer. A covered lower layer is not independently
   merge-ready: the required overlay and every layer beneath it form one
   indivisible ready stack.
 - Before merging, re-read native topology and exact remote heads. Merge every
@@ -233,22 +239,30 @@ refresh an approved expectation, or list a ref under `rewrite`, merely to make
 a rejection pass.
 
 Before any push, the helper looks up the open PR of each admitted ref whose
-remote head would change, in the repository the remote URL names. It refuses
-when that PR is frozen: ready for review, since the helper cannot see when a
-review ends, or a draft whose GitHub Actions CI on its current head has passed,
-meaning no run is queued or in progress and every workflow that ran has a
-successful, neutral or skipped run there. A draft whose runs are queued, in
-progress, failed or cancelled may move. The helper then names the pull request
-runs still going on the old head; once the push lands, cancel any that the
-workflow's concurrency group did not. The helper cannot see a finished review on a draft, so
-`address-feedback`'s frozen rule still decides whether a draft may take a fix. Moving a layer also moves every layer
-above it and restarts their CI, so a fix in place on a low layer can cost more
-runs than a new top layer. The refusal names each blocked PR and how many would
-have CI restarted. The optional `rewrite` field lists the
-refs allowed past that check, as `[{"ref": "refs/heads/...", "reason": "..."}]`:
-each an admitted ref with a non-empty reason. Use it only for the final rebase
-under [Guarded rewrite exception](#guarded-rewrite-exception), never to put a
-fix into a reviewed layer. The lookup needs `gh` signed in to the remote's
+remote head would change, in the repository the remote URL names. A layer is
+frozen once GitHub Actions CI on its exact head has passed and its review is
+terminal, or once it is ready for review. The helper cannot see when a review
+ends, so it refuses to move a PR that is ready for review, or a draft whose CI
+on its current head has passed, meaning no run is queued or in progress and
+every workflow that ran has a successful, neutral or skipped run there. A
+draft with no runs, or whose runs failed, were cancelled or are still queued or
+in progress, may move: it is not frozen, so its fix goes in place, and the
+push reruns CI only on layers whose CI had not passed. The prepared record gives each
+such PR's CI state (`none`, `failed` or `running`) and the reason it may move.
+For runs still going, the helper names the pull request runs on the old head;
+once the push lands, cancel any that the workflow's concurrency group did not,
+since their result would be for a head the PR no longer has. Moving a layer
+also moves every layer above it and restarts their CI, so a fix in place on a
+low layer can cost more runs than a new top layer; that cost never makes a
+layer frozen. The refusal names each blocked PR, how many would have CI
+restarted, and what to do: a fix for a frozen layer goes in a new top layer.
+The optional `rewrite` field lists the refs allowed past that check, as
+`[{"ref": "refs/heads/...", "reason": "..."}]`: each an admitted ref with a
+non-empty reason. Use it for the final rebase under
+[Guarded rewrite exception](#guarded-rewrite-exception), and for a draft whose
+CI passed while its review has not finished, which is not frozen, with a reason
+that names the unfinished review. Never use it to put a fix into a frozen
+layer. The lookup needs `gh` signed in to the remote's
 host; a missing `gh` or a failed lookup refuses. A branch admitted as absent
 needs no lookup, and the hook rejects it if the remote already has it. The
 helper checks when it prepares and the hook checks again at the push, with the
