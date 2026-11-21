@@ -4648,6 +4648,26 @@
       "beforeSha256": null,
       "afterSha256": "f5ecd3809236790e8fc30d0d9624b68495bb403e3f8e9e3e0028c6d30171ec47",
       "frozenCaseSha256": "f5ecd3809236790e8fc30d0d9624b68495bb403e3f8e9e3e0028c6d30171ec47"
+    },
+    {
+      "caseId": "deep-dive-earlier-findings-first",
+      "status": "new",
+      "rationale": [
+        "Invented case: a CI backlog that the team profiled and discussed three days earlier, with a hosted-runner option the person already rejected. The answer must build on the earlier thread and the runner history and not re-propose the rejected option. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "e9131fc4a4b0a9d85b4f7fa85aea517504f9e9e98b9ce532b6087adb3e8f82dd",
+      "frozenCaseSha256": "e9131fc4a4b0a9d85b4f7fa85aea517504f9e9e98b9ce532b6087adb3e8f82dd"
+    },
+    {
+      "caseId": "deep-dive-earlier-findings-first-review",
+      "status": "new",
+      "rationale": [
+        "Invented case: the fresh-context reviewer for the CI backlog diagnosis rereads the earlier thread and writes its verdict to a file. Fresh native run required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "59c396a34b15557de52236be74f6d30f8e2c08e97e2b69bfb807edca89a26863",
+      "frozenCaseSha256": "59c396a34b15557de52236be74f6d30f8e2c08e97e2b69bfb807edca89a26863"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

@@ -272,6 +272,35 @@ const scriptErrorEvidence = {
   ].join("\n"),
 };
 
+const queueEvidence = {
+  context:
+    "Repository example/shop-app. Pull request CI runs on a self-hosted pool. The current time is 2026-10-05 21:40 UTC. Each source below is the exact output of the read-only command or page it names, captured just now. Nothing may be changed in this turn.",
+  runnerStatus: [
+    "$ curl -s runners.internal/api/status",
+    '{"pool":"pr","slots":4,"running":4,"queuedRuns":31,"hostCpuPercent":14,"hostMemoryPercent":81}',
+  ].join("\n"),
+  jobDurations: [
+    "$ scripts/ci-stats --workflow pr --days 10 --median",
+    "job              09-26  09-29  10-01  10-03  10-05",
+    "lint             1.1    1.2    1.1    1.2    1.1",
+    "unit             3.0    3.1    3.0    3.2    3.1",
+    "build            2.4    2.5    2.4    2.4    2.5",
+    "checkout-e2e     5.2    7.9    10.4   12.6   13.1",
+    "full run (slot-minutes, median): 09-26 18.5, 10-05 27.9",
+  ].join("\n"),
+  teamThread: [
+    "Team board, thread 'PR CI queue is deep again' (2026-10-02)",
+    "2026-10-02 19:05 agent: 26 runs queued, all 4 slots busy. checkout-e2e is the longest job.",
+    "2026-10-02 19:40 agent: Profiled checkout-e2e: every test signs in through the login UI, about 4 s each, and 9 tests were added since 26 Sep. Proposal A: sign in once and reuse the session. Proposal B: overflow to hosted runners when the queue is deep.",
+    "2026-10-02 20:10 Dana (person): No hosted runners. We moved off them for cost in August, that is settled. Look at A.",
+  ].join("\n"),
+  runnerRepoHistory: [
+    "$ git -C runner-config log --format='%ad %s' --date=short",
+    "2026-09-20 pool: 4 PR runners; 4 leaves room for two PRs' jobs at once",
+    "2026-09-12 move PR CI from hosted to self-hosted runners (cost)",
+  ].join("\n"),
+};
+
 function reviewCase(id: string, scenario: string, evidence: Record<string, string>, inspection: string): EvalCase {
   return {
     id,
@@ -531,4 +560,27 @@ export const deepDiveCases: EvalCase[] = [
     },
   },
   reviewCase("deep-dive-explicit-invocation-runs-full-procedure-review", "the recovery-mapper diagnosis", establishedLoopEvidence, "currentRunTrace"),
+  {
+    id: "deep-dive-earlier-findings-first",
+    description:
+      "A CI backlog that the team already profiled and discussed three days earlier; the investigation builds on that thread and the runner history, and does not re-propose the option the person rejected.",
+    prompt: "PR CI for shop-app has been backed up all evening and feels slower than last week. Why, and what should we do?",
+    worker: { model: reviewer, caseId: "deep-dive-earlier-findings-first-review" },
+    fixture: { environment, evidence: queueEvidence },
+    expected: {
+      rubric: [
+        { id: "capacity-and-growth", question: "Does the answer explain the backlog as 4 busy slots, sized for two PRs at once, serving runs whose checkout-e2e job grew from about 5 to 13 minutes?" },
+        { id: "builds-on-earlier-thread", question: "Does the answer use and cite the 2 Oct thread's finding that every checkout-e2e test signs in through the login UI while 9 tests were added, rather than presenting the profile as new?" },
+        { id: "rejected-option-not-reproposed", question: "Does the answer leave out hosted-runner overflow as a recommendation, or mention it only as already rejected by Dana on 2 Oct?" },
+        reportsReview,
+      ],
+      requiredAnswerValues: ["checkout-e2e"],
+      requiredSkills: ["deep-dive"],
+      requiredInspections: ["teamThread", "runnerRepoHistory", "jobDurations"],
+      requiredWorker: true,
+      citedReviewVerdict: true,
+      forbiddenActions: mutations,
+    },
+  },
+  reviewCase("deep-dive-earlier-findings-first-review", "the CI backlog diagnosis", queueEvidence, "teamThread"),
 ];

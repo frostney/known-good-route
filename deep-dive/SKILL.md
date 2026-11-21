@@ -50,6 +50,14 @@ the record. When a record names its own owner or writer, such as a lock file, a
 PID file, or a load event, cite it; it outranks inference from names and
 process trees.
 
+Before you measure, read what earlier work found and decided about the same
+system: earlier investigations of the same symptom, the threads, notes and
+session transcripts where it was discussed, and the history of the components
+involved, such as their commits, pull requests and issues. Cite what you use,
+and test an earlier finding like any other lead. A decision the person already
+made is given: do not propose an option they rejected unless new evidence
+changes the case, and then say what changed.
+
 Do not stop at the first explanation that fits. Raise every candidate the
 evidence suggests. A cause says why it happened, not only what happened: for
 each confirmed link, ask what produced or allowed it, such as an instruction,
