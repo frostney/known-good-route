@@ -92,6 +92,8 @@ attribution note `create-issue` closes it with is not content either.
 Issue forms and front matter are YAML, read with PyYAML's safe loader as
 GitHub reads them, in any YAML style. A form that does not load, a `body`
 that is not a list, or a field whose label is not text, is an operational
-error, never a partial check. When the YAML parser reads the form's own `name`
-before the error, that name keeps the form from blocking a check that names
-another template; a form whose name it cannot read blocks every named check.
+error, never a partial check, as is front matter that does not load once the
+parser has read its root as a mapping. When the YAML parser reads a broken template's own `name`
+before the error, that name keeps it from blocking a check that names another
+template; a name it cannot read, or one a `<<` merge may supply, blocks every
+named check.

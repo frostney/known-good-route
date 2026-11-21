@@ -873,10 +873,13 @@ class RendererParityTests(unittest.TestCase):
             CHECK_TEMPLATE.parse_template("t.md", "---\n? name\n: Bug\nabout: [open\n---\n## A\n", REAL_RENDER)
 
     def test_broken_front_matter_opening_with_an_anchor_or_tag_is_an_error(self):
-        for opening in ("&root\nname: Bug", "!!map\nname: Bug", "&root name: Bug"):
+        for opening in ("&root\nname: Bug", "!!map\nname: Bug", "&root name: Bug", "!<tag:yaml.org,2002:map>\nname: Bug", "&root # metadata\nname: Bug"):
             with self.subTest(opening=opening), self.assertRaises(CHECK_TEMPLATE.CheckError) as raised:
                 CHECK_TEMPLATE.parse_template("t.md", f"---\n{opening}\nabout: [open\n---\n## A\n", REAL_RENDER)
             self.assertEqual(raised.exception.name, "Bug")
+
+    def test_broken_front_matter_that_may_merge_its_name_blocks_every_named_check(self):
+        self.assertTrue(CHECK_TEMPLATE.may_be_named("t.md", "---\nbase: &b {name: Bug}\n<<: *b\nabout: *missing\n---\n## A\n", "Bug"))
 
     def test_an_image_between_two_rules_stays_markdown(self):
         text = "---\n![x](y) about: [open\n---\n## A\n"
@@ -1087,6 +1090,12 @@ class TemplateParsingTests(unittest.TestCase):
             "name: Bug\nname: Other\nbody: [open\n": None,
             'name: Other\nname: "Bug\n': None,
             "name: Other\nname: [Bug\n": None,
+            "&key name: Legacy\n*key : Bug\nbody: [open\n": None,
+            "n: &k name\n*k : Bug\nbody: [open\n": "Bug",
+            "base: &b {name: Bug}\n<<: *b\nbody: *missing\n": None,
+            "<<: {name: Other}\nname: Bug\nbody: [open\n": "Bug",
+            "name: B\x07ug\n": None,
+            "body: [*missing]\nname: Legacy\n": "Legacy",
             "name: [Bug]\nbody: [open\n": None,
             "body: [open\nname: Bug\n": None,
         }

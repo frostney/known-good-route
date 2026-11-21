@@ -753,14 +753,15 @@ def jsonable(value: Any) -> Any:
 
 
 def read_yaml(text: str) -> dict[str, Any]:
-    """PyYAML's safe reading of text: {"value": plain data}, or {"error": why, "name": its root_name()}.
+    """PyYAML's safe reading of text: {"value": plain data}, or {"error": why, "mapping": ..., "name": ...}.
 
-    Plain JSON either way, so the uv fallback in load_yaml() returns the same.
+    The error's mapping and name are root_reading()'s. Plain JSON either way,
+    so the uv fallback in load_yaml() returns the same.
     """
     try:
         loader = yaml.SafeLoader(text)  # A character YAML does not allow raises here.
     except yaml.YAMLError as error:
-        return {"error": str(error), "name": root_name(text)}
+        return {"error": str(error), **root_reading(text)}
     try:
         node = loader.get_single_node()
         if node is not None:
@@ -768,24 +769,29 @@ def read_yaml(text: str) -> dict[str, Any]:
         return {"value": jsonable(None if node is None else loader.construct_document(node))}
     # An escape past the last code point raises ValueError or OverflowError; deep nesting, RecursionError.
     except (yaml.YAMLError, ValueError, OverflowError, RecursionError) as error:
-        return {"error": str(error), "name": root_name(text)}
+        return {"error": str(error), **root_reading(text)}
     finally:
         loader.dispose()
 
 
-def root_name(text: str) -> str | None:
-    """The `name` of YAML that does not load, read from PyYAML's parser events up to where it stops.
+STR = "tag:yaml.org,2002:str"
 
-    The parser reads quotes, comments, flow style and explicit keys as YAML
-    does, so only the root mapping's own `name` entry counts, once the parser
-    reads on past it: a value the error follows may be cut short, such as an
-    unclosed quote that ran on. "" when that mapping ends without a name; None
-    when the name is not text, is given twice or is not read before the error.
+
+def root_reading(text: str) -> dict[str, Any]:
+    """What PyYAML's parser reads of YAML that does not load, up to where it stops.
+
+    "mapping": whether the root is a mapping. "name": its own `name` entry,
+    with quotes, comments, flow style, explicit keys and aliases read as YAML
+    reads them. A name counts once the parser reads on past it, since a value
+    the error follows may be cut short, such as an unclosed quote that ran on.
+    "" when the mapping ends without a name; None when the name is not text,
+    is given twice, may come from a `<<` merge, or is not read before the error.
     """
+    cut: int | None = None
     try:
         yaml.SafeLoader(text).dispose()
     except yaml.reader.ReaderError as error:
-        text = text[: error.position]  # The entries before a character YAML does not allow still read.
+        cut = error.position  # The entries before a character YAML does not allow still read.
     resolver = yaml.resolver.Resolver()
 
     def tag(event: Any) -> str:
@@ -793,17 +799,27 @@ def root_name(text: str) -> str | None:
             return resolver.resolve(yaml.ScalarNode, event.value, event.implicit)
         return event.tag
 
+    texts: dict[str, str] = {}  # Anchored text, which an alias repeats.
     names: list[str | None] = []
-    depth, entries, naming, read, twice = 0, 0, False, [], False
+    mapping, depth, entries, naming, read, twice, merged = False, 0, 0, False, [], False, False
     try:
-        for event in yaml.parse(text, Loader=yaml.SafeLoader):
-            names += read  # The parser read on past the name.
+        for event in yaml.parse(text[:cut], Loader=yaml.SafeLoader):
+            if cut is None or event.start_mark.index < cut:
+                names += read  # The parser read on past the name, before any cut.
             read = []
             if isinstance(event, (yaml.StreamStartEvent, yaml.DocumentStartEvent)):
                 continue
             if depth == 0 and not isinstance(event, yaml.MappingStartEvent):
-                return ""  # No root mapping, so no name.
+                break  # No root mapping, so no name.
+            value: str | None = None
+            if isinstance(event, yaml.ScalarEvent) and tag(event) == STR:
+                value = event.value
+                if event.anchor:
+                    texts[event.anchor] = value
+            elif isinstance(event, yaml.AliasEvent):
+                value = texts.get(event.anchor)
             if isinstance(event, (yaml.MappingStartEvent, yaml.SequenceStartEvent)):
+                mapping = mapping or depth == 0
                 if depth == 1 and entries % 2 == 0:
                     naming = False  # A key that is a collection is not `name`.
                 elif depth == 1 and naming:
@@ -813,23 +829,28 @@ def root_name(text: str) -> str | None:
                 continue
             if isinstance(event, (yaml.MappingEndEvent, yaml.SequenceEndEvent)):
                 depth -= 1
+                if depth == 0 and cut is not None and event.start_mark.index >= cut:
+                    break  # The cut, not the mapping, ends here.
                 if depth == 0:
-                    return None if twice else (names or [""])[0]
+                    complete = not (twice or (merged and not names))
+                    return {"mapping": mapping, "name": (names or [""])[0] if complete else None}
                 entries += depth == 1
                 continue
             if depth == 1:  # A scalar or alias entry of the root mapping.
-                scalar = isinstance(event, yaml.ScalarEvent)
                 if entries % 2 == 0:
-                    naming = scalar and tag(event) == "tag:yaml.org,2002:str" and event.value == "name"
+                    naming = value == "name"
                     twice = twice or (naming and bool(names))  # A second name, whatever its value, leaves it open.
+                    merged = merged or (isinstance(event, yaml.ScalarEvent) and tag(event) == "tag:yaml.org,2002:merge")
                 elif naming:
-                    kind = tag(event) if scalar else ""
-                    read = [event.value if kind == "tag:yaml.org,2002:str" else "" if kind == "tag:yaml.org,2002:null" else None]
+                    null = isinstance(event, yaml.ScalarEvent) and tag(event) == "tag:yaml.org,2002:null"
+                    read = ["" if null else value]
                     naming = False
                 entries += 1
     except (yaml.YAMLError, ValueError, OverflowError, RecursionError):
         pass
-    return None if twice or not names else names[0]
+    if not mapping:
+        return {"mapping": False, "name": ""}
+    return {"mapping": True, "name": None if twice or not names else names[0]}  # An explicit name wins over a merge.
 
 
 def load_yaml(text: str) -> Any:
@@ -839,16 +860,17 @@ def load_yaml(text: str) -> Any:
     else:
         result = json.loads(isolated(LOAD, text, PYYAML, "the YAML reader", str(Path(__file__).resolve())))
     if "error" in result:
-        raise BrokenYaml(f"not valid YAML: {result['error']}", result["name"])
+        raise BrokenYaml(f"not valid YAML: {result['error']}", result["name"], result["mapping"])
     return result["value"]
 
 
 class BrokenYaml(ValueError):
-    """YAML that does not load, with the name its root mapping still declares: see root_name()."""
+    """YAML that does not load, with what its parser still read: see root_reading()."""
 
-    def __init__(self, message: str, name: str | None) -> None:
+    def __init__(self, message: str, name: str | None, mapping: bool) -> None:
         super().__init__(message)
         self.name = name
+        self.mapping = mapping
 
 
 def name_in(data: Any) -> str | None:
@@ -875,15 +897,12 @@ def front_matter(text: str) -> tuple[dict[str, Any], str]:
             try:
                 data = load_yaml(block)
             except BrokenYaml as error:
-                # Markdown between two rules is often not YAML; a block that opens with a
-                # plain key at the margin, such as `name:`, says it was meant to be.
-                opening = next((line for line in block.split("\n") if line.strip() and not line.lstrip().startswith("#")), "").lstrip()
-                # An anchor or tag, such as `&root` or `!!map`, opens a YAML node, alone or before
-                # its key on that line; `![` is an image.
-                properties = re.match(r"(?:[&!][^\s\[\]{},]*(?:[ \t]+|$))+", opening)
-                opening = opening[properties.end() :] if properties else opening
-                if (properties and not opening) or opening.startswith("{") or re.match(r"\?(?:[ \t]|$)", opening) or re.match(r"""(?:\w[\w .-]*|"[^"\n]*"|'[^'\n]*')[ \t]*:(?:[ \t]|$)""", opening):
-                    raise BrokenYaml(f"cannot read the front matter: {error}", error.name) from error
+                # Markdown between two rules is often not YAML; a block whose root
+                # PyYAML reads as a mapping, such as one opening with `name:`, was meant
+                # to be. `![` opens a Markdown image: no YAML tag holds a `[`.
+                opening = next((line for line in block.split("\n") if line.strip() and not line.lstrip().startswith("#")), "")
+                if error.mapping and not opening.lstrip().startswith("!["):
+                    raise BrokenYaml(f"cannot read the front matter: {error}", error.name, True) from error
                 return {}, text
             if isinstance(data, dict):
                 return data, "\n".join(lines[index + 1 :])
