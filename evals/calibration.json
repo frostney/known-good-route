@@ -473,6 +473,16 @@
       ]
     },
     {
+      "caseId": "address-pr-feedback-local-review-round-pushes-once",
+      "status": "new",
+      "rationale": [
+        "Agents pushed each review round's fixes before running the next round, although that round reviewed a local commit's diff from its base and needed no push. Each push started CI that the next push cancelled under the cancel-in-progress group, so no intermediate head ever got CI back. Here round 1's finding is fixed and committed, round 2 runs on that local commit and is clean, and the fix is pushed once, after it: the required action sequence puts the commit before a review and that review before the push, and git.push is capped at one. A push before round 2 fails the sequence, and a second push after it fails the cap (evals/local-review-round.test.ts). Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "dad3e34e0b901f7da69aa1eb6127491bb0f096a3f21985fca4ad12841f5c851e",
+      "frozenCaseSha256": "dad3e34e0b901f7da69aa1eb6127491bb0f096a3f21985fca4ad12841f5c851e"
+    },
+    {
       "caseId": "address-pr-feedback-terminal-check-does-not-hide-finding",
       "status": "retained",
       "rationale": [
