@@ -343,6 +343,9 @@ with open(os.environ["FAKE_GH_STATE"] + ".log", "a") as log:
     log.write(json.dumps(args) + "\n")
 path = args[3]
 if path != "graphql":
+    if path in state.get("restAnswers", {}):
+        print(json.dumps(state["restAnswers"][path]))
+        sys.exit(0)
     sys.stderr.write(state.get("rest", "gh: API rate limit exceeded for user ID 1. (HTTP 403)") + "\n")
     sys.exit(1)
 fields = dict(arg.split("=", 1) for arg in args[4:] if arg != "-f")
@@ -350,28 +353,41 @@ if state.get("graphql"):
     print(json.dumps({"errors": [{"type": "RATE_LIMITED", "message": state["graphql"]}]}))
     sys.exit(1)
 query = fields["query"]
-if "checkSuites" in query:
-    suites = state["suites"].get(fields["oid"], [])
+if query.count("{") != query.count("}"):
+    print(json.dumps({"errors": [{"message": "Parse error"}]}))
+    sys.exit(1)
+
+
+def page(items, broken=None):
+    """A connection page as GitHub pages it: at most `first`, after the cursor."""
+    size = int(query.split("first:", 1)[1].split(",", 1)[0])
     start = int(fields.get("after", "0"))
-    page = suites[start:start + 100]
-    more = start + 100 < len(suites)
-    answer = {"object": {"checkSuites": {"pageInfo": {"hasNextPage": more, "endCursor": str(start + 100)},
-                                         "nodes": page}}}
+    more = start + size < len(items)
+    info = {"hasNextPage": more, "endCursor": str(start + size) if more else None}
+    info.update(broken or {})
+    return {"pageInfo": info, "nodes": items[start:start + size]}
+
+
+if "checkSuites" in query:
+    answer = {"object": {"checkSuites": page(state["suites"].get(fields["oid"], []), state.get("suitePageInfo"))}}
 elif "pullRequests" in query:
-    nodes = [p for p in state["pulls"] if p["headRefName"] == fields["branch"]]
-    answer = {"pullRequests": {"totalCount": len(nodes), "nodes": nodes}}
+    answer = {"pullRequests": page([p for p in state["pulls"] if p["headRefName"] == fields["branch"]])}
 else:
     answer = {"nameWithOwner": state["repository"]}
 print(json.dumps({"data": {"repository": answer}}))
 '''
 
 
-def suite(status="COMPLETED", conclusion="SUCCESS", workflow=1, run_id=None, event="pull_request"):
-    """An Actions check suite as GraphQL gives it; workflow=None is another app's suite."""
-    return {"status": status, "conclusion": conclusion if status == "COMPLETED" else None,
+def suite(status="COMPLETED", conclusion="SUCCESS", workflow=1, run_id=None, event="pull_request", app="github-actions"):
+    """A check suite as GraphQL gives it; with workflow=None, one without a workflow run."""
+    return {"status": status, "conclusion": conclusion if status == "COMPLETED" else None, "app": {"slug": app},
             "workflowRun": None if workflow is None else {
                 "databaseId": next(RUN_IDS) if run_id is None else run_id, "event": event,
                 "workflow": {"databaseId": workflow, "name": "CI"}}}
+
+
+def other_app(status="QUEUED"):
+    return suite(status, conclusion=None, workflow=None, app="vercel")
 
 
 def graph_pull(number, branch, sha, draft=True, repository="example-org/app"):
@@ -393,13 +409,14 @@ class SpentRestTests(unittest.TestCase):
                                              "FAKE_GH_STATE": str(self.state)})
         patch.start()
         self.addCleanup(patch.stop)
-        guard.SUITE_RUNS.clear()
         self.admission = guard.validate_admission({
             "directory": "/fixture", "remote": "origin", "url": "https://github.com/example-org/app.git",
             "refs": [{"ref": "refs/heads/stack/one", "source": "a" * 40, "expected": "b" * 40},
                      {"ref": "refs/heads/stack/two", "source": "c" * 40, "expected": "d" * 40}]})
+        self.one = guard.validate_admission({**self.admission, "refs": self.admission["refs"][:1]})
 
     def answer(self, pulls=(), suites=None, repository="example-org/app", **state):
+        Path(str(self.state) + ".log").unlink(missing_ok=True)
         self.state.write_text(json.dumps({"pulls": list(pulls), "suites": suites or {}, "repository": repository,
                                           **state}))
 
@@ -407,11 +424,13 @@ class SpentRestTests(unittest.TestCase):
         log = Path(str(self.state) + ".log")
         return [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
 
+    def graphql_variables(self):
+        return [dict(a.split("=", 1) for a in call[4:] if a != "-f") for call in self.calls() if call[3] == "graphql"]
+
     def test_a_frozen_layer_is_still_refused_and_other_apps_suites_are_ignored(self):
         # Another app's suite stays queued with no workflow run; REST lists no run for it.
         self.answer([graph_pull(12, "stack/one", "b" * 40), graph_pull(13, "stack/two", "d" * 40)],
-                    {"b" * 40: [suite(), suite("QUEUED", workflow=None)],
-                     "d" * 40: [suite(conclusion="FAILURE")]})
+                    {"b" * 40: [suite(), other_app()], "d" * 40: [suite(conclusion="FAILURE")]})
         with self.assertRaisesRegex(guard.GuardError, r"1 open pull request\(s\): #12 \(stack/one: draft, CI passed"):
             guard.check_rewrites(self.admission)
         calls = self.calls()
@@ -428,21 +447,76 @@ class SpentRestTests(unittest.TestCase):
                          [(12, 2, False, ["CI run 7 (in_progress)"])])
 
     def test_a_renamed_repository_and_long_suite_lists(self):
-        admission = guard.validate_admission({**self.admission, "refs": self.admission["refs"][:1]})
         self.answer([graph_pull(12, "stack/one", "b" * 40, repository="example-renamed/app")],
-                    {"b" * 40: [suite() for _ in range(150)] + [suite("QUEUED", workflow=None)] * 30},
+                    {"b" * 40: [suite() for _ in range(150)] + [other_app()] * 30},
                     repository="example-renamed/app")
         with self.assertRaisesRegex(guard.GuardError, "#12 \\(stack/one: draft, CI passed on its head, 150 workflow"):
-            guard.check_rewrites(admission)
-        variables = [dict(a.split("=", 1) for a in call[4:] if a != "-f") for call in self.calls() if call[3] == "graphql"]
+            guard.check_rewrites(self.one)
+        variables = self.graphql_variables()
         self.assertEqual(variables[1]["owner"], "example-renamed")
         self.assertEqual([v.get("after") for v in variables if "checkSuites" in v["query"]], [None, "100"])
+
+    def test_an_actions_suite_without_its_run_or_a_broken_page_refuses(self):
+        # An Actions suite GitHub gives without its run may be a passed run: it is not taken for another app's.
+        for suites, state, error in (([suite(), suite(workflow=None)], {}, "GitHub Actions check suite without its run"),
+                                     ([suite(), {**other_app(), "app": None}], {}, "without its app"),
+                                     ([suite(), None], {}, "incomplete check suites"),
+                                     ([suite()], {"suitePageInfo": {"hasNextPage": None}}, "no check suites"),
+                                     ([suite()], {"suitePageInfo": {"hasNextPage": True, "endCursor": None}},
+                                      "no check suites")):
+            with self.subTest(error=error, state=state):
+                self.answer([graph_pull(12, "stack/one", "b" * 40)], {"b" * 40: suites}, **state)
+                with self.assertRaisesRegex(guard.GuardError, error):
+                    guard.check_rewrites(self.one)
+
+    def test_a_run_list_comes_whole_from_one_api(self):
+        # REST answers page one, then runs out: GraphQL gives the whole list, and
+        # nothing REST read before is kept beside it, duplicate IDs included.
+        runs = many_runs(100)
+        page_one = "repos/example-org/app/actions/runs?per_page=100&page=1&head_sha=" + "b" * 40
+        rest = {page_one: {"total_count": 101, "workflow_runs": runs}}
+        suites = [suite(run_id=r["id"]) for r in runs] + [suite(run_id=99999)]
+        self.answer([graph_pull(12, "stack/one", "b" * 40)], {"b" * 40: suites}, restAnswers=rest)
+        with self.assertRaisesRegex(guard.GuardError, "draft, CI passed on its head, 101 workflow runs"):
+            guard.check_rewrites(self.one)
+        self.assertIn(page_one, [call[3] for call in self.calls()])
+        self.answer([graph_pull(12, "stack/one", "b" * 40)],
+                    {"b" * 40: [suite(run_id=r["id"]) for r in runs] + [suite("QUEUED", run_id=99999)]},
+                    restAnswers=rest)
+        self.assertFalse(guard.check_rewrites(self.one)[0]["ciPassed"])
+
+    def test_fork_pull_requests_do_not_count_toward_the_cutoff(self):
+        forks = [graph_pull(n, "patch-1", "e" * 40, draft=False, repository=f"fork-{n}/app") for n in range(100, 250)]
+        admission = guard.validate_admission({**self.admission, "refs": [
+            {"ref": "refs/heads/patch-1", "source": "a" * 40, "expected": "b" * 40}]})
+        self.answer(forks + [graph_pull(12, "patch-1", "b" * 40)], {"b" * 40: [suite(conclusion="FAILURE")]})
+        self.assertEqual([o["pullRequest"] for o in guard.check_rewrites(admission)], [12])
+        self.answer([graph_pull(n, "patch-1", "b" * 40) for n in range(1, 101)])
+        with self.assertRaisesRegex(guard.GuardError, "more than one page"):
+            guard.check_rewrites(admission)
+
+    def test_other_apps_suites_do_not_count_toward_the_run_limit(self):
+        self.answer([graph_pull(12, "stack/one", "b" * 40)],
+                    {"b" * 40: [other_app() for _ in range(1100)] + [suite(conclusion="FAILURE")]})
+        self.assertEqual([(o["workflowRuns"], o["ciPassed"]) for o in guard.check_rewrites(self.one)], [(1, False)])
+        # More runs than the guard reads, one of them still going: CI has not passed.
+        self.answer([graph_pull(12, "stack/one", "b" * 40)],
+                    {"b" * 40: [suite("QUEUED")] + [suite() for _ in range(1200)]})
+        observed = guard.check_rewrites(self.one)[0]
+        self.assertEqual((observed["ciPassed"], observed["runsListed"]), (False, False))
+        self.answer([graph_pull(12, "stack/one", "b" * 40)], {"b" * 40: [suite() for _ in range(1200)]})
+        with self.assertRaisesRegex(guard.GuardError, "more than 10 pages"):
+            guard.check_rewrites(self.one)
 
     def test_spent_graphql_or_another_rest_failure_still_refuses(self):
         self.answer([graph_pull(12, "stack/one", "b" * 40)], graphql="API rate limit exceeded")
         with self.assertRaisesRegex(guard.GuardError, "REST refused it .*rate limit.*GraphQL did too: API rate limit"):
             guard.check_rewrites(self.admission)
-        self.state.with_name("state.json.log").unlink()
+        for message in ("gh: You have exceeded a secondary rate limit. (HTTP 403)", "gh: HTTP 429"):
+            with self.subTest(message=message):
+                self.answer(rest=message, repository=None)
+                with self.assertRaisesRegex(guard.GuardError, "no repository"):
+                    guard.check_rewrites(self.admission)
         self.answer([graph_pull(12, "stack/one", "b" * 40)], rest="gh: Bad Gateway (HTTP 502)")
         with self.assertRaisesRegex(guard.GuardError, "HTTP 502"):
             guard.check_rewrites(self.admission)
@@ -452,8 +526,36 @@ class SpentRestTests(unittest.TestCase):
         self.answer(repository=None)
         with self.assertRaisesRegex(guard.GuardError, "no repository"):
             guard.check_rewrites(self.admission)
-        with self.assertRaisesRegex(guard.GuardError, "rate limit"):
-            guard.github_api("github.com", "repos/example-org/app/issues")
+        for path in ("repos/example-org/app/issues", "repos/example-org/app/pulls?state=open&per_page=5",
+                     "repos/example-org/app/actions/runs?per_page=100"):
+            with self.subTest(path=path), self.assertRaisesRegex(guard.GuardError, "rate limit"):
+                guard.github_api("github.com", path)
+
+
+@unittest.skipUnless(os.environ.get("KGR_LIVE_GITHUB"), "set KGR_LIVE_GITHUB=1 to ask GitHub itself")
+class LiveGraphQLTests(unittest.TestCase):
+    """GitHub accepts the fallback's queries, and they give the decision REST gives.
+    Reads a public repository with a signed-in gh; set KGR_LIVE_REPOSITORY to choose it."""
+
+    def test_graphql_answers_as_rest_does(self):
+        budget = json.loads(subprocess.run(["gh", "api", "rate_limit"], capture_output=True, check=True).stdout)
+        if budget["resources"]["core"]["remaining"] < 50:
+            self.skipTest("the REST budget is spent, so there is no REST answer to compare")
+        repository = os.environ.get("KGR_LIVE_REPOSITORY", "cli/cli")
+        graphql = lambda host, path: guard.graphql_lookup(host, path, "live check")
+        self.assertEqual(graphql("github.com", "repos/" + repository), guard.github_api("github.com", "repos/" + repository))
+        pulls = guard.github_api("github.com", f"repos/{repository}/pulls?state=open&per_page=5")
+        self.assertTrue(pulls, "the repository needs an open pull request")
+        pull = pulls[0]
+        head = urllib.parse.quote(pull["head"]["repo"]["owner"]["login"] + ":" + pull["head"]["ref"], safe="")
+        path = f"repos/{repository}/pulls?state=open&per_page=100&head={head}"
+        shape = lambda found: [(p["number"], p["draft"], p["head"]["ref"], p["head"]["sha"],
+                                (p["head"]["repo"] or {}).get("full_name")) for p in found]
+        self.assertEqual(shape(graphql("github.com", path)), shape(guard.github_api("github.com", path)))
+        rest = guard.head_runs(guard.github_api, "github.com", repository, pull["head"]["sha"], pull["number"])
+        fallback = guard.head_runs(graphql, "github.com", repository, pull["head"]["sha"], pull["number"])
+        self.assertEqual(sorted(r["id"] for r in fallback[1]), sorted(r["id"] for r in rest[1]))
+        self.assertEqual(guard.ci_state(*fallback, pull["number"]), guard.ci_state(*rest, pull["number"]))
 
 
 class StandaloneTests(unittest.TestCase):

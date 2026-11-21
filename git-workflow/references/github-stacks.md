@@ -249,11 +249,13 @@ refs allowed past that check, as `[{"ref": "refs/heads/...", "reason": "..."}]`:
 each an admitted ref with a non-empty reason. Use it only for the final rebase
 under [Guarded rewrite exception](#guarded-rewrite-exception), never to put a
 fix into a reviewed layer. The lookup needs `gh` signed in to the remote's
-host; a missing `gh` or a failed lookup refuses. It reads through REST, and
-when GitHub refuses a REST read for the account's budget, it asks GraphQL,
-which has a budget of its own, for the same answer: the repository, its open
-PRs on the branch, and the GitHub Actions runs from the head's check suites.
-When GraphQL refuses too, the lookup has failed. A branch admitted as absent
+host; a missing `gh` or a failed lookup refuses. It reads through REST. When GitHub
+refuses a REST read for a rate limit, the account's hourly REST budget or a
+secondary limit, it asks GraphQL, which has a primary budget of its own, for
+the same answer: the repository, its open PRs from the same owner on the
+branch, and the GitHub Actions runs from the head's check suites. Other apps'
+check suites do not count, and an Actions suite without its run refuses. When
+GraphQL refuses too, the lookup has failed. A branch admitted as absent
 needs no lookup, and the hook rejects it if the remote already has it. The
 helper checks when it prepares and the hook checks again at the push, with the
 same rules, so a PR marked ready in between is still refused.
