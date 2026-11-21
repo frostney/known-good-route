@@ -335,6 +335,127 @@ class RewriteTests(unittest.TestCase):
                 guard.github_repository(url)
 
 
+FAKE_GH = r'''#!/usr/bin/env python3
+import json, os, sys
+state = json.load(open(os.environ["FAKE_GH_STATE"]))
+args = sys.argv[1:]
+with open(os.environ["FAKE_GH_STATE"] + ".log", "a") as log:
+    log.write(json.dumps(args) + "\n")
+path = args[3]
+if path != "graphql":
+    sys.stderr.write(state.get("rest", "gh: API rate limit exceeded for user ID 1. (HTTP 403)") + "\n")
+    sys.exit(1)
+fields = dict(arg.split("=", 1) for arg in args[4:] if arg != "-f")
+if state.get("graphql"):
+    print(json.dumps({"errors": [{"type": "RATE_LIMITED", "message": state["graphql"]}]}))
+    sys.exit(1)
+query = fields["query"]
+if "checkSuites" in query:
+    suites = state["suites"].get(fields["oid"], [])
+    start = int(fields.get("after", "0"))
+    page = suites[start:start + 100]
+    more = start + 100 < len(suites)
+    answer = {"object": {"checkSuites": {"pageInfo": {"hasNextPage": more, "endCursor": str(start + 100)},
+                                         "nodes": page}}}
+elif "pullRequests" in query:
+    nodes = [p for p in state["pulls"] if p["headRefName"] == fields["branch"]]
+    answer = {"pullRequests": {"totalCount": len(nodes), "nodes": nodes}}
+else:
+    answer = {"nameWithOwner": state["repository"]}
+print(json.dumps({"data": {"repository": answer}}))
+'''
+
+
+def suite(status="COMPLETED", conclusion="SUCCESS", workflow=1, run_id=None, event="pull_request"):
+    """An Actions check suite as GraphQL gives it; workflow=None is another app's suite."""
+    return {"status": status, "conclusion": conclusion if status == "COMPLETED" else None,
+            "workflowRun": None if workflow is None else {
+                "databaseId": next(RUN_IDS) if run_id is None else run_id, "event": event,
+                "workflow": {"databaseId": workflow, "name": "CI"}}}
+
+
+def graph_pull(number, branch, sha, draft=True, repository="example-org/app"):
+    return {"number": number, "isDraft": draft, "headRefName": branch, "headRefOid": sha,
+            "headRepository": {"nameWithOwner": repository}}
+
+
+class SpentRestTests(unittest.TestCase):
+    """While GitHub refuses REST for its budget, the default lookup answers through GraphQL."""
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="kgr-fake-gh-")
+        self.addCleanup(self.temporary.cleanup)
+        root = Path(self.temporary.name)
+        (root / "gh").write_text(FAKE_GH)
+        (root / "gh").chmod(0o755)
+        self.state = root / "state.json"
+        patch = mock.patch.dict(os.environ, {"PATH": f"{root}{os.pathsep}{os.environ['PATH']}",
+                                             "FAKE_GH_STATE": str(self.state)})
+        patch.start()
+        self.addCleanup(patch.stop)
+        guard.SUITE_RUNS.clear()
+        self.admission = guard.validate_admission({
+            "directory": "/fixture", "remote": "origin", "url": "https://github.com/example-org/app.git",
+            "refs": [{"ref": "refs/heads/stack/one", "source": "a" * 40, "expected": "b" * 40},
+                     {"ref": "refs/heads/stack/two", "source": "c" * 40, "expected": "d" * 40}]})
+
+    def answer(self, pulls=(), suites=None, repository="example-org/app", **state):
+        self.state.write_text(json.dumps({"pulls": list(pulls), "suites": suites or {}, "repository": repository,
+                                          **state}))
+
+    def calls(self):
+        log = Path(str(self.state) + ".log")
+        return [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
+
+    def test_a_frozen_layer_is_still_refused_and_other_apps_suites_are_ignored(self):
+        # Another app's suite stays queued with no workflow run; REST lists no run for it.
+        self.answer([graph_pull(12, "stack/one", "b" * 40), graph_pull(13, "stack/two", "d" * 40)],
+                    {"b" * 40: [suite(), suite("QUEUED", workflow=None)],
+                     "d" * 40: [suite(conclusion="FAILURE")]})
+        with self.assertRaisesRegex(guard.GuardError, r"1 open pull request\(s\): #12 \(stack/one: draft, CI passed"):
+            guard.check_rewrites(self.admission)
+        calls = self.calls()
+        self.assertEqual(calls[0][3], "repos/example-org/app")
+        self.assertTrue(all(call[:3] == ["api", "--hostname", "github.com"] for call in calls))
+        self.assertGreater(sum(call[3] == "graphql" for call in calls), 3)
+
+    def test_a_draft_whose_ci_has_not_passed_may_move_and_forks_are_ignored(self):
+        self.answer([graph_pull(12, "stack/one", "b" * 40), graph_pull(14, "stack/one", "e" * 40, draft=False,
+                                                                     repository="example-fork/app")],
+                    {"b" * 40: [suite(), suite("IN_PROGRESS", workflow=2, run_id=7)]})
+        observed = guard.check_rewrites(self.admission)
+        self.assertEqual([(o["pullRequest"], o["workflowRuns"], o["ciPassed"], o["runsGoing"]) for o in observed],
+                         [(12, 2, False, ["CI run 7 (in_progress)"])])
+
+    def test_a_renamed_repository_and_long_suite_lists(self):
+        admission = guard.validate_admission({**self.admission, "refs": self.admission["refs"][:1]})
+        self.answer([graph_pull(12, "stack/one", "b" * 40, repository="example-renamed/app")],
+                    {"b" * 40: [suite() for _ in range(150)] + [suite("QUEUED", workflow=None)] * 30},
+                    repository="example-renamed/app")
+        with self.assertRaisesRegex(guard.GuardError, "#12 \\(stack/one: draft, CI passed on its head, 150 workflow"):
+            guard.check_rewrites(admission)
+        variables = [dict(a.split("=", 1) for a in call[4:] if a != "-f") for call in self.calls() if call[3] == "graphql"]
+        self.assertEqual(variables[1]["owner"], "example-renamed")
+        self.assertEqual([v.get("after") for v in variables if "checkSuites" in v["query"]], [None, "100"])
+
+    def test_spent_graphql_or_another_rest_failure_still_refuses(self):
+        self.answer([graph_pull(12, "stack/one", "b" * 40)], graphql="API rate limit exceeded")
+        with self.assertRaisesRegex(guard.GuardError, "REST refused it .*rate limit.*GraphQL did too: API rate limit"):
+            guard.check_rewrites(self.admission)
+        self.state.with_name("state.json.log").unlink()
+        self.answer([graph_pull(12, "stack/one", "b" * 40)], rest="gh: Bad Gateway (HTTP 502)")
+        with self.assertRaisesRegex(guard.GuardError, "HTTP 502"):
+            guard.check_rewrites(self.admission)
+        self.assertEqual([call[3] for call in self.calls()], ["repos/example-org/app"])
+
+    def test_a_missing_repository_or_an_unknown_lookup_refuses(self):
+        self.answer(repository=None)
+        with self.assertRaisesRegex(guard.GuardError, "no repository"):
+            guard.check_rewrites(self.admission)
+        with self.assertRaisesRegex(guard.GuardError, "rate limit"):
+            guard.github_api("github.com", "repos/example-org/app/issues")
+
+
 class StandaloneTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="kgr-portable-guard-")

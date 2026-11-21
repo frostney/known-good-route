@@ -180,21 +180,146 @@ def github_repository(url):
     return ("github.com" if match.group(1) == "ssh.github.com" else match.group(1)), match.group(2)
 
 
-def github_api(host, path):
+def gh_api(host, path, *fields):
     try:
-        result = subprocess.run(["gh", "api", "--hostname", host, path], stdin=subprocess.DEVNULL,
-                                capture_output=True, timeout=60)
+        return subprocess.run(["gh", "api", "--hostname", host, path, *fields], stdin=subprocess.DEVNULL,
+                              capture_output=True, timeout=60)
     except FileNotFoundError:
         raise GuardError("gh is not installed; it checks the pull requests whose head would change") from None
     except (OSError, subprocess.TimeoutExpired) as error:
         raise GuardError(f"GitHub lookup failed: {path}: {error}") from None
+
+
+def last_line(result):
+    lines = result.stderr.decode("utf-8", "replace").strip().splitlines()
+    return lines[-1] if lines else f"gh exited {result.returncode}"
+
+
+def rate_limited(result):
+    """Whether GitHub refused a REST call for its budget: the hourly one or a secondary limit."""
+    text = result.stderr.decode("utf-8", "replace").lower()
+    return "rate limit" in text or "http 429" in text
+
+
+def github_api(host, path):
+    """A REST lookup; once GitHub refuses it for its budget, the same lookup through GraphQL,
+    which has a budget of its own, answered in the shape REST would give."""
+    result = gh_api(host, path)
     if result.returncode:
-        lines = result.stderr.decode("utf-8", "replace").strip().splitlines()
-        raise GuardError(f"GitHub lookup failed: {path}: " + (lines[-1] if lines else f"gh exited {result.returncode}"))
+        if rate_limited(result):
+            return graphql_lookup(host, path, last_line(result))
+        raise GuardError(f"GitHub lookup failed: {path}: " + last_line(result))
     try:
         return json.loads(result.stdout)
     except ValueError:
         raise GuardError(f"GitHub lookup returned invalid JSON: {path}") from None
+
+
+REPOSITORY_QUERY = "query($owner:String!,$name:String!){repository(owner:$owner,name:$name){nameWithOwner}}"
+PULLS_QUERY = """query($owner:String!,$name:String!,$branch:String!){repository(owner:$owner,name:$name){
+pullRequests(states:OPEN,headRefName:$branch,first:100){totalCount nodes{number isDraft headRefName headRefOid
+headRepository{nameWithOwner}}}}}"""
+SUITES_QUERY = """query($owner:String!,$name:String!,$oid:GitObjectID!,$after:String){
+repository(owner:$owner,name:$name){object(oid:$oid){... on Commit{checkSuites(first:100,after:$after){
+pageInfo{hasNextPage endCursor} nodes{status conclusion workflowRun{databaseId event
+workflow{databaseId name}}}}}}}}"""
+REST_PATH = re.compile(r"repos/([^/?]+)/([^/?]+)(?:/(pulls|actions/runs)\?(.*))?")
+# A head's runs read through GraphQL, kept so each REST page of them comes from one reading.
+SUITE_RUNS = {}
+
+
+def graphql(host, path, why, query, **variables):
+    """GraphQL's data for QUERY, or a refusal that names both failures."""
+    fields = ["-f", "query=" + query]
+    for key, value in variables.items():
+        if value is not None:
+            fields += ["-f", f"{key}={value}"]
+    result = gh_api(host, "graphql", *fields)
+    try:
+        body = json.loads(result.stdout)
+    except ValueError:
+        body = None
+    errors = body.get("errors") if isinstance(body, dict) else None
+    if result.returncode or errors or not isinstance(body, dict) or not isinstance(body.get("data"), dict):
+        if errors and isinstance(errors, list) and isinstance(errors[0], dict):
+            detail = str(errors[0].get("message") or errors[0].get("type"))
+        else:
+            detail = last_line(result) if result.returncode else "no data"
+        raise GuardError(f"GitHub lookup failed: {path}: REST refused it ({why}), and GraphQL did too: {detail}")
+    return body["data"]
+
+
+def graphql_lookup(host, path, why):
+    """Answer a REST lookup the guard makes through GraphQL instead."""
+    match = REST_PATH.fullmatch(path)
+    if not match:
+        raise GuardError(f"GitHub lookup failed: {path}: {why}")
+    owner, name, kind, query = match.groups()
+    owner, name = urllib.parse.unquote(owner), urllib.parse.unquote(name)
+    parameters = dict(urllib.parse.parse_qsl(query or ""))
+    if kind is None:
+        found = graphql(host, path, why, REPOSITORY_QUERY, owner=owner, name=name).get("repository")
+        if not isinstance(found, dict) or not isinstance(found.get("nameWithOwner"), str):
+            raise GuardError("GitHub lookup returned no repository for " + owner + "/" + name)
+        return {"full_name": found["nameWithOwner"]}
+    if kind == "pulls":
+        # REST's head=OWNER:BRANCH matches only heads in OWNER's repositories.
+        head_owner, branch = parameters["head"].split(":", 1)
+        found = graphql(host, path, why, PULLS_QUERY, owner=owner, name=name, branch=branch).get("repository")
+        pulls = found.get("pullRequests") if isinstance(found, dict) else None
+        if not isinstance(pulls, dict) or not isinstance(pulls.get("nodes"), list) or type(pulls.get("totalCount")) is not int:
+            raise GuardError("GitHub lookup returned no pull request list for refs/heads/" + branch)
+        if pulls["totalCount"] > len(pulls["nodes"]):
+            raise GuardError("more than one page of open pull requests for refs/heads/" + branch
+                             + "; they cannot all be checked")
+        answer = []
+        for node in pulls["nodes"]:
+            source = (node.get("headRepository") or {}).get("nameWithOwner") if isinstance(node, dict) else None
+            if isinstance(source, str) and source.split("/")[0].lower() != head_owner.lower():
+                continue
+            node = node if isinstance(node, dict) else {}
+            answer.append({"number": node.get("number"), "draft": node.get("isDraft"),
+                           "head": {"ref": node.get("headRefName"), "sha": node.get("headRefOid"),
+                                    "repo": {"full_name": source} if isinstance(source, str) else None}})
+        return answer
+    sha, size, page = parameters["head_sha"], int(parameters["per_page"]), int(parameters.get("page", "1"))
+    key = (host, owner.lower() + "/" + name.lower(), sha)
+    if key not in SUITE_RUNS or page == 1:
+        SUITE_RUNS[key] = suite_runs(host, path, why, owner, name, sha)
+    runs = SUITE_RUNS[key]
+    return {"total_count": len(runs), "workflow_runs": runs[(page - 1) * size:page * size]}
+
+
+def suite_runs(host, path, why, owner, name, sha):
+    """The GitHub Actions runs on a commit, from its check suites, in the shape REST lists them.
+    Other apps' check suites have no workflow run and can stay queued for good, so they are
+    left out, as REST's list of workflow runs leaves them out."""
+    runs, after = [], None
+    for _ in range(RUN_PAGES):
+        found = graphql(host, path, why, SUITES_QUERY, owner=owner, name=name, oid=sha, after=after).get("repository")
+        commit = found.get("object") if isinstance(found, dict) else None
+        suites = commit.get("checkSuites") if isinstance(commit, dict) else None
+        if (not isinstance(suites, dict) or not isinstance(suites.get("nodes"), list)
+                or not isinstance(suites.get("pageInfo"), dict)):
+            raise GuardError(f"GitHub lookup returned no check suites for commit {sha}")
+        for suite in suites["nodes"]:
+            run = suite.get("workflowRun") if isinstance(suite, dict) else None
+            if run is None:
+                continue
+            workflow = run.get("workflow") if isinstance(run, dict) else None
+            status, conclusion = suite.get("status"), suite.get("conclusion")
+            runs.append({"id": run.get("databaseId") if isinstance(run, dict) else None,
+                         "name": workflow.get("name") if isinstance(workflow, dict) else None,
+                         "event": run.get("event") if isinstance(run, dict) else None,
+                         "status": status.lower() if isinstance(status, str) else None,
+                         "conclusion": conclusion.lower() if isinstance(conclusion, str) else None,
+                         **({"workflow_id": workflow.get("databaseId")} if isinstance(workflow, dict) else {})})
+        if not suites["pageInfo"].get("hasNextPage"):
+            return runs
+        after = suites["pageInfo"].get("endCursor")
+        if not isinstance(after, str):
+            raise GuardError(f"GitHub lookup returned no next page of check suites for commit {sha}")
+    raise GuardError(f"more than {RUN_PAGES} pages of check suites on commit {sha}; they cannot all be checked")
 
 
 def check_rewrites(c, api=github_api):
