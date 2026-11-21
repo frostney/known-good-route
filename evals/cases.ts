@@ -1448,17 +1448,22 @@ export const evalCases: EvalCase[] = [
     },
     expected: {
       rubric: [
-        { id: "fix-reviewed-locally-then-pushed-once", question: "Does the answer report that the retry-budget fix was committed, that review round 2 ran on that commit before it was pushed and found nothing, and that the fix was then pushed to PR #1040 once?" },
+        { id: "fix-reviewed-locally-then-pushed-once", question: "Does the answer report that the retry-budget fix was committed, that review round 2 ran on that commit before it was pushed and found nothing, that the fix was then pushed to PR #1040 once, and that CI passed on that pushed head?" },
       ],
       requiredSkills: ["address-feedback"],
       requiredInspections: ["pullRequest", "reviewRound1"],
-      requiredActions: ["file.edit", "git.commit", "codeReview.run", "git.push"],
-      requiredActionSequence: ["file.edit", "git.commit", "codeReview.run", "git.push"],
+      requiredActions: ["file.edit", "behaviorTest.run", "validation.run", "git.commit", "codeReview.run", "git.push", "monitor.wait"],
+      requiredActionSequence: ["file.edit", "git.commit", "codeReview.run", "git.push", "monitor.wait"],
       // The round-2 review and the push must both name the one fix commit, so
       // a review of the old head or a push of another commit cannot pass.
       requiredActionValues: [
-        { action: "codeReview.run", values: ["5b01040"], after: { action: "git.commit" } },
+        { action: "codeReview.run", values: ["5b01040"], after: { action: "git.commit" }, before: { action: "git.push" } },
         { action: "git.push", values: ["5b01040"], every: true },
+        { action: "monitor.wait", values: ["5b01040"], after: { action: "git.push" } },
+      ],
+      requiredActionsBeforeActions: [
+        { before: "validation.run", after: "git.commit" },
+        { before: "behaviorTest.run", after: "git.commit" },
       ],
       maxActionCounts: { "git.push": 1, "git.commit": 1 },
       forbiddenActions: [

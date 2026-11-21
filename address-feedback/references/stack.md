@@ -111,8 +111,10 @@ run only `status`, with every exact `PR=SHA`.
    round on them, and publish below once, after the last round. Layers can
    freeze while the fixes wait, and a restack moves every layer above a fix:
    before that push, read the live stack again, place every waiting fix anew
-   under step 7 against it, keep every frozen head, and rerun step 8 on any
-   tree the new placement changes. Enforce the
+   under step 7 against it, and keep every frozen head. When the new
+   placement changes a layer's base or head, rerun step 8 on the integrated
+   tree and review that layer's new diff before the push, within the
+   caller's round limit. Enforce the
    native-stack reference's push-boundary checks for the frozen
    prefix and every branch the push moves or creates; preserve the frozen PR
    heads and metadata. Publish a fix made in place through the native-stack

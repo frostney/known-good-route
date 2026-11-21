@@ -131,10 +131,13 @@ it is no gate and its adapter posts no trigger.
    testing pass on the same unchanged implementation. Then establish the
    declared pre-PR gate, reusing its matching passing result. If fixing a gate
    failure changes the implementation, restart at step 5. Once the complete
-   loop passes unchanged, commit without amending. When another
+   loop passes unchanged, publish it. When another
    [review round on local commits](../SKILL.md#review-rounds-on-local-commits)
-   will read that commit, return it as the head for that round and push only
-   after the last round. Otherwise use `/update-pr` to push without
+   will read the change, commit it through `git-workflow`'s commit step
+   without amending, return that commit as the head for the round, and push
+   only after the last round. Before that push, run step 3's `inspect` on the
+   still-published head and handle any finding that arrived meanwhile from
+   step 4. Otherwise use `/update-pr` to commit and push without amending or
    force-pushing. If that skill is unavailable, follow its documented
    workflow directly.
 8. After a push, re-read the exact head, every check on it, terminal
