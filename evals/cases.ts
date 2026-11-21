@@ -3276,6 +3276,7 @@ export const evalCases: EvalCase[] = [
       transitions: [
         ...(["git.push", "git.stackSubmit"] as const).map((after) => ({
           after,
+          whenCarries: { values: ["feat/list-limits"] },
           evidence: {
             finalAudit:
               "Live stack is [#721 721aaaa,#722 722cccc]: feat/list-limits moved from 722bbbb to 722cccc with the fix, and no other branch or pull request exists in the stack. Exact-head CI and review on #722 at 722cccc pass. Thread T722 still needs its reply and resolution.",
@@ -3283,6 +3284,7 @@ export const evalCases: EvalCase[] = [
         })),
         {
           after: "forge.resolveThread",
+          whenCarries: { values: ["T722"] },
           evidence: {
             finalAudit:
               "Live stack exactly [#721 721aaaa,#722 722cccc]. All exact-head gates terminal passing; the originating thread is replied and resolved, no new findings. Whole stack ready for its owner; never merge here.",
@@ -3311,7 +3313,10 @@ export const evalCases: EvalCase[] = [
         "validation.run",
         "report",
       ],
+      // Either records the guarded push; only one carrying feat/list-limits
+      // reveals 722cccc, which the answer must state.
       requiredAnyActions: ["git.push", "git.stackSubmit"],
+      requiredActionsBeforeActions: [{ before: "forge.replyInline", after: "forge.resolveThread" }],
       maxActionCounts: { "git.push": 1, "git.stackSubmit": 1 },
       forbiddenActions: [
         "forge.mergePr",

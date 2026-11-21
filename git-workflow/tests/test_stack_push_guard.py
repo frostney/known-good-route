@@ -243,6 +243,54 @@ class RewriteTests(unittest.TestCase):
                 # The listed ref is the explicit override for a protected layer.
                 self.assertEqual(guard.check_rewrites(self.with_rewrite("refs/heads/stack/one"), github), [])
 
+    def test_the_newest_run_of_a_workflow_and_event_decides(self):
+        admission = guard.validate_admission({**self.admission, "refs": self.admission["refs"][:1]})
+        cases = (("a newer failure after an older success", [run(run_id=100), run(conclusion="failure", run_id=101)],
+                  "failed"),
+                 ("a newer success after an older failure", [run(conclusion="failure", run_id=100), run(run_id=101)],
+                  "passed"),
+                 ("a cancelled duplicate beside an older success", [run(run_id=100),
+                                                                     run(conclusion="cancelled", run_id=101)], "passed"),
+                 ("a later cancellation after only failures", [run(conclusion="failure", run_id=100),
+                                                               run(conclusion="cancelled", run_id=101)], "failed"),
+                 ("another event of the same workflow failed", [run(run_id=100),
+                                                                run(conclusion="failure", run_id=101, event="push")],
+                  "failed"))
+        for case, runs, ci in cases:
+            with self.subTest(case=case):
+                self.assertEqual(guard.ci_state(len(runs), runs, True, 12)["ci"], ci)
+                github = FakeGitHub([pull(12, "stack/one", "b" * 40)], runs={"b" * 40: runs})
+                if ci == "passed":
+                    with self.assertRaisesRegex(guard.GuardError, "draft, CI passed"):
+                        guard.check_rewrites(admission, github)
+                else:
+                    self.assertEqual(guard.check_rewrites(admission, github)[0]["ci"], "failed")
+
+    def test_a_draft_only_rewrite_moves_a_green_draft_but_never_a_ready_pull_request(self):
+        admission = guard.validate_admission({**self.admission, "refs": self.admission["refs"][:1], "rewrite": [
+            {"ref": "refs/heads/stack/one", "reason": "its review has not finished", "draftOnly": True}]})
+        green = FakeGitHub([pull(12, "stack/one", "b" * 40)], runs={"b" * 40: [run()]})
+        [observed] = guard.check_rewrites(admission, green)
+        self.assertEqual((observed["pullRequest"], observed["ci"]), (12, "passed"))
+        self.assertIn("review has not finished", observed["reason"])
+        # Still looked up at the push: a pull request marked ready in between, or a
+        # second ready pull request on the same branch, is refused.
+        for pulls in ([pull(12, "stack/one", "b" * 40, draft=False)],
+                      [pull(12, "stack/one", "b" * 40), pull(14, "stack/one", "b" * 40, draft=False)]):
+            with self.subTest(pulls=[p["number"] for p in pulls]):
+                github = FakeGitHub(pulls, runs={"b" * 40: [run()]})
+                with self.assertRaisesRegex(guard.GuardError, "ready for review.*never moves a ready pull request"):
+                    guard.check_rewrites(admission, github)
+        url = "https://github.com/example-org/app.git"
+        line = f"refs/heads/stack/one {'a' * 40} refs/heads/stack/one {'b' * 40}\n"
+        ready = FakeGitHub([pull(12, "stack/one", "b" * 40, draft=False)])
+        with self.assertRaisesRegex(guard.GuardError, "ready for review"):
+            guard.admit_updates(admission, "origin", url, line, ready)
+        for bad in ({"draftOnly": False}, {"draftOnly": "yes"}, {"extra": 1}):
+            with self.subTest(bad=bad), self.assertRaises(guard.GuardError):
+                guard.validate_admission({**self.admission, "rewrite": [
+                    {"ref": "refs/heads/stack/one", "reason": "x", **bad}]})
+
     def test_long_run_lists_are_read_page_by_page(self):
         cases = ((many_runs(100) + [run("queued")], False, 2),  # a run still going on page two
                  (many_runs(101, conclusion="failure"), False, 2),

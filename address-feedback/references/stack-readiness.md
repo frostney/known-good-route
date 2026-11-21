@@ -25,21 +25,26 @@ a partial merge.
 
 ## Frozen members and invalidation
 
-A member becomes frozen once CI on its exact head has passed and its review
-is terminal with every finding surface classified, or once it is ready for
-review. A draft whose CI on its exact head failed, was cancelled, is still
-running or never ran is not frozen, even after its review finished: while no
-member above it is frozen, its fixes go in place on it. This workflow never
-pushes to a frozen member, and adds a new top layer only for fixes above a
-frozen member. The protected push helper cannot see when a review
-ends, so it refuses to move a member that is ready for review or a draft whose
-CI passed. A draft whose CI passed but whose review has not finished is not
-frozen: list its ref under `rewrite`, naming the unfinished review as the
-reason, to fix it in place. Fix a member in place only when it and every member
-above it are not frozen, because the push moves them all and restarts their
-CI. The only rewrite is the final rebase
-before merging the whole stack, under `git-workflow`'s
-[native stack reference](../../git-workflow/references/github-stacks.md#guarded-rewrite-exception);
+This is the one definition of frozen that the other stack guides link to. A
+member becomes frozen once CI on its exact head has passed and its review is
+terminal with every finding surface classified, or once it is ready for review,
+whatever its review verdict. Classify a terminal review's findings before
+placing any fix, so a draft whose CI passed and whose review is terminal is
+frozen by the time its fix is placed. A draft whose CI on its exact head
+failed, was cancelled, is still running or never ran is not frozen, even after
+its review finished: while no member above it is frozen, its fixes go in place
+on it. This workflow never pushes to a frozen member, and adds a new top layer
+only for fixes above a frozen member. The protected push helper cannot see when
+a review ends, so it refuses to move a member that is ready for review or a
+draft whose CI passed. A draft whose CI passed but whose review has not
+finished is not frozen: list its ref under `rewrite` with `draftOnly`, naming
+the unfinished review as the reason, to fix it in place; the helper still
+refuses it once it is ready for review. Fix a member in place only when it and
+every member above it are not frozen, because the push moves them all and
+restarts their CI. Apart from a `draftOnly` entry, the only rewrite is the
+final rebase before merging the whole stack, under `git-workflow`'s [native
+stack
+reference](../../git-workflow/references/github-stacks.md#guarded-rewrite-exception);
 it changes every head, so the changed-head rule below applies to every member.
 
 - Appending one expected fix layer above an unchanged prefix preserves the
@@ -80,7 +85,8 @@ The complete stack is `ready` only when all conditions are simultaneously true:
   [PR gate](pr-readiness.md#terminal-exact-head-gate) counts them;
 - every intentionally active provider has terminal evidence for each head it
   was required to review;
-- the newest fix layer has no actionable finding;
+- every layer that took a fix, in place or as an appended fix layer, has no
+  actionable finding at its current head;
 - every source and fix-layer thread has a maintainer-workflow reply;
 - GitHub reports zero unresolved threads across the stack;
 - no paid review capacity, bypass, or merge is required to claim readiness; and

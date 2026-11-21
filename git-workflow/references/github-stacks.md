@@ -81,14 +81,16 @@ layer leaves the layers above it conflicting with the base, so they sync.
 While the layers have open PRs, rewrite them at most once, immediately before
 merging the whole stack, and only when that rule calls for it. A conflict that
 appears earlier waits for that rebase; it never justifies re-pushing reviewed
-layers. A layer is frozen once CI on its exact head has passed and its review
-is terminal, or once it is ready for review; a draft whose CI failed, was
-cancelled, is still running or never ran is not frozen. A repair on a layer
+layers. `address-feedback`'s
+[frozen rule](../../address-feedback/references/stack-readiness.md#frozen-members-and-invalidation)
+decides which layers are frozen: a draft whose CI failed, was cancelled, is
+still running or never ran is not. A repair on a layer
 that is not frozen is not such a rewrite: commit it on that layer, restack the
 layers above it with `gh stack rebase`, and push through the
 [protected publication helper](#protected-publication-helper) with each moved
 branch admitted. List nothing under `rewrite`, except a draft whose CI passed
-while its review has not finished, as that helper's section says. The helper
+while its review has not finished, with `draftOnly`, as that helper's section
+says. The helper
 lets the push through only while no layer it moves is ready for review or a
 draft whose CI passed. For the final rebase, rebase locally with
 `gh stack rebase`, then push through the
@@ -137,7 +139,7 @@ update, merge the freshly fetched remote base and push normally.
   remote update must still be rejected by Git's receive-side comparison.
   Use the bundled helper described below to enforce this constraint; it keeps
   existing hooks and does not change persistent Git configuration.
-- For a new top layer above frozen approved PRs, use protected `gh stack push`,
+- For a new top layer above frozen PRs, approved or not, use protected `gh stack push`,
   then the separate creation and append procedure below. Admit each frozen
   member with equal source and expected IDs and the new layer as absent: that
   push moves no PR head, so it needs no `rewrite` entry. Record successful push
@@ -241,12 +243,16 @@ refresh an approved expectation, or list a ref under `rewrite`, merely to make
 a rejection pass.
 
 Before any push, the helper looks up the open PR of each admitted ref whose
-remote head would change, in the repository the remote URL names. A layer is
-frozen once GitHub Actions CI on its exact head has passed and its review is
-terminal, or once it is ready for review. The helper cannot see when a review
-ends, so it refuses to move a PR that is ready for review, or a draft whose CI
-on its current head has passed, meaning no run is queued or in progress and
-every workflow that ran has a successful, neutral or skipped run there. A
+remote head would change, in the repository the remote URL names.
+`address-feedback`'s
+[frozen rule](../../address-feedback/references/stack-readiness.md#frozen-members-and-invalidation)
+decides which layers are frozen; it needs a terminal review, which the helper
+cannot see. So the helper refuses to move a PR that is ready for review, or a
+draft whose GitHub Actions CI on its current head has passed, meaning no run
+is queued or in progress and the newest run of every workflow and event there
+is successful, neutral or skipped. As in `delivery-wait`, a newer run of a
+workflow and event replaces an older one, and a newest run cancelled beside an
+older passed run of its source counts as passed. A
 draft with no runs, or whose runs failed, were cancelled or are still queued or
 in progress, may move: it is not frozen, so its fix goes in place. The
 prepared record gives each such PR's CI state (`none`, `failed` or `running`) and the reason it may move.
@@ -260,9 +266,11 @@ restarted, and what to do: a fix for a frozen layer goes in a new top layer.
 The optional `rewrite` field lists the refs allowed past that check, as
 `[{"ref": "refs/heads/...", "reason": "..."}]`: each an admitted ref with a
 non-empty reason. Use it for the final rebase under
-[Guarded rewrite exception](#guarded-rewrite-exception), and for a draft whose
-CI passed while its review has not finished, which is not frozen, with a reason
-that names the unfinished review. Never use it to put a fix into a frozen
+[Guarded rewrite exception](#guarded-rewrite-exception). For a draft whose CI
+passed while its review has not finished, which is not frozen, add
+`"draftOnly": true` with a reason that names the unfinished review: the helper
+still looks that ref up when it prepares and at the push, and refuses it if any
+open PR on it is ready for review. Never use either to put a fix into a frozen
 layer. The lookup needs `gh` signed in to the remote's
 host; a missing `gh` or a failed lookup refuses. A branch admitted as absent
 needs no lookup, and the hook rejects it if the remote already has it. The

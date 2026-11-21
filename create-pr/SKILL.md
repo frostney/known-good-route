@@ -143,7 +143,7 @@ readiness. Recording a walkthrough does not replace behavior testing.
    above, push an ordinary branch normally and set its upstream when needed,
    then open one draft PR against the remote default or the named base.
    For a verified native stack, follow the stack reference: a new top layer
-   above frozen approved PRs uses protected push, separate PR creation and
+   above frozen PRs uses protected push, separate PR creation and
    native append; a new stack on a frozen lower PR uses protected
    `gh stack link`; broader authorized submissions use `gh stack submit`. Require
    current evidence for every published layer. Only guarded official stack
