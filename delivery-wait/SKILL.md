@@ -150,13 +150,15 @@ requires its own identity flags:
     cancelled run failed another way. While that older run has not finished,
     the wait waits for it. Once it has passed and every other run on the
     head has finished, so that a rerun cannot cancel a workflow sharing its
-    concurrency group, the wait reports `recoverable`, unless another run,
+    concurrency group, the wait reports `recoverable` after the same two
+    identical observations that `satisfied` needs, unless another run,
     job or named check failed, which is `changed`. A cancelled newest run
     beside only failed older runs is an ordinary failure, and so is one
     cancelled after the older run finished, one with a failed job and one
     cancelled again after its rerun. A cancelled named check left from an
-    earlier attempt, of a run that has not finished or that passed on its
-    rerun, waits for that run's jobs.
+    earlier attempt, of a rerun that has not finished or that passed, waits
+    for that run's jobs. `inspect` reports a cancelled duplicate as `waiting`,
+    naming the rerun.
   - `--all-workflows` does not cover commit statuses or check runs from other
     apps, such as CodeRabbit or Vercel. Add a `--check` for each one the caller
     needs; the wait then also requires those contexts to succeed.

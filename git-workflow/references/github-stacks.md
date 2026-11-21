@@ -173,7 +173,7 @@ update, merge the freshly fetched remote base and push normally.
   rebase-merge merely because stack maintenance used rebases.
 - When `gh stack merge` refuses because required status checks have not
   succeeded, or a layer's `mergeStateStatus` is `BLOCKED` although its checks
-  looked green, run `delivery-wait`'s `inspect checks-terminal
+  looked green, run `delivery-wait`'s `wait checks-terminal
   --all-workflows` on each layer's exact head. `recoverable` means GitHub
   counts a cancelled duplicate run on that head in place of an older run that
   passed. Rerun a run the result names with its `gh run rerun` command and

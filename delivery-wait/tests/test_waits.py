@@ -1206,7 +1206,8 @@ class WaitCommandsTest(unittest.TestCase):
                         "--pr", "7", "--head", "head-1", "--all-workflows",
                     )
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(output["state"], "recoverable")
+                # Like success, only wait can confirm the census is stable.
+                self.assertEqual(output["state"], "recoverable" if command == "wait" else "waiting")
                 self.assertIn("gh run rerun 102 --repo owner/repo", output["reason"])
                 runs = {run["id"]: run for run in output["observation"]["runs"]}
                 self.assertTrue(runs[101].get("superseded"))
@@ -1255,7 +1256,8 @@ class WaitCommandsTest(unittest.TestCase):
                 ])
                 _, output = self.census_wait()
                 self.assertEqual(output["state"], expected)
-                self.assertEqual(output["metrics"]["observations"], 3)
+                # A failure decides at once; a rerun waits for a second identical census.
+                self.assertEqual(output["metrics"]["observations"], 4 if expected == "recoverable" else 3)
         self.reset_census()
         self.write_scenario(census=[census(*self.cancelled_duplicate(running))])
         _, output = self.census_wait(deadline=self.short_deadline())
@@ -1350,6 +1352,34 @@ class WaitCommandsTest(unittest.TestCase):
             census=[census(*self.cancelled_duplicate())],
         )
         _, output = self.census_wait("--check", "build")
+        self.assertEqual(output["state"], "changed")
+
+    def test_a_run_that_appears_before_the_census_is_stable_holds_the_rerun(self) -> None:
+        # A follow-up run could share the rerun's concurrency group.
+        follow_up = workflow_run(103, [], status="queued", conclusion=None, workflow_id=10, name="Follow-up")
+        self.write_scenario(census=[
+            census(*self.cancelled_duplicate()),
+            census(*self.cancelled_duplicate(), follow_up),
+        ])
+        _, output = self.census_wait(deadline=self.short_deadline())
+        self.assertNotEqual(output["state"], "recoverable")
+
+    def test_runs_without_a_known_head_repository_are_not_duplicates(self) -> None:
+        runs = self.cancelled_duplicate()
+        for item in runs:
+            item["run"].pop("head_repository")
+        self.write_scenario(census=[census(*runs)])
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "changed")
+
+    def test_a_first_attempt_cancelled_named_check_is_changed(self) -> None:
+        # No earlier attempt exists for the cancellation to be left from.
+        running = workflow_run(103, [workflow_job(1002, "build-x", "in_progress", None, run_id=103)], status="in_progress", conclusion=None, workflow_id=10, name="Build", check_suite_id=503)
+        self.write_scenario(
+            pull=pull("head-1", [check("build-x", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=503, workflow=10)]),
+            census=[census(running)],
+        )
+        _, output = self.census_wait("--check", "build-x")
         self.assertEqual(output["state"], "changed")
 
     def test_an_older_run_that_was_rerun_cannot_show_the_race(self) -> None:

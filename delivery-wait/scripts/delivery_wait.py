@@ -458,6 +458,7 @@ def raced(older: dict[str, Any], cancelled: dict[str, Any]) -> bool:
     """
     if (
         older.get("headBranch") is None
+        or older.get("headRepositoryId") is None
         or (older.get("headBranch"), older.get("headRepositoryId"))
         != (cancelled.get("headBranch"), cancelled.get("headRepositoryId"))
         or (older.get("attempt") or 1) > 1
@@ -518,7 +519,7 @@ class WorkflowCensusGate:
         failures = workflow_failures(observation)
         # A cancelled named check from a cancelled duplicate run goes with
         # that run; any other conclusion still counts. A cancelled one from a
-        # run that has not finished, or that passed on a
+        # rerun that has not finished, or that passed on a
         # later attempt, is left from an earlier attempt: the check rollup is
         # read before the runs and can lag behind a rerun. The run's jobs
         # decide, and a stable census needs a second observation.
@@ -528,9 +529,9 @@ class WorkflowCensusGate:
         }
         running_suites = {
             run.get("checkSuiteId") for run in deciding_runs(observation)
-            if run.get("checkSuiteId") is not None and (
+            if run.get("checkSuiteId") is not None and (run.get("attempt") or 1) > 1 and (
                 run.get("status") != "completed"
-                or ((run.get("attempt") or 1) > 1 and run.get("conclusion") in PASSING_WORKFLOW_CONCLUSIONS)
+                or run.get("conclusion") in PASSING_WORKFLOW_CONCLUSIONS
             )
         }
         observed = {
@@ -575,13 +576,23 @@ class WorkflowCensusGate:
                 f"{len(others_running)} workflow runs on the head have finished"
             )
         if recoverable:
-            self.previous = None
-            return "recoverable", "; ".join(
+            # Like success, a rerun needs a stable census: a run that starts
+            # after this observation could share the rerun's group.
+            reason = "; ".join(
                 f"the newest run of {run.get('name')} ({run['id']}) was cancelled while an older run "
                 f"of the same workflow and event ({run['cancelledDuplicate']['olderRunId']}) passed: "
                 f"rerun it with {run['cancelledDuplicate']['rerun']}"
                 for run in recoverable
             )
+            if not self.confirm:
+                self.previous = None
+                return "waiting", f"{reason}, once wait confirms the census is stable"
+            digest = stable_digest(observation)
+            confirmed = digest == self.previous
+            self.previous = digest
+            if not confirmed:
+                return "waiting", "a cancelled duplicate run can be rerun; confirming the census is stable"
+            return "recoverable", reason
         runs = deciding_runs(observation)
         jobs = [job for run in runs for job in run.get("jobs", [])]
         pending_runs = [run for run in runs if run.get("status") != "completed" or not run.get("conclusion")]

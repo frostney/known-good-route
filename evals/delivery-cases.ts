@@ -1010,7 +1010,7 @@ export const deliveryCases: EvalCase[] = [
           "monitor.wait": `delivery-wait checks-terminal --all-workflows for PR #561 at ${stackHeads[1]} returned state satisfied: run 9102's second attempt passed, and all 3 deciding workflow runs and 14 jobs on the head succeeded across two identical observations. GitHub reports PR #561's mergeStateStatus as CLEAN.`,
         } },
         // Only a wait on the rerun layer's own head shows its checks passed.
-        { after: "monitor.wait", since: "ci.rerunRun", whenCarries: { values: [stackHeads[1]], fields: ["head", "revision", "ref", "commit"] }, evidence: {}, actionResponses: {
+        { after: "monitor.wait", since: "ci.rerunRun", whenResult: "state satisfied", whenCarries: { values: [stackHeads[1]], fields: ["head", "revision", "ref", "commit"] }, evidence: {}, actionResponses: {
           "git.stackMerge": `gh stack merge squash-merged PRs #560 and #561 onto main in one operation; main is now ${integrated}.`,
         } },
         { after: "git.stackMerge", whenResult: "squash-merged", evidence: { stackTopology: `Stack 35 is merged: PRs #560 and #561 are merged into main at ${integrated}.` } },
