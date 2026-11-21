@@ -1016,6 +1016,18 @@ class TemplateParsingTests(unittest.TestCase):
         form = "{name: Legacy, body: [{type: input, attributes: {label: *missing}}]}\n"
         self.assertEqual(CHECK_TEMPLATE.declared_name(form), "Legacy")
 
+    def test_a_broken_flow_form_ignores_a_commented_name(self):
+        form = "{\n  # name: Legacy\n  name: Bug,\n  body: [*missing]\n}\n"
+        self.assertEqual(CHECK_TEMPLATE.declared_name(form), "Bug")
+
+    def test_a_commented_document_marker_does_not_hide_an_indented_name(self):
+        self.assertEqual(CHECK_TEMPLATE.declared_name("--- # form\n  name: Legacy\n  body: [unclosed\n"), "Legacy")
+
+    def test_aliases_repeating_long_text_past_the_bound_are_an_error(self):
+        text = "a: &a '" + "x" * 1000 + "'\nb: [" + ", ".join(["*a"] * 2000) + "]\n"
+        with self.assertRaisesRegex(ValueError, "expands to more than"):
+            CHECK_TEMPLATE.load_yaml(text)
+
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):
             with self.subTest(quote=quote):

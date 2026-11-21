@@ -73,10 +73,11 @@ LOAD = (
     "        raise ValueError('a YAML alias refers to itself')\n"
     "    active.add(key)\n"
     "    parts = [part for item in node.value for part in (item if isinstance(item, tuple) else (item,))] if isinstance(node.value, list) else []\n"
-    "    total = 1 + sum(expanded(part, sizes, active) for part in parts)\n"
+    "    own = 1 + (len(node.value) if isinstance(node.value, str) else 0)\n"
+    "    total = own + sum(expanded(part, sizes, active) for part in parts)\n"
     "    active.discard(key)\n"
     "    if total > limit:\n"
-    "        raise ValueError(f'the YAML expands to more than {limit} values')\n"
+    "        raise ValueError(f'the YAML expands to more than {limit} values and characters')\n"
     "    sizes[key] = total\n"
     "    return total\n"
     "def plain(value):\n"
@@ -731,16 +732,17 @@ def isolated(program: str, text: str, package: str, what: str, *args: str) -> st
     return completed.stdout
 
 
-# Nodes a template's YAML may stand for; aliases and merges can repeat data exponentially.
-YAML_NODES = 100_000
+# Values and characters a template's YAML may stand for; aliases and merges can repeat data exponentially.
+YAML_SIZE = 1_000_000
 
 
 def expanded(node: Any, sizes: dict[int, int], active: set[int]) -> int:
-    """How many nodes a composed YAML node stands for once its aliases are copied out.
+    """How many values and characters a composed YAML node stands for once its aliases are copied out.
 
-    Counted on the node graph before anything is built, so neither an alias
-    that repeats nested aliases nor a merge can use memory past YAML_NODES;
-    ValueError past it, or for an alias inside its own anchor.
+    Counted on the node graph before anything is built or written out, so
+    neither an alias that repeats nested aliases or long text nor a merge can
+    use memory past YAML_SIZE; ValueError past it, or for an alias inside its
+    own anchor.
     """
     key = id(node)
     if key in sizes:
@@ -753,10 +755,11 @@ def expanded(node: Any, sizes: dict[int, int], active: set[int]) -> int:
         if isinstance(node.value, list)
         else []
     )
-    total = 1 + sum(expanded(part, sizes, active) for part in parts)
+    own = 1 + (len(node.value) if isinstance(node.value, str) else 0)
+    total = own + sum(expanded(part, sizes, active) for part in parts)
     active.discard(key)
-    if total > YAML_NODES:
-        raise ValueError(f"the YAML expands to more than {YAML_NODES} values")
+    if total > YAML_SIZE:
+        raise ValueError(f"the YAML expands to more than {YAML_SIZE} values and characters")
     sizes[key] = total
     return total
 
@@ -786,7 +789,7 @@ def load_yaml(text: str) -> Any:
             raise ValueError(f"not valid YAML: {error}") from error
         finally:
             loader.dispose()
-    result = json.loads(isolated(LOAD, text, PYYAML, "the YAML reader", str(YAML_NODES)))
+    result = json.loads(isolated(LOAD, text, PYYAML, "the YAML reader", str(YAML_SIZE)))
     if "error" in result:
         raise ValueError(f"not valid YAML: {result['error']}")
     return result["value"]
@@ -808,7 +811,7 @@ def name_alone(text: str) -> str | None:
     """
     lines = text.split("\n")
     # Document markers sit at the margin whatever the mapping's indent, so they do not set it.
-    keys = [line for line in lines if line.strip() and not line.lstrip().startswith("#") and not re.fullmatch(r"(?:---|\.\.\.)\s*", line)]
+    keys = [line for line in lines if line.strip() and not line.lstrip().startswith("#") and not re.fullmatch(r"(?:---|\.\.\.)(?:\s+#.*)?\s*", line)]
     margin = min((len(line) - len(line.lstrip()) for line in keys), default=0)
     for index, line in enumerate(lines):
         if len(line) - len(line.lstrip()) == margin and re.match(r"""["']?name["']?[ \t]*:""", line.lstrip()):
@@ -825,10 +828,14 @@ def name_alone(text: str) -> str | None:
 
 def flow_name(text: str) -> str | None:
     """The `name` of a top-level flow mapping, such as `{name: Bug, body: [...]}`, read on its own."""
-    depth, quote = 0, ""
+    depth, quote, comment = 0, "", False
     for index, char in enumerate(text):
-        if quote:
+        if comment:
+            comment = char != "\n"  # A comment runs to the end of its line.
+        elif quote:
             quote = "" if char == quote else quote
+        elif char == "#" and (index == 0 or text[index - 1].isspace()):
+            comment = True
         elif char in "\"'":
             quote = char
         elif char in "{[":
