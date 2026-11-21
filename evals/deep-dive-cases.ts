@@ -392,12 +392,22 @@ const reviewedLoopFix = {
   forbiddenActions: unsafeGit,
 };
 
-// The reviewer rereads the earlier thread and the measurement the parent ran.
-const backlogReview = reviewCase("deep-dive-earlier-findings-first-review", "the CI backlog diagnosis",
-  { ...queueEvidence, measurement: queueMeasurement }, "teamThread");
+// The reviewer rereads the earlier thread, the runner sources and the
+// measurement the parent ran before starting it.
+const backlogReview = reviewCase("deep-dive-earlier-findings-first-review", "the CI backlog diagnosis", {
+  ...queueEvidence,
+  context: queueEvidence.context.replace(
+    "Job statistics and a profile of the current checkout-e2e job are not captured yet: running scripts/ci-stats and scripts/ci-profile is a targeted read-only check.",
+    "The measurement source is the job statistics and checkout-e2e profile the parent captured with scripts/ci-stats and scripts/ci-profile.",
+  ),
+  measurement: queueMeasurement,
+}, "teamThread");
 const earlierFindingsReview: EvalCase = {
   ...backlogReview,
-  expected: { ...backlogReview.expected, requiredInspections: ["teamThread", "measurement"] },
+  expected: {
+    ...backlogReview.expected,
+    requiredInspections: ["teamThread", "runnerRepoHistory", "runnerStatus", "measurement"],
+  },
 };
 
 export const deepDiveCases: EvalCase[] = [
@@ -584,16 +594,22 @@ export const deepDiveCases: EvalCase[] = [
     fixture: { environment, evidence: queueEvidence, actionResponses: { "validation.focused": queueMeasurement } },
     expected: {
       rubric: [
-        { id: "capacity-and-growth", question: "Does the answer explain the backlog as 4 busy slots, sized for two PRs at once, serving runs whose checkout-e2e job grew from about 5 to 13 minutes?" },
+        { id: "capacity-and-growth", question: "Does the answer explain the backlog as 4 busy slots serving runs whose checkout-e2e job grew from about 5 to 13 minutes, citing the live runner status (4 of 4 running, 31 runs queued) and the runner-config history that sized the pool for two PRs at once?" },
         { id: "earlier-finding-tested", question: "Does the answer cite the 2 Oct thread's finding that every checkout-e2e test signs in through the login UI, and reconcile it with the current profile: sign-in is about 127 s of 786 s, while the 9 added tests (about 352 s) and the older tests getting slower (312 s to 434 s) account for the growth?" },
         { id: "rejected-option-not-reproposed", question: "Does the answer leave out hosted-runner overflow as a recommendation, or mention it only as already rejected by Dana on 2 Oct?" },
-        { id: "next-step", question: "Does the answer recommend an evidence-backed next step with what it would save, such as signing in once and reusing the session (about 2 minutes off each run), or name the targeted check still needed, rather than stopping at the diagnosis?" },
+        { id: "next-step", question: "Does the answer recommend an evidence-backed next step with what it would save, such as signing in once and reusing the session (about 2 minutes of test time, 30 fewer sign-ins at about 4 s, if the tests stay isolated), or name the targeted check still needed, rather than stopping at the diagnosis?" },
         reportsReview,
       ],
       requiredAnswerValues: ["checkout-e2e"],
       requiredSkills: ["deep-dive"],
       requiredInspections: ["teamThread", "runnerRepoHistory", "runnerStatus"],
       requiredActions: ["validation.focused"],
+      requiredActionValues: [
+        { action: "validation.focused", values: ["scripts/ci-stats"] },
+        { action: "validation.focused", values: ["scripts/ci-profile"] },
+      ],
+      // The reviewer sees the measurement, so the parent must measure before it starts.
+      requiredActionsBeforeWorker: ["validation.focused"],
       requiredInspectionsBeforeActions: [
         { inspection: "teamThread", action: "validation.focused" },
         { inspection: "runnerRepoHistory", action: "validation.focused" },

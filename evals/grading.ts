@@ -505,6 +505,18 @@ export function gradeRun(
     });
   }
 
+  for (const action of expected.requiredActionsBeforeWorker ?? []) {
+    const started = ledger.workers?.[0]?.startedAtEvent;
+    const actionIndex = ledger.events.findIndex(
+      (event) => event.kind === "action" && event.name === action,
+    );
+    checks.push({
+      name: `${action} before worker`,
+      passed: started !== undefined && actionIndex >= 0 && actionIndex < started,
+      detail: `workerStartedAtEvent=${started ?? "none"} actionIndex=${actionIndex}`,
+    });
+  }
+
   for (const order of expected.requiredActionsBeforeActions ?? []) {
     const beforeIndex = ledger.events.findIndex(
       (event) => event.kind === "action" && event.name === order.before,
