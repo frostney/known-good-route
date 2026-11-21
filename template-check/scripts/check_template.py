@@ -58,7 +58,7 @@ RENDER = (
     "from cmarkgfm.cmark import Options\n"
     "markdown = sys.stdin.buffer.read().decode('utf-8')\n"
     "html = cmarkgfm.github_flavored_markdown_to_html(markdown, "
-    "options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES | Options.CMARK_OPT_SOURCEPOS)\n"
+    "options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES | Options.CMARK_OPT_SOURCEPOS | Options.CMARK_OPT_HARDBREAKS)\n"
     "sys.stdout.buffer.write(html.encode('utf-8'))"
 )
 # PyYAML's safe loader as plain JSON, as jsonable() makes it in this process.
@@ -480,8 +480,8 @@ def written_heading(lines: list[str], node: Node, level: int) -> str:
         content = atx.group(2) or ""
         content = "" if re.fullmatch(r"#+", content) else content
     elif len(block) > 1 and re.fullmatch(r" {0,3}(=+|-+)[ \t]*", block[-1]) and block[-1].strip()[0] == "=-"[level - 1]:
-        # A setext heading's text lines; a line break in a heading reads as a space.
-        content = " ".join(re.sub(r"(?<!\\)((?:\\\\)*)\\$", r"\1", line.strip()) for line in block[:-1])
+        # A setext heading's text lines; GitHub shows each line break in an issue or pull request as one.
+        content = "<br>".join(re.sub(r"(?<!\\)((?:\\\\)*)\\$", r"\1", line.strip()) for line in block[:-1])
         # As an ATX heading, a closing run of `#` would end it early; escape it.
         content = re.sub(r"(^|[ \t])(#+)$", r"\1\\\2", content)
     else:
@@ -677,6 +677,8 @@ def lines_of(text: str) -> str:
 def render(markdown: str) -> str:
     """Markdown as GitHub renders it in an issue or pull request, rendered locally.
 
+    As there, each line break in the text shows as one.
+
     cmark-gfm renders raw HTML here, as GitHub does before it filters the
     tags it never shows; alerts stay quotes that open with their marker.
     """
@@ -684,7 +686,8 @@ def render(markdown: str) -> str:
         return ""
     if cmarkgfm is not None:
         return cmarkgfm.github_flavored_markdown_to_html(
-            markdown, options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES | Options.CMARK_OPT_SOURCEPOS
+            markdown,
+            options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES | Options.CMARK_OPT_SOURCEPOS | Options.CMARK_OPT_HARDBREAKS,
         )
     return isolated(RENDER, markdown, CMARKGFM, "the Markdown renderer")
 
@@ -793,7 +796,8 @@ def name_alone(text: str) -> str | None:
     continued on indented lines is read whole; None when even that fails.
     """
     lines = text.split("\n")
-    keys = [line for line in lines if line.strip() and not line.lstrip().startswith("#")]
+    # Document markers sit at the margin whatever the mapping's indent, so they do not set it.
+    keys = [line for line in lines if line.strip() and not line.lstrip().startswith("#") and not re.fullmatch(r"(?:---|\.\.\.)\s*", line)]
     margin = min((len(line) - len(line.lstrip()) for line in keys), default=0)
     for index, line in enumerate(lines):
         if len(line) - len(line.lstrip()) == margin and re.match(r"""["']?name["']?[ \t]*:""", line.lstrip()):

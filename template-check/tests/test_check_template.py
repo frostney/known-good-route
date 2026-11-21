@@ -853,6 +853,12 @@ class RendererParityTests(unittest.TestCase):
             CHECK_TEMPLATE.parse_template("t.md", "---\n  name: Bug\n  labels: [open\n---\n## A\n", REAL_RENDER)
         self.assertEqual(raised.exception.name, "Bug")
 
+    def test_a_multiline_setext_heading_keeps_its_line_break_as_github_shows_it(self):
+        texts = [CHECK_TEMPLATE.headings(REAL_RENDER(h))[0].text for h in ("Deploy\nplan\n------\n", "## Deploy<br>plan\n", "## Deploy plan\n")]
+        self.assertEqual((texts[0] == texts[1], texts[0] == texts[2]), (True, False))
+        [heading] = CHECK_TEMPLATE.parse_template("t.md", "Deploy\nplan\n------\n", REAL_RENDER).headings
+        self.assertEqual(str(heading), "## Deploy<br>plan")
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
@@ -993,6 +999,9 @@ class TemplateParsingTests(unittest.TestCase):
         form = "body:\n  - type: input\n    attributes:\n      label: 2025-11-20T10:30:00Z\n"
         with self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, "label of field 1"):
             CHECK_TEMPLATE.form_template("f.yml", form)
+
+    def test_a_broken_form_after_a_document_marker_keeps_its_indented_name(self):
+        self.assertEqual(CHECK_TEMPLATE.declared_name("---\n  name: Legacy\n  body: [unclosed\n"), "Legacy")
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):
