@@ -90,7 +90,8 @@ run only `status`, with every exact `PR=SHA`.
    and resume this loop before readiness. Further repairs still respect frozen
    members. While the published layer and every layer above it are unfrozen
    (drafts whose CI has not passed and whose review has not finished), put the
-   repair on that layer and cancel the runs the helper names as superseded.
+   repair on that layer through the native-stack reference's in-place repair
+   path, and cancel the superseded runs the helper names.
    Otherwise append a new fix layer; the push helper refuses to move a layer
    that is ready for review or a draft whose CI has passed.
 9. Enforce the native-stack reference's push-boundary checks for the frozen

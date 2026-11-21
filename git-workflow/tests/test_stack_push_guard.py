@@ -1,6 +1,7 @@
 import copy
 import importlib.util
 import io
+import itertools
 import json
 import os
 from pathlib import Path
@@ -127,14 +128,21 @@ class FakeGitHub:
         query = urllib.parse.parse_qs(path.split("?", 1)[1])
         found = self.runs.get(query["head_sha"][0], [])
         if isinstance(found, int):  # that many finished, passed runs of one workflow
-            found = [run() for _ in range(found)]
+            found = many_runs(found)
         size, page = int(query["per_page"][0]), int(query.get("page", ["1"])[0])
         return {"total_count": len(found), "workflow_runs": found[(page - 1) * size:page * size]}
 
 
-def run(status="completed", conclusion="success", workflow=1, run_id=900, name="CI"):
-    return {"id": run_id, "name": name, "status": status,
+RUN_IDS = itertools.count(1000)
+
+
+def run(status="completed", conclusion="success", workflow=1, run_id=None, name="CI", event="pull_request"):
+    return {"id": next(RUN_IDS) if run_id is None else run_id, "name": name, "status": status, "event": event,
             "conclusion": conclusion if status == "completed" else None, "workflow_id": workflow}
+
+
+def many_runs(count, **fields):
+    return [run(**fields) for _ in range(count)]
 
 
 def pull(number, branch, sha, draft=True, repository="example-org/app"):
@@ -205,10 +213,10 @@ class RewriteTests(unittest.TestCase):
         self.assertIn("restart CI on 2 of them", message)
 
     def test_long_run_lists_are_read_page_by_page(self):
-        cases = (([run()] * 100 + [run("queued")], False, 2),  # a run still going on page two
-                 ([run(conclusion="failure")] * 101, False, 2),
-                 ([run()] * 150, True, 2),
-                 ([run("queued")] + [run()] * 150, False, 1))  # page one settles it
+        cases = ((many_runs(100) + [run("queued")], False, 2),  # a run still going on page two
+                 (many_runs(101, conclusion="failure"), False, 2),
+                 (many_runs(150), True, 2),
+                 ([run("queued")] + many_runs(150), False, 2))
         for runs, passed, pages in cases:
             with self.subTest(passed=passed, pages=pages):
                 github = FakeGitHub([pull(12, "stack/one", "b" * 40)], runs={"b" * 40: runs})
@@ -220,6 +228,27 @@ class RewriteTests(unittest.TestCase):
                     self.assertFalse(guard.check_rewrites(admission, github)[0]["ciPassed"])
                 self.assertEqual(sum("actions/runs" in path for _, path in github.calls), pages)
 
+    def test_a_list_that_changes_while_read_or_a_blank_status_refuses(self):
+        page_one = many_runs(100)
+        for answer in (lambda path: {"total_count": 101, "workflow_runs": page_one if "page=1" in path else [page_one[0]]},
+                       lambda path: {"total_count": 101 if "page=1" in path else 102,
+                                     "workflow_runs": page_one if "page=1" in path else many_runs(2)}):
+            with self.assertRaisesRegex(guard.GuardError, "changed while they were read"):
+                guard.head_runs(lambda host, path: answer(path), "github.com", "example-org/app", "b" * 40, 12)
+        blank = {"total_count": 1, "workflow_runs": [{**run(), "status": ""}]}
+        with self.assertRaisesRegex(guard.GuardError, "incomplete workflow run"):
+            guard.head_runs(lambda host, path: blank, "github.com", "example-org/app", "b" * 40, 12)
+
+    def test_the_warning_names_only_pull_request_runs_and_says_when_the_list_was_cut(self):
+        listed = [run("queued", run_id=7, name="CI PR"), run("in_progress", run_id=8, name="Release", event="push")]
+        state = guard.ci_state(2, listed, True, 12)
+        self.assertEqual((state["ciPassed"], state["runsGoing"]), (False, ["CI PR run 7 (queued)"]))
+        long = [run("queued", run_id=9)] + many_runs(999)
+        total, read, complete = guard.head_runs(
+            lambda host, path: {"total_count": 1500, "workflow_runs": long[(int(urllib.parse.parse_qs(path.split("?", 1)[1])["page"][0]) - 1) * 100:][:100]},
+            "github.com", "example-org/app", "b" * 40, 12)
+        self.assertEqual((total, len(read), complete), (1500, 1000, False))
+
     def test_incomplete_or_endless_run_lists_refuse(self):
         def lookup(pages):
             return lambda host, path: pages(path)
@@ -230,7 +259,7 @@ class RewriteTests(unittest.TestCase):
                                   {"status": "completed", "workflow_id": 1, "conclusion": None}]}, "incomplete workflow run"),
                               (lambda path: {"total_count": 2, "workflow_runs": [] if "page=2" in path else [run()]},
                                "fewer workflow runs"),
-                              (lambda path: {"total_count": 5000, "workflow_runs": [run()] * 100}, "more than 10 pages")):
+                              (lambda path: {"total_count": 5000, "workflow_runs": many_runs(100)}, "more than 10 pages")):
             with self.subTest(error=error), self.assertRaisesRegex(guard.GuardError, error):
                 guard.head_runs(lookup(answer), "github.com", "example-org/app", "b" * 40, 12)
 
@@ -429,7 +458,8 @@ class StandaloneTests(unittest.TestCase):
         record = json.loads((Path(prepared["directory"]) / "admission.json").read_text())["request"]
         self.assertEqual([(o["pullRequest"], o["ciPassed"]) for o in record["pullRequests"]], [(7, False)])
         self.assertIn("moving draft #7 restarts its CI (2 workflow runs on its current head); "
-                      "cancel the runs still going: Evidence run 42 (in_progress)", stderr.getvalue())
+                      "once the push lands, cancel any of these pull request runs on the old head that its concurrency "
+                      "group did not: Evidence run 42 (in_progress)\n", stderr.getvalue())
 
     def test_prepare_refuses_when_gh_is_unavailable(self):
         admission = self.moved_layer()

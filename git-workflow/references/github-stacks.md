@@ -80,7 +80,11 @@ layer leaves the layers above it conflicting with the base, so they sync.
 While the layers have open PRs, rewrite them at most once, immediately before
 merging the whole stack, and only when that rule calls for it. A conflict that
 appears earlier waits for that rebase; it never justifies re-pushing reviewed
-layers. Rebase locally with `gh stack rebase`, then push through the
+layers. A repair on a layer that is not frozen is not such a rewrite: commit it
+on that layer, restack the layers above it with `gh stack rebase`, and push
+through the [protected publication helper](#protected-publication-helper) with
+each moved branch admitted and nothing under `rewrite`. The helper lets the
+push through only while every layer it moves is unfrozen. Rebase locally with `gh stack rebase`, then push through the
 [protected publication helper](#protected-publication-helper) with every member
 listed under `rewrite`. Every rewritten layer reruns its CI once and needs its
 readiness again on the new head. Only the layer-by-layer merge fallback below
@@ -234,8 +238,9 @@ when that PR is frozen: ready for review, since the helper cannot see when a
 review ends, or a draft whose GitHub Actions CI on its current head has passed,
 meaning no run is queued or in progress and every workflow that ran has a
 successful, neutral or skipped run there. A draft whose runs are queued, in
-progress, failed or cancelled may move; the helper names the runs still going
-on it, so cancel those. The helper cannot see a finished review on a draft, so
+progress, failed or cancelled may move. The helper then names the pull request
+runs still going on the old head; once the push lands, cancel any that the
+workflow's concurrency group did not. The helper cannot see a finished review on a draft, so
 `address-feedback`'s frozen rule still decides whether a draft may take a fix. Moving a layer also moves every layer
 above it and restarts their CI, so a fix in place on a low layer can cost more
 runs than a new top layer. The refusal names each blocked PR and how many would

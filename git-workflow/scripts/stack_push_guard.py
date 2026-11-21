@@ -237,9 +237,9 @@ def check_rewrites(c, api=github_api):
                 continue
             if sha != row["expected"]:
                 raise GuardError(f"pull request #{number} head is {sha}, not the admitted expected commit")
-            total, runs = head_runs(api, host, repository, sha, number)
+            total, runs, complete = head_runs(api, host, repository, sha, number)
             observed.append({"ref": row["ref"], "pullRequest": number, "draft": draft,
-                             **ci_state(total, runs, number)})
+                             **ci_state(total, runs, complete, number)})
     blocked = [o for o in observed if not o["draft"] or o["ciPassed"]]
     if blocked:
         details = ", ".join(f"#{o['pullRequest']} ({o['ref'].removeprefix('refs/heads/')}: "
@@ -257,46 +257,63 @@ def check_rewrites(c, api=github_api):
 # such as failure, cancelled or timed_out, leaves the workflow unpassed.
 PASSING = frozenset({"success", "neutral", "skipped"})
 RUN_PAGES = 10
+# The statuses GitHub gives a workflow run; every one but completed is still going.
+RUN_STATUSES = frozenset({"completed", "queued", "in_progress", "waiting", "requested", "pending", "action_required"})
+# Runs a push to the pull request's head supersedes.
+PULL_REQUEST_EVENTS = frozenset({"pull_request", "pull_request_target"})
 
 
 def head_runs(api, host, repository, sha, number):
-    """The workflow runs on a head, page by page. A run still going settles that
-    CI has not passed, so reading stops at the page that shows one."""
-    runs = []
+    """Every workflow run on a head, read page by page. Refuses a list that
+    changes while it is read. Past RUN_PAGES pages it keeps what it read only
+    when that already shows a run still going, which settles that CI has not
+    passed; the third value says whether the list is complete."""
+    runs, ids, total = [], set(), None
     for page in range(1, RUN_PAGES + 1):
         found = api(host, f"repos/{repository}/actions/runs?per_page=100&page={page}&head_sha={sha}")
         if (not isinstance(found, dict) or type(found.get("total_count")) is not int
                 or not isinstance(found.get("workflow_runs"), list)):
             raise GuardError(f"GitHub lookup returned no workflow runs for pull request #{number}")
+        if total is not None and found["total_count"] != total:
+            raise GuardError(f"the workflow runs of pull request #{number} changed while they were read")
+        total = found["total_count"]
         for run in found["workflow_runs"]:
-            if (not isinstance(run, dict) or not isinstance(run.get("status"), str) or "workflow_id" not in run
+            if (not isinstance(run, dict) or type(run.get("id")) is not int or run.get("status") not in RUN_STATUSES
+                    or "workflow_id" not in run
                     or (run["status"] == "completed"
                         and (not isinstance(run.get("conclusion"), str) or not run["conclusion"]))):
                 raise GuardError(f"GitHub lookup returned an incomplete workflow run for pull request #{number}")
+            if run["id"] in ids:
+                raise GuardError(f"the workflow runs of pull request #{number} changed while they were read")
+            ids.add(run["id"])
         runs.extend(found["workflow_runs"])
-        if any(run["status"] != "completed" for run in found["workflow_runs"]) or len(runs) >= found["total_count"]:
-            return found["total_count"], runs
+        if len(runs) >= total:
+            if len(runs) > total:
+                raise GuardError(f"the workflow runs of pull request #{number} changed while they were read")
+            return total, runs, True
         if not found["workflow_runs"]:
             raise GuardError(f"GitHub lookup listed fewer workflow runs than it counted for pull request #{number}")
+    if any(run["status"] != "completed" for run in runs):
+        return total, runs, False
     raise GuardError(f"more than {RUN_PAGES} pages of workflow runs for pull request #{number}; they cannot all be checked")
 
 
-def ci_state(total, runs, number):
+def ci_state(total, runs, complete, number):
     """Whether a head's CI has passed: no run is queued or in progress, and every
     workflow that ran on the head has a passed run there. A cancelled duplicate
-    beside a passed run of the same workflow does not unfreeze it. Also names the
-    runs still going, which a push to the head supersedes."""
-    going = [f"{run.get('name') or 'workflow ' + str(run['workflow_id'])} run {run.get('id')} ({run['status']})"
-             for run in runs if run["status"] != "completed"]
+    beside a passed run of the same workflow does not unfreeze it. Also names
+    the pull request runs still going, which a push to the head supersedes."""
+    going = [run for run in runs if run["status"] != "completed"]
+    superseded = [f"{run.get('name') or 'workflow ' + str(run['workflow_id'])} run {run['id']} ({run['status']})"
+                  for run in going if run.get("event") in PULL_REQUEST_EVENTS]
     if going:
-        return {"workflowRuns": total, "ciPassed": False, "runsGoing": going}
-    if len(runs) < total:
-        raise GuardError(f"GitHub lookup listed fewer workflow runs than it counted for pull request #{number}")
+        return {"workflowRuns": total, "ciPassed": False, "runsGoing": superseded, "runsListed": complete}
     passed = {}
     for run in runs:
         workflow = run["workflow_id"]
         passed[workflow] = passed.get(workflow, False) or run["conclusion"] in PASSING
-    return {"workflowRuns": total, "ciPassed": bool(passed) and all(passed.values()), "runsGoing": []}
+    return {"workflowRuns": total, "ciPassed": bool(passed) and all(passed.values()), "runsGoing": [],
+            "runsListed": complete}
 
 
 def prepare(value, api=github_api):
@@ -319,7 +336,10 @@ def prepare(value, api=github_api):
     pull_requests = check_rewrites(c, api)
     for o in pull_requests:
         if o["workflowRuns"]:
-            going = ("; cancel the runs still going: " + ", ".join(o["runsGoing"])) if o["runsGoing"] else ""
+            going = (("; once the push lands, cancel any of these pull request runs on the old head that its "
+                      "concurrency group did not: " + ", ".join(o["runsGoing"])
+                      + ("" if o["runsListed"] else f", and others past the first {RUN_PAGES} pages"))
+                     if o["runsGoing"] else "")
             print(f"Push guard: moving draft #{o['pullRequest']} restarts its CI ({o['workflowRuns']} workflow runs "
                   f"on its current head){going}", file=sys.stderr)
     count = config_count(os.environ)
