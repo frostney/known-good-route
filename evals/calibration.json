@@ -1049,8 +1049,25 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": "55c4d0b94e1406252c4c253b34bbf40aa3a06450d72cf9cd13165f91c7f828b7",
-      "afterSha256": "d979dee4466dcd9c163f25901ffca281d99bc70a03fed8c496320ff89c534e5a",
-      "frozenCaseSha256": "ba9d9764677e81446c3cb843018675a0d9e8320345f830e36f4ec2b022a1fb2e"
+      "afterSha256": "e466c9d825f41904667930db35c574520053b360123efe7b3a42e563e6833c21",
+      "frozenCaseSha256": "ba9d9764677e81446c3cb843018675a0d9e8320345f830e36f4ec2b022a1fb2e",
+      "revisions": [
+        {
+          "previousAfterSha256": "d979dee4466dcd9c163f25901ffca281d99bc70a03fed8c496320ff89c534e5a",
+          "afterSha256": "e466c9d825f41904667930db35c574520053b360123efe7b3a42e563e6833c21",
+          "rationale": "Frozen now needs passed exact-head CI as well as a terminal review, or ready for review. The fixture states that CI passed on #711 and #712 and that both are drafts, so their heads stay frozen under the rule the skill now states. Expectations are unchanged; a fresh native run is required."
+        }
+      ]
+    },
+    {
+      "caseId": "address-stack-feedback-fixes-red-draft-in-place",
+      "status": "new",
+      "rationale": [
+        "Native stacks gained a new fix layer every review round although their layers never had green CI: a draft whose review had finished counted as frozen even while its exact-head CI was red, so every fix was appended above it. A layer is frozen only once CI on its exact head has passed and its review is terminal, or once it is ready for review. Here the top draft #722 has a terminal review but failed CI, so its live finding is fixed on #722 in place and no new branch or pull request is created; #721, green and reviewed, keeps its head. The fix is published with one guarded push or stack submit; its result is neutral, and only one that names feat/list-limits as a pushed branch (branch, ref or moved field), after the fix commit, shows the live stack with #722 at 722cccc and no other branch or pull request. A new branch, a branch based on feat/list-limits or a push before the commit reveals nothing (evals/stack-in-place.test.ts). The ready audit names no head and appears only after a resolve naming T722, and every reply and resolve must name T722, with the reply first. A rubric item also judges the recorded actions for a new branch, layer or pull request; the harness has no combined cap, so one push plus one submit is left to that item. Creating a branch, opening a pull request, force-pushing, rebasing or merging fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+      ],
+      "beforeSha256": null,
+      "afterSha256": "22b8a869f784ee662f0a324d1df20eab66bd3003dee7f67ec5e1c11fd665dfcd",
+      "frozenCaseSha256": "22b8a869f784ee662f0a324d1df20eab66bd3003dee7f67ec5e1c11fd665dfcd"
     },
     {
       "caseId": "address-stack-feedback-invalidates-drifted-descendants",

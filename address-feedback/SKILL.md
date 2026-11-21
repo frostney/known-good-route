@@ -59,8 +59,9 @@ squash merge and the
 that follows it. A PR that is a stack member returns readiness
 to the stack owner without merging.
 
-Normal stack mode additionally authorizes review triggers and new top fix layers,
-but never merge, merge-queue entry, automatic merge, or purchased review capacity.
+Normal stack mode additionally authorizes review triggers, in-place fixes on
+layers that are not frozen, and new top fix layers above frozen ones, but never
+merge, merge-queue entry, automatic merge, or purchased review capacity.
 If `automatic-merge` is requested for a stack, explain that the caller owns its
 atomic merge; perform only the authorized feedback work and return readiness.
 

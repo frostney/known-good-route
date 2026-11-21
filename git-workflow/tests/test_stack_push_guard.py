@@ -190,8 +190,8 @@ class RewriteTests(unittest.TestCase):
             guard.check_rewrites(self.admission, github)
 
     def test_a_draft_whose_ci_has_not_passed_may_move(self):
-        # Not frozen: its CI is queued, running, failed or cancelled, and a draft has no review yet.
-        for runs in ([run("queued")], [run("in_progress"), run()], [run(conclusion="failure")],
+        # Not frozen whatever its review state: its CI is queued, running, failed or cancelled.
+        for runs in ([run("queued")], [run(), run("in_progress")], [run(conclusion="failure")],
                      [run(conclusion="cancelled")], [run(), run(conclusion="failure", workflow=2)]):
             with self.subTest(runs=runs):
                 github = FakeGitHub([pull(12, "stack/one", "b" * 40), pull(13, "stack/two", "d" * 40)],
@@ -201,9 +201,9 @@ class RewriteTests(unittest.TestCase):
                                  [(12, len(runs), False), (13, 0, False)])
 
     def test_a_draft_whose_ci_passed_is_frozen_and_the_cost_is_named(self):
-        # A cancelled duplicate beside a passed run of the same workflow keeps it frozen.
+        # An older cancelled run replaced by a passed run of the same workflow keeps it frozen.
         github = FakeGitHub([pull(12, "stack/one", "b" * 40), pull(13, "stack/two", "d" * 40, draft=False)],
-                            runs={"b" * 40: [run(), run(conclusion="cancelled"), run(conclusion="skipped", workflow=2)],
+                            runs={"b" * 40: [run(conclusion="cancelled"), run(), run(conclusion="skipped", workflow=2)],
                                   "d" * 40: [run("in_progress")]})
         with self.assertRaises(guard.GuardError) as caught:
             guard.check_rewrites(self.admission, github)
@@ -212,11 +212,98 @@ class RewriteTests(unittest.TestCase):
         self.assertIn("#13 (stack/two: ready for review, 1 workflow runs on its head)", message)
         self.assertIn("restart CI on 2 of them", message)
 
+    def test_the_freeze_rule_for_each_state_of_a_layer(self):
+        # Frozen means ready for review, or CI passed on the exact head with a terminal review;
+        # the guard cannot see the review, so it protects every draft whose CI passed.
+        admission = guard.validate_admission({**self.admission, "refs": self.admission["refs"][:1]})
+        movable = (("no runs", [], "none", "no workflow runs"),
+                   ("failed runs", [run(conclusion="failure"), run(workflow=2)], "failed", "failed or was cancelled"),
+                   ("runs still going", [run("in_progress"), run("queued", workflow=2)], "running", "has not finished"))
+        for case, runs, ci, reason in movable:
+            with self.subTest(case=case):
+                github = FakeGitHub([pull(12, "stack/one", "b" * 40)], runs={"b" * 40: runs})
+                [observed] = guard.check_rewrites(admission, github)
+                self.assertEqual((observed["pullRequest"], observed["ci"], observed["ciPassed"]), (12, ci, False))
+                self.assertIn(reason, observed["reason"])
+                self.assertIn("not frozen", observed["reason"])
+        refused = (("a draft whose runs all passed", True, [run(), run(conclusion="skipped", workflow=2)],
+                    "draft, CI passed on its head", "frozen once its review is terminal"),
+                   ("a ready pull request without runs", False, [], "ready for review)", "ready for review is frozen"),
+                   ("a ready pull request whose CI failed", False, [run(conclusion="failure")], "ready for review,",
+                    "ready for review is frozen"))
+        for case, draft, runs, state, advice in refused:
+            with self.subTest(case=case):
+                github = FakeGitHub([pull(12, "stack/one", "b" * 40, draft=draft)], runs={"b" * 40: runs})
+                with self.assertRaises(guard.GuardError) as caught:
+                    guard.check_rewrites(admission, github)
+                message = str(caught.exception)
+                self.assertIn(f"#12 (stack/one: {state}", message)
+                self.assertIn(advice, message)
+                self.assertIn("new top layer", message)
+                # The listed ref is the explicit override for a protected layer.
+                self.assertEqual(guard.check_rewrites(self.with_rewrite("refs/heads/stack/one"), github), [])
+
+    def test_the_newest_run_of_a_workflow_and_event_decides(self):
+        admission = guard.validate_admission({**self.admission, "refs": self.admission["refs"][:1]})
+        cases = (("a newer failure after an older success", [run(run_id=100), run(conclusion="failure", run_id=101)],
+                  "failed"),
+                 ("a newer success after an older failure", [run(conclusion="failure", run_id=100), run(run_id=101)],
+                  "passed"),
+                 # Not green as the pull request gate counts it until the cancelled run is rerun,
+                 # whether it was a duplicate, a manual cancellation or a cancelled rerun.
+                 ("a later cancellation after an older success", [run(run_id=100),
+                                                                  run(conclusion="cancelled", run_id=101)], "failed"),
+                 ("a cancelled rerun after a cancellation", [run(conclusion="cancelled", run_id=100),
+                                                             run(conclusion="cancelled", run_id=101)], "failed"),
+                 ("a later cancellation after only failures", [run(conclusion="failure", run_id=100),
+                                                               run(conclusion="cancelled", run_id=101)], "failed"),
+                 ("an older run still going beside a newer success", [run("in_progress", run_id=100),
+                                                                       run(run_id=101)], "passed"),
+                 ("another event of the same workflow failed", [run(run_id=100),
+                                                                run(conclusion="failure", run_id=101, event="push")],
+                  "failed"))
+        for case, runs, ci in cases:
+            with self.subTest(case=case):
+                self.assertEqual(guard.ci_state(len(runs), runs, True, 12)["ci"], ci)
+                github = FakeGitHub([pull(12, "stack/one", "b" * 40)], runs={"b" * 40: runs})
+                if ci == "passed":
+                    with self.assertRaisesRegex(guard.GuardError, "draft, CI passed"):
+                        guard.check_rewrites(admission, github)
+                else:
+                    self.assertEqual(guard.check_rewrites(admission, github)[0]["ci"], "failed")
+
+    def test_a_draft_only_rewrite_moves_a_green_draft_but_never_a_ready_pull_request(self):
+        admission = guard.validate_admission({**self.admission, "refs": self.admission["refs"][:1], "rewrite": [
+            {"ref": "refs/heads/stack/one", "reason": "its review has not finished", "draftOnly": True}]})
+        green = FakeGitHub([pull(12, "stack/one", "b" * 40)], runs={"b" * 40: [run()]})
+        [observed] = guard.check_rewrites(admission, green)
+        self.assertEqual((observed["pullRequest"], observed["ci"]), (12, "passed"))
+        self.assertIn("admitted reason", observed["reason"])
+        # Still looked up at the push: a pull request marked ready in between, or a
+        # second ready pull request on the same branch, is refused.
+        for pulls in ([pull(12, "stack/one", "b" * 40, draft=False)],
+                      [pull(12, "stack/one", "b" * 40), pull(14, "stack/one", "b" * 40, draft=False)]):
+            with self.subTest(pulls=[p["number"] for p in pulls]):
+                github = FakeGitHub(pulls, runs={"b" * 40: [run()]})
+                with self.assertRaisesRegex(guard.GuardError, "ready for review.*never moves a ready pull request"):
+                    guard.check_rewrites(admission, github)
+        url = "https://github.com/example-org/app.git"
+        line = f"refs/heads/stack/one {'a' * 40} refs/heads/stack/one {'b' * 40}\n"
+        ready = FakeGitHub([pull(12, "stack/one", "b" * 40, draft=False)])
+        with self.assertRaisesRegex(guard.GuardError, "ready for review"):
+            guard.admit_updates(admission, "origin", url, line, ready)
+        for bad in ({"draftOnly": False}, {"draftOnly": "yes"}, {"extra": 1}):
+            with self.subTest(bad=bad), self.assertRaises(guard.GuardError):
+                guard.validate_admission({**self.admission, "rewrite": [
+                    {"ref": "refs/heads/stack/one", "reason": "x", **bad}]})
+
     def test_long_run_lists_are_read_page_by_page(self):
         cases = ((many_runs(100) + [run("queued")], False, 2),  # a run still going on page two
                  (many_runs(101, conclusion="failure"), False, 2),
                  (many_runs(150), True, 2),
-                 ([run("queued")] + many_runs(150), False, 2))
+                 ([run(conclusion="failure", workflow=2)] + many_runs(150), False, 2),
+                 # An older run still going is replaced by the newer passed runs of its workflow.
+                 ([run("queued")] + many_runs(150), True, 2))
         for runs, passed, pages in cases:
             with self.subTest(passed=passed, pages=pages):
                 github = FakeGitHub([pull(12, "stack/one", "b" * 40)], runs={"b" * 40: runs})
@@ -521,11 +608,12 @@ class SpentRestTests(unittest.TestCase):
         self.answer([graph_pull(12, "stack/one", "b" * 40)],
                     {"b" * 40: [other_app() for _ in range(1100)] + [suite(conclusion="FAILURE")]})
         self.assertEqual([(o["workflowRuns"], o["ciPassed"]) for o in guard.check_rewrites(self.one)], [(1, False)])
-        # More runs than the guard reads, one of them still going: CI has not passed.
+        # More runs than the guard reads, even with one still going: which run of a
+        # workflow is newest cannot be established, so it refuses.
         self.answer([graph_pull(12, "stack/one", "b" * 40)],
                     {"b" * 40: [suite("QUEUED")] + [suite() for _ in range(1200)]})
-        observed = guard.check_rewrites(self.one)[0]
-        self.assertEqual((observed["ciPassed"], observed["runsListed"]), (False, False))
+        with self.assertRaisesRegex(guard.GuardError, "which run of each workflow decides"):
+            guard.check_rewrites(self.one)
         self.answer([graph_pull(12, "stack/one", "b" * 40)], {"b" * 40: [suite() for _ in range(1200)]})
         with self.assertRaisesRegex(guard.GuardError, "more than 10 pages"):
             guard.check_rewrites(self.one)
@@ -541,8 +629,8 @@ class SpentRestTests(unittest.TestCase):
     def test_a_count_cut_short_is_a_lower_bound(self):
         self.answer([graph_pull(12, "stack/one", "b" * 40)],
                     {"b" * 40: [suite("QUEUED")] + [other_app() for _ in range(3100)]})
-        observed = guard.check_rewrites(self.one)[0]
-        self.assertEqual((observed["workflowRuns"], observed["ciPassed"], observed["runsListed"]), (1, False, False))
+        with self.assertRaisesRegex(guard.GuardError, "which run of each workflow decides"):
+            guard.check_rewrites(self.one)
         self.answer([graph_pull(12, "stack/one", "b" * 40, draft=False)],
                     {"b" * 40: [suite("QUEUED")] + [other_app() for _ in range(3100)]})
         with self.assertRaisesRegex(guard.GuardError, "ready for review, at least 1 workflow runs on its head"):
@@ -747,8 +835,11 @@ class StandaloneTests(unittest.TestCase):
         with mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
             prepared = guard.prepare(admission, github)
         record = json.loads((Path(prepared["directory"]) / "admission.json").read_text())["request"]
-        self.assertEqual([(o["pullRequest"], o["ciPassed"]) for o in record["pullRequests"]], [(7, False)])
-        self.assertIn("moving draft #7 restarts its CI (2 workflow runs on its current head); "
+        self.assertEqual([(o["pullRequest"], o["ci"], o["ciPassed"]) for o in record["pullRequests"]],
+                         [(7, "running", False)])
+        self.assertIn("not frozen", record["pullRequests"][0]["reason"])
+        self.assertIn("moving draft #7 in place: draft whose CI on its head has not finished, so it is not frozen; "
+                      "the push supersedes those runs; it restarts its CI (2 workflow runs on its current head); "
                       "once the push lands, cancel any of these pull request runs on the old head that its concurrency "
                       "group did not: Evidence run 42 (in_progress)\n", stderr.getvalue())
 

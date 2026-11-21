@@ -10,7 +10,8 @@ independently merge-ready.
   a terminal result for the member's exact head, and every returned finding
   surface was inspected and classified.
 - `covered`: The member is reviewed and every finding is moot at the integrated
-  top, satisfied by an exact descendant commit, fixed by an exact commit in a
+  top, satisfied by an exact descendant commit, fixed by an exact commit on the
+  member itself (a fix in place, whose new head is then reviewed again) or in a
   required top fix layer, or declined with accepted evidence. Every originating
   inline thread has a maintainer-workflow reply and is resolved.
 - `pending`: CI, review, provider availability, thread handling,
@@ -25,18 +26,34 @@ a partial merge.
 
 ## Frozen members and invalidation
 
-A member becomes frozen after its exact-head CI and review are terminal
-and every finding surface is classified. This workflow never pushes to a frozen
-member. The protected push helper cannot see when a review ends, so it treats a
-member as frozen once it is ready for review, or once CI on its draft head has
-passed, and refuses to move it. That is a narrower check than the rule above:
-a draft whose review has finished is frozen even when the helper would let it
-move. Fix a member in place only when it and every member above it are
-unfrozen, because the push moves them all and restarts their CI. The only
-rewrite is the final rebase
-before merging the whole stack, under `git-workflow`'s
-[native stack reference](../../git-workflow/references/github-stacks.md#guarded-rewrite-exception);
-it changes every head, so the changed-head rule below applies to every member.
+This is the one definition of frozen that the other stack guides link to. A
+member becomes frozen once every check on its exact head has passed, counted as
+the [PR gate](pr-readiness.md#terminal-exact-head-gate) counts them, and its
+review is terminal with every finding surface classified, or once it is ready
+for review, whatever its review verdict. Classify a terminal review's findings
+before placing any fix, so a draft whose CI passed and whose review is terminal
+is frozen by the time its fix is placed. A draft whose checks on its exact head
+failed, were cancelled, are still running or never ran is not frozen, even
+after its review finished: while no member above it is frozen, its fixes go in
+place on it. This workflow never pushes to a frozen member, and adds a new top
+layer only for fixes above a frozen member. The protected push helper sees only
+GitHub Actions runs and no reviews, so it refuses to move a member that is
+ready for review or a draft whose Actions CI passed, and reads a draft whose
+only checks come from other apps as having none. Apply this rule yourself:
+never admit a frozen member because the helper allows it. A draft whose Actions
+CI passed but which is not frozen, because its review has not finished or
+another check on its head has not passed, takes its fix in place under a
+`rewrite` entry with `draftOnly` that names that reason. Check that state again
+immediately before the push, and place the fix again under step 7 of the stack
+workflow if the draft has frozen meanwhile; the helper still refuses it once it
+is ready for review. Fix a member in place only when it and every member above
+it are not frozen, because the push moves them all and restarts their CI. Apart
+from a `draftOnly` entry, a ref goes under `rewrite` only for the rewrites
+`git-workflow`'s [guarded rewrite
+exception](../../git-workflow/references/github-stacks.md#guarded-rewrite-exception)
+allows: the final rebase before merging the whole stack, the layer-by-layer
+merge fallback and a retargeted stack. Each changes every head it moves, so the
+changed-head rule below applies to each of them.
 
 - Appending one expected fix layer above an unchanged prefix preserves the
   prefix's evidence. The new member remains pending until reviewed and covered.
@@ -76,7 +93,8 @@ The complete stack is `ready` only when all conditions are simultaneously true:
   [PR gate](pr-readiness.md#terminal-exact-head-gate) counts them;
 - every intentionally active provider has terminal evidence for each head it
   was required to review;
-- the newest fix layer has no actionable finding;
+- every layer that took a fix, in place or as an appended fix layer, has no
+  actionable finding at its current head;
 - every source and fix-layer thread has a maintainer-workflow reply;
 - GitHub reports zero unresolved threads across the stack;
 - no paid review capacity, bypass, or merge is required to claim readiness; and

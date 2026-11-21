@@ -111,14 +111,16 @@ def validate_admission(value):
             raise GuardError("rewrite needs explicit entries")
         rewrite, listed = [], set()
         for row in value["rewrite"]:
-            if not isinstance(row, dict) or set(row) != {"ref", "reason"}:
+            if not isinstance(row, dict) or set(row) - {"draftOnly"} != {"ref", "reason"}:
                 raise GuardError("invalid rewrite fields")
+            if "draftOnly" in row and row["draftOnly"] is not True:
+                raise GuardError("rewrite draftOnly must be true when given")
             if not isinstance(row["ref"], str) or row["ref"] not in seen or row["ref"] in listed:
                 raise GuardError("rewrite names a ref that is not admitted, or names it twice")
             if not isinstance(row["reason"], str) or not row["reason"].strip():
                 raise GuardError("rewrite needs a reason for each ref")
             listed.add(row["ref"])
-            rewrite.append({"ref": row["ref"], "reason": row["reason"]})
+            rewrite.append({"ref": row["ref"], "reason": row["reason"], **({"draftOnly": True} if "draftOnly" in row else {})})
         result["rewrite"] = rewrite
     return result
 
@@ -363,12 +365,18 @@ def graphql_runs(host, path, why, owner, name, sha):
 
 
 def check_rewrites(c, api=github_api):
-    """Refuse to move the head of an open pull request whose layer is frozen,
-    unless `rewrite` lists its ref. A layer is frozen once it is ready for
-    review, since the guard cannot see when its review ends, or once CI on its
-    draft head has passed. A draft whose runs are queued, in progress, failed
-    or cancelled is not frozen. Returns what was observed, for the prepared record."""
-    listed = {r["ref"] for r in c.get("rewrite", ())}
+    """Refuse to move the head of an open pull request the guard protects,
+    unless `rewrite` lists its ref. A layer is frozen once CI on its exact head
+    has passed and its review is terminal, or once it is ready for review. The
+    guard cannot see when a review ends, so it protects every ready pull
+    request and every draft whose CI passed. A draft with no runs, or whose runs
+    failed, were cancelled or are still going, may move: its fix goes in place.
+    A `rewrite` entry with `draftOnly` lets a draft whose CI passed move while
+    its review has not finished, but the guard still looks it up and refuses
+    it once any open pull request on that ref is ready for review.
+    Returns what was observed, with the reason each may move, for the prepared record."""
+    listed = {r["ref"] for r in c.get("rewrite", ()) if not r.get("draftOnly")}
+    draft_only = {r["ref"] for r in c.get("rewrite", ()) if r.get("draftOnly")}
     moving = [r for r in c["refs"] if set(r["expected"]) != {"0"} and r["expected"] != r["source"]
               and r["ref"] not in listed]
     if not moving:
@@ -403,9 +411,16 @@ def check_rewrites(c, api=github_api):
             if sha != row["expected"]:
                 raise GuardError(f"pull request #{number} head is {sha}, not the admitted expected commit")
             total, runs, complete = head_runs(api, host, repository, sha, number)
-            observed.append({"ref": row["ref"], "pullRequest": number, "draft": draft,
-                             **ci_state(total, runs, complete, number)})
-    blocked = [o for o in observed if not o["draft"] or o["ciPassed"]]
+            # A ready pull request is refused whatever its CI, so only a draft
+            # needs a list complete enough to show which runs decide.
+            state = (ci_state(total, runs, complete, number) if draft or complete else
+                     {"workflowRuns": total, "ci": "unknown", "ciPassed": False, "runsGoing": [], "runsListed": False})
+            overridden = row["ref"] in draft_only
+            reason = (MOVABLE_REASONS[state["ci"]] if not state["ciPassed"]
+                      else DRAFT_ONLY_REASON if overridden else None) if draft else None
+            observed.append({"ref": row["ref"], "pullRequest": number, "draft": draft, **state,
+                             "reason": reason})
+    blocked = [o for o in observed if o["reason"] is None]
     if blocked:
         details = ", ".join(f"#{o['pullRequest']} ({o['ref'].removeprefix('refs/heads/')}: "
                             + ("ready for review" if not o["draft"] else "draft, CI passed on its head")
@@ -413,10 +428,33 @@ def check_rewrites(c, api=github_api):
                                if o["workflowRuns"] else "") + ")"
                             for o in blocked)
         restarted = sum(1 for o in blocked if o["workflowRuns"])
+        advice = []
+        if any(not o["draft"] for o in blocked):
+            advice.append("A pull request that is ready for review is frozen: place the fix as address-feedback's "
+                          "stack step 7 says, on the top fix layer when that is not frozen and otherwise in a new top "
+                          "layer. Keep plain rewrite entries for the guarded rewrites the stack reference allows, "
+                          "such as the final rebase before merging the whole stack; a draftOnly rewrite entry never "
+                          "moves a ready pull request")
+        if any(o["draft"] for o in blocked):
+            advice.append("A draft whose GitHub Actions CI passed is frozen once its review is terminal and its "
+                          "head's checks pass: then place the fix as step 7 says, on the top fix layer when that is "
+                          "not frozen and otherwise in a new top layer. While its review has not finished, or another "
+                          "check on its head has not passed, it is not frozen, so the fix goes in place: re-check that "
+                          "just before the push and list its ref under rewrite with draftOnly true and a reason that "
+                          "names it")
         raise GuardError(f"refusing to move the head of {len(blocked)} open pull request(s): {details}. "
-                         f"Pushing would restart CI on {restarted} of them. Push a new top layer instead, "
-                         "or list each ref under rewrite with its reason")
+                         f"Pushing would restart CI on {restarted} of them. " + ". ".join(advice) + ".")
     return observed
+
+
+# Why the guard lets a draft move, by the state of CI on its head.
+MOVABLE_REASONS = {
+    "none": "draft with no workflow runs on its head, so it is not frozen",
+    "running": "draft whose CI on its head has not finished, so it is not frozen; the push supersedes those runs",
+    "failed": "draft whose CI on its head failed or was cancelled, so it is not frozen; the push reruns it",
+}
+DRAFT_ONLY_REASON = ("draft whose GitHub Actions CI on its head passed, listed under rewrite with draftOnly as not "
+                     "frozen for the admitted reason; the push restarts its CI")
 
 
 # A run with one of these conclusions counts as passed; any other conclusion,
@@ -471,20 +509,33 @@ def head_runs(api, host, repository, sha, number):
 
 
 def ci_state(total, runs, complete, number):
-    """Whether a head's CI has passed: no run is queued or in progress, and every
-    workflow that ran on the head has a passed run there. A cancelled duplicate
-    beside a passed run of the same workflow does not unfreeze it. Also names
-    the pull request runs still going, which a push to the head supersedes."""
+    """The state of a head's CI, decided by the newest run of each workflow
+    and event on it, as in delivery-wait: a newer run of a source replaces an
+    older one, so neither an older success nor an older run still going
+    decides. `none` without runs, `running` while a deciding run is queued or
+    in progress, `passed` when every deciding run passed, and `failed`
+    otherwise. A newest run that was cancelled has not passed, even beside an
+    older passed run of its source: the head is then not green, as the pull
+    request gate counts it, until the cancelled run is rerun. A list cut short
+    cannot show which run of a source is newest, so it refuses. Also names the
+    pull request runs still going, deciding or not, which a push to the head
+    supersedes."""
+    if not complete:
+        raise GuardError(f"more than {RUN_PAGES} pages of workflow runs for pull request #{number}; which run of "
+                         "each workflow decides cannot be established")
     going = [run for run in runs if run["status"] != "completed"]
     superseded = [f"{run.get('name') or 'workflow ' + str(run['workflow_id'])} run {run['id']} ({run['status']})"
                   for run in going if run.get("event") in PULL_REQUEST_EVENTS]
-    if going:
-        return {"workflowRuns": total, "ciPassed": False, "runsGoing": superseded, "runsListed": complete}
-    passed = {}
+    sources = {}
     for run in runs:
-        workflow = run["workflow_id"]
-        passed[workflow] = passed.get(workflow, False) or run["conclusion"] in PASSING
-    return {"workflowRuns": total, "ciPassed": bool(passed) and all(passed.values()), "runsGoing": [],
+        sources.setdefault((run["workflow_id"], run.get("event")), []).append(run)
+    deciding = [max(source, key=lambda run: run["id"]) for source in sources.values()]
+    if any(run["status"] != "completed" for run in deciding):
+        ci = "running"
+    else:
+        passed = [run["conclusion"] in PASSING for run in deciding]
+        ci = "none" if not passed else "passed" if all(passed) else "failed"
+    return {"workflowRuns": total, "ci": ci, "ciPassed": ci == "passed", "runsGoing": superseded,
             "runsListed": complete}
 
 
@@ -507,13 +558,13 @@ def prepare(value, api=github_api):
     # since a pull request can become ready or its CI can pass in between.
     pull_requests = check_rewrites(c, api)
     for o in pull_requests:
-        if o["workflowRuns"]:
-            going = (("; once the push lands, cancel any of these pull request runs on the old head that its "
-                      "concurrency group did not: " + ", ".join(o["runsGoing"])
-                      + ("" if o["runsListed"] else f", and others past the first {RUN_PAGES} pages"))
-                     if o["runsGoing"] else "")
-            print(f"Push guard: moving draft #{o['pullRequest']} restarts its CI ({'' if o['runsListed'] else 'at least '}{o['workflowRuns']} workflow runs "
-                  f"on its current head){going}", file=sys.stderr)
+        going = (("; once the push lands, cancel any of these pull request runs on the old head that its "
+                  "concurrency group did not: " + ", ".join(o["runsGoing"])
+                  + ("" if o["runsListed"] else f", and others past the first {RUN_PAGES} pages"))
+                 if o["runsGoing"] else "")
+        cost = (f"; it restarts its CI ({'' if o['runsListed'] else 'at least '}{o['workflowRuns']} workflow runs "
+                f"on its current head)" if o["workflowRuns"] else "")
+        print(f"Push guard: moving draft #{o['pullRequest']} in place: {o['reason']}{cost}{going}", file=sys.stderr)
     count = config_count(os.environ)
     git_dir = Path(git(directory, "rev-parse", "--absolute-git-dir"))
     original_hooks = Path(git(directory, "rev-parse", "--path-format=absolute", "--git-path", "hooks"))
