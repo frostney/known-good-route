@@ -11,6 +11,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -113,7 +114,8 @@ if args[:2] == ["api", "graphql"]:
     output({"data":{"repository":{"pullRequest":selected}}})
 
 endpoint = next((arg for arg in args if arg.startswith("repos/")), "")
-if scenario.get("restRateLimited") and include:
+import time
+if scenario.get("restRateLimited") and include and time.time() < scenario["coreReset"]:
     print("HTTP/2.0 403 Forbidden\nX-Ratelimit-Remaining: 0\r\nX-Ratelimit-Reset: " + str(scenario["coreReset"])
           + "\r\nX-Ratelimit-Resource: core\r\n\r\n" + json.dumps({"message": "API rate limit exceeded"}))
     print("gh: API rate limit exceeded for user ID 1. (HTTP 403)", file=sys.stderr)
@@ -1133,39 +1135,64 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(output["metrics"]["observations"], 3)
         self.assertEqual(output["metrics"]["notModified"], 2)
 
-    def rest_budget_wait(self, remaining: int, reset_in: float) -> dict:
+    def rest_budget_wait(self, remaining: int, reset_in: float, seconds: float = 1.0, **scenario: object) -> dict:
         reset = int(datetime.now(timezone.utc).timestamp() + reset_in)
         running = {"id": 44, "head_sha": "head-1", "status": "in_progress", "conclusion": None, "html_url": "https://example.invalid/run"}
-        self.write_scenario(workflow=running, coreRemaining=remaining, coreReset=reset)
+        self.write_scenario(**{"workflow": running, "coreRemaining": remaining, "coreReset": reset, **scenario})
         self.counter.unlink(missing_ok=True)
         _, output = self.run_json(
             DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "head-1",
-            "--deadline", (datetime.now(timezone.utc) + timedelta(seconds=1)).isoformat(), "--interval", "0.05",
+            "--deadline", (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat(), "--interval", "0.05",
             "--state", str(self.directory / f"budget-{remaining}.json"),
         )
-        self.assertEqual(output["state"], "timed-out")
         return output
 
     def test_a_wait_stops_spending_the_rest_budget_below_the_reserve(self) -> None:
         self.assertGreater(self.rest_budget_wait(4_900, reset_in=30)["metrics"]["observations"], 5)
-        # Below the reserve kept for other work, the next observation waits for
-        # the reset, so only the last one at the deadline follows the first.
-        self.assertEqual(self.rest_budget_wait(900, reset_in=3600)["metrics"]["observations"], 2)
+        # Below the reserve kept for other work, the next observation would come
+        # after the reset, past the deadline, so the wait ends without it.
+        output = self.rest_budget_wait(900, reset_in=3600)
+        self.assertEqual(output["state"], "timed-out")
+        self.assertIn("REST budget held", output["reason"])
+        self.assertEqual(output["metrics"]["observations"], 1)
 
-    def test_a_wait_slows_down_as_the_rest_budget_runs_low(self) -> None:
+    def test_a_census_reads_no_further_page_below_the_reserve(self) -> None:
+        reset = int(datetime.now(timezone.utc).timestamp() + 3600)
+        runs = census(workflow_run(101, matrix_jobs(1)), workflow_run(102, matrix_jobs(1, start=5, run_id=102), workflow_id=8))
+        first, second = runs["runPages"][0]["workflow_runs"]
+        runs["runPages"] = [{"total_count": 2, "workflow_runs": [first]}, {"total_count": 2, "workflow_runs": [second]}]
+        self.write_scenario(census=[runs], coreRemaining=999, coreReset=reset)
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "timed-out")
+        self.assertEqual(len(self.rest_requests()), 1)  # The first page told it 999 were left.
+
+    def test_a_wait_spends_at_most_its_allowance_in_a_budget_window(self) -> None:
         sys.path.insert(0, str(DELIVERY.parent))
         from kgr_github import Gh, Metrics
 
         gh = Gh(Metrics(0.0))
         self.assertEqual(gh.pace(30, now=0), 30)  # Nothing known about the budget yet.
-        pauses = []
-        for remaining in (5_000, 3_000, 1_500, 1_100, 1_001, 900):
-            gh.core, gh.spent = (remaining, 3_600.0), gh.spent + 4
-            pauses.append(gh.pace(30, now=0))
-        # 4 requests a poll: a quarter of what is left above the reserve of 1,000 lasts to the reset.
-        self.assertEqual([round(pause) for pause in pauses], [30, 30, 115, 576, 3601, 3601])
-        self.assertEqual(gh.pace(30, now=0), 30)  # The last observation spent nothing.
+        now, remaining, spent = 0.0, 1_500, 0
+        while now < 3_600:
+            for _ in range(4):  # Four counted GETs an observation.
+                remaining -= 1
+                spent += 1
+                gh.spent += 1
+                gh.note_rate({"x-ratelimit-remaining": str(remaining), "x-ratelimit-reset": "3600"})
+            now += gh.pace(30, now=now)
+        # A quarter of the 500 above the reserve of 1,000, instead of spending
+        # faster as the reset nears.
+        self.assertLessEqual(spent, 125)
+        self.assertGreater(spent, 100)
         self.assertEqual(gh.pace(30, now=3_601), 30)  # The budget has reset.
+
+    def test_a_wait_honours_retry_after(self) -> None:
+        sys.path.insert(0, str(DELIVERY.parent))
+        from kgr_github import Gh, Metrics
+
+        gh = Gh(Metrics(0.0))
+        gh.note_rate({"retry-after": "120"})
+        self.assertGreater(gh.pace(30), 110)
 
     def test_a_rate_limited_rest_read_retries_after_the_reset(self) -> None:
         reset = int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
@@ -1175,8 +1202,38 @@ class WaitCommandsTest(unittest.TestCase):
             "--deadline", (datetime.now(timezone.utc) + timedelta(seconds=1)).isoformat(), "--interval", "0.05",
         )
         self.assertEqual(output["state"], "timed-out")
-        # One read, and one more at the deadline, instead of one every interval.
+        self.assertEqual(len(self.rest_requests()), 1)  # The reset falls after the deadline.
+
+    def test_a_rate_limited_wait_recovers_once_the_budget_resets(self) -> None:
+        reset = int(datetime.now(timezone.utc).timestamp()) + 2
+        self.write_scenario(restRateLimited=True, coreReset=reset)
+        _, output = self.run_json(
+            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "head-1",
+            "--deadline", (datetime.now(timezone.utc) + timedelta(seconds=5)).isoformat(), "--interval", "0.05",
+        )
+        self.assertEqual(output["state"], "satisfied")
         self.assertEqual(len(self.rest_requests()), 2)
+
+    def test_a_paced_wait_stops_promptly_when_asked(self) -> None:
+        reset = int(datetime.now(timezone.utc).timestamp() + 3600)
+        running = {"id": 44, "head_sha": "head-1", "status": "in_progress", "conclusion": None, "html_url": "https://example.invalid/run"}
+        # 1,100 left: the allowance paces the next observation minutes away, inside the deadline.
+        self.write_scenario(workflow=running, coreRemaining=1_100, coreReset=reset)
+        process = subprocess.Popen(
+            [sys.executable, str(DELIVERY), "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44",
+             "--head", "head-1", "--deadline", (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat(),
+             "--interval", "0.05", "--json"],
+            cwd=self.directory, env=self.environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        )
+        log = self.counter.with_name("counter.log")
+        for _ in range(100):
+            if log.exists():
+                break
+            time.sleep(0.05)
+        time.sleep(0.3)
+        process.terminate()
+        stdout, _ = process.communicate(timeout=3)
+        self.assertEqual(json.loads(stdout)["state"], "cancelled")
 
     def test_checks_terminal_without_a_selector_names_all_workflows(self) -> None:
         self.write_scenario()

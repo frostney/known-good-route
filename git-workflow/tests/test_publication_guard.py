@@ -77,7 +77,8 @@ FAKE_GH = textwrap.dedent(f"""\
         if slug not in visibility:
             print(json.dumps({{"data": {{"repository": None}}, "errors": [{{"type": "NOT_FOUND", "path": ["repository"]}}]}}))
             sys.exit(print("gh: Could not resolve to a Repository", file=sys.stderr) or 1)
-        sys.exit(print(json.dumps({{"data": {{"repository": {{"visibility": visibility[slug].upper()}}}}}})))
+        answer = "SECRET" if "oddgraphql" in fail else visibility[slug].upper()
+        sys.exit(print(json.dumps({{"data": {{"repository": {{"visibility": answer}}}}}})))
     if "rest" in fail and args[0] == "api":
         spent("API")
     if args[:2] == ["repo", "view"]:
@@ -102,6 +103,8 @@ FAKE_GH = textwrap.dedent(f"""\
         if slug not in visibility:
             sys.exit(print("gh: Not Found (HTTP 404)", file=sys.stderr) or 1)
         body = {{"visibility": visibility[slug], "private": visibility[slug] != "public"}}
+        if "blank" in fail:
+            sys.exit(print(""))
         print(body["visibility"] if "--jq" in args else json.dumps(body))
     else:
         sys.exit(print("unexpected fake gh call: " + repr(args), file=sys.stderr) or 1)
@@ -651,13 +654,47 @@ class PublicationGuardTests(unittest.TestCase):
         self.git("commit", "-q", "-m", "feat: notes")
         marker = self.base / "pushed"
         push = ["--", sys.executable, "-c", f"open({str(marker)!r}, 'w')"]
-        result = self.run_guard("outgoing", "--base", "origin/main", *push)
-        self.assertEqual(result.returncode, 3)
-        self.assertIn("commit the staged rewrites", result.stderr)
-        self.assertFalse(marker.exists())
+        for attempt in ("rewrites", "retry"):  # A retry finds the rewrites staged, not committed.
+            result = self.run_guard("outgoing", "--base", "origin/main", *push)
+            self.assertEqual(result.returncode, 3, attempt)
+            self.assertIn("commit what is staged", result.stderr)
+            self.assertFalse(marker.exists())
         self.git("commit", "-q", "-m", "fix: notes name no private repository")
         self.assertEqual(self.run_guard("outgoing", "--base", "origin/main", *push).returncode, 0)
         self.assertTrue(marker.exists())
+
+    def test_a_push_after_the_separator_waits_for_files_the_guard_could_not_read(self):
+        self.git("update-ref", "refs/remotes/origin/main", "HEAD")
+        self.stage({"latin.txt": "caf\xe9\n".encode("latin-1")})
+        self.git("commit", "-q", "-m", "feat: latin text")
+        marker = self.base / "pushed"
+        result = self.run_guard("outgoing", "--base", "origin/main", "--", sys.executable, "-c",
+                                f"open({str(marker)!r}, 'w')")
+        self.assertEqual(result.returncode, 3)
+        self.assertIn("could not read latin.txt", result.stderr)
+        self.assertFalse(marker.exists())
+
+    def test_every_spelling_of_a_file_option_is_withheld_once_and_kept_apart(self):
+        message = self.write("message", "fix: one\n")
+        Path(f"{message}.unchecked").write_text("fix: earlier\n")
+        for spelling in (["--message", str(message)], [f"--message-file={message}"]):
+            with self.subTest(spelling=spelling[0]):
+                message.write_text("fix: one\n")
+                result = self.run_guard("staged", *spelling, env={"FAKE_GH_FAIL": "rest,graphql"})
+                self.assertEqual(result.returncode, 2)
+                self.assertFalse(message.exists())
+        self.assertEqual(Path(f"{message}.unchecked").read_text(), "fix: earlier\n")
+        self.assertEqual(Path(f"{message}.unchecked.2").read_text(), "fix: one\n")
+        self.assertEqual(Path(f"{message}.unchecked.3").read_text(), "fix: one\n")
+
+    def test_a_visibility_github_does_not_name_stops_the_guard(self):
+        self.stage({"notes.md": f"Ported from {PRIVATE}.\n"})
+        for fail in ("blank", "rest,oddgraphql"):
+            with self.subTest(fail=fail):
+                result = self.run_guard("staged", env={"FAKE_GH_FAIL": fail})
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("gave visibility", result.stderr)
+                self.assertEqual(self.staged("notes.md"), f"Ported from {PRIVATE}.\n")
 
     def test_merge_of_the_base_checks_only_what_the_merge_changes(self):
         self.stage({"c.md": "base\n"})

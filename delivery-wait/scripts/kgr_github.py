@@ -103,13 +103,20 @@ class Gh:
     A GET repeats its last ETag, and GitHub answers an unchanged resource with
     304 Not Modified, which its primary rate limit does not count. Each REST
     answer reports the core budget left, which `pace` uses to slow a wait down.
+    A wait sets `reserve`: with less than that left, a REST read raises
+    RateLimited without asking GitHub.
     """
 
-    def __init__(self, metrics: Metrics, timeout: int = 30) -> None:
+    def __init__(self, metrics: Metrics, timeout: int = 30, reserve: int | None = None) -> None:
         self.metrics = metrics
         self.timeout = timeout
+        self.reserve = reserve
         self.cached: dict[str, tuple[str, Any, str | None]] = {}
         self.core: tuple[int, float] | None = None  # (remaining, reset epoch)
+        # This window's allowance, CORE_SHARE of the budget above the reserve
+        # when this client first saw the window, and what it has spent of it.
+        self.window: dict[str, float] = {}
+        self.retry_at: float | None = None  # From a Retry-After header.
         self.spent = 0  # REST requests GitHub counted against the core budget
         self.paced_spent = 0
 
@@ -133,7 +140,7 @@ class Gh:
     def fail(completed: subprocess.CompletedProcess[str], body: str | None = None) -> None:
         message = (completed.stderr or (completed.stdout if body is None else body)).strip()
         lowered = message.lower()
-        if "rate limit" in lowered or "rate-limit" in lowered or "quota" in lowered:
+        if "rate limit" in lowered or "rate-limit" in lowered or "quota" in lowered or "http 429" in lowered:
             raise RateLimited(message or "GitHub API rate limit exceeded")
         if any(marker in lowered for marker in ("timeout", "timed out", "connection reset", "temporary failure", "could not resolve host", "http 502", "http 503", "http 504")):
             raise TransientError(message or "temporary GitHub transport failure")
@@ -160,15 +167,32 @@ class Gh:
         return self.decode(completed.stdout)
 
     def note_rate(self, headers: dict[str, str]) -> None:
+        try:
+            self.retry_at = time.time() + float(headers["retry-after"])
+        except (KeyError, ValueError):
+            pass
         if headers.get("x-ratelimit-resource", "core") != "core":
             return
         try:
-            self.core = (int(headers["x-ratelimit-remaining"]), float(headers["x-ratelimit-reset"]))
+            remaining, reset = int(headers["x-ratelimit-remaining"]), float(headers["x-ratelimit-reset"])
         except (KeyError, ValueError):
-            pass
+            return
+        self.core = (remaining, reset)
+        if self.window.get("reset") != reset:
+            # Counts the request that reported the window, so the allowance is what is left.
+            allowance = max(0, remaining + 1 - CORE_RESERVE) * CORE_SHARE
+            self.window = {"reset": reset, "allowance": allowance, "spent": 0}
+        self.window["spent"] += 1
+
+    def below_reserve(self, now: float | None = None) -> bool:
+        now = time.time() if now is None else now
+        return self.core is not None and now < self.core[1] and self.core[0] < CORE_RESERVE
 
     def get(self, endpoint: str) -> tuple[Any, str | None]:
         """One REST page and the URL of the next, revalidated against its last ETag."""
+        if self.reserve is not None and self.below_reserve():
+            raise RateLimited(f"{self.core[0]} REST requests left, under the {CORE_RESERVE} kept for other work, "
+                              "until the budget resets")
         cached = self.cached.get(endpoint)
         args = ["api", "--include", endpoint]
         if cached:
@@ -177,7 +201,10 @@ class Gh:
         status, headers, body = parse_included(completed.stdout)
         if status == 304 and cached:
             self.metrics.not_modified += 1
-            return copy.deepcopy(cached[1]), cached[2]
+            # A 304 can still link a page added since; without a link, the cached one holds.
+            link = NEXT_LINK.search(headers.get("link", ""))
+            following = link.group(1) if link else cached[2]
+            return copy.deepcopy(cached[1]), following
         if status is not None:
             self.spent += 1
             self.note_rate(headers)
@@ -219,22 +246,31 @@ class Gh:
     def pace(self, interval: float, now: float | None = None) -> float:
         """The pause before the next observation, stretched while the core budget runs low.
 
-        At the last observation's cost, it spends at most CORE_SHARE of the
-        budget above CORE_RESERVE before the reset, and none below the
-        reserve. An observation that cost nothing, such as one answered by
-        304s or GraphQL alone, keeps the interval.
+        A window's allowance is CORE_SHARE of the budget above CORE_RESERVE
+        when this client first saw it. After an observation that spent some
+        budget, the pause spreads what is left of the allowance evenly up to
+        the reset, at that observation's cost. With the allowance used up or
+        less than CORE_RESERVE left, the next observation waits for the reset.
+        An observation that cost nothing keeps the interval. A Retry-After
+        GitHub sent is always honoured.
         """
         now = time.time() if now is None else now
         cost = self.spent - self.paced_spent
         self.paced_spent = self.spent
-        if not cost or self.core is None or now >= self.core[1]:
-            return interval
-        remaining, reset = self.core
-        until_reset = reset - now + 1
-        headroom = remaining - CORE_RESERVE
-        if headroom < cost:
-            return max(interval, until_reset)
-        return max(interval, min(until_reset, until_reset * cost / (headroom * CORE_SHARE)))
+        wake = interval
+        if self.retry_at is not None and self.retry_at > now:
+            wake = max(wake, self.retry_at - now)
+        if self.core is None or now >= self.core[1]:
+            return wake
+        until_reset = self.core[1] - now + 1
+        if self.below_reserve(now):
+            return max(wake, until_reset)
+        if not cost:
+            return wake
+        left = self.window.get("allowance", 0) - self.window.get("spent", 0)
+        if left < cost:
+            return max(wake, until_reset)
+        return max(wake, min(until_reset, until_reset * cost / left))
 
 
 def stable_digest(value: Any) -> str:
@@ -380,12 +416,29 @@ def wait_for_transition(
     change_precedes_terminal: bool = False,
     pace: Callable[[float], float] | None = None,
 ) -> dict[str, Any]:
-    """Observe until a transition, sleeping `pace(interval)`, or `interval`, between observations."""
+    """Observe until a transition, sleeping `pace(interval)`, or `interval`, between observations.
+
+    When pacing holds the next observation past the deadline, the wait ends
+    at the deadline without making it.
+    """
     stopped = False
+    held = False
 
     def stop(_signum: int, _frame: Any) -> None:
         nonlocal stopped
         stopped = True
+
+    def nap(seconds: float) -> None:
+        """Sleep, waking early once a signal asks the wait to stop."""
+        end = time.time() + seconds
+        while not stopped and end > time.time():
+            time.sleep(max(0.0, min(0.5, end - time.time())))
+
+    def pause() -> float:
+        nonlocal held
+        delay = pace(interval) if pace else interval
+        held = delay > interval and time.time() + delay >= deadline
+        return delay
 
     previous_handlers = {
         number: signal.signal(number, stop) for number in (signal.SIGINT, signal.SIGTERM)
@@ -409,6 +462,15 @@ def wait_for_transition(
                 observation = prior.get("observation", {}) if prior else {}
                 result = result_envelope(kind, "cancelled", identity, observation, metrics, "interrupted")
                 write_state(state_path, {"schemaVersion": 1, "kind": kind, "identity": identity, "observation": observation, "digest": prior.get("digest") if prior else None, "updatedAt": utc_now(), "terminalResult": result})
+                return result
+            if held:
+                observation = prior.get("observation", {}) if prior else {}
+                result = result_envelope(
+                    kind, deadline_result[0], identity, observation, metrics,
+                    f"{deadline_result[1]}; the GitHub REST budget held the next observation past it",
+                )
+                base = prior or {"schemaVersion": 1, "kind": kind, "identity": identity, "observation": {}, "digest": None}
+                write_state(state_path, {**base, "updatedAt": utc_now(), "terminalResult": result})
                 return result
             try:
                 observation = observe()
@@ -441,7 +503,7 @@ def wait_for_transition(
                         },
                     )
                     return result
-                delay = pace(interval) if pace else interval
+                delay = pause()
                 retry_at = min(deadline, time.time() + delay)
                 write_state(
                     state_path,
@@ -461,10 +523,10 @@ def wait_for_transition(
                         ).isoformat().replace("+00:00", "Z"),
                     },
                 )
-                time.sleep(min(delay, max(0.0, deadline - time.time())))
+                nap(min(delay, max(0.0, deadline - time.time())))
                 continue
             metrics.observations += 1
-            delay = pace(interval) if pace else interval
+            delay = pause()
             terminal, reason = classify(observation)
             digest = stable_digest(transition_key(observation) if transition_key else observation)
             checkpoint = {
@@ -510,7 +572,7 @@ def wait_for_transition(
                 write_state(state_path, checkpoint)
                 return result
             prior = checkpoint
-            time.sleep(min(delay, max(0.0, deadline - time.time())))
+            nap(min(delay, max(0.0, deadline - time.time())))
     finally:
         for number, handler in previous_handlers.items():
             signal.signal(number, handler)

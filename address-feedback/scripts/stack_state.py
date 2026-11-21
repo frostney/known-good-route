@@ -17,6 +17,7 @@ sys.dont_write_bytecode = True  # Keep installed skill trees free of __pycache__
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "delivery-wait" / "scripts"))
 
 from kgr_github import (  # noqa: E402
+    CORE_RESERVE,
     Gh,
     Metrics,
     StateLock,
@@ -303,6 +304,7 @@ def main() -> int:
             if expected is None:
                 raise WaitError("stack wait requires --expect")
             args.interval = positive_interval(args.interval)
+            gh.reserve = CORE_RESERVE
             state_path = args.state or default_state_path("stack", identity)
             with StateLock(state_path):
                 output = wait_for_transition(
@@ -317,6 +319,7 @@ def main() -> int:
                     transition_key=lambda value: value,
                     deadline_result=("pending", "deadline reached without a verified stack transition"),
                     change_precedes_terminal=True,
+                    pace=gh.pace,
                 )
         emit(output, args.json)
         return 0

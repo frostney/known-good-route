@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "delivery-wait" / "
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from kgr_github import (  # noqa: E402
+    CORE_RESERVE,
     Gh,
     Metrics,
     StateLock,
@@ -436,6 +437,7 @@ def main() -> int:
                 output = result_envelope("review", state, identity, observation, metrics, reason)
             else:
                 args.interval = positive_interval(args.interval)
+                gh.reserve = CORE_RESERVE
                 state_path = args.state or default_state_path("review", identity)
                 with StateLock(state_path):
                     output = wait_for_transition(

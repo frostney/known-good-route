@@ -247,13 +247,20 @@ so the helper keeps that use low:
   unchanged resource with 304 Not Modified, which its rate limit does not
   count, so runs that sit in a queue cost next to nothing after the first
   observation. `metrics.notModified` counts these reads.
-- Each REST answer reports how much of the budget is left. After an
-  observation that spent some of it, the wait stretches `--interval` so that
-  it would spend at most a quarter of what is left above 1,000 before the
-  budget resets. With fewer than 1,000 left, it observes again only after the
-  reset, and a rate-limited read retries after the reset rather than every
-  `--interval`. Several waits on one account therefore slow each other down
-  instead of emptying the budget. An observation that spent nothing keeps
-  `--interval`.
+- Each REST answer reports how much of the budget is left. A wait's
+  allowance in each hourly window is a quarter of what was left above 1,000
+  when it first saw that window. After an observation that spent budget, the
+  wait stretches `--interval` to spread the rest of its allowance evenly up to
+  the reset. Once the allowance is used up, or fewer than 1,000 requests are
+  left, it reads nothing more through REST until the reset, not even the next
+  page of a census. Several waits on one account therefore slow each other
+  down instead of emptying the budget. An observation that spent nothing
+  keeps `--interval`.
+- A rate-limited read, including a 429 or a secondary limit, retries after
+  the reset or the `Retry-After` GitHub gives, rather than every
+  `--interval`. When that falls after `--deadline`, the wait ends at the
+  deadline without another read and says so in its reason; run it again
+  after the reset.
+- `inspect` takes its one snapshot even below the reserve.
 
 The checkpoint's `nextAttemptAt` shows when the next observation is due.

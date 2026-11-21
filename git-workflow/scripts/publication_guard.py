@@ -174,6 +174,7 @@ def failure(result):
     return result.stderr.decode(errors="replace").strip()
 
 
+VISIBILITIES = ("public", "private", "internal")
 VISIBILITY_QUERY = "query($owner:String!,$name:String!){repository(owner:$owner,name:$name){visibility}}"
 VIEWER_QUERY = ("query($endCursor:String){viewer{login organizations(first:100,after:$endCursor)"
                 "{nodes{login} pageInfo{hasNextPage endCursor}}}}")
@@ -193,8 +194,10 @@ def graphql_visibility(slug, host="github.com"):
         body = None
     if isinstance(body, dict) and isinstance(body.get("data"), dict):
         repository = body["data"].get("repository")
-        if isinstance(repository, dict) and isinstance(repository.get("visibility"), str):
+        if isinstance(repository, dict) and str(repository.get("visibility")).lower() in VISIBILITIES:
             return repository["visibility"].lower(), None
+        if isinstance(repository, dict):
+            return None, f"GitHub GraphQL gave visibility {repository.get('visibility')!r}"
         errors = body.get("errors")
         if repository is None and errors and all(isinstance(e, dict) and e.get("type") == "NOT_FOUND" for e in errors):
             return "missing", None
@@ -208,10 +211,13 @@ def visibility(slug, host="github.com", name=None):
     """
     name = name or slug
     # An older GitHub Enterprise Server names no visibility, only whether a repository is private.
-    result = gh_api(f"repos/{slug}", "--jq", '.visibility // (if .private == false then "public" else "private" end)',
-                    host=host)
+    result = gh_api(f"repos/{slug}", "--jq", '.visibility // (if .private == true then "private" '
+                    'elif .private == false then "public" else "" end)', host=host)
     if result.returncode == 0:
-        return result.stdout.decode().strip()
+        answer = result.stdout.decode().strip()
+        if answer in VISIBILITIES:
+            return answer
+        raise GuardError(f"cannot ask GitHub whether {name} is public: it gave visibility {answer!r}")
     if b"HTTP 404" in result.stderr:
         return "missing"
     if rate_limited(result):
@@ -1060,11 +1066,11 @@ FILE_OPTIONS = ("--message-file", "--title-file", "--body-file")
 
 
 def named_files(argv):
-    """The message, title and body files ARGV names, read the way argparse would."""
+    """The message, title and body files ARGV names, including under a mistyped prefix of an option."""
     files = []
     for at, argument in enumerate(argv):
         name, equals, value = argument.partition("=")
-        if name in FILE_OPTIONS:
+        if len(name) > 2 and any(option.startswith(name) for option in FILE_OPTIONS):
             value = value if equals else (argv[at + 1] if at + 1 < len(argv) else "")
             if value:
                 files.append(value)
@@ -1074,24 +1080,38 @@ def named_files(argv):
 def withhold(argv):
     """Moves each file ARGV names aside, so a command that ignores the guard's exit status publishes nothing."""
     for path in named_files(argv):
-        if os.path.isfile(path):
-            os.replace(path, path + ".unchecked")
-            print(f"publication guard: moved {path} to {path}.unchecked; nothing checked it", file=sys.stderr)
+        if not os.path.isfile(path):
+            continue
+        target, number = f"{path}.unchecked", 1
+        while os.path.lexists(target):  # Keeps an earlier run's copy.
+            number += 1
+            target = f"{path}.unchecked.{number}"
+        try:
+            os.rename(path, target)
+            print(f"publication guard: moved {path} to {target}; nothing checked it", file=sys.stderr)
+        except OSError as error:
+            try:
+                with open(path, "w"):
+                    pass  # Empty, so a commit or PR write from it has nothing to publish.
+                print(f"publication guard: cannot move {path} ({error}); emptied it instead", file=sys.stderr)
+            except OSError as second:
+                print(f"publication guard: cannot withhold {path}: {second}; do not publish it", file=sys.stderr)
 
 
 def check(argv):
     if sys.version_info < (3, 11):
         raise GuardError("Python 3.11 or newer is required")
+    # No abbreviated options, so every file the guard reads is one withhold() finds.
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     usage="%(prog)s {staged,outgoing,pr} ... [-- COMMAND ...]")
+                                     usage="%(prog)s {staged,outgoing,pr} ... [-- COMMAND ...]", allow_abbrev=False)
     commands = parser.add_subparsers(dest="operation", required=True)
-    staged = commands.add_parser("staged", help="rewrite the staged diff and, optionally, the commit message file")
+    staged = commands.add_parser("staged", allow_abbrev=False, help="rewrite the staged diff and, optionally, the commit message file")
     staged.add_argument("--message-file")
-    outgoing = commands.add_parser("outgoing", help="rewrite and stage files the branch changes since BASE")
+    outgoing = commands.add_parser("outgoing", allow_abbrev=False, help="rewrite and stage files the branch changes since BASE")
     outgoing.add_argument("--base", required=True)
     for command in (staged, outgoing):
         command.add_argument("--remote", help="the remote being pushed to; defaults to the branch's push remote")
-    pr = commands.add_parser("pr", help="rewrite PR title and body files in place")
+    pr = commands.add_parser("pr", allow_abbrev=False, help="rewrite PR title and body files in place")
     pr.add_argument("--repo", required=True, help="the pull request's base repository, [HOST/]OWNER/REPO")
     pr.add_argument("--title-file")
     pr.add_argument("--body-file")
@@ -1099,6 +1119,21 @@ def check(argv):
         command.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     return args, guard(args)
+
+
+def publish_refusal(args, report):
+    """Why the command after -- must not run although the check passed, or None."""
+    if args.operation != "outgoing" or not report["public"]:
+        return None
+    root, _ = repository_root()
+    staged = run(["git", "diff", "--cached", "--quiet"], cwd=root, check=False).returncode
+    if report["rewritten"] or staged:
+        # A push sends commits, not the index, so staged rewrites are not in it yet.
+        return "the push would publish the commits as they are; commit what is staged through `staged` and rerun"
+    if report["unchecked"]:
+        return ("the guard could not read " + ", ".join(report["unchecked"])
+                + "; check them yourself, then run the push without the guard's --")
+    return None
 
 
 def main(argv=None):
@@ -1115,9 +1150,9 @@ def main(argv=None):
     print(json.dumps(report) if args.json else render(report), flush=True)
     if not publish:
         return 0
-    if args.operation == "outgoing" and report["rewritten"]:
-        print("Error: publication guard: the push would publish the commits as they are; commit the staged "
-              "rewrites through `staged` and rerun", file=sys.stderr)
+    refusal = publish_refusal(args, report)
+    if refusal:
+        print(f"Error: publication guard: {refusal}; nothing was run", file=sys.stderr)
         return 3
     try:
         return subprocess.run(publish).returncode

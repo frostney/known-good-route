@@ -113,8 +113,11 @@ finds nothing to publish.
   `gh stack link`, run `outgoing --base BASE -- <the push command>`. BASE is
   `REMOTE/DEFAULT`, or for a stack layer the branch beneath it. Add
   `--remote NAME` when the push goes to a remote other than the branch's push
-  remote. When it stages rewrites, it exits 3 without pushing: commit them
-  through the commit step above, then run the push step again.
+  remote. While the index differs from `HEAD`, as after it stages rewrites,
+  it exits 3 without pushing: commit what is staged through the commit step
+  above, then run the push step again. It also exits 3 when it could not read
+  a file; check that file as the `was not checked` warning below says, then
+  push.
 - Before each pull request title or body write, write the title and body to
   files and run `pr --repo OWNER/REPO --title-file FILE --body-file FILE`, where
   `OWNER/REPO` is the repository the pull request is opened in. Then create or
@@ -142,13 +145,16 @@ Act on its result:
   an argument was wrong. Nothing was rewritten, and the files it was given are
   now `FILE.unchecked`. Fix the cause the error names, move the files back
   and rerun. A spent REST budget alone is not such a cause, since the guard
-  then asks GraphQL; an error naming both means GraphQL's budget is spent too.
-  Never publish without a run that exits 0.
-- Exit 3 from `outgoing` with a push after `--`: the push did not run; see the
-  push step above.
-- With a command after `--`, any other exit is that command's own status.
-  Without one, any other exit means the guard failed. Stop, do not publish,
-  and report its output.
+  then asks GraphQL; an error naming both REST and GraphQL means GraphQL could
+  not answer either, because its budget is spent too or it failed. An answer
+  that names no known visibility stops the guard too. Never publish without a
+  run that exits 0.
+- The guard's own refusals print a line starting `Error: publication guard:`
+  on standard error. Exit 3 with such a line from `outgoing` with a push
+  after `--` means the push did not run; see the push step above.
+- With a command after `--` and no such line, the exit is that command's own
+  status. Without a command, any other exit means the guard failed. Stop, do
+  not publish, and report its output.
 
 At the same points, check what you publish against the repository's binding
 guides. A current
