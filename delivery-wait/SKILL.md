@@ -251,14 +251,15 @@ so the helper keeps that use low:
   allowance in each hourly window is a quarter of what was left above 1,000
   when it first saw that window. After an observation that spent budget, the
   wait stretches `--interval` to spread the rest of its allowance evenly up to
-  the reset. Once the allowance is used up, or fewer than 1,000 requests are
-  left, it reads nothing more through REST until the reset, not even the next
-  page of a census. Several waits on one account therefore slow each other
+  the reset. The allowance is checked between observations, so one
+  observation can go past it. Once the allowance is used up, the wait reads
+  nothing more until the reset. With fewer than 1,000 requests left it makes
+  no REST read at all until the reset, not even the next page of a census. Several waits on one account therefore slow each other
   down instead of emptying the budget. An observation that spent nothing
   keeps `--interval`.
 - A rate-limited read, including a 429 or a secondary limit, retries after
-  the reset or the `Retry-After` GitHub gives, rather than every
-  `--interval`. When that falls after `--deadline`, the wait ends at the
+  the reset or the `Retry-After` GitHub gives, or a minute later when a
+  secondary limit names no time, rather than every `--interval`. When that falls after `--deadline`, the wait ends at the
   deadline without another read and says so in its reason; run it again
   after the reset.
 - `inspect` takes its one snapshot even below the reserve.

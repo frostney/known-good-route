@@ -452,6 +452,7 @@ def main() -> int:
                         transition_key=review_transition_key,
                         change_precedes_terminal=True,
                         pace=gh.pace,
+                        not_before=gh.not_before,
                     )
         elif args.command == "reply":
             repo_parts(args.repo)

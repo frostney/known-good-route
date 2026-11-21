@@ -13,8 +13,10 @@ import sys
 import tempfile
 import time
 import unittest
+import unittest.mock
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -115,6 +117,10 @@ if args[:2] == ["api", "graphql"]:
 
 endpoint = next((arg for arg in args if arg.startswith("repos/")), "")
 import time
+if scenario.get("restSecondaryLimited") and include:
+    print("HTTP/2.0 403 Forbidden\nRetry-After: 25\r\n\r\n" + json.dumps({"message": "secondary rate limit"}))
+    print("gh: You have exceeded a secondary rate limit. (HTTP 403)", file=sys.stderr)
+    sys.exit(1)
 if scenario.get("restRateLimited") and include and time.time() < scenario["coreReset"]:
     print("HTTP/2.0 403 Forbidden\nX-Ratelimit-Remaining: 0\r\nX-Ratelimit-Reset: " + str(scenario["coreReset"])
           + "\r\nX-Ratelimit-Resource: core\r\n\r\n" + json.dumps({"message": "API rate limit exceeded"}))
@@ -251,6 +257,22 @@ def workflow_run(
         },
         "jobs": jobs,
     }
+
+
+QUEUED_GH = r'''#!/usr/bin/env python3
+import json, os, sys
+path = os.environ["QUEUED_GH"]
+queue = json.loads(open(path).read())
+response = queue.pop(0)
+open(path, "w").write(json.dumps(queue))
+reason = {200: "OK", 304: "Not Modified", 403: "Forbidden", 429: "Too Many Requests"}[response["status"]]
+head = "\r\n".join(f"{key}: {value}" for key, value in response["headers"].items())
+body = json.dumps(response["body"]) if "body" in response else ""
+print(f"HTTP/2.0 {response['status']} {reason}\n{head}\r\n\r\n{body}", end="")
+if response["status"] >= 300:
+    print(f"gh: {reason} (HTTP {response['status']})", file=sys.stderr)
+    sys.exit(1)
+'''
 
 
 def parse_time(value: str) -> float:
@@ -1213,6 +1235,60 @@ class WaitCommandsTest(unittest.TestCase):
         )
         self.assertEqual(output["state"], "satisfied")
         self.assertEqual(len(self.rest_requests()), 2)
+
+    def test_a_retry_after_past_the_deadline_ends_the_wait_without_another_read(self) -> None:
+        self.write_scenario(restSecondaryLimited=True)
+        _, output = self.run_json(
+            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "head-1",
+            "--deadline", (datetime.now(timezone.utc) + timedelta(seconds=1)).isoformat(), "--interval", "30",
+        )
+        self.assertEqual(output["state"], "timed-out")
+        self.assertIn("held the next observation until", output["reason"])
+        self.assertEqual(len(self.rest_requests()), 1)
+
+    def queued_gh(self, responses: list[dict]) -> "Any":
+        """A Gh whose `gh` answers RESPONSES in order, as `gh api --include` prints them."""
+        sys.path.insert(0, str(DELIVERY.parent))
+        from kgr_github import Gh, Metrics
+
+        queue = self.directory / "queue.json"
+        queue.write_text(json.dumps(responses))
+        script = self.directory / "queued" / "gh"
+        script.parent.mkdir(exist_ok=True)
+        script.write_text(QUEUED_GH)
+        script.chmod(script.stat().st_mode | stat.S_IXUSR)
+        patch = unittest.mock.patch.dict(os.environ, {
+            "PATH": f"{script.parent}{os.pathsep}{os.environ['PATH']}", "QUEUED_GH": str(queue)})
+        patch.start()
+        self.addCleanup(patch.stop)
+        return Gh(Metrics(time.monotonic()), reserve=1_000)
+
+    def test_a_304_refreshes_the_budget_and_the_page_links(self) -> None:
+        reset = str(int(time.time()) + 3600)
+        rate = lambda left: {"X-Ratelimit-Remaining": str(left), "X-Ratelimit-Reset": reset}
+        gh = self.queued_gh([
+            {"status": 200, "headers": {"ETag": "one", "Link": '<https://api.github.com/x?page=2>; rel="next"', **rate(1_500)}, "body": [1]},
+            {"status": 200, "headers": {"ETag": "two", **rate(1_499)}, "body": [2]},
+            # The list shrank to one page, and other work spent the budget meanwhile.
+            {"status": 304, "headers": {"Link": '<https://api.github.com/x?page=1>; rel="first"', **rate(999)}},
+            {"status": 304, "headers": {}},
+        ])
+        self.assertEqual(gh.rest_pages("x"), [[1], [2]])
+        self.assertEqual(gh.rest_pages("x"), [[1]])
+        self.assertEqual(gh.metrics.not_modified, 1)
+        self.assertEqual(gh.spent, 2)  # A 304 is not spent.
+        self.assertIsNotNone(gh.not_before())
+        with self.assertRaises(Exception) as raised:
+            gh.rest_pages("x")  # Below the reserve, no read goes out.
+        self.assertIn("under the 1000", str(raised.exception))
+        self.assertEqual(len(json.loads((self.directory / "queue.json").read_text())), 1)
+
+    def test_a_secondary_limit_without_a_retry_time_backs_off_a_minute(self) -> None:
+        gh = self.queued_gh([{"status": 429, "headers": {}, "body": {"message": "Too Many Requests"}}])
+        with self.assertRaises(Exception):
+            gh.rest("x")
+        self.assertGreater(gh.not_before() - time.time(), 55)
+        self.assertGreater(gh.pace(30), 55)
 
     def test_a_paced_wait_stops_promptly_when_asked(self) -> None:
         reset = int(datetime.now(timezone.utc).timestamp() + 3600)

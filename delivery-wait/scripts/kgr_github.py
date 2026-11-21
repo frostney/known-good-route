@@ -38,6 +38,9 @@ CORE_RESERVE = 1000
 # A wait paces itself to spend at most this share of the core budget left above
 # the reserve before the reset, so several waits on one account fit together.
 CORE_SHARE = 0.25
+# GitHub asks a client that hit a secondary limit without a Retry-After to
+# wait at least a minute.
+SECONDARY_BACKOFF = 60
 NEXT_LINK = re.compile(r'<([^>]+)>\s*;\s*rel="next"')
 
 
@@ -166,7 +169,8 @@ class Gh:
             self.fail(completed)
         return self.decode(completed.stdout)
 
-    def note_rate(self, headers: dict[str, str]) -> None:
+    def note_rate(self, headers: dict[str, str], spent: bool = True) -> None:
+        """The budget and retry time HEADERS report; SPENT counts the response against the window."""
         try:
             self.retry_at = time.time() + float(headers["retry-after"])
         except (KeyError, ValueError):
@@ -180,9 +184,19 @@ class Gh:
         self.core = (remaining, reset)
         if self.window.get("reset") != reset:
             # Counts the request that reported the window, so the allowance is what is left.
-            allowance = max(0, remaining + 1 - CORE_RESERVE) * CORE_SHARE
+            allowance = max(0, remaining + spent - CORE_RESERVE) * CORE_SHARE
             self.window = {"reset": reset, "allowance": allowance, "spent": 0}
-        self.window["spent"] += 1
+        self.window["spent"] += spent
+
+    def not_before(self, now: float | None = None) -> float | None:
+        """The earliest time GitHub's limits let this client's next REST read go, or None for now."""
+        now = time.time() if now is None else now
+        times = [self.retry_at] if self.retry_at is not None and self.retry_at > now else []
+        if self.core is not None and now < self.core[1] and (
+            self.below_reserve(now) or self.window.get("allowance", 0) <= self.window.get("spent", 0)
+        ):
+            times.append(self.core[1] + 1)
+        return max(times) if times else None
 
     def below_reserve(self, now: float | None = None) -> bool:
         now = time.time() if now is None else now
@@ -201,13 +215,20 @@ class Gh:
         status, headers, body = parse_included(completed.stdout)
         if status == 304 and cached:
             self.metrics.not_modified += 1
-            # A 304 can still link a page added since; without a link, the cached one holds.
-            link = NEXT_LINK.search(headers.get("link", ""))
-            following = link.group(1) if link else cached[2]
+            self.note_rate(headers, spent=False)
+            following = cached[2]
+            if "link" in headers:
+                # A Link replaces the cached one, and one without a next page ends the list.
+                link = NEXT_LINK.search(headers["link"])
+                following = link.group(1) if link else None
+                self.cached[endpoint] = (cached[0], cached[1], following)
             return copy.deepcopy(cached[1]), following
         if status is not None:
             self.spent += 1
             self.note_rate(headers)
+            if status in (403, 429) and "retry-after" not in headers and headers.get("x-ratelimit-remaining") != "0":
+                if status == 429 or "rate limit" in (completed.stderr + body).lower():
+                    self.retry_at = max(self.retry_at or 0.0, time.time() + SECONDARY_BACKOFF)
         if completed.returncode != 0 or status is None or not 200 <= status < 300:
             self.fail(completed, body)
         payload = self.decode(body)
@@ -415,14 +436,16 @@ def wait_for_transition(
     deadline_result: tuple[str, str] = ("timed-out", "deadline reached"),
     change_precedes_terminal: bool = False,
     pace: Callable[[float], float] | None = None,
+    not_before: Callable[[], float | None] | None = None,
 ) -> dict[str, Any]:
     """Observe until a transition, sleeping `pace(interval)`, or `interval`, between observations.
 
-    When pacing holds the next observation past the deadline, the wait ends
-    at the deadline without making it.
+    When pacing or `not_before`, GitHub's earliest permitted read, holds the
+    next observation past the deadline, the wait ends at the deadline
+    without making it.
     """
     stopped = False
-    held = False
+    held: float | None = None  # When the read the deadline cut off could have gone.
 
     def stop(_signum: int, _frame: Any) -> None:
         nonlocal stopped
@@ -437,7 +460,13 @@ def wait_for_transition(
     def pause() -> float:
         nonlocal held
         delay = pace(interval) if pace else interval
-        held = delay > interval and time.time() + delay >= deadline
+        blocked = not_before() if not_before else None
+        if blocked is not None:
+            delay = max(delay, blocked - time.time())
+        now = time.time()
+        held = None
+        if now + delay >= deadline and (delay > interval or (blocked is not None and blocked >= deadline)):
+            held = blocked if blocked is not None else now + delay
         return delay
 
     previous_handlers = {
@@ -463,11 +492,12 @@ def wait_for_transition(
                 result = result_envelope(kind, "cancelled", identity, observation, metrics, "interrupted")
                 write_state(state_path, {"schemaVersion": 1, "kind": kind, "identity": identity, "observation": observation, "digest": prior.get("digest") if prior else None, "updatedAt": utc_now(), "terminalResult": result})
                 return result
-            if held:
+            if held is not None and time.time() >= deadline:
                 observation = prior.get("observation", {}) if prior else {}
+                at = datetime.fromtimestamp(held, timezone.utc).isoformat().replace("+00:00", "Z")
                 result = result_envelope(
                     kind, deadline_result[0], identity, observation, metrics,
-                    f"{deadline_result[1]}; the GitHub REST budget held the next observation past it",
+                    f"{deadline_result[1]}; the GitHub REST budget held the next observation until {at}",
                 )
                 base = prior or {"schemaVersion": 1, "kind": kind, "identity": identity, "observation": {}, "digest": None}
                 write_state(state_path, {**base, "updatedAt": utc_now(), "terminalResult": result})

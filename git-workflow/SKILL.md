@@ -97,15 +97,18 @@ example `python3 /path/to/git-workflow/scripts/publication_guard.py`. It needs
 `gh` signed in to GitHub. When the repository receiving the content is public,
 it rewrites private GitHub references and local machine paths out of it. It
 asks GitHub through REST and, when the account's REST budget is spent, through
-GraphQL, whose budget is separate.
+GraphQL, whose budget is separate. Gists are the exception: GraphQL cannot look
+one up by its id, so a gist reference still needs REST.
 
 Run the guard as a whole command, or put the command that publishes after
 `--`, as below: the guard then runs it only after a clean check and exits with
-its status. Never pipe the guard's output, such as into `| tail -1`, or chain
-a command after a pipe: the pipe's status is the last command's, so a failed
-check would not stop what follows. A failed run moves each message, title or
-body file it was given to `FILE.unchecked`, so a command that reads the file
-finds nothing to publish.
+its status. Otherwise, publish only after reading the guard's own exit
+status. Never pipe the guard's output, such as into `| tail -1`, or chain a
+command after a pipe: the pipe's status is the last command's, so a failed
+check would not stop what follows. As a second line of defence, a failed run
+moves each message, title or body file it was given aside and names where, so
+a command that reads the file finds nothing to publish. That cannot stop a
+push, and it fails when the file cannot be moved, which the guard then says.
 
 - Before each commit, write the message to a file and run `staged
   --message-file FILE -- git commit -F FILE`.
@@ -116,8 +119,8 @@ finds nothing to publish.
   remote. While the index differs from `HEAD`, as after it stages rewrites,
   it exits 3 without pushing: commit what is staged through the commit step
   above, then run the push step again. It also exits 3 when it could not read
-  a file; check that file as the `was not checked` warning below says, then
-  push.
+  a file, and so does the commit step; check that file as the
+  `was not checked` warning below says, then commit or push.
 - Before each pull request title or body write, write the title and body to
   files and run `pr --repo OWNER/REPO --title-file FILE --body-file FILE`, where
   `OWNER/REPO` is the repository the pull request is opened in. Then create or
@@ -143,8 +146,8 @@ Act on its result:
   it; the guard used its default keep list for what it could not read.
 - Exit 2: Git or GitHub could not answer a question the guard depends on, or
   an argument was wrong. Nothing was rewritten, and the files it was given are
-  now `FILE.unchecked`. Fix the cause the error names, move the files back
-  and rerun. A spent REST budget alone is not such a cause, since the guard
+  where its `moved FILE to` lines say, usually `FILE.unchecked`. Fix the cause
+  the error names, move the files back and rerun. A spent REST budget alone is not such a cause, since the guard
   then asks GraphQL; an error naming both REST and GraphQL means GraphQL could
   not answer either, because its budget is spent too or it failed. An answer
   that names no known visibility stops the guard too. Never publish without a

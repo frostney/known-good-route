@@ -3,6 +3,8 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import shutil
+import signal
 import stat
 import subprocess
 import sys
@@ -695,6 +697,50 @@ class PublicationGuardTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 2)
                 self.assertIn("gave visibility", result.stderr)
                 self.assertEqual(self.staged("notes.md"), f"Ported from {PRIVATE}.\n")
+
+    def test_the_visibility_projection_accepts_only_a_named_visibility_or_a_legacy_flag(self):
+        jq = shutil.which("jq")
+        if not jq:
+            self.skipTest("jq is not installed")
+        for body, expected in (({"visibility": "public", "private": True}, "public"),
+                               ({"visibility": "internal"}, "internal"), ({"private": False}, "public"),
+                               ({"private": True}, "private"), ({"visibility": False, "private": True}, ""),
+                               ({"visibility": None, "private": "no"}, ""), ({}, "")):
+            with self.subTest(body=body):
+                result = subprocess.run([jq, "-r", publication_guard.VISIBILITY_JQ], input=json.dumps(body),
+                                        capture_output=True, text=True, check=True)
+                self.assertEqual(result.stdout.strip(), expected)
+
+    def test_a_file_that_cannot_be_moved_aside_is_left_whole_and_named(self):
+        if os.geteuid() == 0:
+            self.skipTest("root can rename in a read-only directory")
+        folder = self.base / "locked"
+        folder.mkdir()
+        message = folder / "message"
+        message.write_text("fix: one\n")
+        folder.chmod(0o500)
+        self.addCleanup(folder.chmod, 0o700)
+        result = self.run_guard("staged", "--message-file", str(message), env={"FAKE_GH_FAIL": "rest,graphql"})
+        self.assertEqual(result.returncode, 2)
+        self.assertIn(f"cannot move {message} aside", result.stderr)
+        self.assertEqual(message.read_text(), "fix: one\n")
+
+    def test_a_commit_after_the_separator_waits_for_files_the_guard_could_not_read(self):
+        self.stage({"latin.txt": "caf\xe9\n".encode("latin-1")})
+        head = self.git("rev-parse", "HEAD")
+        result = self.run_guard("staged", "--", "git", "commit", "-q", "-m", "feat: latin")
+        self.assertEqual(result.returncode, 3)
+        self.assertIn("Error: publication guard: the guard could not read latin.txt", result.stderr)
+        self.assertEqual(self.git("rev-parse", "HEAD"), head)
+
+    def test_the_guard_marks_its_own_refusals_and_passes_on_how_the_command_ended(self):
+        result = self.run_guard("pr", "--", "true")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("Error: publication guard:", result.stderr)
+        self.assertIn("--repo", result.stderr)
+        self.assertEqual(self.run_guard("staged", "--", sys.executable, "-c", "exit(2)").returncode, 2)
+        killed = self.run_guard("staged", "--", sys.executable, "-c", "import os, signal; os.kill(os.getpid(), signal.SIGTERM)")
+        self.assertEqual(killed.returncode, -signal.SIGTERM)
 
     def test_merge_of_the_base_checks_only_what_the_merge_changes(self):
         self.stage({"c.md": "base\n"})

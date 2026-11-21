@@ -320,6 +320,7 @@ def main() -> int:
                     deadline_result=("pending", "deadline reached without a verified stack transition"),
                     change_precedes_terminal=True,
                     pace=gh.pace,
+                    not_before=gh.not_before,
                 )
         emit(output, args.json)
         return 0

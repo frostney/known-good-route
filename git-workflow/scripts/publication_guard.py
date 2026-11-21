@@ -34,6 +34,7 @@ import json
 import os
 from pathlib import Path
 import re
+import signal
 import subprocess
 import sys
 import tempfile
@@ -130,6 +131,13 @@ class GuardError(RuntimeError):
     pass
 
 
+class Parser(argparse.ArgumentParser):
+    """Reports a wrong argument as a guard error, so every refusal carries the guard's marker."""
+
+    def error(self, message):
+        raise GuardError(f"{self.prog}: {message}")
+
+
 def run(args, *, data=None, cwd=None, check=True):
     try:
         result = subprocess.run(args, input=data, cwd=cwd, capture_output=True)
@@ -175,6 +183,11 @@ def failure(result):
 
 
 VISIBILITIES = ("public", "private", "internal")
+# A visibility string as given; only without one, an older server's boolean
+# private flag. Anything else prints nothing, which the guard refuses.
+VISIBILITY_JQ = ('if (.visibility | type) == "string" then .visibility '
+                 'elif .visibility == null and (.private | type) == "boolean" then '
+                 '(if .private then "private" else "public" end) else "" end')
 VISIBILITY_QUERY = "query($owner:String!,$name:String!){repository(owner:$owner,name:$name){visibility}}"
 VIEWER_QUERY = ("query($endCursor:String){viewer{login organizations(first:100,after:$endCursor)"
                 "{nodes{login} pageInfo{hasNextPage endCursor}}}}")
@@ -211,8 +224,7 @@ def visibility(slug, host="github.com", name=None):
     """
     name = name or slug
     # An older GitHub Enterprise Server names no visibility, only whether a repository is private.
-    result = gh_api(f"repos/{slug}", "--jq", '.visibility // (if .private == true then "private" '
-                    'elif .private == false then "public" else "" end)', host=host)
+    result = gh_api(f"repos/{slug}", "--jq", VISIBILITY_JQ, host=host)
     if result.returncode == 0:
         answer = result.stdout.decode().strip()
         if answer in VISIBILITIES:
@@ -1087,22 +1099,18 @@ def withhold(argv):
             number += 1
             target = f"{path}.unchecked.{number}"
         try:
-            os.rename(path, target)
+            os.rename(path, target)  # Moves a symlink itself, never its target.
             print(f"publication guard: moved {path} to {target}; nothing checked it", file=sys.stderr)
         except OSError as error:
-            try:
-                with open(path, "w"):
-                    pass  # Empty, so a commit or PR write from it has nothing to publish.
-                print(f"publication guard: cannot move {path} ({error}); emptied it instead", file=sys.stderr)
-            except OSError as second:
-                print(f"publication guard: cannot withhold {path}: {second}; do not publish it", file=sys.stderr)
+            print(f"publication guard: cannot move {path} aside ({error}); it is unchecked, do not publish it",
+                  file=sys.stderr)
 
 
 def check(argv):
     if sys.version_info < (3, 11):
         raise GuardError("Python 3.11 or newer is required")
     # No abbreviated options, so every file the guard reads is one withhold() finds.
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
+    parser = Parser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
                                      usage="%(prog)s {staged,outgoing,pr} ... [-- COMMAND ...]", allow_abbrev=False)
     commands = parser.add_subparsers(dest="operation", required=True)
     staged = commands.add_parser("staged", allow_abbrev=False, help="rewrite the staged diff and, optionally, the commit message file")
@@ -1123,7 +1131,12 @@ def check(argv):
 
 def publish_refusal(args, report):
     """Why the command after -- must not run although the check passed, or None."""
-    if args.operation != "outgoing" or not report["public"]:
+    if not report["public"] or args.operation == "pr":
+        return None
+    if args.operation == "staged":
+        if report["unchecked"]:
+            return ("the guard could not read " + ", ".join(report["unchecked"])
+                    + "; check them yourself, then commit without the guard's --")
         return None
     root, _ = repository_root()
     staged = run(["git", "diff", "--cached", "--quiet"], cwd=root, check=False).returncode
@@ -1155,10 +1168,16 @@ def main(argv=None):
         print(f"Error: publication guard: {refusal}; nothing was run", file=sys.stderr)
         return 3
     try:
-        return subprocess.run(publish).returncode
+        code = subprocess.run(publish).returncode
     except OSError as error:
         print(f"Error: publication guard: cannot run {publish[0]}: {error}", file=sys.stderr)
         return 127
+    if code < 0:
+        # Ends the guard by the same signal, so the caller sees what ended the command.
+        signal.signal(-code, signal.SIG_DFL)
+        os.kill(os.getpid(), -code)
+        return 128 - code
+    return code
 
 
 if __name__ == "__main__":
