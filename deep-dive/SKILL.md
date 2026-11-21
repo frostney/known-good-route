@@ -13,7 +13,7 @@ description: >-
 license: Unlicense OR MIT
 metadata:
   agents-role: ambient
-  agents-text: Before claiming the cause of something observed, check what actually ran and try to break each explanation, and cite a fresh review's verdict when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review was asked for; skip all of that only when the failing output or trace already shows the mechanism, or the observation is itself the defect, such as a required control a view never renders, and treat a symptom whose cause sits in another step or file as a cause to establish.
+  agents-text: Before claiming the cause of something observed, check what actually ran and try to break each explanation, and cite a fresh review's verdict when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review was asked for; unless a review was asked for, skip all of that only when the failing output or trace already shows the mechanism, or the observation is itself the defect, such as a required control a view never renders, and treat a symptom whose cause sits in another step or file as a cause to establish.
 ---
 
 # Deep dive

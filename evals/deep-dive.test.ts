@@ -118,7 +118,7 @@ test("a contested cause the run had to find is investigated and reviewed before 
     const id = "deep-dive-loop-unresolved-cause-reviews";
     const scenario = loopCase(id);
     const review = deepDiveCases.find((c) => c.id === scenario.worker!.caseId)!;
-    const reviewLedger: RunLedger = { ...empty(), inspections: ["checkpointFile"], verdict: { path: verdictFile, verdict: "agree", evidence: "checkpoint lacks provenance" } };
+    const reviewLedger: RunLedger = { ...empty(), inspections: ["mapperSource", "checkpointFile", "checkpointWriter"], verdict: { path: verdictFile, verdict: "agree", evidence: "writeCheckpoint drops provenance" } };
     const reviewer = (startedAtEvent: number) => ({
       ...worker, caseId: review.id, startedAtEvent, ledger: reviewLedger, grade: gradeRun(review, reviewLedger, "Agree."),
     });
@@ -127,13 +127,20 @@ test("a contested cause the run had to find is investigated and reviewed before 
       if (startedAtEvent !== null) ledger.workers = [reviewer(startedAtEvent)];
       return gradeRun(scenario, ledger, `writeCheckpoint drops provenance. Fresh review: agree (${verdictFile}). PR #391 is open.`).passed;
     };
-    const investigate: Step[] = [{ inspect: "gateOutput" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { inspect: "checkpointWriter" }];
-    expect(passes([...investigate, ...deliver], 4), id).toBeTrue();
+    const investigate: Step[] = [{ inspect: "gateOutput" }, { inspect: "teamNote" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { inspect: "checkpointWriter" }];
+    expect(passes([...investigate, ...deliver], 5), id).toBeTrue();
     // A review that started only after the fix came too late.
-    expect(passes([...investigate, ...deliver], 5), id).toBeFalse();
+    expect(passes([...investigate, ...deliver], 6), id).toBeFalse();
     expect(passes([...investigate, ...deliver], null), id).toBeFalse();
+    // A review started before the writer was read judged a narrower explanation.
+    expect(passes([...investigate, ...deliver], 4), id).toBeFalse();
+    // A reviewer that reread only the checkpoint file did not judge the writer diagnosis.
+    const narrow: RunLedger = { ...reviewLedger, inspections: ["checkpointFile"] };
+    const narrowRun = trajectory([...investigate, ...deliver]);
+    narrowRun.workers = [{ ...reviewer(5), ledger: narrow, grade: gradeRun(review, narrow, "Agree.") }];
+    expect(gradeRun(scenario, narrowRun, `writeCheckpoint drops provenance. Fresh review: agree (${verdictFile}). PR #391 is open.`).passed, id).toBeFalse();
     // Investigation and review without the fix, the gate and the pull request do not finish the loop.
-    expect(passes(investigate, 4), id).toBeFalse();
+    expect(passes(investigate, 5), id).toBeFalse();
     expect(passes([{ inspect: "gateOutput" }, { act: "file.edit" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { inspect: "checkpointWriter" }, { act: "validation.run" }, { act: "forge.openDraftPr" }], 1), id).toBeFalse();
   }
 });

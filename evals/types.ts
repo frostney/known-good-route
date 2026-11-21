@@ -191,6 +191,9 @@ export interface EvalExpectations {
   // worker can see cannot stand in for the action. With values, only a record
   // carrying all of them, matched as for requiredActionValues, counts.
   requiredActionsBeforeWorker?: Array<ActionName | { action: ActionName; values: ExactValue[] }>;
+  // Each source must be inspected before the native worker started, so the
+  // explanation the worker reviews already rests on it.
+  requiredInspectionsBeforeWorker?: string[];
   requiredActionSequence?: ActionName[];
   requiredActions?: ActionName[];
   requiredAnyActions?: ActionName[];

@@ -536,6 +536,18 @@ export function gradeRun(
     });
   }
 
+  for (const inspection of expected.requiredInspectionsBeforeWorker ?? []) {
+    const started = ledger.workers?.[0]?.startedAtEvent;
+    const inspectionIndex = ledger.events.findIndex(
+      (event) => event.kind === "inspection" && event.name === inspection,
+    );
+    checks.push({
+      name: `${inspection} before worker`,
+      passed: started !== undefined && inspectionIndex >= 0 && inspectionIndex < started,
+      detail: `workerStartedAtEvent=${started ?? "none"} inspectionIndex=${inspectionIndex}`,
+    });
+  }
+
   for (const order of expected.requiredActionsBeforeActions ?? []) {
     const beforeIndex = ledger.events.findIndex(
       (event) => event.kind === "action" && event.name === order.before,
@@ -775,10 +787,13 @@ export function validateCases(
         throw new Error(`${evalCase.id}: empty action response sequence`);
     if (evalCase.expected.citedReviewVerdict && !(evalCase.worker && evalCase.expected.requiredWorker))
       throw new Error(`${evalCase.id}: a cited review verdict needs a required configured worker`);
+    // A native Agent worker is recorded even when no Agent call ran, so only a
+    // process worker can tell a skipped review from a started one.
     if (evalCase.expected.forbiddenWorker &&
-        (!evalCase.worker || evalCase.expected.requiredWorker ||
-         evalCase.expected.requiredWorkerBeforeActions?.length || evalCase.expected.requiredActionsBeforeWorker?.length))
-      throw new Error(`${evalCase.id}: a forbidden worker needs a configured worker that nothing else requires`);
+        (!evalCase.worker || evalCase.worker.mode === "claude-agent" || evalCase.expected.requiredWorker ||
+         evalCase.expected.requiredWorkerBeforeActions?.length || evalCase.expected.requiredActionsBeforeWorker?.length ||
+         evalCase.expected.requiredInspectionsBeforeWorker?.length))
+      throw new Error(`${evalCase.id}: a forbidden worker needs a configured process worker that nothing else requires`);
     if (evalCase.worker) {
       const child = caseCatalog.find((c) => c.id === evalCase.worker!.caseId);
       if (!child || child.worker)

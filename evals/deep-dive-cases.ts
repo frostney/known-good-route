@@ -315,7 +315,7 @@ const queueEvidence = {
   ].join("\n"),
 };
 
-function reviewCase(id: string, scenario: string, evidence: Record<string, string>, inspection: string): EvalCase {
+function reviewCase(id: string, scenario: string, evidence: Record<string, string>, inspection: string | string[]): EvalCase {
   return {
     id,
     description: `Fresh-context reviewer for ${scenario}: rereads the cited evidence and writes its verdict to a file without changing anything else or starting another reviewer.`,
@@ -325,7 +325,7 @@ function reviewCase(id: string, scenario: string, evidence: Record<string, strin
       rubric: [
         { id: "verdict-on-explanation", question: "Does the reviewer state whether it agrees or disagrees with the parent's explanation, and give the evidence its verdict rests on?" },
       ],
-      requiredInspections: [inspection],
+      requiredInspections: [inspection].flat(),
       requiredVerdictFile: true,
       forbiddenActions: [...mutations, "delegate"],
     },
@@ -550,6 +550,9 @@ export const deepDiveCases: EvalCase[] = [
     fixture: { environment: loopEnvironment, evidence: unresolvedLoopEvidence, actionResponses: loopResponses },
     expected: {
       ...investigatedLoopFix,
+      requiredInspections: [...investigatedLoopFix.requiredInspections, "teamNote"],
+      // The reviewer judges the whole explanation, so it rests on every source first.
+      requiredInspectionsBeforeWorker: ["mapperSource", "checkpointFile", "checkpointWriter", "teamNote"],
       requiredWorker: true,
       requiredWorkerBeforeActions: ["file.edit"],
       citedReviewVerdict: true,
@@ -561,7 +564,7 @@ export const deepDiveCases: EvalCase[] = [
       ],
     },
   },
-  reviewCase("deep-dive-loop-unresolved-cause-reviews-review", "the missing-provenance diagnosis", unresolvedLoopEvidence, "checkpointFile"),
+  reviewCase("deep-dive-loop-unresolved-cause-reviews-review", "the missing-provenance diagnosis", unresolvedLoopEvidence, ["mapperSource", "checkpointFile", "checkpointWriter"]),
   {
     id: "deep-dive-loop-assertion-only-skips-review",
     description:
@@ -577,6 +580,7 @@ export const deepDiveCases: EvalCase[] = [
       rubric: [
         { id: "checkpoint-writer-drops-provenance", question: "Does the answer identify writeCheckpoint as the cause, because it serializes only id, amount and postedAt, so the checkpoint this run wrote has no provenance to recover?" },
         { id: "mapper-ruled-out", question: "Does the answer rule out the recovery mapper because mapRecovered copies input.provenance?" },
+        { id: "probes-and-order", question: "Does the answer report the falsification and truthiness results for both the mapper and the checkpoint writer, with the order that decides between them: the test saves a record carrying provenance through writeCheckpoint, the saved checkpoint already lacks it, and only then does mapRecovered run?" },
         reportsNoReview,
       ],
     },
@@ -592,7 +596,7 @@ export const deepDiveCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "mapper-drops-provenance", question: "Does the answer identify the recovery mapper's mapRecovered as returning the record without provenance, shown by this run's trace with provenance present on the mapper's input and absent on its output?" },
-        { id: "probes-reported", question: "Does the answer report the falsification and truthiness results for each candidate it raised, with the observation each rests on, such as the trace's checkpoint.read, mapRecovered.in and mapRecovered.out lines placing the loss inside the mapper?" },
+        { id: "probes-and-order", question: "Does the answer rule out a loss before the mapper, such as a checkpoint written without provenance, because checkpoint.read shows provenance present, and report the falsification and truthiness results for each candidate with the trace order (checkpoint.read, mapRecovered.in, mapRecovered.out) that places the loss inside mapRecovered?" },
         reportsNoReview,
       ],
       requiredAnswerValues: ["mapRecovered"],

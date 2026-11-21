@@ -4064,10 +4064,11 @@
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text.",
         "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when the conclusion rests on inference, leaves another candidate standing, sets aside a conflicting claim, or a review was asked for. The conclusion sets aside the teammate's note that blames the mapper, so its fresh review is still required. The description says so, and the review expectations moved out of the shared loop expectations unchanged. Fresh native run required.",
-        "The checkpoint source now also shows the test lines that build the record with provenance and save it through writeCheckpoint, so the link from the writer to this run is read in the record rather than inferred; the investigation must read the writer source before the edit. Fresh native run required."
+        "The checkpoint source now also shows the test lines that build the record with provenance and save it through writeCheckpoint, so the link from the writer to this run is read in the record rather than inferred; the investigation must read the writer source before the edit. Fresh native run required.",
+        "The run must read the teammate's note, the mapper, the checkpoint and the writer before it starts the reviewer, so the review covers the whole explanation. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "83fed7e716c78f3c37fa346ded75cccf3d27ab20587601dc80927917991c1e88",
+      "afterSha256": "e3281f609845f665669c165fc31db8a5e5d704dbf4fa523a2a26c8ee74073d85",
       "frozenCaseSha256": "3a1da29a679611dfae7a939f8972faed95ce2e255c10393d45e060adfa457054",
       "postFreezeChangedFields": [
         "description",
@@ -4082,10 +4083,11 @@
         "Fresh-context reviewer task for the matching deep-dive scenario: rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer.",
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text.",
-        "The checkpoint source now also shows the test lines that build the record with provenance and save it through writeCheckpoint. Fresh native run required."
+        "The checkpoint source now also shows the test lines that build the record with provenance and save it through writeCheckpoint. Fresh native run required.",
+        "The reviewer must reread the mapper, the checkpoint and the writer source, not only the checkpoint file. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "3c152d00d5420a9cd35ee15dc625056d6c6000f94a5d5c9ca9911472a583d560",
+      "afterSha256": "b272e50b485a44c694ef42fa8eb1d081edfc1d52468bf8132b1dac4d40ee98a1",
       "frozenCaseSha256": "0a433a8527c7098e39e1810208106c7250f0b79127f8e49766b7d975274bec80",
       "revisions": [
         {
@@ -4121,10 +4123,10 @@
         "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish.",
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text.",
-        "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when the conclusion rests on inference, leaves another candidate standing, sets aside a conflicting claim, or a review was asked for. The trace shows every link directly and nothing contradicts it, so the explicit /deep-dive now runs the full investigation, keeps the reviewer available, must not start it, and reports no review with the reason. A rubric item now asks for the falsification and truthiness results of each candidate. Fresh native run required."
+        "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when the conclusion rests on inference, leaves another candidate standing, sets aside a conflicting claim, or a review was asked for. The trace shows every link directly and nothing contradicts it, so the explicit /deep-dive now runs the full investigation, keeps the reviewer available, must not start it, and reports no review with the reason. A rubric item now asks it to rule out a loss before the mapper from checkpoint.read and to report each candidate's probe results with the trace order. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "17bb5b2d7a0395ee579914b3ca5c342ded75ca1504176472a18d9d4b8d2f1d6a",
+      "afterSha256": "69cabe9f97eb3a90ac5020b6d550f69b6f84654dd4c0cd671b039eb949fef5f9",
       "frozenCaseSha256": "6c8de269d2fe3ca67c45dfc64e7d8e6a6ee843cf5f7c853e729be92e108a06e0",
       "revisions": [
         {
@@ -4184,11 +4186,11 @@
       "caseId": "deep-dive-loop-assertion-only-skips-review",
       "status": "new",
       "rationale": [
-        "Replaces deep-dive-loop-assertion-only-reviews now that the fresh review is conditional. Invented uncontested case in the same authorized loop under the same AGENTS.md block: the failing check only states that provenance is missing, with no trace and no competing claim. The checkpoint source shows the test lines that build the record with provenance and save it through writeCheckpoint. The run must read the mapper, the checkpoint and the writer before the fix; every link is read directly and the mapper is broken by its own source, so a reviewer stays available, must not start, and the answer reports no review with the reason. Paired with deep-dive-loop-unresolved-cause-reviews, whose only extra source is the teammate's note that makes the review required. Fresh native run required."
+        "Replaces deep-dive-loop-assertion-only-reviews now that the fresh review is conditional. Invented uncontested case in the same authorized loop under the same AGENTS.md block: the failing check only states that provenance is missing, with no trace and no competing claim. The checkpoint source shows the test lines that build the record with provenance and save it through writeCheckpoint. The run must read the mapper, the checkpoint and the writer before the fix; every link is read directly and the mapper is broken by its own source, so a reviewer stays available, must not start, and the answer reports both candidates' probe results, the order that decides between them and no review with the reason. Paired with deep-dive-loop-unresolved-cause-reviews, whose only extra source is the teammate's note that makes the review required. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "5c84637dd57ae6dbf17ce887c5b3232934b03dc4ee95329bfb97552bf05dff82",
-      "frozenCaseSha256": "5c84637dd57ae6dbf17ce887c5b3232934b03dc4ee95329bfb97552bf05dff82"
+      "afterSha256": "377d9360c98bfabfe65f21a083b135ad98d4a8135ac2448cbb1888dda3d0ab5e",
+      "frozenCaseSha256": "377d9360c98bfabfe65f21a083b135ad98d4a8135ac2448cbb1888dda3d0ab5e"
     },
     {
       "caseId": "deep-dive-loop-assertion-only-skips-review-review",
