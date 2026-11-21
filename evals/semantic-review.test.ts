@@ -175,3 +175,12 @@ test("a reference link with a heading anchor reads and records the file", async 
   expect(response.path).toBe(resolve(root,"milestone-rush/references/orchestration.md"));
   expect(state.loadedReferences).toEqual(["milestone-rush/references/orchestration.md"]);
 });
+
+test("a case that forbids its configured worker is reviewed parent-only while no worker ran", () => {
+  const withWorker: EvalCase = { ...scenario, worker: { model: "codex:gpt-6-astra", caseId: "semantic-fixture-review" } };
+  expect(() => buildSemanticPacket(withWorker, record(ledger()), [], "")).toThrow("worker receipts");
+  const forbidden: EvalCase = { ...withWorker, expected: { forbiddenWorker: true } };
+  expect(() => buildSemanticPacket(forbidden, record(ledger()), [], "")).not.toThrow();
+  const ran = { ...record(ledger()), ledger: { ...ledger(), workers: [{} as NonNullable<RunLedger["workers"]>[number]] } };
+  expect(() => buildSemanticPacket(forbidden, ran, [], "")).toThrow("worker receipts");
+});

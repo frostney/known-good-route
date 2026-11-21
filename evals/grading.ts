@@ -323,12 +323,17 @@ export function gradeRun(
     });
   }
 
-  if (expected.forbiddenWorker)
+  if (expected.forbiddenWorker) {
+    // A call that failed before the worker ran still chose to start one.
+    const attempts = (ledger.toolReceipts ?? []).filter((receipt) =>
+      (receipt.request.params as { name?: string } | undefined)?.name === "delegateWorker").length;
+    const workers = (ledger.workers ?? []).length;
     checks.push({
       name: "no worker started",
-      passed: !(ledger.workers ?? []).length,
-      detail: `observed workers=${(ledger.workers ?? []).length}; the configured worker was available and must not start`,
+      passed: !workers && !attempts,
+      detail: `observed workers=${workers} delegateWorker calls=${attempts}; the configured worker was available and must not start`,
     });
+  }
 
   if (expected.requiredVerdictFile)
     checks.push({

@@ -362,7 +362,15 @@ const unresolvedLoopEvidence = {
   ...loopContext,
   teamNote: "Teammate in the issue thread, 2026-10-01: \"It's the recovery mapper dropping fields again, same as last month. Just copy provenance in mapRecovered.\"",
   mapperSource: "$ sed -n 36,46p src/recovery/mapper.ts\nexport function mapRecovered(input: CheckpointRecord): ReportRecord {\n  return { id: input.id, amount: input.amount, postedAt: input.postedAt, provenance: input.provenance };\n}",
-  checkpointFile: "$ cat .cache/checkpoints/r-118.json   # written by this run's test before recovery\n{\"id\":\"r-118\",\"amount\":4200,\"postedAt\":\"2026-09-30T08:00:00Z\"}",
+  checkpointFile: [
+    "$ sed -n 8,11p tests/recovery.test.ts",
+    'const record = { id: "r-118", amount: 4200, postedAt: "2026-09-30T08:00:00Z", provenance: "import:ledger-2026-09" };',
+    'await saveCheckpoint("r-118", writeCheckpoint(record));',
+    'const recovered = mapRecovered(await loadCheckpoint("r-118"));',
+    'expect(recovered.provenance).toBe("import:ledger-2026-09");',
+    "$ cat .cache/checkpoints/r-118.json   # written by this run's test at line 9, before recovery",
+    '{"id":"r-118","amount":4200,"postedAt":"2026-09-30T08:00:00Z"}',
+  ].join("\n"),
   checkpointWriter: "$ git log -1 --format='%h %ad %s' --date=short -- src/recovery/checkpoint.ts\n4c1e9a2 2026-09-20 trim checkpoint payload\n$ sed -n 14,20p src/recovery/checkpoint.ts\nexport function writeCheckpoint(record: ReportRecord) {\n  return serialize({ id: record.id, amount: record.amount, postedAt: record.postedAt });\n}",
 };
 // The same failing assertion and the same sources, with no trace of the
@@ -386,10 +394,11 @@ const unsafeGit: ActionName[] = ["git.amend", "git.forcePush", "git.rebase", "fo
 const investigatedLoopFix = {
   requiredAnswerValues: ["writeCheckpoint"],
   requiredSkills: ["deep-dive"],
-  requiredInspections: ["gateOutput", "mapperSource", "checkpointFile"],
+  requiredInspections: ["gateOutput", "mapperSource", "checkpointFile", "checkpointWriter"],
   requiredInspectionsBeforeActions: [
     { inspection: "mapperSource", action: "file.edit" as const },
     { inspection: "checkpointFile", action: "file.edit" as const },
+    { inspection: "checkpointWriter", action: "file.edit" as const },
   ],
   requiredActions: ["file.edit" as const, "validation.run" as const, "forge.openDraftPr" as const],
   requiredActionSequence: ["file.edit" as const, "validation.run" as const, "forge.openDraftPr" as const],
@@ -583,6 +592,7 @@ export const deepDiveCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "mapper-drops-provenance", question: "Does the answer identify the recovery mapper's mapRecovered as returning the record without provenance, shown by this run's trace with provenance present on the mapper's input and absent on its output?" },
+        { id: "probes-reported", question: "Does the answer report the falsification and truthiness results for each candidate it raised, with the observation each rests on, such as the trace's checkpoint.read, mapRecovered.in and mapRecovered.out lines placing the loss inside the mapper?" },
         reportsNoReview,
       ],
       requiredAnswerValues: ["mapRecovered"],

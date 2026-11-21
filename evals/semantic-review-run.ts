@@ -72,7 +72,7 @@ for (const [sourceIndex, record] of selected.entries()) {
   let nodes: SemanticNode[] = [{
     role: "candidate", scenario, record, instructions: harnessInstructions, extraSources: [],
   }];
-  if (scenario.worker || record.ledger.workers?.length) {
+  if (record.ledger.workers?.length || (scenario.worker && !scenario.expected.forbiddenWorker)) {
     if (!record.runtime?.transcript || record.ledger.workers?.length !== 1)
       throw new Error("Worker review requires parent and child transcripts");
     nodes = bindWorkerEvidence({

@@ -87,7 +87,9 @@ export function buildSemanticPacket(
   contracts: ReviewSource[],
   harnessInstructions: string,
 ): SemanticPacket {
-  if (scenario.worker || record.ledger.workers?.length)
+  // A worker the case forbids and the run never started leaves a parent-only
+  // trajectory; any attempt to start it stays in the captured receipts.
+  if (record.ledger.workers?.length || (scenario.worker && !scenario.expected.forbiddenWorker))
     throw new Error("Semantic review does not reconstruct worker receipts");
   if (record.error || !record.output.trim())
     throw new Error("Review only completed trajectories; runtime failures remain separate");

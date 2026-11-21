@@ -127,14 +127,14 @@ test("a contested cause the run had to find is investigated and reviewed before 
       if (startedAtEvent !== null) ledger.workers = [reviewer(startedAtEvent)];
       return gradeRun(scenario, ledger, `writeCheckpoint drops provenance. Fresh review: agree (${verdictFile}). PR #391 is open.`).passed;
     };
-    const investigate: Step[] = [{ inspect: "gateOutput" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }];
-    expect(passes([...investigate, ...deliver], 3), id).toBeTrue();
+    const investigate: Step[] = [{ inspect: "gateOutput" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { inspect: "checkpointWriter" }];
+    expect(passes([...investigate, ...deliver], 4), id).toBeTrue();
     // A review that started only after the fix came too late.
-    expect(passes([...investigate, ...deliver], 4), id).toBeFalse();
+    expect(passes([...investigate, ...deliver], 5), id).toBeFalse();
     expect(passes([...investigate, ...deliver], null), id).toBeFalse();
     // Investigation and review without the fix, the gate and the pull request do not finish the loop.
-    expect(passes(investigate, 3), id).toBeFalse();
-    expect(passes([{ inspect: "gateOutput" }, { act: "file.edit" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { act: "validation.run" }, { act: "forge.openDraftPr" }], 1), id).toBeFalse();
+    expect(passes(investigate, 4), id).toBeFalse();
+    expect(passes([{ inspect: "gateOutput" }, { act: "file.edit" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { inspect: "checkpointWriter" }, { act: "validation.run" }, { act: "forge.openDraftPr" }], 1), id).toBeFalse();
   }
 });
 
@@ -150,13 +150,23 @@ test("an uncontested cause read directly is investigated before the fix, and the
       ledger.workers = [{ ...worker, caseId: review.id, startedAtEvent, ledger: reviewLedger, grade: gradeRun(review, reviewLedger, "Agree.") }];
     return gradeRun(scenario, ledger, "writeCheckpoint drops provenance. No review: every link was read directly in the mapper source, the checkpoint file and the writer. PR #391 is open.").passed;
   };
-  const investigate: Step[] = [{ inspect: "gateOutput" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }];
+  const investigate: Step[] = [{ inspect: "gateOutput" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { inspect: "checkpointWriter" }];
   expect(passes([...investigate, ...deliver], null)).toBeTrue();
-  expect(passes([...investigate, ...deliver], 3)).toBeFalse();
+  expect(passes([...investigate, ...deliver], 4)).toBeFalse();
   expect(passes([...investigate, { act: "delegate" }, ...deliver], null)).toBeFalse();
   // Skipping the review does not skip the investigation.
   expect(passes([{ inspect: "gateOutput" }, ...deliver], null)).toBeFalse();
-  expect(passes([{ inspect: "gateOutput" }, { act: "file.edit" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { act: "validation.run" }, { act: "forge.openDraftPr" }], null)).toBeFalse();
+  expect(passes([{ inspect: "gateOutput" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, ...deliver], null)).toBeFalse();
+  expect(passes([{ inspect: "gateOutput" }, { act: "file.edit" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { inspect: "checkpointWriter" }, { act: "validation.run" }, { act: "forge.openDraftPr" }], null)).toBeFalse();
+  // A call that errored before any worker ran still chose to start the review.
+  const attempted = trajectory([...investigate, ...deliver]);
+  attempted.toolReceiptVersion = 1;
+  attempted.toolReceipts = [{
+    sequence: 0, state: "completed", eventStart: 4, eventEnd: 4,
+    request: { method: "tools/call", params: { name: "delegateWorker", arguments: { context: "review" } } },
+    response: { isError: true, content: [{ type: "text", text: "worker unavailable" }] },
+  }];
+  expect(gradeRun(scenario, attempted, "writeCheckpoint drops provenance. PR #391 is open.").checks.find((c) => c.name === "no worker started")!.passed).toBeFalse();
 });
 
 test("an explicit /deep-dive on a cause the trace shows runs the investigation and starts no reviewer", () => {
