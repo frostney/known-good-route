@@ -563,10 +563,16 @@ class WorkflowCensusGate:
             )
         }
 
+        # A possible duplicate still finishing decides once its run completes.
+        finishing_suites = {
+            run.get("checkSuiteId") for run in observation.get("runs", [])
+            if run["id"] in possible_duplicates(observation) and run.get("checkSuiteId") is not None
+        }
+
         def stale(name: str, check: dict[str, Any]) -> bool:
             if str(check.get("conclusion", "")).upper() != "CANCELLED":
                 return False
-            if check.get("suite") in duplicate_suites:
+            if check.get("suite") in duplicate_suites | finishing_suites:
                 return True
             rerun = reruns.get(check.get("suite"))
             return rerun is not None and (

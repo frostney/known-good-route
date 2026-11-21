@@ -157,9 +157,9 @@ requires its own identity flags:
     cancelled after the older run finished, one with a failed job and one
     cancelled again after its rerun. A cancelled named check left from an
     earlier attempt, of a rerun that has not finished or that passed with a
-    job of that name, waits for that run's jobs. A cancelled job of a first
-    attempt that has an older run of its source waits for its run to
-    complete. `inspect` reports a cancelled duplicate as `waiting`, naming
+    job of that name, waits for that run's jobs. A cancelled job or named
+    check of a first attempt that has an older run of its source waits for
+    its run to complete. `inspect` reports a cancelled duplicate as `waiting`, naming
     the rerun.
   - `--all-workflows` does not cover commit statuses or check runs from other
     apps, such as CodeRabbit or Vercel. Add a `--check` for each one the caller

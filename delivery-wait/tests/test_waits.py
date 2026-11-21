@@ -1397,6 +1397,17 @@ class WaitCommandsTest(unittest.TestCase):
         _, output = self.census_wait()
         self.assertEqual(output["state"], "recoverable")
 
+    def test_a_cancelled_named_check_waits_while_its_possible_duplicate_run_completes(self) -> None:
+        running = workflow_run(101, [workflow_job(1000, "build", "in_progress", None)], status="in_progress", conclusion=None, workflow_id=9, check_suite_id=501)
+        finishing = workflow_run(102, [workflow_job(1001, "build", conclusion="cancelled", run_id=102)], status="in_progress", conclusion=None, workflow_id=9, check_suite_id=502)
+        cancelled_check = check("build", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=502, workflow=9)
+        self.write_scenario(
+            pull=pull("head-1", [cancelled_check]),
+            census=[census(running, finishing), census(*self.cancelled_duplicate())],
+        )
+        _, output = self.census_wait("--check", "build")
+        self.assertEqual(output["state"], "recoverable")
+
     def test_a_cancelled_named_check_a_passed_rerun_did_not_replace_is_changed(self) -> None:
         # The rerun's matrix no longer has the shard, so its cancellation is current.
         older = self.cancelled_duplicate()[0]
