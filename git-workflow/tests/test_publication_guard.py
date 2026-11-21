@@ -38,13 +38,17 @@ PUBLIC_GIST = "fedcba9876543210fedcba9876543210"
 
 # Repositories absent from this table answer 404; example-flaky answers 502, and
 # FAKE_GH_FAIL names further calls that answer 502: user, orgs, or lookup (every
-# reference lookup, while the destination check still answers).
+# reference lookup, while the destination check still answers). In it, rest
+# makes every REST call answer that the rate limit is spent, and graphql does
+# the same for GraphQL.
 FAKE_GH = textwrap.dedent(f"""\
     #!{sys.executable}
     import json, os, sys
     args = sys.argv[1:]
     with open(os.environ["FAKE_GH_LOG"], "a") as log:
         log.write(" ".join(args) + "\\n")
+    with open(os.environ["FAKE_GH_LOG"]) as log:
+        earlier_lookups = sum(" repos/" in line for line in log) - 1
     host = "github.com"
     if "--hostname" in args:
         at = args.index("--hostname")
@@ -60,6 +64,22 @@ FAKE_GH = textwrap.dedent(f"""\
     def bad_gateway():
         sys.exit(print("gh: Bad Gateway (HTTP 502)", file=sys.stderr) or 1)
 
+    def spent(kind):
+        sys.exit(print(f"gh: {{kind}} rate limit exceeded for user ID 1. (HTTP 403)", file=sys.stderr) or 1)
+
+    if args[:2] == ["api", "graphql"]:
+        if "graphql" in fail:
+            spent("GraphQL API")
+        fields = dict(arg.split("=", 1) for arg in args if "=" in arg and not arg.startswith("."))
+        if "viewer" in fields["query"]:
+            sys.exit(print("example-user\\nexample-private"))
+        slug = (fields["owner"] + "/" + fields["name"]).lower()
+        if slug not in visibility:
+            print(json.dumps({{"data": {{"repository": None}}, "errors": [{{"type": "NOT_FOUND", "path": ["repository"]}}]}}))
+            sys.exit(print("gh: Could not resolve to a Repository", file=sys.stderr) or 1)
+        sys.exit(print(json.dumps({{"data": {{"repository": {{"visibility": visibility[slug].upper()}}}}}})))
+    if "rest" in fail and args[0] == "api":
+        spent("API")
     if args[:2] == ["repo", "view"]:
         print(os.environ.get("FAKE_GH_REPO", "octocat/Hello-World"))
     elif args[:2] == ["api", "user"]:
@@ -77,7 +97,7 @@ FAKE_GH = textwrap.dedent(f"""\
         print(json.dumps({{"id": gist, "public": gists[gist]}}))
     elif args[0] == "api" and args[1].startswith("repos/"):
         slug = args[1].removeprefix("repos/").lower()
-        if slug.startswith("example-flaky/") or ("lookup" in fail and "--jq" not in args):
+        if slug.startswith("example-flaky/") or ("lookup" in fail and earlier_lookups):
             bad_gateway()
         if slug not in visibility:
             sys.exit(print("gh: Not Found (HTTP 404)", file=sys.stderr) or 1)
@@ -442,6 +462,7 @@ class PublicationGuardTests(unittest.TestCase):
     def test_pr_destination_is_the_base_repository_given(self):
         body = self.write("body", f"See {PRIVATE}#3\n")
         self.assertEqual(self.run_guard("pr", "--body-file", str(body)).returncode, 2)
+        os.replace(f"{body}.unchecked", body)  # A failed run withholds the files it was given.
         self.assertIn(f"{PRIVATE} is not public", self.guard("pr", "--body-file", str(body), repo=PRIVATE))
         self.assertIn("is not public", self.guard("pr", "--body-file", str(body),
                                                   repo="code.example.invalid/example-org/example-tool"))
@@ -565,7 +586,78 @@ class PublicationGuardTests(unittest.TestCase):
             result = self.run_guard("staged", "--message-file", str(message))
             self.assertEqual(result.returncode, 2)
             self.assertIn("as UTF-8 text", result.stderr)
-        self.assertEqual(latin.read_bytes(), f"fix: caf\xe9 /Users/{USER}/x\n".encode("latin-1"))
+        self.assertFalse(latin.exists())
+        self.assertEqual(Path(f"{latin}.unchecked").read_bytes(), f"fix: caf\xe9 /Users/{USER}/x\n".encode("latin-1"))
+
+    def test_a_spent_rest_budget_is_answered_through_graphql(self):
+        text = f"Ported from {PRIVATE} and {PUBLIC}, see {GONE}#2 and and/or example-private/deleted-repo.\n"
+        self.stage({"notes.md": text})
+        spent = {"FAKE_GH_FAIL": "rest"}
+        output = self.guard("staged", env=spent)
+        self.assertIn(f"{PUBLIC} is public", output)
+        self.assertEqual(self.staged("notes.md"), "Ported from a private repository and octocat/Hello-World, see an "
+                         "issue or pull request in a private repository and and/or a private repository.\n")
+        self.assertIn("graphql", self.log.read_text())
+        self.assertIn(f"{PRIVATE} is not public", self.guard("staged", repo=PRIVATE, env=spent))
+        result = self.run_guard("pr", "--repo", "example-gone/nowhere", env=spent)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("no such repository", result.stderr)
+
+    def test_a_spent_rest_and_graphql_budget_stops_the_guard_and_withholds_its_files(self):
+        self.stage({"notes.md": f"Ported from {PRIVATE}.\n"})
+        message = self.write("message", f"fix: port {PRIVATE}\n")
+        result = self.run_guard("staged", "--message-file", str(message), env={"FAKE_GH_FAIL": "rest,graphql"})
+        self.assertEqual(result.returncode, 2)
+        self.assertIn(f"cannot ask GitHub whether {PUBLIC} is public: REST:", result.stderr)
+        self.assertIn("GraphQL: gh: GraphQL API rate limit exceeded", result.stderr)
+        self.assertEqual(self.staged("notes.md"), f"Ported from {PRIVATE}.\n")
+        self.assertFalse(message.exists())
+        self.assertEqual(Path(f"{message}.unchecked").read_text(), f"fix: port {PRIVATE}\n")
+
+    def test_a_piped_guard_that_fails_leaves_the_commit_nothing_to_publish(self):
+        self.stage({"notes.md": f"Ported from {PRIVATE}.\n"})
+        message = self.write("message", f"fix: port {PRIVATE}\n")
+        head = self.git("rev-parse", "HEAD")
+        script = (f"{sys.executable} {HELPER} staged --message-file {message} | tail -1 "
+                  f"&& git commit -q -F {message}")
+        for fail in ("rest,graphql", "lookup"):
+            with self.subTest(fail=fail):
+                result = subprocess.run(["bash", "-c", script], cwd=self.repo, capture_output=True, text=True,
+                                        env={**self.guard_env, "FAKE_GH_FAIL": fail})
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("could not read log file", result.stderr)
+                self.assertEqual(self.git("rev-parse", "HEAD"), head)
+                os.replace(f"{message}.unchecked", message)
+
+    def test_a_command_after_the_separator_runs_only_after_a_clean_check(self):
+        self.stage({"notes.md": f"Ported from {PRIVATE}.\n"})
+        message = self.write("message", f"fix: port {PRIVATE}\n")
+        head = self.git("rev-parse", "HEAD")
+        commit = ["--", "git", "commit", "-q", "-F", str(message)]
+        failed = self.run_guard("staged", "--message-file", str(message), *commit, env={"FAKE_GH_FAIL": "lookup"})
+        self.assertEqual(failed.returncode, 2)
+        self.assertEqual(self.git("rev-parse", "HEAD"), head)
+        os.replace(f"{message}.unchecked", message)
+        output = self.guard("staged", "--message-file", str(message), *commit)
+        self.assertIn("rewrote notes.md (staged)", output)
+        self.assertEqual(self.git("log", "-1", "--format=%B").strip(), "fix: port a private repository")
+        self.assertEqual(self.git("show", "HEAD:notes.md"), "Ported from a private repository.\n")
+        self.assertEqual(self.run_guard("staged", "--", "false").returncode, 1)  # The command's own status.
+
+    def test_a_push_after_the_separator_waits_for_the_staged_rewrites_to_be_committed(self):
+        self.git("commit", "-q", "--allow-empty", "-m", "base")
+        self.git("update-ref", "refs/remotes/origin/main", "HEAD")
+        self.stage({"notes.md": f"Ported from {PRIVATE}.\n"})
+        self.git("commit", "-q", "-m", "feat: notes")
+        marker = self.base / "pushed"
+        push = ["--", sys.executable, "-c", f"open({str(marker)!r}, 'w')"]
+        result = self.run_guard("outgoing", "--base", "origin/main", *push)
+        self.assertEqual(result.returncode, 3)
+        self.assertIn("commit the staged rewrites", result.stderr)
+        self.assertFalse(marker.exists())
+        self.git("commit", "-q", "-m", "fix: notes name no private repository")
+        self.assertEqual(self.run_guard("outgoing", "--base", "origin/main", *push).returncode, 0)
+        self.assertTrue(marker.exists())
 
     def test_merge_of_the_base_checks_only_what_the_merge_changes(self):
         self.stage({"c.md": "base\n"})

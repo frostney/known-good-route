@@ -95,15 +95,26 @@ Run [scripts/publication_guard.py](scripts/publication_guard.py) from this
 installed skill with Python 3.11 or newer, using its actual installed path, for
 example `python3 /path/to/git-workflow/scripts/publication_guard.py`. It needs
 `gh` signed in to GitHub. When the repository receiving the content is public,
-it rewrites private GitHub references and local machine paths out of it.
+it rewrites private GitHub references and local machine paths out of it. It
+asks GitHub through REST and, when the account's REST budget is spent, through
+GraphQL, whose budget is separate.
 
-- Before each commit, write the message to a file, run `staged --message-file
-  FILE`, and commit with `git commit -F FILE`.
+Run the guard as a whole command, or put the command that publishes after
+`--`, as below: the guard then runs it only after a clean check and exits with
+its status. Never pipe the guard's output, such as into `| tail -1`, or chain
+a command after a pipe: the pipe's status is the last command's, so a failed
+check would not stop what follows. A failed run moves each message, title or
+body file it was given to `FILE.unchecked`, so a command that reads the file
+finds nothing to publish.
+
+- Before each commit, write the message to a file and run `staged
+  --message-file FILE -- git commit -F FILE`.
 - Before each push, including `gh stack push`, `gh stack submit` and
-  `gh stack link`, run `outgoing --base BASE`. BASE is `REMOTE/DEFAULT`, or for
-  a stack layer the branch beneath it. Add `--remote NAME` when the push goes
-  to a remote other than the branch's push remote. Commit what it stages
-  through the commit step above, then push.
+  `gh stack link`, run `outgoing --base BASE -- <the push command>`. BASE is
+  `REMOTE/DEFAULT`, or for a stack layer the branch beneath it. Add
+  `--remote NAME` when the push goes to a remote other than the branch's push
+  remote. When it stages rewrites, it exits 3 without pushing: commit them
+  through the commit step above, then run the push step again.
 - Before each pull request title or body write, write the title and body to
   files and run `pr --repo OWNER/REPO --title-file FILE --body-file FILE`, where
   `OWNER/REPO` is the repository the pull request is opened in. Then create or
@@ -128,10 +139,16 @@ Act on its result:
 - `warning:` about `.github/publication-guard.json` or a keep pattern: report
   it; the guard used its default keep list for what it could not read.
 - Exit 2: Git or GitHub could not answer a question the guard depends on, or
-  an argument was wrong, and nothing was changed. Fix the cause the error names
-  and rerun. Never publish without a run that exits 0.
-- Any other exit: the guard failed. Stop, do not publish, and report its
-  output.
+  an argument was wrong. Nothing was rewritten, and the files it was given are
+  now `FILE.unchecked`. Fix the cause the error names, move the files back
+  and rerun. A spent REST budget alone is not such a cause, since the guard
+  then asks GraphQL; an error naming both means GraphQL's budget is spent too.
+  Never publish without a run that exits 0.
+- Exit 3 from `outgoing` with a push after `--`: the push did not run; see the
+  push step above.
+- With a command after `--`, any other exit is that command's own status.
+  Without one, any other exit means the guard failed. Stop, do not publish,
+  and report its output.
 
 At the same points, check what you publish against the repository's binding
 guides. A current
