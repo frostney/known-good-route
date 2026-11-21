@@ -880,6 +880,19 @@ class RendererParityTests(unittest.TestCase):
         texts = {CHECK_TEMPLATE.headings(REAL_RENDER(h))[0].text for h in ("## ![CI](https://example.org/ci.svg)\n", "## \\![CI](https://example.org/ci.svg)\n")}
         self.assertEqual(len(texts), 2)
 
+    def test_placeholders_and_the_attribution_inside_any_wrapper_are_no_content(self):
+        html = "<h2>Steps</h2><ul><li>[ ]<section><ul><li>[ ]</li></ul></section></li></ul>"
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(html)], [False])
+        body = "## Related\n\n<details>\n\n> [!NOTE]\n> Created on behalf of @someone using Some Model.\n\n</details>\n"
+        self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(REAL_RENDER(body), "issue", body, github=False)], [False])
+
+    def test_a_local_image_compares_by_the_source_it_shows(self):
+        texts = {
+            CHECK_TEMPLATE.headings(REAL_RENDER(h), github=False)[0].text
+            for h in ('## <img src="/staging.svg" data-canonical-src="/production.svg" alt="Env">\n', '## <img src="/production.svg" alt="Env">\n')
+        }
+        self.assertEqual(len(texts), 2)
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
@@ -1052,6 +1065,9 @@ class TemplateParsingTests(unittest.TestCase):
 
     def test_an_explicit_name_key_is_recovered_from_broken_yaml(self):
         self.assertEqual(CHECK_TEMPLATE.name_alone("? name\n: Other\nabout: [open\n"), "Other")
+
+    def test_a_quoted_name_key_is_recovered_from_a_broken_flow_form(self):
+        self.assertEqual(CHECK_TEMPLATE.declared_name('{"name":"Broken","body":[}\n'), "Broken")
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):

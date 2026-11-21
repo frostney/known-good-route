@@ -335,7 +335,7 @@ def heading_text(node: Node | str, github: bool = True) -> str:
     if node.tag == "img":
         # An image shows its picture, so its source is part of the heading; GitHub
         # proxies the source and keeps the original as data-canonical-src.
-        source = node.attrs.get("data-canonical-src") or node.attrs.get("src", "")
+        source = (github and node.attrs.get("data-canonical-src")) or node.attrs.get("src", "")
         return f"![{literal(node.attrs.get('alt', ''))}](<{destination(source)}>)"
     references = elements(node.children)
     if node.tag == "sup" and references and all("data-footnote-ref" in child.attrs for child in references):
@@ -406,7 +406,7 @@ def plain(node: Node) -> bool:
     An element that shows nothing, such as an empty code block, is ignored.
     """
     return all(
-        (child.tag in ("p", "span", "div") and plain(child)) or (not text_of(child).strip() and not has_media(child) and child.tag not in MEDIA)
+        (child.tag in WRAPPERS | {"p", "span"} and plain(child)) or (not text_of(child).strip() and not has_media(child) and child.tag not in MEDIA)
         for child in elements(node.children)
     )
 
@@ -420,7 +420,7 @@ def apart(item: Node) -> tuple[Node, list[Node]]:
         for child in node.children:
             if isinstance(child, Node) and child.tag in ("ul", "ol", "blockquote"):
                 nested.append(child)
-            elif isinstance(child, Node) and child.tag in ("div", "p", "span"):
+            elif isinstance(child, Node) and child.tag in WRAPPERS | {"p", "span"}:
                 kept.append(own(child))
             else:
                 kept.append(child)
@@ -615,7 +615,7 @@ def headings(html: str, kind: str | None = None, source: str | None = None, gith
     if kind == "issue" and shown:
         last, holder = shown[-1], builder.root
         # Through plain wrappers to the last block that shows anything.
-        while last.tag in ("div", "section") and not is_alert(last, github):
+        while last.tag in WRAPPERS and not is_alert(last, github):
             inner = [block for block in elements(last.children) if block.tag != "hr" and (words(block) or has_media(block) or has_checked(block))]
             if not inner:
                 break
@@ -847,8 +847,18 @@ def root_is_flow(text: str) -> bool:
 
 def flow_name(text: str) -> str | None:
     """The `name` of a top-level flow mapping, such as `{name: Bug, body: [...]}`, read on its own."""
+    if not root_is_flow(text):
+        return None
     depth, quote, comment, escaped = 0, "", False, False
     for index, char in enumerate(text):
+        # An entry of the root mapping starts after its `{` or a comma, before its key is read as a quote.
+        if not (comment or escaped or quote) and depth == 1 and text[index - 1 : index] in ("{", ",", " ", "\n", "\t"):
+            entry = re.match(r"""\s*["']?name["']?\s*:\s*("(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[^,}\]\n]+)""", text[index:])
+            if entry:
+                try:
+                    return name_in(load_yaml(f"name: {entry.group(1).strip()}")) or None
+                except ValueError:
+                    return None
         if comment:
             comment = char != "\n"  # A comment runs to the end of its line.
         elif escaped:
@@ -867,13 +877,6 @@ def flow_name(text: str) -> str | None:
             depth += 1
         elif char in "}]":
             depth -= 1
-        elif depth == 1 and text[index - 1 : index] in ("{", ",", " ", "\n", "\t") or index == 0:
-            entry = re.match(r"""\s*["']?name["']?\s*:\s*("(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[^,}\]\n]+)""", text[index:])
-            if entry and root_is_flow(text):
-                try:
-                    return name_in(load_yaml(f"name: {entry.group(1).strip()}")) or None
-                except ValueError:
-                    return None
     return None
 
 
