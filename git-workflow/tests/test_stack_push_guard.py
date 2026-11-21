@@ -201,9 +201,14 @@ class RewriteTests(unittest.TestCase):
         self.assertIn("#13 (stack/two: ready for review, 1 workflow runs on its head)", message)
         self.assertIn("restart CI on 2 of them", message)
 
+    def test_a_run_still_going_settles_a_long_run_list(self):
+        runs = {"total_count": 101, "workflow_runs": [run()] * 99 + [run("queued")]}
+        self.assertEqual(guard.ci_state(runs, 12), {"workflowRuns": 101, "ciPassed": False})
+
     def test_incomplete_or_paged_run_lists_refuse(self):
         for runs, error in (({"total_count": 1}, "no workflow runs"),
                             ({"total_count": 101, "workflow_runs": [run()] * 100}, "more than one page"),
+                            ({"total_count": 101, "workflow_runs": [run(conclusion="failure")] * 100}, "more than one page"),
                             ({"total_count": 1, "workflow_runs": [{"status": "completed"}]}, "incomplete workflow run")):
             with self.subTest(error=error), self.assertRaisesRegex(guard.GuardError, error):
                 guard.ci_state(runs, 12)

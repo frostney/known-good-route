@@ -266,14 +266,16 @@ def ci_state(runs, number):
     if (not isinstance(runs, dict) or type(runs.get("total_count")) is not int
             or not isinstance(runs.get("workflow_runs"), list)):
         raise GuardError(f"GitHub lookup returned no workflow runs for pull request #{number}")
+    for run in runs["workflow_runs"]:
+        if not isinstance(run, dict) or not isinstance(run.get("status"), str) or "workflow_id" not in run:
+            raise GuardError(f"GitHub lookup returned an incomplete workflow run for pull request #{number}")
+    # A run still going settles it on any page; deciding that CI passed needs them all.
+    if any(run["status"] != "completed" for run in runs["workflow_runs"]):
+        return {"workflowRuns": runs["total_count"], "ciPassed": False}
     if runs["total_count"] > len(runs["workflow_runs"]):
         raise GuardError(f"more than one page of workflow runs for pull request #{number}; they cannot all be checked")
     passed = {}
     for run in runs["workflow_runs"]:
-        if not isinstance(run, dict) or not isinstance(run.get("status"), str) or "workflow_id" not in run:
-            raise GuardError(f"GitHub lookup returned an incomplete workflow run for pull request #{number}")
-        if run["status"] != "completed":
-            return {"workflowRuns": runs["total_count"], "ciPassed": False}
         workflow = run["workflow_id"]
         passed[workflow] = passed.get(workflow, False) or run.get("conclusion") in PASSING
     return {"workflowRuns": runs["total_count"], "ciPassed": bool(passed) and all(passed.values())}
