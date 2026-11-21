@@ -35,6 +35,9 @@ class TransientError(WaitError):
 # publication guard, reviews and people. Below it, a wait observes nothing
 # more until the budget resets.
 CORE_RESERVE = 1000
+# A smaller budget, such as a GitHub Actions token's 1,000 an hour, keeps
+# this share of its limit instead, so a wait can still read in each window.
+RESERVE_SHARE = 0.2
 # A wait paces itself to spend at most this share of the core budget left above
 # the reserve before the reset, so several waits on one account fit together.
 CORE_SHARE = 0.25
@@ -116,6 +119,7 @@ class Gh:
         self.reserve = reserve
         self.cached: dict[str, tuple[str, Any, str | None]] = {}
         self.core: tuple[int, float] | None = None  # (remaining, reset epoch)
+        self.limit: int | None = None  # The hourly budget GitHub reports.
         # This window's allowance, CORE_SHARE of the budget above the reserve
         # when this client first saw the window, and what it has spent of it.
         self.window: dict[str, float] = {}
@@ -181,10 +185,14 @@ class Gh:
             remaining, reset = int(headers["x-ratelimit-remaining"]), float(headers["x-ratelimit-reset"])
         except (KeyError, ValueError):
             return
+        try:
+            self.limit = int(headers["x-ratelimit-limit"])
+        except (KeyError, ValueError):
+            pass
         self.core = (remaining, reset)
         if self.window.get("reset") != reset:
             # Counts the request that reported the window, so the allowance is what is left.
-            allowance = max(0, remaining + spent - CORE_RESERVE) * CORE_SHARE
+            allowance = max(0, remaining + spent - self.kept()) * CORE_SHARE
             self.window = {"reset": reset, "allowance": allowance, "spent": 0}
         self.window["spent"] += spent
 
@@ -200,12 +208,36 @@ class Gh:
 
     def below_reserve(self, now: float | None = None) -> bool:
         now = time.time() if now is None else now
-        return self.core is not None and now < self.core[1] and self.core[0] < CORE_RESERVE
+        return self.core is not None and now < self.core[1] and self.core[0] < self.kept()
+
+    def kept(self) -> int:
+        """The REST requests a wait leaves for other work: CORE_RESERVE, or less of a smaller budget."""
+        return CORE_RESERVE if self.limit is None else min(CORE_RESERVE, int(self.limit * RESERVE_SHARE))
+
+    def export(self) -> dict[str, Any]:
+        """The budget state a resumed wait needs, so it neither reads too soon nor gets a fresh allowance."""
+        return {"core": list(self.core) if self.core else None, "limit": self.limit,
+                "window": dict(self.window), "retryAt": self.retry_at}
+
+    def restore(self, saved: Any) -> None:
+        if not isinstance(saved, dict):
+            return
+        try:
+            if saved.get("core"):
+                self.core = (int(saved["core"][0]), float(saved["core"][1]))
+            if saved.get("limit") is not None:
+                self.limit = int(saved["limit"])
+            if isinstance(saved.get("window"), dict):
+                self.window = {key: float(value) for key, value in saved["window"].items()}
+            if saved.get("retryAt") is not None:
+                self.retry_at = float(saved["retryAt"])
+        except (TypeError, ValueError, IndexError, KeyError):
+            pass  # A damaged record only costs the resumed wait its first paced read.
 
     def get(self, endpoint: str) -> tuple[Any, str | None]:
         """One REST page and the URL of the next, revalidated against its last ETag."""
         if self.reserve is not None and self.below_reserve():
-            raise RateLimited(f"{self.core[0]} REST requests left, under the {CORE_RESERVE} kept for other work, "
+            raise RateLimited(f"{self.core[0]} REST requests left, under the {self.kept()} kept for other work, "
                               "until the budget resets")
         cached = self.cached.get(endpoint)
         args = ["api", "--include", endpoint]
@@ -267,11 +299,11 @@ class Gh:
     def pace(self, interval: float, now: float | None = None) -> float:
         """The pause before the next observation, stretched while the core budget runs low.
 
-        A window's allowance is CORE_SHARE of the budget above CORE_RESERVE
+        A window's allowance is CORE_SHARE of the budget above the reserve
         when this client first saw it. After an observation that spent some
         budget, the pause spreads what is left of the allowance evenly up to
         the reset, at that observation's cost. With the allowance used up or
-        less than CORE_RESERVE left, the next observation waits for the reset.
+        less than the reserve left, the next observation waits for the reset.
         An observation that cost nothing keeps the interval. A Retry-After
         GitHub sent is always honoured.
         """
@@ -437,12 +469,15 @@ def wait_for_transition(
     change_precedes_terminal: bool = False,
     pace: Callable[[float], float] | None = None,
     not_before: Callable[[], float | None] | None = None,
+    limits: Any = None,
 ) -> dict[str, Any]:
     """Observe until a transition, sleeping `pace(interval)`, or `interval`, between observations.
 
     When pacing or `not_before`, GitHub's earliest permitted read, holds the
     next observation past the deadline, the wait ends at the deadline
-    without making it.
+    without making it. `limits`, such as the Gh client, keeps its budget
+    state in the checkpoint through `export` and `restore`, so a resumed wait
+    honours a hold an earlier run learned.
     """
     stopped = False
     held: float | None = None  # When the read the deadline cut off could have gone.
@@ -450,6 +485,9 @@ def wait_for_transition(
     def stop(_signum: int, _frame: Any) -> None:
         nonlocal stopped
         stopped = True
+
+    def save(path: Path | None, value: dict[str, Any]) -> None:
+        write_state(path, {**value, "githubLimits": limits.export()} if limits else value)
 
     def nap(seconds: float) -> None:
         """Sleep, waking early once a signal asks the wait to stop."""
@@ -486,11 +524,19 @@ def wait_for_transition(
                 metrics,
                 "checkpoint identity does not match the requested proof target",
             )
+        if limits and prior:
+            limits.restore(prior.get("githubLimits"))
+        blocked = not_before() if not_before else None
+        if blocked is not None:
+            # A hold an earlier run learned comes before this run's first read.
+            if blocked >= deadline:
+                held = blocked
+            nap(min(blocked, deadline) - time.time())
         while True:
             if stopped:
                 observation = prior.get("observation", {}) if prior else {}
                 result = result_envelope(kind, "cancelled", identity, observation, metrics, "interrupted")
-                write_state(state_path, {"schemaVersion": 1, "kind": kind, "identity": identity, "observation": observation, "digest": prior.get("digest") if prior else None, "updatedAt": utc_now(), "terminalResult": result})
+                save(state_path, {"schemaVersion": 1, "kind": kind, "identity": identity, "observation": observation, "digest": prior.get("digest") if prior else None, "updatedAt": utc_now(), "terminalResult": result})
                 return result
             if held is not None and time.time() >= deadline:
                 observation = prior.get("observation", {}) if prior else {}
@@ -500,7 +546,7 @@ def wait_for_transition(
                     f"{deadline_result[1]}; the GitHub REST budget held the next observation until {at}",
                 )
                 base = prior or {"schemaVersion": 1, "kind": kind, "identity": identity, "observation": {}, "digest": None}
-                write_state(state_path, {**base, "updatedAt": utc_now(), "terminalResult": result})
+                save(state_path, {**base, "updatedAt": utc_now(), "terminalResult": result})
                 return result
             try:
                 observation = observe()
@@ -516,7 +562,7 @@ def wait_for_transition(
                         metrics,
                         deadline_result[1],
                     )
-                    write_state(
+                    save(
                         state_path,
                         {
                             "schemaVersion": 1,
@@ -535,7 +581,7 @@ def wait_for_transition(
                     return result
                 delay = pause()
                 retry_at = min(deadline, time.time() + delay)
-                write_state(
+                save(
                     state_path,
                     {
                         "schemaVersion": 1,
@@ -571,23 +617,23 @@ def wait_for_transition(
                 ).isoformat().replace("+00:00", "Z"),
                 "connectivity": {"state": "connected", "error": None},
             }
-            write_state(state_path, checkpoint)
+            save(state_path, checkpoint)
             prior_digest = prior.get("digest") if prior else None
             changed = prior_digest is not None and prior_digest != digest
             if change_precedes_terminal and changed:
                 result = result_envelope(kind, "changed", identity, observation, metrics, "authoritative state changed")
                 checkpoint["terminalResult"] = result
-                write_state(state_path, checkpoint)
+                save(state_path, checkpoint)
                 return result
             if terminal != "waiting":
                 result = result_envelope(kind, terminal, identity, observation, metrics, reason)
                 checkpoint["terminalResult"] = result
-                write_state(state_path, checkpoint)
+                save(state_path, checkpoint)
                 return result
             if changed:
                 result = result_envelope(kind, "changed", identity, observation, metrics, "authoritative state changed")
                 checkpoint["terminalResult"] = result
-                write_state(state_path, checkpoint)
+                save(state_path, checkpoint)
                 return result
             if time.time() >= deadline:
                 result = result_envelope(
@@ -599,7 +645,7 @@ def wait_for_transition(
                     deadline_result[1],
                 )
                 checkpoint["terminalResult"] = result
-                write_state(state_path, checkpoint)
+                save(state_path, checkpoint)
                 return result
             prior = checkpoint
             nap(min(delay, max(0.0, deadline - time.time())))

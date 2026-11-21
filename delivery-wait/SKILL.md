@@ -260,8 +260,12 @@ so the helper keeps that use low:
 - A rate-limited read, including a 429 or a secondary limit, retries after
   the reset or the `Retry-After` GitHub gives, or a minute later when a
   secondary limit names no time, rather than every `--interval`. When that falls after `--deadline`, the wait ends at the
-  deadline without another read and says so in its reason; run it again
-  after the reset.
+  deadline without another read and names the time in its reason. The
+  checkpoint keeps that time and the window's allowance under
+  `githubLimits`, so a wait run again with the same `--state` honours them
+  before its first read.
+- The reserve is 1,000, or a fifth of a smaller budget such as a GitHub
+  Actions token's 1,000 an hour.
 - `inspect` takes its one snapshot even below the reserve.
 
 The checkpoint's `nextAttemptAt` shows when the next observation is due.

@@ -1290,6 +1290,32 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertGreater(gh.not_before() - time.time(), 55)
         self.assertGreater(gh.pace(30), 55)
 
+    def test_a_resumed_wait_honours_the_hold_an_earlier_run_learned(self) -> None:
+        state = str(self.directory / "held.json")
+        command = [DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "head-1",
+                   "--interval", "0.05", "--state", state, "--deadline"]
+        self.write_scenario(restSecondaryLimited=True)
+        _, first = self.run_json(*command, (datetime.now(timezone.utc) + timedelta(seconds=0.5)).isoformat())
+        self.assertIn("held the next observation until", first["reason"])
+        self.write_scenario()  # GitHub would answer now, but asked for 25 seconds.
+        _, second = self.run_json(*command, (datetime.now(timezone.utc) + timedelta(seconds=0.5)).isoformat())
+        self.assertEqual(second["state"], "timed-out")
+        self.assertIn("held the next observation until", second["reason"])
+        self.assertEqual(len(self.rest_requests()), 1)
+
+    def test_a_smaller_budget_keeps_a_proportionate_reserve(self) -> None:
+        sys.path.insert(0, str(DELIVERY.parent))
+        from kgr_github import Gh, Metrics
+
+        gh = Gh(Metrics(0.0), reserve=1_000)
+        reset = str(int(time.time()) + 3600)
+        # A GitHub Actions token's 1,000 an hour: a fifth of it is kept, so a wait can still read.
+        gh.note_rate({"x-ratelimit-limit": "1000", "x-ratelimit-remaining": "999", "x-ratelimit-reset": reset})
+        self.assertEqual(gh.kept(), 200)
+        self.assertFalse(gh.below_reserve())
+        gh.note_rate({"x-ratelimit-limit": "5000", "x-ratelimit-remaining": "999", "x-ratelimit-reset": reset})
+        self.assertTrue(gh.below_reserve())
+
     def test_a_paced_wait_stops_promptly_when_asked(self) -> None:
         reset = int(datetime.now(timezone.utc).timestamp() + 3600)
         running = {"id": 44, "head_sha": "head-1", "status": "in_progress", "conclusion": None, "html_url": "https://example.invalid/run"}

@@ -741,6 +741,21 @@ class PublicationGuardTests(unittest.TestCase):
         self.assertEqual(self.run_guard("staged", "--", sys.executable, "-c", "exit(2)").returncode, 2)
         killed = self.run_guard("staged", "--", sys.executable, "-c", "import os, signal; os.kill(os.getpid(), signal.SIGTERM)")
         self.assertEqual(killed.returncode, -signal.SIGTERM)
+        killed = self.run_guard("staged", "--", sys.executable, "-c", "import os, signal; os.kill(os.getpid(), signal.SIGKILL)")
+        self.assertEqual(killed.returncode, -signal.SIGKILL)
+
+    def test_withholding_never_moves_a_file_onto_another_input_or_takes_an_option_for_a_file(self):
+        title, body = self.write("body.unchecked", "Title\n"), self.write("body", "Body\n")
+        result = self.run_guard("pr", "--repo", PUBLIC, "--title-file", str(title), "--body-file", str(body),
+                                env={"FAKE_GH_FAIL": "rest,graphql"})
+        self.assertEqual(result.returncode, 2)
+        self.assertFalse(title.exists() or body.exists())
+        self.assertEqual(Path(f"{title}.unchecked").read_text(), "Title\n")
+        self.assertEqual(Path(f"{body}.unchecked.2").read_text(), "Body\n")
+        stray = self.repo / "--body-file"
+        stray.write_text("not an input\n")
+        self.assertEqual(self.run_guard("pr", "--repo", PUBLIC, "--title-file", "--body-file", "x").returncode, 2)
+        self.assertEqual(stray.read_text(), "not an input\n")
 
     def test_merge_of_the_base_checks_only_what_the_merge_changes(self):
         self.stage({"c.md": "base\n"})

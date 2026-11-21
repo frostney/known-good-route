@@ -1521,6 +1521,14 @@ def run_review(
         return max(delay, blocked - clock()) if blocked is not None else delay
 
     while True:
+        # A hold GitHub set, even on the API-root lookup before this loop, comes before a read.
+        reason = held()
+        if reason:
+            last["triggers"] = public_posted(posted)
+            return "pending", reason, last
+        blocked = not_before()
+        if blocked is not None and blocked > clock():
+            sleeper(blocked - clock())
         try:
             evidence = pull_evidence(ObservationCache(gh), repo, pr)  # type: ignore[arg-type]
         except (RateLimited, TransientError):
@@ -1563,8 +1571,9 @@ def run_review(
         wakes = [pace(interval), deadline - clock()]
         wakes += [parse_time(item[key]) - clock() for key in ("retryAt", "boundAt") if item.get(key)]
         # A bot's wake time never moves a read ahead of what GitHub's limits allow.
-        if held():
-            return state, f"deadline reached; {reason}", last
+        hold = held()
+        if hold:
+            return state, f"deadline reached; {reason}; {hold}", last
         sleeper(max(0.0, min(after_limits(min(wakes)), deadline - clock())))
 
 

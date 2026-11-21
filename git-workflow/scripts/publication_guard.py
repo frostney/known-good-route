@@ -1083,7 +1083,9 @@ def named_files(argv):
     for at, argument in enumerate(argv):
         name, equals, value = argument.partition("=")
         if len(name) > 2 and any(option.startswith(name) for option in FILE_OPTIONS):
-            value = value if equals else (argv[at + 1] if at + 1 < len(argv) else "")
+            if not equals:
+                # A missing value leaves the next option in its place, never a file name.
+                value = argv[at + 1] if at + 1 < len(argv) and not argv[at + 1].startswith("-") else ""
             if value:
                 files.append(value)
     return files
@@ -1091,11 +1093,14 @@ def named_files(argv):
 
 def withhold(argv):
     """Moves each file ARGV names aside, so a command that ignores the guard's exit status publishes nothing."""
-    for path in named_files(argv):
+    paths = named_files(argv)
+    # No file moves onto another input's path, where a later command would read it.
+    inputs = {os.path.abspath(path) for path in paths}
+    for path in paths:
         if not os.path.isfile(path):
             continue
         target, number = f"{path}.unchecked", 1
-        while os.path.lexists(target):  # Keeps an earlier run's copy.
+        while os.path.lexists(target) or os.path.abspath(target) in inputs:  # Keeps an earlier run's copy.
             number += 1
             target = f"{path}.unchecked.{number}"
         try:
@@ -1174,7 +1179,10 @@ def main(argv=None):
         return 127
     if code < 0:
         # Ends the guard by the same signal, so the caller sees what ended the command.
-        signal.signal(-code, signal.SIG_DFL)
+        try:
+            signal.signal(-code, signal.SIG_DFL)
+        except (OSError, ValueError):  # SIGKILL and SIGSTOP keep their default.
+            pass
         os.kill(os.getpid(), -code)
         return 128 - code
     return code

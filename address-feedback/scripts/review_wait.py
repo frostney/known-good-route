@@ -453,6 +453,7 @@ def main() -> int:
                         change_precedes_terminal=True,
                         pace=gh.pace,
                         not_before=gh.not_before,
+                        limits=gh,
                     )
         elif args.command == "reply":
             repo_parts(args.repo)

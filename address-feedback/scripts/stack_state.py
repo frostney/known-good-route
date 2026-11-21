@@ -321,6 +321,7 @@ def main() -> int:
                     change_precedes_terminal=True,
                     pace=gh.pace,
                     not_before=gh.not_before,
+                    limits=gh,
                 )
         emit(output, args.json)
         return 0
