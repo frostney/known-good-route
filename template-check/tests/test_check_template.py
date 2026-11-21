@@ -1064,10 +1064,39 @@ class TemplateParsingTests(unittest.TestCase):
         self.assertEqual(CHECK_TEMPLATE.declared_name(form), "Bug")
 
     def test_an_explicit_name_key_is_recovered_from_broken_yaml(self):
-        self.assertEqual(CHECK_TEMPLATE.name_alone("? name\n: Other\nabout: [open\n"), "Other")
+        self.assertEqual(CHECK_TEMPLATE.declared_name("? name\n: Other\nabout: [open\n"), "Other")
 
     def test_a_quoted_name_key_is_recovered_from_a_broken_flow_form(self):
         self.assertEqual(CHECK_TEMPLATE.declared_name('{"name":"Broken","body":[}\n'), "Broken")
+
+    def test_a_broken_form_names_only_what_its_root_mapping_declares(self):
+        cases = {
+            "{description: tracking name:Legacy, name: Bug, body: [*missing]}\n": "Bug",
+            "? name # shown in the chooser\n: Other\nabout: [open\n": "Other",
+            "description: |\n  name: Legacy\nname: Bug\nbody: [open\n": "Bug",
+            "name: Bug\nname: Other\nbody: [open\n": None,
+            "name: [Bug]\nbody: [open\n": None,
+            "body: [open\nname: Bug\n": None,
+        }
+        for form, name in cases.items():
+            with self.subTest(form=form):
+                self.assertEqual(CHECK_TEMPLATE.declared_name(form), name)
+
+    def test_a_form_body_that_is_not_a_list_is_an_error(self):
+        for body in ("false", "0", "{}", "''"):
+            with self.subTest(body=body), self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, "body is not a list"):
+                CHECK_TEMPLATE.form_template("f.yml", f"name: Bug\nbody: {body}\n")
+
+    def test_the_uv_reader_reads_yaml_as_this_process_does(self):
+        # The program uv runs, here on this Python, which has PyYAML installed.
+        script = str(Path(CHECK_TEMPLATE.__file__).resolve())
+        for text in ("name: Bug\nbody: [a, 1, 2025-01-01]\n", "name: Bug\nbody: [open\n", "a: &a [*a]\n", "name: Legacy\nbody: \x07\n"):
+            with self.subTest(text=text):
+                completed = subprocess.run(
+                    [sys.executable, "-I", "-c", CHECK_TEMPLATE.LOAD, script], input=text.encode("utf-8"),
+                    capture_output=True, check=True, cwd=tempfile.gettempdir(),
+                )
+                self.assertEqual(json.loads(completed.stdout), CHECK_TEMPLATE.read_yaml(text))
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):
@@ -1579,6 +1608,15 @@ class CommandTests(unittest.TestCase):
             "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "Issue", stdin=body(*FULL)
         )
         self.assertEqual((code, result["state"]), (0, "match"))
+
+    def test_a_named_check_needs_a_broken_form_whose_name_hides_in_another_value(self):
+        self.write(".github/ISSUE_TEMPLATE/broken.yml", "{description: tracking name:Legacy, name: Bug, body: [*missing]}\n")
+        self.write(".github/ISSUE_TEMPLATE/bug.md", "---\nname: Bug\n---\n## Summary\n\n-\n")
+        code, result = self.run_check(
+            "--root", str(self.checkout), "--kind", "issue", "--body", "-", "--template-name", "Bug", stdin="## Summary\n\nText.\n"
+        )
+        self.assertEqual((code, result["state"]), (2, "operational-error"))
+        self.assertIn("broken.yml", result["reason"])
 
     def test_a_form_that_fails_to_parse_keeps_its_declared_name(self):
         self.write(".github/ISSUE_TEMPLATE/form.yml", 'name: Bug report\nbody:\n  - type: input\n    attributes: {label: "\\UFFFFFFFF"}\n')

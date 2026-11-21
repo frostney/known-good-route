@@ -90,7 +90,8 @@ last template section. For an issue, the
 attribution note `create-issue` closes it with is not content either.
 
 Issue forms and front matter are YAML, read with PyYAML's safe loader as
-GitHub reads them, in any YAML style. A form that does not load, or a field
-whose label is not text, is an operational error, never a partial check; its
-`name` entry, read on its own, still keeps it from blocking a check that names
-another template.
+GitHub reads them, in any YAML style. A form that does not load, a `body`
+that is not a list, or a field whose label is not text, is an operational
+error, never a partial check. When the YAML parser reads the form's own `name`
+before the error, that name keeps the form from blocking a check that names
+another template; a form whose name it cannot read blocks every named check.

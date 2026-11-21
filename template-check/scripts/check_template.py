@@ -22,7 +22,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import textwrap
 from dataclasses import dataclass, field
 from html import escape
 from html.parser import HTMLParser
@@ -61,43 +60,14 @@ RENDER = (
     "options=Options.CMARK_OPT_UNSAFE | Options.CMARK_OPT_FOOTNOTES | Options.CMARK_OPT_SOURCEPOS | Options.CMARK_OPT_HARDBREAKS)\n"
     "sys.stdout.buffer.write(html.encode('utf-8'))"
 )
-# PyYAML's safe loader as plain JSON, as jsonable() makes it in this process.
+# The YAML reader run through uv: this script's own read_yaml(), with PyYAML installed there.
 LOAD = (
-    "import json, sys, yaml\n"
-    "limit = int(sys.argv[1])\n"
-    "def expanded(node, sizes, active):\n"
-    "    key = id(node)\n"
-    "    if key in sizes:\n"
-    "        return sizes[key]\n"
-    "    if key in active:\n"
-    "        raise ValueError('a YAML alias refers to itself')\n"
-    "    active.add(key)\n"
-    "    parts = [part for item in node.value for part in (item if isinstance(item, tuple) else (item,))] if isinstance(node.value, list) else []\n"
-    "    own = 1 + (len(node.value) if isinstance(node.value, str) else 0)\n"
-    "    total = own + sum(expanded(part, sizes, active) for part in parts)\n"
-    "    active.discard(key)\n"
-    "    if total > limit:\n"
-    "        raise ValueError(f'the YAML expands to more than {limit} values and characters')\n"
-    "    sizes[key] = total\n"
-    "    return total\n"
-    "def plain(value):\n"
-    "    if isinstance(value, dict):\n"
-    "        return {str(key): plain(item) for key, item in value.items()}\n"
-    "    if isinstance(value, list):\n"
-    "        return [plain(item) for item in value]\n"
-    "    return value if value is None or isinstance(value, (str, int, float, bool)) else {'!': type(value).__name__}\n"
-    "try:\n"
-    "    loader = yaml.SafeLoader(sys.stdin.buffer.read().decode('utf-8'))\n"
-    "    try:\n"
-    "        node = loader.get_single_node()\n"
-    "        if node is not None:\n"
-    "            expanded(node, {}, set())\n"
-    "        value = None if node is None else loader.construct_document(node)\n"
-    "    finally:\n"
-    "        loader.dispose()\n"
-    "    result = {'value': plain(value)}\n"
-    "except (yaml.YAMLError, ValueError, OverflowError, RecursionError) as error:\n"
-    "    result = {'error': str(error)}\n"
+    "import importlib.util, json, sys\n"
+    "spec = importlib.util.spec_from_file_location('check_template', sys.argv[1])\n"
+    "module = importlib.util.module_from_spec(spec)\n"
+    "sys.modules[spec.name] = module\n"
+    "spec.loader.exec_module(module)\n"
+    "result = module.read_yaml(sys.stdin.buffer.read().decode('utf-8'))\n"
     "sys.stdout.buffer.write(json.dumps(result).encode('utf-8'))"
 )
 
@@ -782,102 +752,102 @@ def jsonable(value: Any) -> Any:
     return {"!": type(value).__name__}  # A date or another YAML type, which is no text where text belongs.
 
 
+def read_yaml(text: str) -> dict[str, Any]:
+    """PyYAML's safe reading of text: {"value": plain data}, or {"error": why, "name": its root_name()}.
+
+    Plain JSON either way, so the uv fallback in load_yaml() returns the same.
+    """
+    try:
+        loader = yaml.SafeLoader(text)  # A character YAML does not allow raises here.
+    except yaml.YAMLError as error:
+        return {"error": str(error), "name": root_name(text)}
+    try:
+        node = loader.get_single_node()
+        if node is not None:
+            expanded(node, {}, set())
+        return {"value": jsonable(None if node is None else loader.construct_document(node))}
+    # An escape past the last code point raises ValueError or OverflowError; deep nesting, RecursionError.
+    except (yaml.YAMLError, ValueError, OverflowError, RecursionError) as error:
+        return {"error": str(error), "name": root_name(text)}
+    finally:
+        loader.dispose()
+
+
+def root_name(text: str) -> str | None:
+    """The `name` of YAML that does not load, read from PyYAML's parser events up to where it stops.
+
+    The parser reads quotes, comments, flow style and explicit keys as YAML
+    does, so only the root mapping's own `name` entry counts, once the parser
+    reads on past it: a value the error follows may be cut short, such as an
+    unclosed quote that ran on. "" when that mapping ends without a name; None
+    when the name is not text, is given twice or is not read before the error.
+    """
+    try:
+        yaml.SafeLoader(text).dispose()
+    except yaml.reader.ReaderError as error:
+        text = text[: error.position]  # The entries before a character YAML does not allow still read.
+    resolver = yaml.resolver.Resolver()
+
+    def tag(event: Any) -> str:
+        if event.tag is None or event.tag == "!":
+            return resolver.resolve(yaml.ScalarNode, event.value, event.implicit)
+        return event.tag
+
+    names: list[str | None] = []
+    depth, entries, naming, read = 0, 0, False, []
+    try:
+        for event in yaml.parse(text, Loader=yaml.SafeLoader):
+            names += read  # The parser read on past the name.
+            read = []
+            if isinstance(event, (yaml.StreamStartEvent, yaml.DocumentStartEvent)):
+                continue
+            if depth == 0 and not isinstance(event, yaml.MappingStartEvent):
+                return ""  # No root mapping, so no name.
+            if isinstance(event, (yaml.MappingStartEvent, yaml.SequenceStartEvent)):
+                if depth == 1 and entries % 2 == 0:
+                    naming = False  # A key that is a collection is not `name`.
+                elif depth == 1 and naming:
+                    read = [None]  # A name that is a collection is not text.
+                    naming = False
+                depth += 1
+                continue
+            if isinstance(event, (yaml.MappingEndEvent, yaml.SequenceEndEvent)):
+                depth -= 1
+                if depth == 0:
+                    return (names or [""])[0] if len(names) <= 1 else None
+                entries += depth == 1
+                continue
+            if depth == 1:  # A scalar or alias entry of the root mapping.
+                scalar = isinstance(event, yaml.ScalarEvent)
+                if entries % 2 == 0:
+                    naming = scalar and tag(event) == "tag:yaml.org,2002:str" and event.value == "name"
+                elif naming:
+                    kind = tag(event) if scalar else ""
+                    read = [event.value if kind == "tag:yaml.org,2002:str" else "" if kind == "tag:yaml.org,2002:null" else None]
+                    naming = False
+                entries += 1
+    except (yaml.YAMLError, ValueError, OverflowError, RecursionError):
+        pass
+    return names[0] if len(names) == 1 else None
+
+
 def load_yaml(text: str) -> Any:
-    """YAML read with PyYAML's safe loader, locally or through uv; ValueError for text that is not YAML."""
+    """YAML read with PyYAML's safe loader, locally or through uv; BrokenYaml for text that is not YAML."""
     if yaml is not None:
-        try:
-            loader = yaml.SafeLoader(text)  # A character YAML does not allow raises here.
-        except yaml.YAMLError as error:
-            raise ValueError(f"not valid YAML: {error}") from error
-        try:
-            node = loader.get_single_node()
-            if node is not None:
-                expanded(node, {}, set())
-            return jsonable(None if node is None else loader.construct_document(node))
-        # An escape past the last code point raises ValueError or OverflowError; deep nesting, RecursionError.
-        except (yaml.YAMLError, ValueError, OverflowError, RecursionError) as error:
-            raise ValueError(f"not valid YAML: {error}") from error
-        finally:
-            loader.dispose()
-    result = json.loads(isolated(LOAD, text, PYYAML, "the YAML reader", str(YAML_SIZE)))
+        result = read_yaml(text)
+    else:
+        result = json.loads(isolated(LOAD, text, PYYAML, "the YAML reader", str(Path(__file__).resolve())))
     if "error" in result:
-        raise ValueError(f"not valid YAML: {result['error']}")
+        raise BrokenYaml(f"not valid YAML: {result['error']}", result["name"])
     return result["value"]
 
 
 class BrokenYaml(ValueError):
-    """YAML that does not load, with the name its own `name:` entry still declares, if any."""
+    """YAML that does not load, with the name its root mapping still declares: see root_name()."""
 
     def __init__(self, message: str, name: str | None) -> None:
         super().__init__(message)
         self.name = name
-
-
-def name_alone(text: str) -> str | None:
-    """The top-level `name` read on its own, from YAML that does not load as a whole.
-
-    Its entry runs from its key to the next line at the margin, so a name
-    continued on indented lines is read whole; None when even that fails.
-    """
-    lines = text.split("\n")
-    # Document markers sit at the margin whatever the mapping's indent, so they do not set it.
-    keys = [line for line in lines if line.strip() and not line.lstrip().startswith("#") and not re.fullmatch(r"(?:---|\.\.\.)(?:\s+#.*)?\s*", line)]
-    margin = min((len(line) - len(line.lstrip()) for line in keys), default=0)
-    for index, line in enumerate(lines):
-        explicit = re.match(r"""\?[ \t]+["']?name["']?[ \t]*$""", line.lstrip())
-        if len(line) - len(line.lstrip()) == margin and (explicit or re.match(r"""["']?name["']?[ \t]*:""", line.lstrip())):
-            # An explicit `? name` key takes its value from the `: value` line after it.
-            start = index + 2 if explicit else index + 1
-            end = next(
-                (n for n in range(start, len(lines)) if lines[n].strip() and len(lines[n]) - len(lines[n].lstrip()) <= margin),
-                len(lines),
-            )
-            try:
-                return name_in(load_yaml(textwrap.dedent("\n".join(lines[index:end])))) or None
-            except ValueError:
-                return None
-    return flow_name(text)
-
-
-def root_is_flow(text: str) -> bool:
-    """Whether a YAML document's root is a flow mapping, past document markers, directives and comments."""
-    lines = [line for line in text.split("\n") if line.strip() and not re.match(r"\s*(?:#|---|%)", line)]
-    return bool(lines) and lines[0].lstrip().startswith("{")
-
-
-def flow_name(text: str) -> str | None:
-    """The `name` of a top-level flow mapping, such as `{name: Bug, body: [...]}`, read on its own."""
-    if not root_is_flow(text):
-        return None
-    depth, quote, comment, escaped = 0, "", False, False
-    for index, char in enumerate(text):
-        # An entry of the root mapping starts after its `{` or a comma, before its key is read as a quote.
-        if not (comment or escaped or quote) and depth == 1 and text[index - 1 : index] in ("{", ",", " ", "\n", "\t"):
-            entry = re.match(r"""\s*["']?name["']?\s*:\s*("(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[^,}\]\n]+)""", text[index:])
-            if entry:
-                try:
-                    return name_in(load_yaml(f"name: {entry.group(1).strip()}")) or None
-                except ValueError:
-                    return None
-        if comment:
-            comment = char != "\n"  # A comment runs to the end of its line.
-        elif escaped:
-            escaped = False
-        elif quote == '"' and char == "\\":
-            escaped = True  # `\"` stays inside a double-quoted value.
-        elif quote == "'" and char == "'" and text[index + 1 : index + 2] == "'":
-            escaped = True  # `''` stays inside a single-quoted value.
-        elif quote:
-            quote = "" if char == quote else quote
-        elif char == "#" and (index == 0 or text[index - 1].isspace()):
-            comment = True
-        elif char in "\"'":
-            quote = char
-        elif char in "{[":
-            depth += 1
-        elif char in "}]":
-            depth -= 1
-    return None
 
 
 def name_in(data: Any) -> str | None:
@@ -903,12 +873,12 @@ def front_matter(text: str) -> tuple[dict[str, Any], str]:
             block = "\n".join(lines[1:index])
             try:
                 data = load_yaml(block)
-            except ValueError as error:
+            except BrokenYaml as error:
                 # Markdown between two rules is often not YAML; a block that opens with a
                 # plain key at the margin, such as `name:`, says it was meant to be.
                 opening = next((line for line in block.split("\n") if line.strip() and not line.lstrip().startswith("#")), "").lstrip()
                 if opening.startswith("{") or re.match(r"\?(?:[ \t]|$)", opening) or re.match(r"""(?:\w[\w .-]*|"[^"\n]*"|'[^'\n]*')[ \t]*:(?:[ \t]|$)""", opening):
-                    raise BrokenYaml(f"cannot read the front matter: {error}", name_alone(block)) from error
+                    raise BrokenYaml(f"cannot read the front matter: {error}", error.name) from error
                 return {}, text
             if isinstance(data, dict):
                 return data, "\n".join(lines[index + 1 :])
@@ -920,8 +890,8 @@ def declared_name(text: str) -> str | None:
     """A form's top-level `name`: "" when it declares none, None when it cannot be read."""
     try:
         return name_in(load_yaml(text))
-    except ValueError:
-        return name_alone(text)
+    except BrokenYaml as error:
+        return error.name
 
 
 def form_template(path: str, text: str, need_name: bool = True) -> Template:
@@ -940,9 +910,9 @@ def form_template(path: str, text: str, need_name: bool = True) -> Template:
 
     try:
         data = load_yaml(text)
-    except ValueError as error:
+    except BrokenYaml as error:
         # Its name, read on its own, keeps the error from blocking a check that names another template.
-        raise failure(f"cannot read the issue form: {error}", name_alone(text) or "") from error
+        raise failure(f"cannot read the issue form: {error}", error.name or "") from error
     if not isinstance(data, dict):
         raise failure("the issue form is not a YAML mapping")
     declared = name_in(data)
@@ -950,7 +920,7 @@ def form_template(path: str, text: str, need_name: bool = True) -> Template:
         # A name the form declares but that is not text: it may be any template's.
         raise failure("cannot read the issue form's name")
     name = declared or Path(path).stem
-    body = data.get("body") or []
+    body = data.get("body", [])
     if not isinstance(body, list):
         raise failure("the issue form's body is not a list of fields", name)
     found: list[Heading] = []
