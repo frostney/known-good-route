@@ -286,7 +286,8 @@ def footnote_label(href: str) -> str:
 
 def literal(text: str) -> str:
     """Text with each character Markdown could read as markup escaped, so it reads back as written."""
-    text = re.sub(r"([\\`*_~<\[\]&])", r"\\\1", text).replace(BREAK, "<br>")
+    # `!` too, so a literal one before a link never reads as an image.
+    text = re.sub(r"([\\`*_~<\[\]&!])", r"\\\1", text).replace(BREAK, "<br>")
     # A plain-text URL would become a link where it is written back.
     return re.sub(r"(?i)\b(?:https?|ftp)(?=://)|\bwww(?=\.)", lambda match: match.group(0) + "\\", text)
 
@@ -823,9 +824,12 @@ def name_alone(text: str) -> str | None:
     keys = [line for line in lines if line.strip() and not line.lstrip().startswith("#") and not re.fullmatch(r"(?:---|\.\.\.)(?:\s+#.*)?\s*", line)]
     margin = min((len(line) - len(line.lstrip()) for line in keys), default=0)
     for index, line in enumerate(lines):
-        if len(line) - len(line.lstrip()) == margin and re.match(r"""["']?name["']?[ \t]*:""", line.lstrip()):
+        explicit = re.match(r"""\?[ \t]+["']?name["']?[ \t]*$""", line.lstrip())
+        if len(line) - len(line.lstrip()) == margin and (explicit or re.match(r"""["']?name["']?[ \t]*:""", line.lstrip())):
+            # An explicit `? name` key takes its value from the `: value` line after it.
+            start = index + 2 if explicit else index + 1
             end = next(
-                (n for n in range(index + 1, len(lines)) if lines[n].strip() and len(lines[n]) - len(lines[n].lstrip()) <= margin),
+                (n for n in range(start, len(lines)) if lines[n].strip() and len(lines[n]) - len(lines[n].lstrip()) <= margin),
                 len(lines),
             )
             try:
@@ -843,10 +847,16 @@ def root_is_flow(text: str) -> bool:
 
 def flow_name(text: str) -> str | None:
     """The `name` of a top-level flow mapping, such as `{name: Bug, body: [...]}`, read on its own."""
-    depth, quote, comment = 0, "", False
+    depth, quote, comment, escaped = 0, "", False, False
     for index, char in enumerate(text):
         if comment:
             comment = char != "\n"  # A comment runs to the end of its line.
+        elif escaped:
+            escaped = False
+        elif quote == '"' and char == "\\":
+            escaped = True  # `\"` stays inside a double-quoted value.
+        elif quote == "'" and char == "'" and text[index + 1 : index + 2] == "'":
+            escaped = True  # `''` stays inside a single-quoted value.
         elif quote:
             quote = "" if char == quote else quote
         elif char == "#" and (index == 0 or text[index - 1].isspace()):

@@ -876,6 +876,10 @@ class RendererParityTests(unittest.TestCase):
         body = "## Related\n\n> [!NOTE]\n> `Created on behalf of @someone using Some Model.`\n"
         self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(REAL_RENDER(body), "issue", body, github=False)], [True])
 
+    def test_a_literal_bang_before_a_link_is_no_image(self):
+        texts = {CHECK_TEMPLATE.headings(REAL_RENDER(h))[0].text for h in ("## ![CI](https://example.org/ci.svg)\n", "## \\![CI](https://example.org/ci.svg)\n")}
+        self.assertEqual(len(texts), 2)
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
@@ -1041,6 +1045,13 @@ class TemplateParsingTests(unittest.TestCase):
 
     def test_a_broken_flow_form_after_a_preamble_keeps_its_name(self):
         self.assertEqual(CHECK_TEMPLATE.declared_name("---\n# form\n{name: Legacy, body: [*missing]}\n"), "Legacy")
+
+    def test_flow_name_recovery_honors_escaped_quotes(self):
+        form = '{description: "say \\", name: Other, \\"", name: Bug, body: [*missing]}\n'
+        self.assertEqual(CHECK_TEMPLATE.declared_name(form), "Bug")
+
+    def test_an_explicit_name_key_is_recovered_from_broken_yaml(self):
+        self.assertEqual(CHECK_TEMPLATE.name_alone("? name\n: Other\nabout: [open\n"), "Other")
 
     def test_a_quoted_form_name_may_wrap_onto_the_lines_below(self):
         for quote in ('"', "'"):
