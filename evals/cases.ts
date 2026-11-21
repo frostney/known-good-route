@@ -3287,7 +3287,7 @@ export const evalCases: EvalCase[] = [
           whenCarries: { values: ["T722"] },
           evidence: {
             finalAudit:
-              "Live stack exactly [#721 721aaaa,#722 722cccc]. All exact-head gates terminal passing; the originating thread is replied and resolved, no new findings. Whole stack ready for its owner; never merge here.",
+              "Thread T722 is replied and resolved; no thread is unresolved and no new finding exists. Every check and review on the current live heads is terminal and passing, with no other branch or pull request in the stack. Ready for its owner once the published fix is confirmed on #722; never merge here.",
           },
         },
       ],
@@ -3317,6 +3317,10 @@ export const evalCases: EvalCase[] = [
       // reveals 722cccc, which the answer must state.
       requiredAnyActions: ["git.push", "git.stackSubmit"],
       requiredActionsBeforeActions: [{ before: "forge.replyInline", after: "forge.resolveThread" }],
+      requiredActionValues: [
+        { action: "forge.replyInline", values: ["T722"], every: true },
+        { action: "forge.resolveThread", values: ["T722"], every: true },
+      ],
       maxActionCounts: { "git.push": 1, "git.stackSubmit": 1 },
       forbiddenActions: [
         "forge.mergePr",

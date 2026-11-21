@@ -10,7 +10,8 @@ independently merge-ready.
   a terminal result for the member's exact head, and every returned finding
   surface was inspected and classified.
 - `covered`: The member is reviewed and every finding is moot at the integrated
-  top, satisfied by an exact descendant commit, fixed by an exact commit in a
+  top, satisfied by an exact descendant commit, fixed by an exact commit on the
+  member itself (a fix in place, whose new head is then reviewed again) or in a
   required top fix layer, or declined with accepted evidence. Every originating
   inline thread has a maintainer-workflow reply and is resolved.
 - `pending`: CI, review, provider availability, thread handling,
@@ -41,11 +42,12 @@ finished is not frozen: list its ref under `rewrite` with `draftOnly`, naming
 the unfinished review as the reason, to fix it in place; the helper still
 refuses it once it is ready for review. Fix a member in place only when it and
 every member above it are not frozen, because the push moves them all and
-restarts their CI. Apart from a `draftOnly` entry, the only rewrite is the
-final rebase before merging the whole stack, under `git-workflow`'s [native
-stack
-reference](../../git-workflow/references/github-stacks.md#guarded-rewrite-exception);
-it changes every head, so the changed-head rule below applies to every member.
+restarts their CI. Apart from a `draftOnly` entry, a ref goes under `rewrite`
+only for the rewrites `git-workflow`'s [guarded rewrite
+exception](../../git-workflow/references/github-stacks.md#guarded-rewrite-exception)
+allows: the final rebase before merging the whole stack, the layer-by-layer
+merge fallback and a retargeted stack. Each changes every head it moves, so the
+changed-head rule below applies to each of them.
 
 - Appending one expected fix layer above an unchanged prefix preserves the
   prefix's evidence. The new member remains pending until reviewed and covered.

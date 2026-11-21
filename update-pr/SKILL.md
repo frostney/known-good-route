@@ -50,7 +50,8 @@ not block the update.
    heads and follow the stack reference's
    [guarded rewrite exception](../git-workflow/references/github-stacks.md#guarded-rewrite-exception),
    which rewrites layers with open PRs only once, just before the whole stack
-   merges; never use raw rebase or force-push commands.
+   merges, apart from the merge fallback and retarget cases it names; never use
+   raw rebase or force-push commands.
 4. Apply `/code-review fix-all` and `/test-against-spec fix` to the changed
    behavior, including any baseline integration. Reuse only evidence whose
    content, command, environment and coverage still match; a baseline merge or

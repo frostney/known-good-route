@@ -1,10 +1,10 @@
 # Address stack feedback
 
 Converge review feedback for exactly one native GitHub stack. Review every
-initial layer at its exact head, preserve the heads of frozen layers, fix a
-layer that is not frozen in place, collect the fixes for frozen layers in one
-new top layer per round, and stop only when the complete live stack reaches a
-clean fixed point or an explicit blocker. [stack-readiness.md](stack-readiness.md#frozen-members-and-invalidation)
+initial layer at its exact head, preserve the heads of frozen layers, place
+each fix under step 7's rule, and stop only when the complete live stack
+reaches a clean fixed point or an explicit blocker.
+[stack-readiness.md](stack-readiness.md#frozen-members-and-invalidation)
 defines when a layer is frozen.
 
 Apply the parent SKILL.md shared authority, attribution, and evidence rules.
@@ -72,13 +72,17 @@ run only `status`, with every exact `PR=SHA`.
    decline requiring human judgment remains unresolved and blocks readiness.
    Record every live finding with its originating PR and thread or surface.
 7. If live findings remain, check out the current native stack and record every
-   remote head. Choose where the fixes land. A finding on a layer that is not
-   frozen, with no frozen layer above it, is fixed on that layer in place. Every
-   other fix goes on the top fix layer from an earlier round while that layer
-   is not frozen, and otherwise into exactly one new branch above the current
-   top, created with `gh stack add`. A red or unfinished CI run never freezes a
-   draft, so it never calls for a new layer. Fix every validated live finding
-   where it lands. Group commits by one
+   remote head. Choose where each fix lands, against the live stack:
+   - A finding on a layer that is not frozen, with no frozen layer above it,
+     is fixed on that layer in place.
+   - Every other fix goes on the top layer when it is a fix layer from an
+     earlier round and is not frozen, since nothing sits above it.
+   - Otherwise it goes into exactly one new branch above the current top,
+     created with `gh stack add`, shared by every such fix this round.
+
+   Only a frozen layer at or above a finding's layer calls for a new layer;
+   red or unfinished CI never freezes a draft. Fix every validated live
+   finding where it lands. Group commits by one
    coherent cause or originating PR where that preserves traceability; every
    source reply must link the exact landing commit and the PR it landed in. For a
    documentation finding, search the document and any file that mirrors the
@@ -103,10 +107,11 @@ run only `status`, with every exact `PR=SHA`.
 9. Enforce the native-stack reference's push-boundary checks for the frozen
    prefix and every branch the push moves or creates; preserve the frozen PR
    heads and metadata. Publish a fix made in place through the native-stack
-   reference's in-place repair path: commit it on its layer, restack the
-   layers above it with `gh stack rebase` when there are any, push through the
-   protected helper with each moved branch admitted, and cancel the superseded
-   runs it names. Publish a new fix layer with its protected `gh stack push`
+   reference's in-place repair path: commit it on its layer, restack only the
+   layers above it with `gh stack rebase --upstack --no-trunk` from that
+   branch when there are any, check that every layer below kept its head,
+   validate the restacked top, push through the protected helper with each
+   moved branch admitted, and cancel the superseded runs it names. Publish a new fix layer with its protected `gh stack push`
    followed by separate PR creation and native append procedure. The helper
    refuses to move a layer that is ready for review or a draft whose CI passed;
    never list a frozen member under `rewrite` to land a fix. A fix in place
@@ -119,12 +124,11 @@ run only `status`, with every exact `PR=SHA`.
    review. Trigger and collect its exact-head review under the active provider
    contract.
 10. Once each layer a fix landed on has successful exact-head CI and a
-    terminal review on its new head, it is frozen. Then reply to and resolve
-    the originating threads with the exact fix evidence. If that review
-    produces live findings, place their fixes under step 7's rule against the
-    live stack: in place while that layer and every layer above it are not
-    frozen, as when its CI failed, and otherwise in another top layer. Never
-    push those fixes into any frozen member.
+    terminal review on its new head, reply to and resolve the originating
+    threads with the exact fix evidence. Do not wait for that CI before
+    handling new work: classify any live finding the review of a moved head
+    returns, and any CI failure on it, as soon as it is known, and place its
+    fix under step 7, which never pushes into a frozen member.
 11. After every head, topology, review, or thread transition, reconcile native
     membership through the stack helper. An expected append-only fix layer keeps
     the frozen prefix valid but needs its own review. A fix in place, planned
@@ -136,7 +140,8 @@ run only `status`, with every exact `PR=SHA`.
 12. Before reporting readiness, capture the live stack again and compare it with
     the snapshot used by the final evidence pass. Require every current member
     to be present in the evidence set, and every layer that took a fix this
-    round, in place or appended, to be reviewed clean at its current head. A drained trigger list is not completion when live membership differs.
+    round, in place or appended, to be reviewed clean at its current head. A
+    drained trigger list is not completion when live membership differs.
 
 ## Provider adapters
 
