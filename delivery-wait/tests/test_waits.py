@@ -1233,6 +1233,8 @@ class WaitCommandsTest(unittest.TestCase):
     def test_all_workflows_cancelled_newest_run_without_a_passed_older_run_is_a_failure(self) -> None:
         for name, older in (
             ("older run failed", workflow_run(101, [workflow_job(1000, "build", conclusion="failure")], conclusion="failure", workflow_id=9)),
+            # A job that may fail without failing its run.
+            ("older run passed with a failed job", workflow_run(101, [workflow_job(1000, "build", conclusion="failure")], workflow_id=9)),
             ("older run is another event", workflow_run(101, [workflow_job(1000, "build")], workflow_id=9, event="push")),
             ("older run is another workflow", workflow_run(101, [workflow_job(1000, "build")], workflow_id=10, name="Lint")),
         ):

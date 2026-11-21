@@ -1038,6 +1038,8 @@ export const deliveryCases: EvalCase[] = [
       ],
       forbiddenActionValues: [
         { action: "ci.rerunRun", values: ["9101", "9105"] },
+        // A wait on the run that already passed does not cover the rerun.
+        { action: "monitor.wait", values: ["9101"] },
         { action: "git.stackMerge", values: ["--admin", "admin"] },
       ],
       maxActionCounts: { "git.stackMerge": 2, "ci.rerunRun": 1 },

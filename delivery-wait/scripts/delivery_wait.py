@@ -430,9 +430,12 @@ def mark_cancelled_duplicates(runs: list[dict[str, Any]], repo: str, number: int
             if run is not newest and raced(run, newest)
             and (not run.get("pullRequests") or number in run["pullRequests"])
         ]
+        # A job that may fail without failing its run, such as one with
+        # continue-on-error, still has to pass.
         passed = [
             run["id"] for run in older
             if run.get("status") == "completed" and run.get("conclusion") in PASSING_WORKFLOW_CONCLUSIONS
+            and all(job.get("conclusion") in PASSING_WORKFLOW_CONCLUSIONS for job in run.get("jobs", []))
         ]
         pending = [
             run["id"] for run in older

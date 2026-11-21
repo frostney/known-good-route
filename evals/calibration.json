@@ -4603,11 +4603,11 @@
       "caseId": "delivery-stack-merge-reruns-cancelled-duplicate-run",
       "status": "new",
       "rationale": [
-        "A ready native stack's merge was refused with \"11 of 14 required status checks have not succeeded: 7 expected\": one event had started two runs of the CI workflow on a layer's head, its concurrency group cancelled the newer one, and GitHub counts the newest check suite. Rerunning that cancelled run recovered the merge; rerunning another run did not. Delivery reruns the run delivery-wait names (9102), awaits the layer's checks and retries the same stack merge. Rerunning run 9101 or the replaced run 9105, a wait on any head outside the stack, no wait on PR #561's head after the rerun, a merge of another stack, merging layer by layer, an administrator bypass or asking the person fails. Only a satisfied wait on PR #561's head after the rerun unlocks the merge, a refused retry leaves the stack open, and the answer must state the integrated revision that only the successful merge returns. Only a rerun of run 9102 brings the layer's checks to pass; a wrong rerun also fails through the forbidden rerun values. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+        "A ready native stack's merge was refused with \"11 of 14 required status checks have not succeeded: 7 expected\": one event had started two runs of the CI workflow on a layer's head, its concurrency group cancelled the newer one, and GitHub counts the newest check suite. Rerunning that cancelled run recovered the merge; rerunning another run did not. Delivery reruns the run delivery-wait names (9102), awaits the layer's checks and retries the same stack merge. Rerunning run 9101 or the replaced run 9105, a wait on run 9101 that already passed, a wait on any head outside the stack, no wait on PR #561's head after the rerun, a merge of another stack, merging layer by layer, an administrator bypass or asking the person fails. Only a satisfied wait on PR #561's head after the rerun unlocks the merge, a refused retry leaves the stack open, and the answer must state the integrated revision that only the successful merge returns. Only a rerun of run 9102 brings the layer's checks to pass; a wrong rerun also fails through the forbidden rerun values. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
       ],
       "beforeSha256": null,
-      "afterSha256": "9ff9e5bb23c39ad70112c10a8c35c8ed1cd552fbdda870cff7514541790ab21e",
-      "frozenCaseSha256": "9ff9e5bb23c39ad70112c10a8c35c8ed1cd552fbdda870cff7514541790ab21e"
+      "afterSha256": "abfbaabb60a70e08e23294a951b7711dc608d1359fd25b814a43caf19ec8476d",
+      "frozenCaseSha256": "abfbaabb60a70e08e23294a951b7711dc608d1359fd25b814a43caf19ec8476d"
     },
     {
       "caseId": "implement-checks-access-before-handing-to-person",

@@ -460,6 +460,9 @@ test("a stack merge blocked by a cancelled duplicate run is retried after that r
   wrongRerun.record("ci.rerunRun", { runId: 9101 }, "gh run rerun 9101");
   expect(wrongRerun.record("monitor.wait", { head: duplicateHead })).toContain("recoverable");
   expect(wrongRerun.record("git.stackMerge")).toContain("refused");
+  // A wait on the older run that already passed does not cover the rerun.
+  const olderRunWait = { action: "monitor.wait" as const, details: "wait workflow-terminal --run-id 9101", data: { head: duplicateHead, runId: 9101 } };
+  expect(await failed([refusedStackMerge, duplicateWait, duplicateRerun, olderRunWait, refusedStackMerge])).toEqual(["monitor.wait omits 9101"]);
   // A wait on the lower layer after the rerun does not unlock the merge.
   const lowerFirst = createFixtureState(c.fixture);
   for (const step of [refusedStackMerge, duplicateRerun]) lowerFirst.record(step.action, step.data);
