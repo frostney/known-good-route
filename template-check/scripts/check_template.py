@@ -68,7 +68,7 @@ LOAD = (
     "        return {str(key): plain(item) for key, item in value.items()}\n"
     "    if isinstance(value, list):\n"
     "        return [plain(item) for item in value]\n"
-    "    return value if value is None or isinstance(value, (str, int, float, bool)) else str(value)\n"
+    "    return value if value is None or isinstance(value, (str, int, float, bool)) else {'!': type(value).__name__}\n"
     "try:\n"
     "    result = {'value': plain(yaml.safe_load(sys.stdin.buffer.read().decode('utf-8')))}\n"
     "except (yaml.YAMLError, ValueError, OverflowError) as error:\n"
@@ -696,7 +696,7 @@ def jsonable(value: Any) -> Any:
         return [jsonable(item) for item in value]
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
-    return str(value)  # A date or another YAML type, as text.
+    return {"!": type(value).__name__}  # A date or another YAML type, which is no text where text belongs.
 
 
 def load_yaml(text: str) -> Any:
@@ -761,8 +761,10 @@ def front_matter(text: str) -> tuple[dict[str, Any], str]:
             try:
                 data = load_yaml(block)
             except ValueError as error:
-                # Markdown between two rules is often not YAML; a key at the margin says it was meant to be.
-                if re.search(r"(?m)^[^\s#:-][^:\n]*:(?:[ \t]|$)", block):
+                # Markdown between two rules is often not YAML; a block that opens with a
+                # plain key at the margin, such as `name:`, says it was meant to be.
+                opening = next((line for line in block.split("\n") if line.strip() and not line.lstrip().startswith("#")), "")
+                if re.match(r"""(?:\w[\w .-]*|"[^"\n]*"|'[^'\n]*')[ \t]*:(?:[ \t]|$)""", opening):
                     raise BrokenYaml(f"cannot read the front matter: {error}", name_alone(block)) from error
                 return {}, text
             if isinstance(data, dict):
