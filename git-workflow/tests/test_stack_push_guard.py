@@ -377,7 +377,11 @@ if "checkSuites" in query:
     found["totalCount"] = len(suites)
     answer = {"object": {"checkSuites": found}}
 elif "pullRequests" in query:
-    answer = {"pullRequests": page([p for p in state["pulls"] if p["headRefName"] == fields["branch"]])}
+    pulls = [p for p in state["pulls"] if p["headRefName"] == fields["branch"]]
+    found = page(pulls)
+    # pullGrows: a pull request reopened behind the cursor after the first page.
+    found["totalCount"] = len(pulls) + (1 if state.get("pullGrows") and "after" in fields else 0)
+    answer = {"pullRequests": found}
 else:
     answer = {"nameWithOwner": state["repository"]}
 print(json.dumps({"data": {"repository": answer}}))
@@ -499,6 +503,18 @@ class SpentRestTests(unittest.TestCase):
         self.assertEqual([o["pullRequest"] for o in guard.check_rewrites(admission)], [12])
         self.answer([graph_pull(n, "patch-1", "b" * 40) for n in range(1, 101)])
         with self.assertRaisesRegex(guard.GuardError, "more than one page"):
+            guard.check_rewrites(admission)
+
+    def test_a_pull_request_list_that_changes_while_read_refuses(self):
+        # A ready pull request reopened behind the cursor shows only in the count.
+        forks = [graph_pull(n, "patch-1", "e" * 40, repository=f"fork-{n}/app") for n in range(100, 201)]
+        admission = guard.validate_admission({**self.admission, "refs": [
+            {"ref": "refs/heads/patch-1", "source": "a" * 40, "expected": "b" * 40}]})
+        self.answer(forks, pullGrows=True)
+        with self.assertRaisesRegex(guard.GuardError, "changed while they were read"):
+            guard.check_rewrites(admission)
+        self.answer(forks + [forks[0]])
+        with self.assertRaisesRegex(guard.GuardError, "changed while they were read"):
             guard.check_rewrites(admission)
 
     def test_other_apps_suites_do_not_count_toward_the_run_limit(self):

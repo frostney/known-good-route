@@ -217,7 +217,7 @@ def github_api(host, path):
 
 REPOSITORY_QUERY = "query($owner:String!,$name:String!){repository(owner:$owner,name:$name){nameWithOwner}}"
 PULLS_QUERY = """query($owner:String!,$name:String!,$branch:String!,$after:String){repository(owner:$owner,name:$name){
-pullRequests(states:OPEN,headRefName:$branch,first:100,after:$after){pageInfo{hasNextPage endCursor}
+pullRequests(states:OPEN,headRefName:$branch,first:100,after:$after){totalCount pageInfo{hasNextPage endCursor}
 nodes{number isDraft headRefName headRefOid headRepository{nameWithOwner}}}}}"""
 SUITES_QUERY = """query($owner:String!,$name:String!,$oid:GitObjectID!,$after:String){
 repository(owner:$owner,name:$name){object(oid:$oid){... on Commit{checkSuites(first:100,after:$after){totalCount
@@ -293,18 +293,27 @@ def graphql_pulls(host, path, why, owner, name, parameters):
     REST's one-page cutoff applies."""
     head_owner, branch = parameters["head"].split(":", 1)
     limit = int(parameters["per_page"])
-    answer, after = [], None
+    answer, after, total, numbers = [], None, None, set()
     for _ in range(GRAPHQL_PAGES):
         found = graphql(host, path, why, PULLS_QUERY, owner=owner, name=name, branch=branch, after=after)
-        nodes, after, _ = connection(found.get("repository"), "pullRequests",
-                                  "pull request list for refs/heads/" + branch)
+        nodes, after, count = connection(found.get("repository"), "pullRequests",
+                                         "pull request list for refs/heads/" + branch)
+        # A pull request opened or reopened behind the cursor shows only in the count.
+        if type(count) is not int or (total is not None and count != total):
+            raise GuardError("the open pull requests for refs/heads/" + branch + " changed while they were read")
+        total = count
         for node in nodes:
+            if node.get("number") in numbers:
+                raise GuardError("the open pull requests for refs/heads/" + branch + " changed while they were read")
+            numbers.add(node.get("number"))
             source = (node.get("headRepository") or {}).get("nameWithOwner")
             if isinstance(source, str) and source.split("/")[0].lower() != head_owner.lower():
                 continue
             answer.append({"number": node.get("number"), "draft": node.get("isDraft"),
                            "head": {"ref": node.get("headRefName"), "sha": node.get("headRefOid"),
                                     "repo": {"full_name": source} if isinstance(source, str) else None}})
+        if after is None and len(numbers) != total:
+            raise GuardError("the open pull requests for refs/heads/" + branch + " changed while they were read")
         if after is None or len(answer) >= limit:
             return answer[:limit]
     raise GuardError("more than one page of open pull requests for refs/heads/" + branch
