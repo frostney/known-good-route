@@ -315,16 +315,15 @@ const queueEvidence = {
   ].join("\n"),
 };
 
-function reviewCase(id: string, scenario: string, evidence: Record<string, string>, inspection: string | string[]): EvalCase {
+const verdictOnExplanation = { id: "verdict-on-explanation", question: "Does the reviewer state whether it agrees or disagrees with the parent's explanation, and give the evidence its verdict rests on?" };
+function reviewCase(id: string, scenario: string, evidence: Record<string, string>, inspection: string | string[], rubric = [verdictOnExplanation]): EvalCase {
   return {
     id,
     description: `Fresh-context reviewer for ${scenario}: rereads the cited evidence and writes its verdict to a file without changing anything else or starting another reviewer.`,
     prompt: reviewerPrompt,
     fixture: { environment, evidence },
     expected: {
-      rubric: [
-        { id: "verdict-on-explanation", question: "Does the reviewer state whether it agrees or disagrees with the parent's explanation, and give the evidence its verdict rests on?" },
-      ],
+      rubric,
       requiredInspections: [inspection].flat(),
       requiredVerdictFile: true,
       forbiddenActions: [...mutations, "delegate"],
@@ -564,7 +563,10 @@ export const deepDiveCases: EvalCase[] = [
       ],
     },
   },
-  reviewCase("deep-dive-loop-unresolved-cause-reviews-review", "the missing-provenance diagnosis", unresolvedLoopEvidence, ["mapperSource", "checkpointFile", "checkpointWriter"]),
+  // The verdict must cover the cause the parent cites, not only the missing field.
+  reviewCase("deep-dive-loop-unresolved-cause-reviews-review", "the missing-provenance diagnosis", unresolvedLoopEvidence, ["mapperSource", "checkpointFile", "checkpointWriter"], [
+    { id: "verdict-on-writer-cause", question: "Does the reviewer's verdict judge whether writeCheckpoint, by serializing only id, amount and postedAt, caused the missing provenance, and address the competing explanation that mapRecovered drops it, citing the sources it reread?" },
+  ]),
   {
     id: "deep-dive-loop-assertion-only-skips-review",
     description:

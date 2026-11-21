@@ -3759,7 +3759,7 @@
         "AGENTS.md block updated: deep-dive's ambient line keeps the in-loop exception to a failing check whose own output or trace shows the mechanism, and says a behaviour the specification requires but the code lacks is built, not diagnosed.",
         "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish.",
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text.",
-        "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when the conclusion rests on inference, leaves another candidate standing, sets aside a conflicting claim, or a review was asked for. The conclusion sets aside the team chat's claim that PR 421 holds the lock, so its fresh review is still required."
+        "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review or reviewer was asked for, and otherwise asks the answer to say why no review ran. The conclusion sets aside the team chat's claim that PR 421 holds the lock, so its fresh review is still required."
       ],
       "beforeSha256": null,
       "afterSha256": "be1986d1dffc8825c4defce59eea066cd26bd1253c0c1eb1d721ae650195cf5d",
@@ -3830,7 +3830,7 @@
         "AGENTS.md block updated: deep-dive's ambient line keeps the in-loop exception to a failing check whose own output or trace shows the mechanism, and says a behaviour the specification requires but the code lacks is built, not diagnosed.",
         "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish.",
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text.",
-        "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when the conclusion rests on inference, leaves another candidate standing, sets aside a conflicting claim, or a review was asked for. The conclusion sets aside the setup document's claim that terse-replies applies to every session, so its fresh review is still required."
+        "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review or reviewer was asked for, and otherwise asks the answer to say why no review ran. The conclusion sets aside the setup document's claim that terse-replies applies to every session, so its fresh review is still required."
       ],
       "beforeSha256": null,
       "afterSha256": "e5be9627ba48c980dfacd7107c0038eec35faba1eabcd8870fdfb12ffedd1f35",
@@ -3901,7 +3901,7 @@
         "AGENTS.md block updated: deep-dive's ambient line keeps the in-loop exception to a failing check whose own output or trace shows the mechanism, and says a behaviour the specification requires but the code lacks is built, not diagnosed.",
         "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish.",
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text.",
-        "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when the conclusion rests on inference, leaves another candidate standing, sets aside a conflicting claim, or a review was asked for. The conclusion sets aside the PR description's anonymization claim, so its fresh review is still required."
+        "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review or reviewer was asked for, and otherwise asks the answer to say why no review ran. The conclusion sets aside the PR description's anonymization claim, so its fresh review is still required."
       ],
       "beforeSha256": null,
       "afterSha256": "cb6e243fe9a9f8eec64bc94c57461c1b41c67b38de75c524bc10f5c626647f16",
@@ -3972,7 +3972,7 @@
         "AGENTS.md block updated: deep-dive's ambient line keeps the in-loop exception to a failing check whose own output or trace shows the mechanism, and says a behaviour the specification requires but the code lacks is built, not diagnosed.",
         "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish.",
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text.",
-        "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when the conclusion rests on inference, leaves another candidate standing, sets aside a conflicting claim, or a review was asked for. The conclusion sets aside the funnel note that blames the checkout widget, so its fresh review is still required."
+        "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review or reviewer was asked for, and otherwise asks the answer to say why no review ran. The conclusion sets aside the funnel note that blames the checkout widget, so its fresh review is still required."
       ],
       "beforeSha256": null,
       "afterSha256": "e44df1dc4f855d39eb1dadf492ccb92ea73484c13aaf3a47fb5403078e7b0799",
@@ -4044,7 +4044,7 @@
         "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish.",
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text.",
-        "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when the conclusion rests on inference, leaves another candidate standing, sets aside a conflicting claim, or a review was asked for. The case stays in the loop without a deep dive, so the change does not apply to it."
+        "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review or reviewer was asked for, and otherwise asks the answer to say why no review ran. The case stays in the loop without a deep dive, so the change does not apply to it."
       ],
       "beforeSha256": null,
       "afterSha256": "d85e873a3a380275bdcf2aedd41598165a0bda678fe68e1cd0ae57f20617a3c9",
@@ -4063,7 +4063,7 @@
         "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish.",
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text.",
-        "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when the conclusion rests on inference, leaves another candidate standing, sets aside a conflicting claim, or a review was asked for. The conclusion sets aside the teammate's note that blames the mapper, so its fresh review is still required. The description says so, and the review expectations moved out of the shared loop expectations unchanged. Fresh native run required.",
+        "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review or reviewer was asked for, and otherwise asks the answer to say why no review ran. The conclusion sets aside the teammate's note that blames the mapper, so its fresh review is still required. The description says so, and the review expectations moved out of the shared loop expectations unchanged. Fresh native run required.",
         "The checkpoint source now also shows the test lines that build the record with provenance and save it through writeCheckpoint, so the link from the writer to this run is read in the record rather than inferred; the investigation must read the writer source before the edit. Fresh native run required.",
         "The run must read the teammate's note, the mapper, the checkpoint and the writer before it starts the reviewer, so the review covers the whole explanation. Fresh native run required."
       ],
@@ -4084,10 +4084,11 @@
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text.",
         "The checkpoint source now also shows the test lines that build the record with provenance and save it through writeCheckpoint. Fresh native run required.",
-        "The reviewer must reread the mapper, the checkpoint and the writer source, not only the checkpoint file. Fresh native run required."
+        "The reviewer must reread the mapper, the checkpoint and the writer source, not only the checkpoint file. Fresh native run required.",
+        "The rubric now asks whether the verdict judges writeCheckpoint as the cause and addresses the mapper explanation, so a verdict on the missing field alone does not count as a review of the diagnosis. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "b272e50b485a44c694ef42fa8eb1d081edfc1d52468bf8132b1dac4d40ee98a1",
+      "afterSha256": "85fa5cc05f12a36ad235201c2765136c8c51f6ab701d188c9f0c40ec771b9799",
       "frozenCaseSha256": "0a433a8527c7098e39e1810208106c7250f0b79127f8e49766b7d975274bec80",
       "revisions": [
         {
@@ -4123,7 +4124,7 @@
         "AGENTS.md block updated: deep-dive's ambient line skips the review only when the failing output or trace shows the mechanism or the observation is itself the defect, and treats a symptom whose cause sits in another step or file as a cause to establish.",
         "Rubric-judged evals, merging main: the case moved onto the judged-rubric format, with its regex answer checks as rubric items or exact values and its environment declared.",
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text.",
-        "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when the conclusion rests on inference, leaves another candidate standing, sets aside a conflicting claim, or a review was asked for. The trace shows every link directly and nothing contradicts it, so the explicit /deep-dive now runs the full investigation, keeps the reviewer available, must not start it, and reports no review with the reason. A rubric item now asks it to rule out a loss before the mapper from checkpoint.read and to report each candidate's probe results with the trace order. Fresh native run required."
+        "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review or reviewer was asked for, and otherwise asks the answer to say why no review ran. The trace shows every link directly and nothing contradicts it, so the explicit /deep-dive now runs the full investigation, keeps the reviewer available, must not start it, and reports no review with the reason. A rubric item now asks it to rule out a loss before the mapper from checkpoint.read and to report each candidate's probe results with the trace order. Fresh native run required."
       ],
       "beforeSha256": null,
       "afterSha256": "69cabe9f97eb3a90ac5020b6d550f69b6f84654dd4c0cd671b039eb949fef5f9",

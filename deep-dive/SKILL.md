@@ -9,11 +9,11 @@ description: >-
   happened or what is causing it, or when the user runs /deep-dive. Inside an
   authorized development, delivery or fix loop, a failing check whose own output
   or trace already shows an uncontested in-scope cause is fixed in that loop
-  instead, unless the user ran /deep-dive or a review was asked for.
+  instead, unless the user ran /deep-dive or a review or reviewer was asked for.
 license: Unlicense OR MIT
 metadata:
   agents-role: ambient
-  agents-text: Before claiming the cause of something observed, check what actually ran and try to break each explanation, and cite a fresh review's verdict when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review was asked for; unless a review was asked for, skip all of that only when the failing output or trace already shows the mechanism, or the observation is itself the defect, such as a required control a view never renders, and treat a symptom whose cause sits in another step or file as a cause to establish.
+  agents-text: Before claiming the cause of something observed, check what actually ran and try to break each explanation, and cite a fresh review's verdict when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review or reviewer was asked for, otherwise saying why no review ran; skip all of that only when a failing output or trace already shows the mechanism, nothing contradicts it and no review or reviewer was asked for, or when the observation is itself the defect, such as a required control a view never renders, and treat a symptom whose cause sits in another step or file as a cause to establish.
 ---
 
 # Deep dive
@@ -23,8 +23,8 @@ you name a cause or propose a fix for something observed, establish the cause
 from the record of what ran and try to break it. When the conclusion rests on
 indirect evidence or is contested, also have it reviewed in a fresh context.
 
-An explicit `/deep-dive`, or a request for a review, always runs the full
-investigation below, and the fresh review whenever
+An explicit `/deep-dive`, or a request for a review or a named reviewer, always
+runs the full investigation below, and the fresh review whenever
 [its trigger](#get-a-fresh-review) holds. Otherwise, a
 check that fails inside an authorized development, delivery or fix loop needs no
 deep dive only when the failing run's own output or trace already shows the
