@@ -198,9 +198,11 @@ def github_api(host, path):
 
 
 def check_rewrites(c, api=github_api):
-    """Refuse to move the head of an open pull request that is ready for review or
-    already has GitHub Actions runs on that head, unless `rewrite` lists its ref.
-    Returns what was observed, for the prepared record."""
+    """Refuse to move the head of an open pull request whose layer is frozen,
+    unless `rewrite` lists its ref. A layer is frozen once it is ready for
+    review, since the guard cannot see when its review ends, or once CI on its
+    draft head has passed. A draft whose runs are queued, in progress, failed
+    or cancelled is not frozen. Returns what was observed, for the prepared record."""
     listed = {r["ref"] for r in c.get("rewrite", ())}
     moving = [r for r in c["refs"] if set(r["expected"]) != {"0"} and r["expected"] != r["source"]
               and r["ref"] not in listed]
@@ -235,15 +237,13 @@ def check_rewrites(c, api=github_api):
                 continue
             if sha != row["expected"]:
                 raise GuardError(f"pull request #{number} head is {sha}, not the admitted expected commit")
-            runs = api(host, f"repos/{repository}/actions/runs?per_page=1&head_sha={sha}")
-            if not isinstance(runs, dict) or type(runs.get("total_count")) is not int:
-                raise GuardError(f"GitHub lookup returned no workflow run count for pull request #{number}")
+            runs = api(host, f"repos/{repository}/actions/runs?per_page=100&head_sha={sha}")
             observed.append({"ref": row["ref"], "pullRequest": number, "draft": draft,
-                             "workflowRuns": runs["total_count"]})
-    blocked = [o for o in observed if not o["draft"] or o["workflowRuns"]]
+                             **ci_state(runs, number)})
+    blocked = [o for o in observed if not o["draft"] or o["ciPassed"]]
     if blocked:
         details = ", ".join(f"#{o['pullRequest']} ({o['ref'].removeprefix('refs/heads/')}: "
-                            + ("draft" if o["draft"] else "ready for review")
+                            + ("ready for review" if not o["draft"] else "draft, CI passed on its head")
                             + (f", {o['workflowRuns']} workflow runs on its head" if o["workflowRuns"] else "") + ")"
                             for o in blocked)
         restarted = sum(1 for o in blocked if o["workflowRuns"])
@@ -251,6 +251,32 @@ def check_rewrites(c, api=github_api):
                          f"Pushing would restart CI on {restarted} of them. Push a new top layer instead, "
                          "or list each ref under rewrite with its reason")
     return observed
+
+
+# A run with one of these conclusions counts as passed; any other conclusion,
+# such as failure, cancelled or timed_out, leaves the workflow unpassed.
+PASSING = frozenset({"success", "neutral", "skipped"})
+
+
+def ci_state(runs, number):
+    """How many workflow runs a head has, and whether its CI has passed: no run
+    is queued or in progress, and every workflow that ran on the head has a
+    passed run there. A cancelled duplicate beside a passed run of the same
+    workflow does not unfreeze it."""
+    if (not isinstance(runs, dict) or type(runs.get("total_count")) is not int
+            or not isinstance(runs.get("workflow_runs"), list)):
+        raise GuardError(f"GitHub lookup returned no workflow runs for pull request #{number}")
+    if runs["total_count"] > len(runs["workflow_runs"]):
+        raise GuardError(f"more than one page of workflow runs for pull request #{number}; they cannot all be checked")
+    passed = {}
+    for run in runs["workflow_runs"]:
+        if not isinstance(run, dict) or not isinstance(run.get("status"), str) or "workflow_id" not in run:
+            raise GuardError(f"GitHub lookup returned an incomplete workflow run for pull request #{number}")
+        if run["status"] != "completed":
+            return {"workflowRuns": runs["total_count"], "ciPassed": False}
+        workflow = run["workflow_id"]
+        passed[workflow] = passed.get(workflow, False) or run.get("conclusion") in PASSING
+    return {"workflowRuns": runs["total_count"], "ciPassed": bool(passed) and all(passed.values())}
 
 
 def prepare(value, api=github_api):
@@ -269,8 +295,12 @@ def prepare(value, api=github_api):
             raise GuardError("admission object format differs from repository")
         git(directory, "cat-file", "-e", row["source"] + "^{commit}")
     # Refuse before anything is prepared; the hook checks again at the push,
-    # since a pull request can become ready or gain runs in between.
+    # since a pull request can become ready or its CI can pass in between.
     pull_requests = check_rewrites(c, api)
+    for o in pull_requests:
+        if o["workflowRuns"]:
+            print(f"Push guard: moving draft #{o['pullRequest']} restarts its CI ({o['workflowRuns']} workflow runs "
+                  "on its current head); cancel any of them still queued or running", file=sys.stderr)
     count = config_count(os.environ)
     git_dir = Path(git(directory, "rev-parse", "--absolute-git-dir"))
     original_hooks = Path(git(directory, "rev-parse", "--path-format=absolute", "--git-path", "hooks"))

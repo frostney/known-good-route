@@ -1,5 +1,6 @@
 import copy
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -123,7 +124,14 @@ class FakeGitHub:
             owner, head = urllib.parse.unquote(path.split("head=", 1)[1]).split(":", 1)
             return [p for p in self.pulls if p["head"]["ref"] == head
                     and owner.lower() == self.full_name.split("/")[0].lower()]
-        return {"total_count": self.runs.get(path.split("head_sha=", 1)[1], 0)}
+        found = self.runs.get(path.split("head_sha=", 1)[1], [])
+        if isinstance(found, int):  # that many finished, passed runs of one workflow
+            found = [run() for _ in range(found)]
+        return {"total_count": len(found), "workflow_runs": found}
+
+
+def run(status="completed", conclusion="success", workflow=1):
+    return {"status": status, "conclusion": conclusion if status == "completed" else None, "workflow_id": workflow}
 
 
 def pull(number, branch, sha, draft=True, repository="example-org/app"):
@@ -170,17 +178,35 @@ class RewriteTests(unittest.TestCase):
         with self.assertRaisesRegex(guard.GuardError, r"1 open pull request\(s\): #12 \(stack/one: ready for review\)"):
             guard.check_rewrites(self.admission, github)
 
-    def test_draft_with_a_queued_run_is_refused_and_the_cost_is_named(self):
-        # The guard asks for runs on the head without a status filter, so GitHub
-        # counts queued, in-progress and finished runs alike.
+    def test_a_draft_whose_ci_has_not_passed_may_move(self):
+        # Not frozen: its CI is queued, running, failed or cancelled, and a draft has no review yet.
+        for runs in ([run("queued")], [run("in_progress"), run()], [run(conclusion="failure")],
+                     [run(conclusion="cancelled")], [run(), run(conclusion="failure", workflow=2)]):
+            with self.subTest(runs=runs):
+                github = FakeGitHub([pull(12, "stack/one", "b" * 40), pull(13, "stack/two", "d" * 40)],
+                                    runs={"b" * 40: runs})
+                observed = guard.check_rewrites(self.admission, github)
+                self.assertEqual([(o["pullRequest"], o["workflowRuns"], o["ciPassed"]) for o in observed],
+                                 [(12, len(runs), False), (13, 0, False)])
+
+    def test_a_draft_whose_ci_passed_is_frozen_and_the_cost_is_named(self):
+        # A cancelled duplicate beside a passed run of the same workflow keeps it frozen.
         github = FakeGitHub([pull(12, "stack/one", "b" * 40), pull(13, "stack/two", "d" * 40, draft=False)],
-                            runs={"b" * 40: 1, "d" * 40: 3})
+                            runs={"b" * 40: [run(), run(conclusion="cancelled"), run(conclusion="skipped", workflow=2)],
+                                  "d" * 40: [run("in_progress")]})
         with self.assertRaises(guard.GuardError) as caught:
             guard.check_rewrites(self.admission, github)
         message = str(caught.exception)
-        self.assertIn("#12 (stack/one: draft, 1 workflow runs on its head)", message)
-        self.assertIn("#13 (stack/two: ready for review, 3 workflow runs on its head)", message)
+        self.assertIn("#12 (stack/one: draft, CI passed on its head, 3 workflow runs on its head)", message)
+        self.assertIn("#13 (stack/two: ready for review, 1 workflow runs on its head)", message)
         self.assertIn("restart CI on 2 of them", message)
+
+    def test_incomplete_or_paged_run_lists_refuse(self):
+        for runs, error in (({"total_count": 1}, "no workflow runs"),
+                            ({"total_count": 101, "workflow_runs": [run()] * 100}, "more than one page"),
+                            ({"total_count": 1, "workflow_runs": [{"status": "completed"}]}, "incomplete workflow run")):
+            with self.subTest(error=error), self.assertRaisesRegex(guard.GuardError, error):
+                guard.ci_state(runs, 12)
 
     def test_listed_rewrite_passes_without_a_lookup(self):
         github = FakeGitHub([pull(12, "stack/one", "b" * 40, draft=False)], runs={"b" * 40: 4})
@@ -367,6 +393,15 @@ class StandaloneTests(unittest.TestCase):
         record = json.loads((Path(prepared["directory"]) / "admission.json").read_text())["request"]
         self.assertEqual(record["admission"]["rewrite"], admission["rewrite"])
         self.assertEqual(record["pullRequests"], [])
+
+    def test_prepare_moves_a_draft_whose_ci_failed_and_names_the_restarted_runs(self):
+        admission = self.moved_layer()
+        github = FakeGitHub([pull(7, "feature/portable-guard", self.head)], runs={self.head: [run(conclusion="failure")]})
+        with mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+            prepared = guard.prepare(admission, github)
+        record = json.loads((Path(prepared["directory"]) / "admission.json").read_text())["request"]
+        self.assertEqual([(o["pullRequest"], o["ciPassed"]) for o in record["pullRequests"]], [(7, False)])
+        self.assertIn("moving draft #7 restarts its CI (1 workflow runs", stderr.getvalue())
 
     def test_prepare_refuses_when_gh_is_unavailable(self):
         admission = self.moved_layer()

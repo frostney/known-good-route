@@ -230,9 +230,15 @@ a rejection pass.
 
 Before any push, the helper looks up the open PR of each admitted ref whose
 remote head would change, in the repository the remote URL names. It refuses
-when that PR is ready for review, or when its current head already has GitHub
-Actions runs, queued, in progress or finished. The refusal names each blocked
-PR and how many would have CI restarted. The optional `rewrite` field lists the
+when that PR is frozen: ready for review, since the helper cannot see when a
+review ends, or a draft whose GitHub Actions CI on its current head has passed,
+meaning no run is queued or in progress and every workflow that ran has a
+successful, neutral or skipped run there. A draft whose runs are queued, in
+progress, failed or cancelled may move; the helper names the runs the push
+restarts, so cancel those still going. Moving a layer also moves every layer
+above it and restarts their CI, so a fix in place on a low layer can cost more
+runs than a new top layer. The refusal names each blocked PR and how many would
+have CI restarted. The optional `rewrite` field lists the
 refs allowed past that check, as `[{"ref": "refs/heads/...", "reason": "..."}]`:
 each an admitted ref with a non-empty reason. Use it only for the final rebase
 under [Guarded rewrite exception](#guarded-rewrite-exception), never to put a

@@ -88,13 +88,15 @@ run only `status`, with every exact `PR=SHA`.
    available checks and use step 9 to publish the necessary draft fix layer,
    explicitly retaining the missing preview evidence. Test its exact revision
    and resume this loop before readiness. Further repairs still respect frozen
-   members; append a new fix layer once the published layer is frozen or has CI
-   runs on its head, which the push helper refuses to move.
+   members. While the published layer is a draft whose CI has not passed, put
+   the repair on it and cancel the runs it supersedes; append a new fix layer
+   once it is ready for review or its CI has passed, which the push helper
+   refuses to move.
 9. Enforce the native-stack reference's push-boundary checks for the frozen
    prefix and new branch. Use its protected `gh stack push` followed by separate
    PR creation and native append procedure; preserve the frozen PR heads and
-   metadata. The helper refuses to move a layer that is ready for review or has
-   CI runs on its head; never list a frozen member under `rewrite` to land a
+   metadata. The helper refuses to move a layer that is ready for review or a
+   draft whose CI has passed; never list a frozen member under `rewrite` to land a
    fix. Reconcile a partial result before continuing. Immediately replace
    generated metadata with its actual claim, validation, and originating
    finding links, and satisfy the project's PR evidence contract. Keep it draft
