@@ -106,21 +106,27 @@ run only `status`, with every exact `PR=SHA`.
    or a draft whose CI passed; for such a draft whose review has not finished,
    list its ref under `rewrite` with that reason.
 9. Enforce the native-stack reference's push-boundary checks for the frozen
-   prefix and new branch. Use its protected `gh stack push` followed by separate
-   PR creation and native append procedure; preserve the frozen PR heads and
-   metadata. The helper refuses to move a layer that is ready for review or a
-   draft whose CI passed; never list a frozen member under `rewrite` to land a
-   fix. Reconcile a partial result before continuing. Immediately replace
+   prefix and every branch the push moves or creates; preserve the frozen PR
+   heads and metadata. Publish a fix made in place through the native-stack
+   reference's in-place repair path: commit it on its layer, restack the
+   layers above it with `gh stack rebase` when there are any, push through the
+   protected helper with each moved branch admitted, and cancel the superseded
+   runs it names. Publish a new fix layer with its protected `gh stack push`
+   followed by separate PR creation and native append procedure. The helper
+   refuses to move a layer that is ready for review or a draft whose CI passed;
+   never list a frozen member under `rewrite` to land a fix. Reconcile a
+   partial result before continuing. For a new layer, immediately replace
    generated metadata with its actual claim, validation, and originating
-   finding links, and satisfy the project's PR evidence contract. Keep it draft
-   until its own local evidence and checks permit review. Trigger and
-   collect its exact-head review under the active provider contract.
-10. Once that fix layer has successful exact-head CI and a terminal review, it
-    is frozen. Reply to and resolve the originating threads with the exact fix
-    evidence. If review of the fix layer produces live findings, fix them on it
-    in place while it is not frozen, as when its CI failed; create another top
-    layer only once it is frozen, and never push those fixes into any frozen
-    member.
+   finding links, and satisfy the project's PR evidence contract. Keep a layer
+   that took a fix draft until its own local evidence and checks permit
+   review. Trigger and collect its exact-head review under the active provider
+   contract.
+10. Once each layer a fix landed on has successful exact-head CI and a
+    terminal review on its new head, it is frozen. Then reply to and resolve
+    the originating threads with the exact fix evidence. If that review
+    produces live findings, fix them on the layer in place while it is not
+    frozen, as when its CI failed; create another top layer only once it is
+    frozen, and never push those fixes into any frozen member.
 11. After every head, topology, review, or thread transition, reconcile native
     membership through the stack helper. An expected append-only fix layer keeps
     the frozen prefix valid but needs its own review. An unexpected head or
@@ -153,7 +159,8 @@ Return:
 - each member's `reviewed`, `covered`, `pending`, or `blocked` state;
 - every finding surface and its disposition, source thread, and exact fix or
   decline evidence;
-- each created fix layer and its validation, CI, and review result;
+- each fix made in place and each created fix layer, with its validation,
+  CI, and review result;
 - current unresolved and unanswered thread counts;
 - active provider state and safely derived `retry_at` or `null`;
 - topology changes and the evidence they invalidated;

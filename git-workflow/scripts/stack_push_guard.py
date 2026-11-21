@@ -259,7 +259,7 @@ def check_rewrites(c, api=github_api):
                           "top layer. While its review has not finished it is not frozen, so the fix goes in place: "
                           "list its ref under rewrite with a reason that names the unfinished review")
         raise GuardError(f"refusing to move the head of {len(blocked)} open pull request(s): {details}. "
-                         f"Pushing would restart CI on {restarted} of them. " + ". ".join(advice))
+                         f"Pushing would restart CI on {restarted} of them. " + ". ".join(advice) + ".")
     return observed
 
 

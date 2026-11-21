@@ -70,8 +70,8 @@ push with force-with-lease. They are allowed only when all of these are true:
 - the cascade's CI load is accepted: a sync re-fires CI for every rebased layer
   at once, which on a seven-layer stack meant about 25 concurrent jobs and
   flaked two surfaces. Put a fix for a frozen layer in a new top layer, and
-  a fix for a layer that is not frozen in place; after a sync, rerun flaked
-  surfaces one at a time.
+  a fix for a layer that is not frozen, with no frozen layer above it, in
+  place; after a sync, rerun flaked surfaces one at a time.
 
 A stack, like any PR branch, need not be up to date with its trunk: sync it
 onto a moved trunk only under `git-workflow`'s
@@ -87,12 +87,14 @@ cancelled, is still running or never ran is not frozen. A repair on a layer
 that is not frozen is not such a rewrite: commit it on that layer, restack the
 layers above it with `gh stack rebase`, and push through the
 [protected publication helper](#protected-publication-helper) with each moved
-branch admitted and nothing under `rewrite`. The helper lets the push through
-only while no layer it moves is ready for review or a draft whose CI passed.
-For the final rebase, rebase locally with `gh stack rebase`, then push through
-the [protected publication helper](#protected-publication-helper) with every
-member listed under `rewrite`. Every rewritten layer reruns its CI once and needs its
-readiness again on the new head. Only the layer-by-layer merge fallback below
+branch admitted. List nothing under `rewrite`, except a draft whose CI passed
+while its review has not finished, as that helper's section says. The helper
+lets the push through only while no layer it moves is ready for review or a
+draft whose CI passed. For the final rebase, rebase locally with
+`gh stack rebase`, then push through the
+[protected publication helper](#protected-publication-helper) with every
+member listed under `rewrite`. Every rewritten layer reruns its CI once and
+needs its readiness again on the new head. Only the layer-by-layer merge fallback below
 and a retargeted stack rewrite again, the same way. `gh stack sync` pushes on
 its own, outside the helper, so use it only while no layer has an open PR.
 
@@ -246,9 +248,8 @@ ends, so it refuses to move a PR that is ready for review, or a draft whose CI
 on its current head has passed, meaning no run is queued or in progress and
 every workflow that ran has a successful, neutral or skipped run there. A
 draft with no runs, or whose runs failed, were cancelled or are still queued or
-in progress, may move: it is not frozen, so its fix goes in place, and the
-push reruns CI only on layers whose CI had not passed. The prepared record gives each
-such PR's CI state (`none`, `failed` or `running`) and the reason it may move.
+in progress, may move: it is not frozen, so its fix goes in place. The
+prepared record gives each such PR's CI state (`none`, `failed` or `running`) and the reason it may move.
 For runs still going, the helper names the pull request runs on the old head;
 once the push lands, cancel any that the workflow's concurrency group did not,
 since their result would be for a head the PR no longer has. Moving a layer

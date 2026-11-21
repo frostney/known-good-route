@@ -28,17 +28,16 @@ a partial merge.
 A member becomes frozen once CI on its exact head has passed and its review
 is terminal with every finding surface classified, or once it is ready for
 review. A draft whose CI on its exact head failed, was cancelled, is still
-running or never ran is not frozen, even after its review finished: its fixes
-go in place on it, and that push reruns CI only on layers whose CI had not
-passed. This
-workflow never pushes to a frozen member, and adds a new top layer only for
-fixes above a frozen member. The protected push helper cannot see when a review
+running or never ran is not frozen, even after its review finished: while no
+member above it is frozen, its fixes go in place on it. This workflow never
+pushes to a frozen member, and adds a new top layer only for fixes above a
+frozen member. The protected push helper cannot see when a review
 ends, so it refuses to move a member that is ready for review or a draft whose
 CI passed. A draft whose CI passed but whose review has not finished is not
 frozen: list its ref under `rewrite`, naming the unfinished review as the
 reason, to fix it in place. Fix a member in place only when it and every member
 above it are not frozen, because the push moves them all and restarts their
-CI. The only other rewrite is the final rebase
+CI. The only rewrite is the final rebase
 before merging the whole stack, under `git-workflow`'s
 [native stack reference](../../git-workflow/references/github-stacks.md#guarded-rewrite-exception);
 it changes every head, so the changed-head rule below applies to every member.

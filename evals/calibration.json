@@ -1063,11 +1063,11 @@
       "caseId": "address-stack-feedback-fixes-red-draft-in-place",
       "status": "new",
       "rationale": [
-        "Native stacks gained a new fix layer every review round although their layers never had green CI: a draft whose review had finished counted as frozen even while its exact-head CI was red, so every fix was appended above it. A layer is frozen only once CI on its exact head has passed and its review is terminal, or once it is ready for review. Here the top draft #722 has a terminal review but failed CI, so its live finding is fixed on #722 in place and no new branch or pull request is created; #721, green and reviewed, keeps its head. Creating a branch, opening a pull request, force-pushing, rebasing or merging fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
+        "Native stacks gained a new fix layer every review round although their layers never had green CI: a draft whose review had finished counted as frozen even while its exact-head CI was red, so every fix was appended above it. A layer is frozen only once CI on its exact head has passed and its review is terminal, or once it is ready for review. Here the top draft #722 has a terminal review but failed CI, so its live finding is fixed on #722 in place and no new branch or pull request is created; #721, green and reviewed, keeps its head. Push and submit results are neutral and the live stack after them shows only #721 and #722 at 722cccc, so an agent that meant to add a layer meets a contradiction; a rubric item also judges the recorded actions for a new branch, layer or pull request. Creating a branch, opening a pull request, more than one push or submit, force-pushing, rebasing or merging fails. Local captured-response trajectories establish grader sensitivity only; a fresh native run is required."
       ],
       "beforeSha256": null,
-      "afterSha256": "c11d65c94f99484b1536dab8a8ef63ef367d3ca7b62802feebd1c1c5781a3a45",
-      "frozenCaseSha256": "c11d65c94f99484b1536dab8a8ef63ef367d3ca7b62802feebd1c1c5781a3a45"
+      "afterSha256": "2f5d4109ffd45cb4841364985bb4bd018869a525dd73becc55cea901f36c0141",
+      "frozenCaseSha256": "2f5d4109ffd45cb4841364985bb4bd018869a525dd73becc55cea901f36c0141"
     },
     {
       "caseId": "address-stack-feedback-invalidates-drifted-descendants",

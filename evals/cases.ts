@@ -3265,15 +3265,22 @@ export const evalCases: EvalCase[] = [
         "behaviorTest.run":
           "Actual fixture probes accept 100, reject 101 and retain unauthorized precedence.",
         "git.push":
-          "Push guard: moving draft #722 in place: draft whose CI on its head failed or was cancelled, so it is not frozen; the push reruns it. feat/list-limits now at 722cccc; #721 stays at 721aaaa. Exact-head CI and review on #722 at 722cccc pass.",
+          "Push finished. Re-read the live stack for the resulting branches, heads and pull requests.",
         "git.stackSubmit":
-          "Push guard: moving draft #722 in place: draft whose CI on its head failed or was cancelled, so it is not frozen; the push reruns it. feat/list-limits now at 722cccc; #721 stays at 721aaaa. Exact-head CI and review on #722 at 722cccc pass.",
+          "Native stack command finished. Re-read the live stack for the resulting branches, heads and pull requests.",
         "forge.replyInline":
           "Reply posted to the specified originating thread with required attribution.",
         "forge.resolveThread":
           "Specified originating thread resolved after its reply.",
       },
       transitions: [
+        ...(["git.push", "git.stackSubmit"] as const).map((after) => ({
+          after,
+          evidence: {
+            finalAudit:
+              "Live stack is [#721 721aaaa,#722 722cccc]: feat/list-limits moved from 722bbbb to 722cccc with the fix, and no other branch or pull request exists in the stack. Exact-head CI and review on #722 at 722cccc pass. Thread T722 still needs its reply and resolution.",
+          },
+        })),
         {
           after: "forge.resolveThread",
           evidence: {
@@ -3286,6 +3293,7 @@ export const evalCases: EvalCase[] = [
     expected: {
       rubric: [
         { id: "fixed-in-place", question: "Does the answer report that the fix landed on PR #722 itself, as a new head on its branch, rather than in a new fix layer or PR?" },
+        { id: "no-new-layer-action", question: "Do the recorded actions show the fix pushed to #722's existing branch, with no new branch, stack layer or pull request created (for example no `gh stack add`)?" },
         { id: "not-frozen-reason", question: "Does the answer explain, in substance, that #722 took the fix in place because its exact-head CI had failed, so it was not frozen even though its review had finished?" },
         { id: "lower-head-kept", question: "Does the answer report that #721 stayed at its head?" },
         { id: "not-merged", question: "Does the answer state that the stack was not merged, leaving merge to the caller?" },
@@ -3304,6 +3312,7 @@ export const evalCases: EvalCase[] = [
         "report",
       ],
       requiredAnyActions: ["git.push", "git.stackSubmit"],
+      maxActionCounts: { "git.push": 1, "git.stackSubmit": 1 },
       forbiddenActions: [
         "forge.mergePr",
         "forge.openDraftPr",

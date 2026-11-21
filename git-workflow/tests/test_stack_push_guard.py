@@ -190,7 +190,7 @@ class RewriteTests(unittest.TestCase):
             guard.check_rewrites(self.admission, github)
 
     def test_a_draft_whose_ci_has_not_passed_may_move(self):
-        # Not frozen: its CI is queued, running, failed or cancelled, and a draft has no review yet.
+        # Not frozen whatever its review state: its CI is queued, running, failed or cancelled.
         for runs in ([run("queued")], [run("in_progress"), run()], [run(conclusion="failure")],
                      [run(conclusion="cancelled")], [run(), run(conclusion="failure", workflow=2)]):
             with self.subTest(runs=runs):
