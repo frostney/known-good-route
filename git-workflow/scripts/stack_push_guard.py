@@ -237,9 +237,9 @@ def check_rewrites(c, api=github_api):
                 continue
             if sha != row["expected"]:
                 raise GuardError(f"pull request #{number} head is {sha}, not the admitted expected commit")
-            runs = api(host, f"repos/{repository}/actions/runs?per_page=100&head_sha={sha}")
+            total, runs = head_runs(api, host, repository, sha, number)
             observed.append({"ref": row["ref"], "pullRequest": number, "draft": draft,
-                             **ci_state(runs, number)})
+                             **ci_state(total, runs, number)})
     blocked = [o for o in observed if not o["draft"] or o["ciPassed"]]
     if blocked:
         details = ", ".join(f"#{o['pullRequest']} ({o['ref'].removeprefix('refs/heads/')}: "
@@ -256,29 +256,47 @@ def check_rewrites(c, api=github_api):
 # A run with one of these conclusions counts as passed; any other conclusion,
 # such as failure, cancelled or timed_out, leaves the workflow unpassed.
 PASSING = frozenset({"success", "neutral", "skipped"})
+RUN_PAGES = 10
 
 
-def ci_state(runs, number):
-    """How many workflow runs a head has, and whether its CI has passed: no run
-    is queued or in progress, and every workflow that ran on the head has a
-    passed run there. A cancelled duplicate beside a passed run of the same
-    workflow does not unfreeze it."""
-    if (not isinstance(runs, dict) or type(runs.get("total_count")) is not int
-            or not isinstance(runs.get("workflow_runs"), list)):
-        raise GuardError(f"GitHub lookup returned no workflow runs for pull request #{number}")
-    for run in runs["workflow_runs"]:
-        if not isinstance(run, dict) or not isinstance(run.get("status"), str) or "workflow_id" not in run:
-            raise GuardError(f"GitHub lookup returned an incomplete workflow run for pull request #{number}")
-    # A run still going settles it on any page; deciding that CI passed needs them all.
-    if any(run["status"] != "completed" for run in runs["workflow_runs"]):
-        return {"workflowRuns": runs["total_count"], "ciPassed": False}
-    if runs["total_count"] > len(runs["workflow_runs"]):
-        raise GuardError(f"more than one page of workflow runs for pull request #{number}; they cannot all be checked")
+def head_runs(api, host, repository, sha, number):
+    """The workflow runs on a head, page by page. A run still going settles that
+    CI has not passed, so reading stops at the page that shows one."""
+    runs = []
+    for page in range(1, RUN_PAGES + 1):
+        found = api(host, f"repos/{repository}/actions/runs?per_page=100&page={page}&head_sha={sha}")
+        if (not isinstance(found, dict) or type(found.get("total_count")) is not int
+                or not isinstance(found.get("workflow_runs"), list)):
+            raise GuardError(f"GitHub lookup returned no workflow runs for pull request #{number}")
+        for run in found["workflow_runs"]:
+            if (not isinstance(run, dict) or not isinstance(run.get("status"), str) or "workflow_id" not in run
+                    or (run["status"] == "completed"
+                        and (not isinstance(run.get("conclusion"), str) or not run["conclusion"]))):
+                raise GuardError(f"GitHub lookup returned an incomplete workflow run for pull request #{number}")
+        runs.extend(found["workflow_runs"])
+        if any(run["status"] != "completed" for run in found["workflow_runs"]) or len(runs) >= found["total_count"]:
+            return found["total_count"], runs
+        if not found["workflow_runs"]:
+            raise GuardError(f"GitHub lookup listed fewer workflow runs than it counted for pull request #{number}")
+    raise GuardError(f"more than {RUN_PAGES} pages of workflow runs for pull request #{number}; they cannot all be checked")
+
+
+def ci_state(total, runs, number):
+    """Whether a head's CI has passed: no run is queued or in progress, and every
+    workflow that ran on the head has a passed run there. A cancelled duplicate
+    beside a passed run of the same workflow does not unfreeze it. Also names the
+    runs still going, which a push to the head supersedes."""
+    going = [f"{run.get('name') or 'workflow ' + str(run['workflow_id'])} run {run.get('id')} ({run['status']})"
+             for run in runs if run["status"] != "completed"]
+    if going:
+        return {"workflowRuns": total, "ciPassed": False, "runsGoing": going}
+    if len(runs) < total:
+        raise GuardError(f"GitHub lookup listed fewer workflow runs than it counted for pull request #{number}")
     passed = {}
-    for run in runs["workflow_runs"]:
+    for run in runs:
         workflow = run["workflow_id"]
-        passed[workflow] = passed.get(workflow, False) or run.get("conclusion") in PASSING
-    return {"workflowRuns": runs["total_count"], "ciPassed": bool(passed) and all(passed.values())}
+        passed[workflow] = passed.get(workflow, False) or run["conclusion"] in PASSING
+    return {"workflowRuns": total, "ciPassed": bool(passed) and all(passed.values()), "runsGoing": []}
 
 
 def prepare(value, api=github_api):
@@ -301,8 +319,9 @@ def prepare(value, api=github_api):
     pull_requests = check_rewrites(c, api)
     for o in pull_requests:
         if o["workflowRuns"]:
+            going = ("; cancel the runs still going: " + ", ".join(o["runsGoing"])) if o["runsGoing"] else ""
             print(f"Push guard: moving draft #{o['pullRequest']} restarts its CI ({o['workflowRuns']} workflow runs "
-                  "on its current head); cancel any of them still queued or running", file=sys.stderr)
+                  f"on its current head){going}", file=sys.stderr)
     count = config_count(os.environ)
     git_dir = Path(git(directory, "rev-parse", "--absolute-git-dir"))
     original_hooks = Path(git(directory, "rev-parse", "--path-format=absolute", "--git-path", "hooks"))

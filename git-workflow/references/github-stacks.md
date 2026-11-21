@@ -234,8 +234,9 @@ when that PR is frozen: ready for review, since the helper cannot see when a
 review ends, or a draft whose GitHub Actions CI on its current head has passed,
 meaning no run is queued or in progress and every workflow that ran has a
 successful, neutral or skipped run there. A draft whose runs are queued, in
-progress, failed or cancelled may move; the helper names the runs the push
-restarts, so cancel those still going. Moving a layer also moves every layer
+progress, failed or cancelled may move; the helper names the runs still going
+on it, so cancel those. The helper cannot see a finished review on a draft, so
+`address-feedback`'s frozen rule still decides whether a draft may take a fix. Moving a layer also moves every layer
 above it and restarts their CI, so a fix in place on a low layer can cost more
 runs than a new top layer. The refusal names each blocked PR and how many would
 have CI restarted. The optional `rewrite` field lists the

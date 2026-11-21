@@ -124,14 +124,17 @@ class FakeGitHub:
             owner, head = urllib.parse.unquote(path.split("head=", 1)[1]).split(":", 1)
             return [p for p in self.pulls if p["head"]["ref"] == head
                     and owner.lower() == self.full_name.split("/")[0].lower()]
-        found = self.runs.get(path.split("head_sha=", 1)[1], [])
+        query = urllib.parse.parse_qs(path.split("?", 1)[1])
+        found = self.runs.get(query["head_sha"][0], [])
         if isinstance(found, int):  # that many finished, passed runs of one workflow
             found = [run() for _ in range(found)]
-        return {"total_count": len(found), "workflow_runs": found}
+        size, page = int(query["per_page"][0]), int(query.get("page", ["1"])[0])
+        return {"total_count": len(found), "workflow_runs": found[(page - 1) * size:page * size]}
 
 
-def run(status="completed", conclusion="success", workflow=1):
-    return {"status": status, "conclusion": conclusion if status == "completed" else None, "workflow_id": workflow}
+def run(status="completed", conclusion="success", workflow=1, run_id=900, name="CI"):
+    return {"id": run_id, "name": name, "status": status,
+            "conclusion": conclusion if status == "completed" else None, "workflow_id": workflow}
 
 
 def pull(number, branch, sha, draft=True, repository="example-org/app"):
@@ -201,17 +204,35 @@ class RewriteTests(unittest.TestCase):
         self.assertIn("#13 (stack/two: ready for review, 1 workflow runs on its head)", message)
         self.assertIn("restart CI on 2 of them", message)
 
-    def test_a_run_still_going_settles_a_long_run_list(self):
-        runs = {"total_count": 101, "workflow_runs": [run()] * 99 + [run("queued")]}
-        self.assertEqual(guard.ci_state(runs, 12), {"workflowRuns": 101, "ciPassed": False})
+    def test_long_run_lists_are_read_page_by_page(self):
+        cases = (([run()] * 100 + [run("queued")], False, 2),  # a run still going on page two
+                 ([run(conclusion="failure")] * 101, False, 2),
+                 ([run()] * 150, True, 2),
+                 ([run("queued")] + [run()] * 150, False, 1))  # page one settles it
+        for runs, passed, pages in cases:
+            with self.subTest(passed=passed, pages=pages):
+                github = FakeGitHub([pull(12, "stack/one", "b" * 40)], runs={"b" * 40: runs})
+                admission = guard.validate_admission({**self.admission, "refs": self.admission["refs"][:1]})
+                if passed:
+                    with self.assertRaisesRegex(guard.GuardError, "draft, CI passed"):
+                        guard.check_rewrites(admission, github)
+                else:
+                    self.assertFalse(guard.check_rewrites(admission, github)[0]["ciPassed"])
+                self.assertEqual(sum("actions/runs" in path for _, path in github.calls), pages)
 
-    def test_incomplete_or_paged_run_lists_refuse(self):
-        for runs, error in (({"total_count": 1}, "no workflow runs"),
-                            ({"total_count": 101, "workflow_runs": [run()] * 100}, "more than one page"),
-                            ({"total_count": 101, "workflow_runs": [run(conclusion="failure")] * 100}, "more than one page"),
-                            ({"total_count": 1, "workflow_runs": [{"status": "completed"}]}, "incomplete workflow run")):
+    def test_incomplete_or_endless_run_lists_refuse(self):
+        def lookup(pages):
+            return lambda host, path: pages(path)
+        for answer, error in ((lambda path: {"total_count": 1}, "no workflow runs"),
+                              (lambda path: {"total_count": 1, "workflow_runs": [{"status": "completed"}]},
+                               "incomplete workflow run"),
+                              (lambda path: {"total_count": 1, "workflow_runs": [
+                                  {"status": "completed", "workflow_id": 1, "conclusion": None}]}, "incomplete workflow run"),
+                              (lambda path: {"total_count": 2, "workflow_runs": [] if "page=2" in path else [run()]},
+                               "fewer workflow runs"),
+                              (lambda path: {"total_count": 5000, "workflow_runs": [run()] * 100}, "more than 10 pages")):
             with self.subTest(error=error), self.assertRaisesRegex(guard.GuardError, error):
-                guard.ci_state(runs, 12)
+                guard.head_runs(lookup(answer), "github.com", "example-org/app", "b" * 40, 12)
 
     def test_listed_rewrite_passes_without_a_lookup(self):
         github = FakeGitHub([pull(12, "stack/one", "b" * 40, draft=False)], runs={"b" * 40: 4})
@@ -401,12 +422,14 @@ class StandaloneTests(unittest.TestCase):
 
     def test_prepare_moves_a_draft_whose_ci_failed_and_names_the_restarted_runs(self):
         admission = self.moved_layer()
-        github = FakeGitHub([pull(7, "feature/portable-guard", self.head)], runs={self.head: [run(conclusion="failure")]})
+        github = FakeGitHub([pull(7, "feature/portable-guard", self.head)], runs={self.head: [
+            run(conclusion="failure", run_id=41, name="CI PR"), run("in_progress", run_id=42, name="Evidence")]})
         with mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
             prepared = guard.prepare(admission, github)
         record = json.loads((Path(prepared["directory"]) / "admission.json").read_text())["request"]
         self.assertEqual([(o["pullRequest"], o["ciPassed"]) for o in record["pullRequests"]], [(7, False)])
-        self.assertIn("moving draft #7 restarts its CI (1 workflow runs", stderr.getvalue())
+        self.assertIn("moving draft #7 restarts its CI (2 workflow runs on its current head); "
+                      "cancel the runs still going: Evidence run 42 (in_progress)", stderr.getvalue())
 
     def test_prepare_refuses_when_gh_is_unavailable(self):
         admission = self.moved_layer()

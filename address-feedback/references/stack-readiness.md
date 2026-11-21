@@ -29,9 +29,11 @@ A member becomes frozen after its exact-head CI and review are terminal
 and every finding surface is classified. This workflow never pushes to a frozen
 member. The protected push helper cannot see when a review ends, so it treats a
 member as frozen once it is ready for review, or once CI on its draft head has
-passed, and refuses to move it. A draft whose CI is queued, running, failed or
-cancelled is not frozen: fix it in place, which restarts CI on it and on every
-member above it. The only rewrite is the final rebase
+passed, and refuses to move it. That is a narrower check than the rule above:
+a draft whose review has finished is frozen even when the helper would let it
+move. Fix a member in place only when it and every member above it are
+unfrozen, because the push moves them all and restarts their CI. The only
+rewrite is the final rebase
 before merging the whole stack, under `git-workflow`'s
 [native stack reference](../../git-workflow/references/github-stacks.md#guarded-rewrite-exception);
 it changes every head, so the changed-head rule below applies to every member.
