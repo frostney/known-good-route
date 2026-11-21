@@ -117,5 +117,8 @@ push replaces; under a cancel-in-progress group that run is cancelled before it
 reports, and the next round gains nothing from it. Push before the rounds end
 only for a step that reads the published head: a review provider that reviews
 pushes, a preview that specification testing needs, or a person who asks to
-see it. Readiness, CI and review evidence still belong to the head that is
-finally pushed.
+see it. Between rounds, still read the findings and check results that arrive
+on the published head, and handle them with the round's own. A stack layer's
+round diffs against the local head of the layer below it, not its remote base,
+which lacks fixes that are not yet pushed. Readiness, CI and review evidence
+still belong to the head that is finally pushed.

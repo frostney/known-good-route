@@ -1409,7 +1409,7 @@ export const evalCases: EvalCase[] = [
       environment: {
         orchestration: { endpoint: "ready-to-merge", entryPoints: "stop" },
         standingInstructions:
-          "Pull requests get at most two review rounds. You run each round yourself with codeReview.run on the committed diff `git diff origin/main...SHA` of one commit, which can be local; the reviewer posts nothing to GitHub. Fix a round's valid findings, then run the next round, unless the round was clean or was the last.",
+          "Once a pull request is ready for review, review it in at most two rounds. You run each round yourself with codeReview.run; its brief names the PR's base branch and head SHA and limits the review to the committed diff `git diff origin/<base>...<head SHA>`. The reviewer posts nothing to GitHub. Check every finding against the code and fix the valid ones. Run the next round on the new head unless the round was clean or was the last.",
       },
       evidence: {
         repositoryStatus:
