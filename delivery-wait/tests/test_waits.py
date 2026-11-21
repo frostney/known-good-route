@@ -1384,6 +1384,30 @@ class WaitCommandsTest(unittest.TestCase):
         _, output = self.census_wait("--check", "build-x")
         self.assertEqual(output["state"], "changed")
 
+    def test_a_cancelled_job_waits_while_its_possible_duplicate_run_completes(self) -> None:
+        # The race cancels the jobs seconds before the run itself completes.
+        running = workflow_run(101, [workflow_job(1000, "build", "in_progress", None)], status="in_progress", conclusion=None, workflow_id=9, check_suite_id=501)
+        finishing = workflow_run(102, [workflow_job(1001, "build", conclusion="cancelled", run_id=102)], status="in_progress", conclusion=None, workflow_id=9, check_suite_id=502)
+        passed = self.cancelled_duplicate()[0]
+        self.write_scenario(census=[
+            census(running, finishing),
+            census(*self.cancelled_duplicate(running)),
+            census(*self.cancelled_duplicate(passed)),
+        ])
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "recoverable")
+
+    def test_a_cancelled_named_check_a_passed_rerun_did_not_replace_is_changed(self) -> None:
+        # The rerun's matrix no longer has the shard, so its cancellation is current.
+        older = self.cancelled_duplicate()[0]
+        passed = workflow_run(102, [workflow_job(1003, "build", run_id=102)], workflow_id=9, check_suite_id=502, attempt=2)
+        self.write_scenario(
+            pull=pull("head-1", [check("shard-9", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=502, workflow=9)]),
+            census=[census(older, passed)],
+        )
+        _, output = self.census_wait("--check", "shard-9")
+        self.assertEqual(output["state"], "changed")
+
     def test_an_older_run_that_was_rerun_cannot_show_the_race(self) -> None:
         # Its creation and its latest update span two attempts.
         older = workflow_run(101, [workflow_job(1000, "build")], workflow_id=9, check_suite_id=501, attempt=2, updated_at="2026-08-12T09:30:00Z")

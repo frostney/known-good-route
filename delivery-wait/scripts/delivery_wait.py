@@ -487,8 +487,29 @@ def deciding_runs(observation: dict[str, Any]) -> list[dict[str, Any]]:
     return [run for run in observation.get("runs", []) if not run.get("superseded")]
 
 
+def possible_duplicates(observation: dict[str, Any]) -> set[int]:
+    """Runs still finishing that may yet be marked as cancelled duplicates.
+
+    A cancelled run's jobs show `cancelled` seconds before the run completes;
+    its own conclusion decides, so their cancellation waits for it.
+    """
+    runs = observation.get("runs", [])
+    return {
+        run["id"] for run in runs
+        if run.get("status") != "completed" and (run.get("attempt") or 1) == 1
+        and run.get("workflowId") is not None
+        and any(
+            other["id"] < run["id"]
+            and (other.get("workflowId"), other.get("event"), other.get("headBranch"), other.get("headRepositoryId"))
+            == (run.get("workflowId"), run.get("event"), run.get("headBranch"), run.get("headRepositoryId"))
+            for other in runs
+        )
+    }
+
+
 def workflow_failures(observation: dict[str, Any]) -> list[str]:
     failures = []
+    finishing = possible_duplicates(observation)
     for run in deciding_runs(observation):
         if run.get("cancelledDuplicate"):
             # Decided by the older run of its source; see mark_cancelled_duplicates.
@@ -499,6 +520,8 @@ def workflow_failures(observation: dict[str, Any]) -> list[str]:
         for job in run.get("jobs", []):
             conclusion = job.get("conclusion")
             terminal = job.get("status") == "completed" or job.get("completedAt") is not None
+            if run["id"] in finishing and conclusion == "cancelled":
+                continue
             if terminal and conclusion and conclusion not in PASSING_WORKFLOW_CONCLUSIONS:
                 failures.append(f"{run.get('name')} / {job.get('name')}: {conclusion}")
     return sorted(failures)
@@ -530,21 +553,29 @@ class WorkflowCensusGate:
             run.get("checkSuiteId") for run in deciding_runs(observation)
             if run.get("cancelledDuplicate") and run.get("checkSuiteId") is not None
         }
-        running_suites = {
-            run.get("checkSuiteId") for run in deciding_runs(observation)
+        # A rerun still going may not have created its check runs yet; a
+        # passed one replaced only the checks its jobs name.
+        reruns = {
+            run.get("checkSuiteId"): run for run in deciding_runs(observation)
             if run.get("checkSuiteId") is not None and (run.get("attempt") or 1) > 1 and (
                 run.get("status") != "completed"
                 or run.get("conclusion") in PASSING_WORKFLOW_CONCLUSIONS
             )
         }
+
+        def stale(name: str, check: dict[str, Any]) -> bool:
+            if str(check.get("conclusion", "")).upper() != "CANCELLED":
+                return False
+            if check.get("suite") in duplicate_suites:
+                return True
+            rerun = reruns.get(check.get("suite"))
+            return rerun is not None and (
+                rerun.get("status") != "completed"
+                or name in {job.get("name") for job in rerun.get("jobs", [])}
+            )
+
         observed = {
-            name: [
-                check for check in checks
-                if not (
-                    check.get("suite") in duplicate_suites | running_suites
-                    and str(check.get("conclusion", "")).upper() == "CANCELLED"
-                )
-            ]
+            name: [check for check in checks if not stale(name, check)]
             for name, checks in checks_by_name(observation).items()
         }
         failures += [
