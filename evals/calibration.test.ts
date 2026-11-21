@@ -67,6 +67,17 @@ test("preflight rejects impossible calibration and worker setups before native c
   );
   const child = { ...scenario({}), id: "missing" };
   expect(() => validateCases([c], new Set(), [c, child])).not.toThrow();
+  c.expected.forbiddenWorker = true;
+  expect(() => validateCases([c], new Set(), [c, child])).not.toThrow();
+  c.expected.requiredWorker = true;
+  expect(() => validateCases([c], new Set(), [c, child])).toThrow("forbidden worker");
+  c.expected.requiredWorker = false;
+  c.worker = { ...c.worker!, mode: "claude-agent" };
+  expect(() => validateCases([c], new Set(), [c, child])).toThrow("forbidden worker");
+  c.worker = { model: "claude:claude-opus-5", caseId: "missing" };
+  c.expected.requiredWorker = true;
+  const { worker: _worker, ...unconfigured } = c;
+  expect(() => validateCases([{ ...unconfigured, expected: { ...c.expected, requiredWorker: false } }], new Set())).toThrow("forbidden worker");
 });
 test("final communication is a report but cannot execute a mutation or reorder a question", () => {
   const ledger = empty();

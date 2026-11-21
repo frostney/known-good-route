@@ -191,7 +191,7 @@ export async function run() {
           plannedRuns: jobs.length,
           judges: judgePlan,
           plannedJudgeCalls: jobs.reduce(
-            (total, job) => total + 1 + (job.evalCase.worker ? 1 : 0),
+            (total, job) => total + 1 + (job.evalCase.worker && !job.evalCase.expected.forbiddenWorker ? 1 : 0),
             0,
           ),
           agentsFile: (await agentsFileFor(skills)).length > 0,

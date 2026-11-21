@@ -2,27 +2,30 @@
 name: deep-dive
 description: >-
   Establishes the actual cause of something observed by checking what really
-  ran or loaded, trying to break each candidate explanation, and having the
-  result reviewed in a fresh context before reporting it. Use before claiming a
-  cause or proposing a fix for an observed failure, hang, leak, or unexpected
-  agent behavior, when asked why something happened or what is causing it, or
-  when the user runs /deep-dive. Inside an authorized development, delivery or
-  fix loop, a failing check whose own output or trace already shows an uncontested
-  in-scope cause is fixed in that loop instead, unless the user ran /deep-dive.
+  ran or loaded and trying to break each candidate explanation, and has the
+  result reviewed in a fresh context when it rests on indirect evidence or is
+  contested. Use before claiming a cause or proposing a fix for an observed
+  failure, hang, leak, or unexpected agent behavior, when asked why something
+  happened or what is causing it, or when the user runs /deep-dive. Inside an
+  authorized development, delivery or fix loop, a failing check whose own output
+  or trace already shows an uncontested in-scope cause is fixed in that loop
+  instead, unless the user ran /deep-dive or a review or reviewer was asked for.
 license: Unlicense OR MIT
 metadata:
   agents-role: ambient
-  agents-text: Before claiming the cause of something observed, check what actually ran, try to break each explanation, and cite a fresh review's verdict; skip that only when the failing output or trace already shows the mechanism, or the observation is itself the defect, such as a required control a view never renders, and treat a symptom whose cause sits in another step or file as a cause to establish.
+  agents-text: Before claiming the cause of something observed, check what actually ran and try to break each explanation, and cite a fresh review's verdict when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review or reviewer was asked for, otherwise saying why no review ran; skip all of that only when a failing output or trace already shows the mechanism, nothing contradicts it and no review or reviewer was asked for, or when the observation is itself the defect, such as a required control a view never renders, and treat a symptom whose cause sits in another step or file as a cause to establish.
 ---
 
 # Deep dive
 
 The person should not have to ask you to check what actually happened. Before
 you name a cause or propose a fix for something observed, establish the cause
-from the record of what ran, try to break it, and have it reviewed in a fresh
-context.
+from the record of what ran and try to break it. When the conclusion rests on
+indirect evidence or is contested, also have it reviewed in a fresh context.
 
-An explicit `/deep-dive` always runs the full procedure below. Otherwise, a
+An explicit `/deep-dive`, or a request for a review or a named reviewer, always
+runs the full investigation below, and the fresh review whenever
+[its trigger](#get-a-fresh-review) holds. Otherwise, a
 check that fails inside an authorized development, delivery or fix loop needs no
 deep dive only when the failing run's own output or trace already shows the
 in-scope mechanism that produced the failure, not only the failed assertion or
@@ -30,7 +33,8 @@ the defect it names, and nothing contradicts it. State that cause and its
 evidence, fix it in the loop, and rerun; the rerun confirms the fix, not the
 cause. If you had to read source, files or history beyond the failing output
 to find the cause, or set aside a conflicting claim, such as a note blaming
-another component, you did a deep dive: get its fresh review before the fix.
+another component, you did a deep dive: finish its probes, and its fresh
+review when [the trigger](#get-a-fresh-review) holds, before the fix.
 When the observation is itself the defect, such as a required control a view
 never renders, there is no cause to claim: fix it and verify it against the
 requirement. A symptom whose cause sits in another step or file, such as a
@@ -93,9 +97,26 @@ breaks it.
 
 ## Get a fresh review
 
-Before returning, have the result reviewed in a fresh agent context: a subagent
-when the host has one, otherwise a separate CLI run such as `claude -p` or
-`codex exec`. Use the reviewer the caller names. Read
+A fresh review is required when the conclusion is contested or rests on
+indirect evidence, that is when any of these holds:
+
+- a link in the surviving explanation was inferred rather than read in the
+  record, for example from names, timestamps or process trees, or because a
+  source was out of reach;
+- more than one candidate survives the probes, or a candidate was ruled out
+  only by inference rather than by an observation;
+- the conclusion sets aside a conflicting claim, such as a note, a document,
+  the person's statement or an earlier finding;
+- the caller or the person asks for a review or names a reviewer.
+
+When none holds, because every link was read directly in the record and every
+other candidate was broken by an observation, skip the review and say so in the
+report: no review, with the reason, such as every link read directly in the
+sources you name. Never describe that result as reviewed.
+
+When a review is required, have the result reviewed before returning, in a
+fresh agent context: a subagent when the host has one, otherwise a separate CLI
+run such as `claude -p` or `codex exec`. Use the reviewer the caller names. Read
 [references/fresh-review.md](references/fresh-review.md) before starting it.
 
 The reviewer gets the symptom, the surviving explanation or the gap, where each
@@ -125,8 +146,9 @@ not a change to what is under investigation.
 
 Stop only when one of these holds:
 
-- One explanation survives both probes and the fresh review, and every other
-  candidate you raised is ruled out with evidence.
+- One explanation survives both probes and, when
+  [the trigger](#get-a-fresh-review) requires one, the fresh review; every
+  other candidate you raised is ruled out with evidence.
 - The evidence runs out. Report what is missing, where you looked, and which
   candidates remain open, without choosing between them.
 
@@ -134,7 +156,7 @@ Stop only when one of these holds:
 
 Keep it short. When the deep dive ran inside a larger task, such as a delivery,
 its report still goes in the final message, including the verdict file's exact
-path:
+path or the reason no review ran:
 
 - the surviving explanation as a cause, back to its earliest supported link,
   or the gap;
@@ -147,7 +169,9 @@ path:
   out;
 - the falsification and truthiness results for each candidate, with the
   observation each rests on;
-- which reviewer ran, by route and model, its verdict, and the exact path of
-  its verdict file, or that the result is unreviewed.
+- the review: which reviewer ran, by route and model, its verdict and the
+  exact path of its verdict file, or that the required review produced no
+  verdict file and the result is unreviewed; or "no review" with the reason
+  none was required, such as every link read directly in the sources you name.
 
 Propose a fix only after this, and only for the surviving cause.

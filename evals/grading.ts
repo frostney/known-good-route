@@ -323,6 +323,18 @@ export function gradeRun(
     });
   }
 
+  if (expected.forbiddenWorker) {
+    // A call that failed before the worker ran still chose to start one.
+    const attempts = (ledger.toolReceipts ?? []).filter((receipt) =>
+      (receipt.request.params as { name?: string } | undefined)?.name === "delegateWorker").length;
+    const workers = (ledger.workers ?? []).length;
+    checks.push({
+      name: "no worker started",
+      passed: !workers && !attempts,
+      detail: `observed workers=${workers} delegateWorker calls=${attempts}; the configured worker was available and must not start`,
+    });
+  }
+
   if (expected.requiredVerdictFile)
     checks.push({
       name: "reviewer wrote a verdict file",
@@ -521,6 +533,18 @@ export function gradeRun(
       name: `${action}${values.length ? ` carrying ${values.map(describe).join(", ")}` : ""} before worker`,
       passed: started !== undefined && actionIndex >= 0 && actionIndex < started,
       detail: `workerStartedAtEvent=${started ?? "none"} actionIndex=${actionIndex}`,
+    });
+  }
+
+  for (const inspection of expected.requiredInspectionsBeforeWorker ?? []) {
+    const started = ledger.workers?.[0]?.startedAtEvent;
+    const inspectionIndex = ledger.events.findIndex(
+      (event) => event.kind === "inspection" && event.name === inspection,
+    );
+    checks.push({
+      name: `${inspection} before worker`,
+      passed: started !== undefined && inspectionIndex >= 0 && inspectionIndex < started,
+      detail: `workerStartedAtEvent=${started ?? "none"} inspectionIndex=${inspectionIndex}`,
     });
   }
 
@@ -763,6 +787,13 @@ export function validateCases(
         throw new Error(`${evalCase.id}: empty action response sequence`);
     if (evalCase.expected.citedReviewVerdict && !(evalCase.worker && evalCase.expected.requiredWorker))
       throw new Error(`${evalCase.id}: a cited review verdict needs a required configured worker`);
+    // A native Agent worker is recorded even when no Agent call ran, so only a
+    // process worker can tell a skipped review from a started one.
+    if (evalCase.expected.forbiddenWorker &&
+        (!evalCase.worker || evalCase.worker.mode === "claude-agent" || evalCase.expected.requiredWorker ||
+         evalCase.expected.requiredWorkerBeforeActions?.length || evalCase.expected.requiredActionsBeforeWorker?.length ||
+         evalCase.expected.requiredInspectionsBeforeWorker?.length))
+      throw new Error(`${evalCase.id}: a forbidden worker needs a configured process worker that nothing else requires`);
     if (evalCase.worker) {
       const child = caseCatalog.find((c) => c.id === evalCase.worker!.caseId);
       if (!child || child.worker)

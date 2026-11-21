@@ -47,8 +47,10 @@ const worker = {
 };
 const passes = (ledger: RunLedger, output: string) => gradeRun(parentCase, ledger, output).passed;
 
-test("a deep dive passes only when its answer cites the verdict file of a review that ran", () => {
+test("a contested deep dive passes only when its answer cites the verdict file of a review that ran", () => {
   expect(passes({ ...parent, workers: [worker] }, answer)).toBeTrue();
+  // The team chat's claim is set aside, so skipping the review fails.
+  expect(passes(parent, `${finding} No review: every link was read directly in the lock file and the flock probe.`)).toBeFalse();
   // A claimed review without a citable verdict file is unreviewed.
   expect(passes({ ...parent, workers: [worker] }, `${finding} A fresh review agreed.`)).toBeFalse();
   expect(passes({ ...parent, workers: [worker] }, `${finding} Review: agree (${transcript}).`)).toBeFalse();
@@ -111,11 +113,12 @@ test("an established cause stays in the loop: the trace is read before the fix, 
   expect(passes([...read, { act: "file.edit" }, { act: "forge.openDraftPr" }])).toBeFalse();
 });
 
-test("a cause the run had to find is investigated and reviewed before the fix, contested or not", () => {
-  for (const id of ["deep-dive-loop-unresolved-cause-reviews", "deep-dive-loop-assertion-only-reviews"]) {
+test("a contested cause the run had to find is investigated and reviewed before the fix", () => {
+  {
+    const id = "deep-dive-loop-unresolved-cause-reviews";
     const scenario = loopCase(id);
     const review = deepDiveCases.find((c) => c.id === scenario.worker!.caseId)!;
-    const reviewLedger: RunLedger = { ...empty(), inspections: ["checkpointFile"], verdict: { path: verdictFile, verdict: "agree", evidence: "checkpoint lacks provenance" } };
+    const reviewLedger: RunLedger = { ...empty(), inspections: ["mapperSource", "checkpointFile", "checkpointWriter"], verdict: { path: verdictFile, verdict: "agree", evidence: "writeCheckpoint drops provenance" } };
     const reviewer = (startedAtEvent: number) => ({
       ...worker, caseId: review.id, startedAtEvent, ledger: reviewLedger, grade: gradeRun(review, reviewLedger, "Agree."),
     });
@@ -124,15 +127,66 @@ test("a cause the run had to find is investigated and reviewed before the fix, c
       if (startedAtEvent !== null) ledger.workers = [reviewer(startedAtEvent)];
       return gradeRun(scenario, ledger, `writeCheckpoint drops provenance. Fresh review: agree (${verdictFile}). PR #391 is open.`).passed;
     };
-    const investigate: Step[] = [{ inspect: "gateOutput" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }];
-    expect(passes([...investigate, ...deliver], 3), id).toBeTrue();
+    const investigate: Step[] = [{ inspect: "gateOutput" }, { inspect: "teamNote" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { inspect: "checkpointWriter" }];
+    expect(passes([...investigate, ...deliver], 5), id).toBeTrue();
     // A review that started only after the fix came too late.
-    expect(passes([...investigate, ...deliver], 4), id).toBeFalse();
+    expect(passes([...investigate, ...deliver], 6), id).toBeFalse();
     expect(passes([...investigate, ...deliver], null), id).toBeFalse();
+    // A review started before the writer was read judged a narrower explanation.
+    expect(passes([...investigate, ...deliver], 4), id).toBeFalse();
+    // A reviewer that reread only the checkpoint file did not judge the writer diagnosis.
+    const narrow: RunLedger = { ...reviewLedger, inspections: ["checkpointFile"] };
+    const narrowRun = trajectory([...investigate, ...deliver]);
+    narrowRun.workers = [{ ...reviewer(5), ledger: narrow, grade: gradeRun(review, narrow, "Agree.") }];
+    expect(gradeRun(scenario, narrowRun, `writeCheckpoint drops provenance. Fresh review: agree (${verdictFile}). PR #391 is open.`).passed, id).toBeFalse();
     // Investigation and review without the fix, the gate and the pull request do not finish the loop.
-    expect(passes(investigate, 3), id).toBeFalse();
-    expect(passes([{ inspect: "gateOutput" }, { act: "file.edit" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { act: "validation.run" }, { act: "forge.openDraftPr" }], 1), id).toBeFalse();
+    expect(passes(investigate, 5), id).toBeFalse();
+    expect(passes([{ inspect: "gateOutput" }, { act: "file.edit" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { inspect: "checkpointWriter" }, { act: "validation.run" }, { act: "forge.openDraftPr" }], 1), id).toBeFalse();
   }
+});
+
+// The same failing check and sources without the teammate's note: every link is
+// read directly and the mapper is broken by its own source, so no review is due.
+test("an uncontested cause read directly is investigated before the fix, and the available reviewer is not started", () => {
+  const scenario = loopCase("deep-dive-loop-assertion-only-skips-review");
+  const review = deepDiveCases.find((c) => c.id === scenario.worker!.caseId)!;
+  const reviewLedger: RunLedger = { ...empty(), inspections: ["checkpointFile"], verdict: { path: verdictFile, verdict: "agree", evidence: "checkpoint lacks provenance" } };
+  const passes = (steps: Step[], startedAtEvent: number | null) => {
+    const ledger = trajectory(steps);
+    if (startedAtEvent !== null)
+      ledger.workers = [{ ...worker, caseId: review.id, startedAtEvent, ledger: reviewLedger, grade: gradeRun(review, reviewLedger, "Agree.") }];
+    return gradeRun(scenario, ledger, "writeCheckpoint drops provenance. No review: every link was read directly in the mapper source, the checkpoint file and the writer. PR #391 is open.").passed;
+  };
+  const investigate: Step[] = [{ inspect: "gateOutput" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { inspect: "checkpointWriter" }];
+  expect(passes([...investigate, ...deliver], null)).toBeTrue();
+  expect(passes([...investigate, ...deliver], 4)).toBeFalse();
+  expect(passes([...investigate, { act: "delegate" }, ...deliver], null)).toBeFalse();
+  // Skipping the review does not skip the investigation.
+  expect(passes([{ inspect: "gateOutput" }, ...deliver], null)).toBeFalse();
+  expect(passes([{ inspect: "gateOutput" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, ...deliver], null)).toBeFalse();
+  expect(passes([{ inspect: "gateOutput" }, { act: "file.edit" }, { inspect: "mapperSource" }, { inspect: "checkpointFile" }, { inspect: "checkpointWriter" }, { act: "validation.run" }, { act: "forge.openDraftPr" }], null)).toBeFalse();
+  // A call that errored before any worker ran still chose to start the review.
+  const attempted = trajectory([...investigate, ...deliver]);
+  attempted.toolReceiptVersion = 1;
+  attempted.toolReceipts = [{
+    sequence: 0, state: "completed", eventStart: 4, eventEnd: 4,
+    request: { method: "tools/call", params: { name: "delegateWorker", arguments: { context: "review" } } },
+    response: { isError: true, content: [{ type: "text", text: "worker unavailable" }] },
+  }];
+  expect(gradeRun(scenario, attempted, "writeCheckpoint drops provenance. PR #391 is open.").checks.find((c) => c.name === "no worker started")!.passed).toBeFalse();
+});
+
+test("an explicit /deep-dive on a cause the trace shows runs the investigation and starts no reviewer", () => {
+  const scenario = loopCase("deep-dive-explicit-invocation-runs-full-procedure");
+  const review = deepDiveCases.find((c) => c.id === scenario.worker!.caseId)!;
+  const ledger: RunLedger = { ...empty(), loadedSkills: ["deep-dive"], inspections: ["gateOutput", "currentRunTrace"] };
+  const answer = "mapRecovered drops provenance. No review: the trace shows provenance on the mapper's input and not on its output.";
+  expect(gradeRun(scenario, ledger, answer).passed).toBeTrue();
+  const reviewLedger: RunLedger = { ...empty(), inspections: ["currentRunTrace"], verdict: { path: verdictFile, verdict: "agree", evidence: "trace" } };
+  const reviewed = { ...ledger, workers: [{ ...worker, caseId: review.id, ledger: reviewLedger, grade: gradeRun(review, reviewLedger, "Agree.") }] };
+  expect(gradeRun(scenario, reviewed, answer).passed).toBeFalse();
+  expect(gradeRun(scenario, { ...ledger, inspections: ["gateOutput"] }, answer).passed).toBeFalse();
+  expect(gradeRun(scenario, { ...ledger, loadedSkills: [] }, answer).passed).toBeFalse();
 });
 
 test("the backlog case measures only after reading the earlier thread and runner history, and before the review starts", () => {

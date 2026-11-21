@@ -563,6 +563,10 @@ nonempty delivered context/instructions/result, consistently passing child
 checks, and actual response model IDs that all match the configured worker.
 Initialization or configured-model labels cannot substitute for response IDs.
 Transcript/receipt binding is verified separately; metadata alone is not proof.
+A case can instead keep its worker available and forbid starting it
+(`forbiddenWorker`, process workers only), so a run that starts none chose
+not to, such as a deep dive whose evidence calls for no fresh review. A call
+that fails before the worker runs still counts as starting it.
 Fixture passes do not prove real GitHub permissions, UI behavior, or hosted CI.
 
 The missing-capability milestone fixture accepts either a direct posting request

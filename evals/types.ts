@@ -151,6 +151,9 @@ export interface EvalExpectations {
   }>;
 
   requiredWorker?: boolean;
+  // The configured worker stays available but must not start, so skipping it
+  // is the run's own decision, such as a review the evidence does not call for.
+  forbiddenWorker?: boolean;
   // A reviewer must write its verdict through writeVerdict; the parent's final
   // response must cite that verdict file, so a review claim is bound to a run
   // that actually happened.
@@ -188,6 +191,9 @@ export interface EvalExpectations {
   // worker can see cannot stand in for the action. With values, only a record
   // carrying all of them, matched as for requiredActionValues, counts.
   requiredActionsBeforeWorker?: Array<ActionName | { action: ActionName; values: ExactValue[] }>;
+  // Each source must be inspected before the native worker started, so the
+  // explanation the worker reviews already rests on it.
+  requiredInspectionsBeforeWorker?: string[];
   requiredActionSequence?: ActionName[];
   requiredActions?: ActionName[];
   requiredAnyActions?: ActionName[];
