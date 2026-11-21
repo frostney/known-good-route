@@ -191,7 +191,7 @@ class RewriteTests(unittest.TestCase):
 
     def test_a_draft_whose_ci_has_not_passed_may_move(self):
         # Not frozen whatever its review state: its CI is queued, running, failed or cancelled.
-        for runs in ([run("queued")], [run("in_progress"), run()], [run(conclusion="failure")],
+        for runs in ([run("queued")], [run(), run("in_progress")], [run(conclusion="failure")],
                      [run(conclusion="cancelled")], [run(), run(conclusion="failure", workflow=2)]):
             with self.subTest(runs=runs):
                 github = FakeGitHub([pull(12, "stack/one", "b" * 40), pull(13, "stack/two", "d" * 40)],
@@ -257,6 +257,8 @@ class RewriteTests(unittest.TestCase):
                                                              run(conclusion="cancelled", run_id=101)], "failed"),
                  ("a later cancellation after only failures", [run(conclusion="failure", run_id=100),
                                                                run(conclusion="cancelled", run_id=101)], "failed"),
+                 ("an older run still going beside a newer success", [run("in_progress", run_id=100),
+                                                                       run(run_id=101)], "passed"),
                  ("another event of the same workflow failed", [run(run_id=100),
                                                                 run(conclusion="failure", run_id=101, event="push")],
                   "failed"))
@@ -276,7 +278,7 @@ class RewriteTests(unittest.TestCase):
         green = FakeGitHub([pull(12, "stack/one", "b" * 40)], runs={"b" * 40: [run()]})
         [observed] = guard.check_rewrites(admission, green)
         self.assertEqual((observed["pullRequest"], observed["ci"]), (12, "passed"))
-        self.assertIn("review has not finished", observed["reason"])
+        self.assertIn("admitted reason", observed["reason"])
         # Still looked up at the push: a pull request marked ready in between, or a
         # second ready pull request on the same branch, is refused.
         for pulls in ([pull(12, "stack/one", "b" * 40, draft=False)],
@@ -299,7 +301,9 @@ class RewriteTests(unittest.TestCase):
         cases = ((many_runs(100) + [run("queued")], False, 2),  # a run still going on page two
                  (many_runs(101, conclusion="failure"), False, 2),
                  (many_runs(150), True, 2),
-                 ([run("queued")] + many_runs(150), False, 2))
+                 ([run(conclusion="failure", workflow=2)] + many_runs(150), False, 2),
+                 # An older run still going is replaced by the newer passed runs of its workflow.
+                 ([run("queued")] + many_runs(150), True, 2))
         for runs, passed, pages in cases:
             with self.subTest(passed=passed, pages=pages):
                 github = FakeGitHub([pull(12, "stack/one", "b" * 40)], runs={"b" * 40: runs})
@@ -604,11 +608,12 @@ class SpentRestTests(unittest.TestCase):
         self.answer([graph_pull(12, "stack/one", "b" * 40)],
                     {"b" * 40: [other_app() for _ in range(1100)] + [suite(conclusion="FAILURE")]})
         self.assertEqual([(o["workflowRuns"], o["ciPassed"]) for o in guard.check_rewrites(self.one)], [(1, False)])
-        # More runs than the guard reads, one of them still going: CI has not passed.
+        # More runs than the guard reads, even with one still going: which run of a
+        # workflow is newest cannot be established, so it refuses.
         self.answer([graph_pull(12, "stack/one", "b" * 40)],
                     {"b" * 40: [suite("QUEUED")] + [suite() for _ in range(1200)]})
-        observed = guard.check_rewrites(self.one)[0]
-        self.assertEqual((observed["ciPassed"], observed["runsListed"]), (False, False))
+        with self.assertRaisesRegex(guard.GuardError, "which run of each workflow decides"):
+            guard.check_rewrites(self.one)
         self.answer([graph_pull(12, "stack/one", "b" * 40)], {"b" * 40: [suite() for _ in range(1200)]})
         with self.assertRaisesRegex(guard.GuardError, "more than 10 pages"):
             guard.check_rewrites(self.one)
@@ -624,8 +629,8 @@ class SpentRestTests(unittest.TestCase):
     def test_a_count_cut_short_is_a_lower_bound(self):
         self.answer([graph_pull(12, "stack/one", "b" * 40)],
                     {"b" * 40: [suite("QUEUED")] + [other_app() for _ in range(3100)]})
-        observed = guard.check_rewrites(self.one)[0]
-        self.assertEqual((observed["workflowRuns"], observed["ciPassed"], observed["runsListed"]), (1, False, False))
+        with self.assertRaisesRegex(guard.GuardError, "which run of each workflow decides"):
+            guard.check_rewrites(self.one)
         self.answer([graph_pull(12, "stack/one", "b" * 40, draft=False)],
                     {"b" * 40: [suite("QUEUED")] + [other_app() for _ in range(3100)]})
         with self.assertRaisesRegex(guard.GuardError, "ready for review, at least 1 workflow runs on its head"):

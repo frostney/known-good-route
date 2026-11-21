@@ -88,9 +88,11 @@ run only `status`, with every exact `PR=SHA`.
    documentation finding, search the document and any file that mirrors the
    same fact for sibling statements, and fix them in the same commit; an
    incremental review surfaces each missed sibling one round later.
-8. Run focused validation while fixing. Before submitting a substantive fix
-   layer, repeat `/code-review fix-all` and `/test-against-spec fix` against the
-   complete integrated tree until both pass on the same unchanged content,
+8. Run focused validation while fixing. Before publishing a substantive fix,
+   in place or in a fix layer, restack it as step 9 describes, then repeat
+   `/code-review fix-all` and `/test-against-spec fix` against the complete
+   integrated tree as it will be published until both pass on the same
+   unchanged content,
    leaving a finding declined under the finding policy unfixed, then
    establish the project's declared gate using matching current results. Stop
    for a material product, architecture, security, compatibility, or scope
@@ -101,18 +103,20 @@ run only `status`, with every exact `PR=SHA`.
    and resume this loop before readiness. Further repairs still respect frozen
    members: place each further repair under step 7's rule, checked against
    the live stack at that moment. The push helper refuses to move a layer that
-   is ready for review or a draft whose CI passed; for such a draft whose
-   review has not finished, list its ref under `rewrite` with `draftOnly` and
-   that reason.
+   is ready for review or a draft whose GitHub Actions CI passed; for such a
+   draft that the frozen rule does not freeze, list its ref under `rewrite`
+   with `draftOnly` and the reason, checked again just before the push.
 9. Enforce the native-stack reference's push-boundary checks for the frozen
    prefix and every branch the push moves or creates; preserve the frozen PR
    heads and metadata. Publish a fix made in place through the native-stack
    reference's in-place repair path: commit it on its layer, restack only the
    layers above it with `gh stack rebase --upstack --no-trunk` from that
    branch when there are any, check that every layer below kept its head,
-   validate the restacked top, push through the protected helper with each
-   moved branch admitted, and cancel the superseded runs it names. Publish a new fix layer with its protected `gh stack push`
-   followed by separate PR creation and native append procedure. The helper
+   run step 8's review, specification test and project gate on the restacked
+   top, push through the protected helper with each moved branch admitted, and
+   cancel the superseded runs it names. Publish a new fix layer with its
+   protected `gh stack push` followed by separate PR creation and native
+   append procedure. The helper
    refuses to move a layer that is ready for review or a draft whose CI passed;
    never list a frozen member under `rewrite` to land a fix. A fix in place
    moves the layer and every layer above it, so each moved head needs its

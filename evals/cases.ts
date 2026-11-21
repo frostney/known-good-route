@@ -3274,9 +3274,15 @@ export const evalCases: EvalCase[] = [
           "Specified originating thread resolved after its reply.",
       },
       transitions: [
+        // Only a push of feat/list-limits itself, after the fix is committed,
+        // moves #722; a new branch based on it does not.
         ...(["git.push", "git.stackSubmit"] as const).map((after) => ({
           after,
-          whenCarries: { values: ["feat/list-limits"] },
+          since: "git.commit" as const,
+          whenCarries: {
+            values: ["feat/list-limits"],
+            fields: ["branch", "branches", "ref", "refs", "moved", "admitted", "admit", "pushed"],
+          },
           evidence: {
             finalAudit:
               "Live stack is [#721 721aaaa,#722 722cccc]: feat/list-limits moved from 722bbbb to 722cccc with the fix, and no other branch or pull request exists in the stack. Exact-head CI and review on #722 at 722cccc pass. Thread T722 still needs its reply and resolution.",
