@@ -131,12 +131,20 @@ it is no gate and its adapter posts no trigger.
    testing pass on the same unchanged implementation. Then establish the
    declared pre-PR gate, reusing its matching passing result. If fixing a gate
    failure changes the implementation, restart at step 5. Once the complete
-   loop passes unchanged, use `/update-pr` to commit and push without amending
-   or force-pushing. If that skill is unavailable, follow its documented
-   workflow directly.
-8. Re-read the exact head, every check on it, terminal automation verdicts,
-   actionable findings, unresolved threads, and unanswered inline automation
-   threads. Apply the readiness and `retry_at` rules in the reference. A new
+   loop passes unchanged, publish it. When another
+   [review round on local commits](../SKILL.md#review-rounds-on-local-commits)
+   will read the change, commit it through `git-workflow`'s commit step
+   without amending, return that commit as the head for the round, and push
+   only after the last round. Before that push, even when no round remains,
+   run step 3's `inspect` on the still-published head and handle any finding
+   that arrived meanwhile from step 4; a fix it needs returns to step 5, so
+   the pushed content has passed review, behavior testing and the gate. Then
+   push once through `/update-pr`. Otherwise use `/update-pr` to commit and
+   push without amending or force-pushing. If that skill is unavailable,
+   follow its documented workflow directly.
+8. After a push, re-read the exact head, every check on it, terminal
+   automation verdicts, actionable findings, unresolved threads, and unanswered
+   inline automation threads. Apply the readiness and `retry_at` rules in the reference. A new
    head invalidates external gate evidence. Preserve local evidence for each
    requirement only when the pushed content is identical and its recorded
    dependencies did not change. A validated CI, code, or behavior failure

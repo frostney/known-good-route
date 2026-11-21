@@ -106,7 +106,20 @@ run only `status`, with every exact `PR=SHA`.
    is ready for review or a draft whose GitHub Actions CI passed; for such a
    draft that the frozen rule does not freeze, list its ref under `rewrite`
    with `draftOnly` and the reason, checked again just before the push.
-9. Enforce the native-stack reference's push-boundary checks for the frozen
+9. When another [review round on local commits](../SKILL.md#review-rounds-on-local-commits)
+   will read the restacked local heads, commit and restack locally, run that
+   round on them, and publish below once, after the last round. Layers can
+   freeze while the fixes wait, and a restack moves every layer above a fix:
+   before that push, repeat step 5's inspection on the still-published heads
+   and route any new live finding through step 7, read the live stack
+   again, place every waiting fix anew under step 7 against it, and keep
+   every frozen head. When the new placement changes a layer's base or
+   head, rerun step 8 on the integrated tree and review that layer's new
+   diff before the push, within the caller's round limit. When the caller's
+   rounds are spent, apply its rule for the last round's fixes to the new
+   placement and name the changed layers in the result; if the caller
+   requires another review instead, return that as a blocker. Enforce the
+   native-stack reference's push-boundary checks for the frozen
    prefix and every branch the push moves or creates; preserve the frozen PR
    heads and metadata. Publish a fix made in place through the native-stack
    reference's in-place repair path: commit it on its layer, restack only the

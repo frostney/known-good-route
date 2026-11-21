@@ -104,3 +104,21 @@ resolution, and deterministic waits. All `scripts/` paths in its procedure are
 relative to this skill directory. Helpers supply facts and exact mutations;
 the agent owns judgment. Preserve the chosen mode's publication and readiness
 gates, and never substitute repeated model heartbeats for a passive wait.
+
+### Review rounds on local commits
+
+A review round that the agent runs itself on a commit's diff from its base,
+such as `git diff origin/main...SHA`, reads a local commit and needs no push.
+When the next round is such a review, commit each round's fixes through
+`git-workflow`'s commit step, run the next round on that commit, and push once,
+when no further round will run: after a clean round, or once the last round's
+fixes pass their checks. A push between rounds starts CI on a head the next
+push replaces; under a cancel-in-progress group that run is cancelled before it
+reports, and the next round gains nothing from it. Push before the rounds end
+only for a step that reads the published head: a review provider that reviews
+pushes, a preview that specification testing needs, or a person who asks to
+see it. Between rounds, still read the findings and check results that arrive
+on the published head, and handle them with the round's own. A stack layer's
+round diffs against the local head of the layer below it, not its remote base,
+which lacks fixes that are not yet pushed. Readiness, CI and review evidence
+still belong to the head that is finally pushed.
