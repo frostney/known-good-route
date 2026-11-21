@@ -429,8 +429,8 @@ class RenderedHeadingTests(unittest.TestCase):
         )
         self.assertEqual([h.has_content for h in CHECK_TEMPLATE.headings(note, "issue")], [False])
 
-    def test_a_line_break_in_a_heading_separates_its_words(self):
-        self.assertEqual(self.read("line_break_heading"), [("Rollout plan", True)])
+    def test_a_line_break_in_a_heading_is_part_of_it(self):
+        self.assertEqual(self.read("line_break_heading"), [("Rollout<br>plan", True)])
 
     def test_a_checked_task_item_is_content_and_an_unchecked_one_is_not(self):
         self.assertEqual(self.read("checked_task"), [("Done", True), ("Open", False)])
@@ -826,6 +826,17 @@ class RendererParityTests(unittest.TestCase):
         # Read as GitHub renders it: the closing rule underlines the line above it.
         self.assertEqual([str(h) for h in template.headings], ["## **Note**: Use this template.", "## A"])
 
+    def test_an_explicit_line_break_is_part_of_a_heading(self):
+        texts = {CHECK_TEMPLATE.headings(REAL_RENDER(h))[0].text for h in ("## Rollout<br>plan\n", "## Rollout plan\n")}
+        self.assertEqual(len(texts), 2)
+
+    def test_yaml_aliases_that_expand_past_the_bound_are_an_error(self):
+        lines = ["a0: &a0 [x, x, x, x, x, x, x, x, x, x]"]
+        lines += [f"a{n}: &a{n} [{', '.join([f'*a{n - 1}'] * 10)}]" for n in range(1, 7)]
+        form = "\n".join([*lines, "body:", "  - type: input", "    attributes: {label: A}", ""])
+        with self.assertRaisesRegex(CHECK_TEMPLATE.CheckError, "expands to more than"):
+            CHECK_TEMPLATE.form_template("f.yml", form)
+
     def test_footnote_escapes_that_are_not_utf8_stay_apart(self):
         texts = {
             CHECK_TEMPLATE.headings(REAL_RENDER(f"## Rollout [^{label}]\n\n[^{label}]: r\n"))[0].text for label in ("check%FF", "check%FE")
@@ -1194,12 +1205,11 @@ class TemplateParsingTests(unittest.TestCase):
 
 class CompareTests(unittest.TestCase):
     def compare(self, sections):
-        template = CHECK_TEMPLATE.parse_template("default.md", ISSUE_TEMPLATE)
+        # The template's own headings, past its front matter, so comparing needs no YAML reader.
+        expected = md_headings(ISSUE_TEMPLATE.split("\n---\n", 1)[1])
         return [
             (problem["kind"], problem["expected"], problem["actual"])
-            for problem in CHECK_TEMPLATE.compare(
-                template.headings, md_headings(body(*sections))
-            )
+            for problem in CHECK_TEMPLATE.compare(expected, md_headings(body(*sections)))
         ]
 
     def test_matching_body_with_extra_subsections_has_no_problems(self):

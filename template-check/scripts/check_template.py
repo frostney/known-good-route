@@ -63,7 +63,11 @@ RENDER = (
 # PyYAML's safe loader as plain JSON, as jsonable() makes it in this process.
 LOAD = (
     "import json, sys, yaml\n"
+    "budget = [int(sys.argv[1])]\n"
     "def plain(value):\n"
+    "    budget[0] -= 1\n"
+    "    if budget[0] < 0:\n"
+    "        raise ValueError(f'the YAML expands to more than {sys.argv[1]} values')\n"
     "    if isinstance(value, dict):\n"
     "        return {str(key): plain(item) for key, item in value.items()}\n"
     "    if isinstance(value, list):\n"
@@ -81,6 +85,8 @@ HEADING_TAG = re.compile(r"h([1-6])")
 # Whitespace HTML collapses in prose; a nonbreaking space shows as it is.
 COLLAPSIBLE = re.compile(r"[ \t\n\r\f]+")
 CODE_SPACE = "\x00"  # A space inside inline code, which no rendered text contains.
+# An explicit <br>, which shows a new line where a newline in the text shows a space.
+BREAK = "\u2028"
 # Block elements that only group what they hold, so a review note may sit inside one.
 WRAPPERS = {"div", "section", "article", "main", "header", "footer", "aside", "nav", "details"}
 # Elements whose headings are their section's content rather than sections.
@@ -163,7 +169,7 @@ class TreeBuilder(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         self.joins = False
         if tag == "br":
-            self.stack[-1].children.append("\n")  # A line break separates words and lines.
+            self.stack[-1].children.append(BREAK)  # A line break separates words and lines.
             return
         if tag in CLOSES_PARAGRAPH and self.stack[-1].tag == "p":
             self.stack.pop()
@@ -205,7 +211,7 @@ def inner_html(node: Node) -> str:
 
     def write(child: Node | str) -> str:
         if isinstance(child, str):
-            return "<br>" if child == "\n" else escape(child, quote=False)
+            return escape(child, quote=False).replace(BREAK, "<br>")
         attrs = "".join(f' {key}="{escape(value)}"' for key, value in child.attrs.items() if key != "data-sourcepos")
         return f"<{child.tag}{attrs}>" if child.tag in VOID else f"<{child.tag}{attrs}>{inner_html(child)}</{child.tag}>"
 
@@ -259,7 +265,7 @@ def footnote_label(href: str) -> str:
 
 def literal(text: str) -> str:
     """Text with each character Markdown could read as markup escaped, so it reads back as written."""
-    text = re.sub(r"([\\`*_~<\[\]&])", r"\\\1", text)
+    text = re.sub(r"([\\`*_~<\[\]&])", r"\\\1", text).replace(BREAK, "<br>")
     # A plain-text URL would become a link where it is written back.
     return re.sub(r"(?i)\b(?:https?|ftp)(?=://)|\bwww(?=\.)", lambda match: match.group(0) + "\\", text)
 
@@ -401,7 +407,7 @@ def names_head(paragraph: Node) -> bool:
         """True once a commit in code is found, False at the first line break."""
         for child in node.children:
             if isinstance(child, str):
-                if "\n" in child:
+                if "\n" in child or BREAK in child:
                     return False
             elif child.tag == "code":
                 if re.fullmatch(r"[0-9a-fA-F]{4,40}", words(child)):
@@ -660,7 +666,7 @@ def render(markdown: str) -> str:
     return isolated(RENDER, markdown, CMARKGFM, "the Markdown renderer")
 
 
-def isolated(program: str, text: str, package: str, what: str) -> str:
+def isolated(program: str, text: str, package: str, what: str, *args: str) -> str:
     """A pinned package's program run through uv on text, for a package that is not installed."""
     uv = shutil.which("uv")
     if not uv:
@@ -671,7 +677,7 @@ def isolated(program: str, text: str, package: str, what: str) -> str:
     command = [
         uv, "run", "--quiet", "--no-config", "--no-project", "--isolated",
         "--default-index", "https://pypi.org/simple", "--python", sys.executable,
-        "--with", package, "python", "-I", "-c", program,
+        "--with", package, "python", "-I", "-c", program, *args,
     ]
     # Index settings inherited from the environment could still add or prefer another source.
     environment = {key: value for key, value in os.environ.items() if key not in UV_SOURCES}
@@ -688,12 +694,23 @@ def isolated(program: str, text: str, package: str, what: str) -> str:
     return completed.stdout
 
 
-def jsonable(value: Any) -> Any:
-    """A loaded YAML value as plain data: mappings with string keys, lists and scalars."""
+# Nodes a template's YAML may expand to; aliases can repeat data exponentially.
+YAML_NODES = 100_000
+
+
+def jsonable(value: Any, budget: list[int] | None = None) -> Any:
+    """A loaded YAML value as plain data: mappings with string keys, lists and scalars.
+
+    ValueError past YAML_NODES nodes, as an alias that repeats nested aliases expands.
+    """
+    budget = budget if budget is not None else [YAML_NODES]
+    budget[0] -= 1
+    if budget[0] < 0:
+        raise ValueError(f"the YAML expands to more than {YAML_NODES} values")
     if isinstance(value, dict):
-        return {str(key): jsonable(item) for key, item in value.items()}
+        return {str(key): jsonable(item, budget) for key, item in value.items()}
     if isinstance(value, list):
-        return [jsonable(item) for item in value]
+        return [jsonable(item, budget) for item in value]
     if value is None or isinstance(value, (str, int, float, bool)):
         return value
     return {"!": type(value).__name__}  # A date or another YAML type, which is no text where text belongs.
@@ -706,7 +723,7 @@ def load_yaml(text: str) -> Any:
             return jsonable(yaml.safe_load(text))
         except (yaml.YAMLError, ValueError, OverflowError) as error:  # An escape past the last code point raises the others.
             raise ValueError(f"not valid YAML: {error}") from error
-    result = json.loads(isolated(LOAD, text, PYYAML, "the YAML reader"))
+    result = json.loads(isolated(LOAD, text, PYYAML, "the YAML reader", str(YAML_NODES)))
     if "error" in result:
         raise ValueError(f"not valid YAML: {result['error']}")
     return result["value"]
