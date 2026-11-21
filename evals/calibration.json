@@ -4653,21 +4653,21 @@
       "caseId": "deep-dive-earlier-findings-first",
       "status": "new",
       "rationale": [
-        "Invented case: a CI backlog that the team profiled and discussed three days earlier, with a hosted-runner option the person already rejected. The answer must build on the earlier thread and the runner history and not re-propose the rejected option. Fresh native run required."
+        "Invented case: a CI backlog that the team profiled and discussed three days earlier, with a hosted-runner option the person already rejected. The measurement is a recorded targeted check that must come after reading the earlier thread and the runner history; the answer must test the earlier finding against the current profile, keep the rejected option out and recommend a next step. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "e9131fc4a4b0a9d85b4f7fa85aea517504f9e9e98b9ce532b6087adb3e8f82dd",
-      "frozenCaseSha256": "e9131fc4a4b0a9d85b4f7fa85aea517504f9e9e98b9ce532b6087adb3e8f82dd"
+      "afterSha256": "08e327f085e9660dafe58aef1e9ac80c82a1a7da592b257208456b90087fc677",
+      "frozenCaseSha256": "08e327f085e9660dafe58aef1e9ac80c82a1a7da592b257208456b90087fc677"
     },
     {
       "caseId": "deep-dive-earlier-findings-first-review",
       "status": "new",
       "rationale": [
-        "Invented case: the fresh-context reviewer for the CI backlog diagnosis rereads the earlier thread and writes its verdict to a file. Fresh native run required."
+        "Invented case: the fresh-context reviewer for the CI backlog diagnosis rereads the earlier thread and the measurement the parent ran, and writes its verdict to a file. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "59c396a34b15557de52236be74f6d30f8e2c08e97e2b69bfb807edca89a26863",
-      "frozenCaseSha256": "59c396a34b15557de52236be74f6d30f8e2c08e97e2b69bfb807edca89a26863"
+      "afterSha256": "044ca3f93c955d050ad9034ad85ef5bb1e228a13f9559f1c548bb758c11244e4",
+      "frozenCaseSha256": "044ca3f93c955d050ad9034ad85ef5bb1e228a13f9559f1c548bb758c11244e4"
     }
   ],
   "hashFormat": "afterSha256 uses JSON.stringify of the loaded current case; beforeSha256 retains original Python canonical JSON for provenance",

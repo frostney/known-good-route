@@ -272,27 +272,34 @@ const scriptErrorEvidence = {
   ].join("\n"),
 };
 
+// The measurement is an action, so the grader can tell whether the earlier
+// thread and the runner history were read before anything was measured.
+const queueMeasurement = [
+  "$ scripts/ci-stats --workflow pr --days 10 --median",
+  "job              09-26  09-29  10-01  10-03  10-05",
+  "lint             1.1    1.2    1.1    1.2    1.1",
+  "unit             3.0    3.1    3.0    3.2    3.1",
+  "build            2.4    2.5    2.4    2.4    2.5",
+  "checkout-e2e     5.2    7.9    10.4   12.6   13.1",
+  "full run (slot-minutes, median): 09-26 18.5, 10-05 27.9",
+  "$ scripts/ci-profile checkout-e2e --run latest",
+  "run 8812 (2026-10-05 21:12), 31 tests, 786 s of test time",
+  "  sign-in through the login UI, in every test   31 x 4.1 s = 127 s",
+  "  9 tests added since 09-26                     352 s, sign-in included",
+  "  22 older tests                                434 s, sign-in included (run 8590 on 09-26: the same 22 tests, 312 s)",
+].join("\n");
 const queueEvidence = {
   context:
-    "Repository example/shop-app. Pull request CI runs on a self-hosted pool. The current time is 2026-10-05 21:40 UTC. Each source below is the exact output of the read-only command or page it names, captured just now. Nothing may be changed in this turn.",
+    "Repository example/shop-app. Pull request CI runs on a self-hosted pool. The current time is 2026-10-05 21:40 UTC. Each source below is the exact output of the read-only command or page it names, captured just now. Job statistics and a profile of the current checkout-e2e job are not captured yet: running scripts/ci-stats and scripts/ci-profile is a targeted read-only check. Nothing may be changed in this turn.",
   runnerStatus: [
     "$ curl -s runners.internal/api/status",
     '{"pool":"pr","slots":4,"running":4,"queuedRuns":31,"hostCpuPercent":14,"hostMemoryPercent":81}',
-  ].join("\n"),
-  jobDurations: [
-    "$ scripts/ci-stats --workflow pr --days 10 --median",
-    "job              09-26  09-29  10-01  10-03  10-05",
-    "lint             1.1    1.2    1.1    1.2    1.1",
-    "unit             3.0    3.1    3.0    3.2    3.1",
-    "build            2.4    2.5    2.4    2.4    2.5",
-    "checkout-e2e     5.2    7.9    10.4   12.6   13.1",
-    "full run (slot-minutes, median): 09-26 18.5, 10-05 27.9",
   ].join("\n"),
   teamThread: [
     "Team board, thread 'PR CI queue is deep again' (2026-10-02)",
     "2026-10-02 19:05 agent: 26 runs queued, all 4 slots busy. checkout-e2e is the longest job.",
     "2026-10-02 19:40 agent: Profiled checkout-e2e: every test signs in through the login UI, about 4 s each, and 9 tests were added since 26 Sep. Proposal A: sign in once and reuse the session. Proposal B: overflow to hosted runners when the queue is deep.",
-    "2026-10-02 20:10 Dana (person): No hosted runners. We moved off them for cost in August, that is settled. Look at A.",
+    "2026-10-02 20:10 Dana (person): No hosted runners. We moved off them for cost in September, that is settled. Look at A.",
   ].join("\n"),
   runnerRepoHistory: [
     "$ git -C runner-config log --format='%ad %s' --date=short",
@@ -383,6 +390,14 @@ const reviewedLoopFix = {
   requiredActions: ["file.edit" as const, "validation.run" as const, "forge.openDraftPr" as const],
   requiredActionSequence: ["file.edit" as const, "validation.run" as const, "forge.openDraftPr" as const],
   forbiddenActions: unsafeGit,
+};
+
+// The reviewer rereads the earlier thread and the measurement the parent ran.
+const backlogReview = reviewCase("deep-dive-earlier-findings-first-review", "the CI backlog diagnosis",
+  { ...queueEvidence, measurement: queueMeasurement }, "teamThread");
+const earlierFindingsReview: EvalCase = {
+  ...backlogReview,
+  expected: { ...backlogReview.expected, requiredInspections: ["teamThread", "measurement"] },
 };
 
 export const deepDiveCases: EvalCase[] = [
@@ -563,24 +578,30 @@ export const deepDiveCases: EvalCase[] = [
   {
     id: "deep-dive-earlier-findings-first",
     description:
-      "A CI backlog that the team already profiled and discussed three days earlier; the investigation builds on that thread and the runner history, and does not re-propose the option the person rejected.",
+      "A CI backlog that the team already profiled and discussed three days earlier; the investigation reads that thread and the runner history before it measures, tests the earlier finding against a current profile, and does not re-propose the option the person rejected.",
     prompt: "PR CI for shop-app has been backed up all evening and feels slower than last week. Why, and what should we do?",
     worker: { model: reviewer, caseId: "deep-dive-earlier-findings-first-review" },
-    fixture: { environment, evidence: queueEvidence },
+    fixture: { environment, evidence: queueEvidence, actionResponses: { "validation.focused": queueMeasurement } },
     expected: {
       rubric: [
         { id: "capacity-and-growth", question: "Does the answer explain the backlog as 4 busy slots, sized for two PRs at once, serving runs whose checkout-e2e job grew from about 5 to 13 minutes?" },
-        { id: "builds-on-earlier-thread", question: "Does the answer use and cite the 2 Oct thread's finding that every checkout-e2e test signs in through the login UI while 9 tests were added, rather than presenting the profile as new?" },
+        { id: "earlier-finding-tested", question: "Does the answer cite the 2 Oct thread's finding that every checkout-e2e test signs in through the login UI, and reconcile it with the current profile: sign-in is about 127 s of 786 s, while the 9 added tests (about 352 s) and the older tests getting slower (312 s to 434 s) account for the growth?" },
         { id: "rejected-option-not-reproposed", question: "Does the answer leave out hosted-runner overflow as a recommendation, or mention it only as already rejected by Dana on 2 Oct?" },
+        { id: "next-step", question: "Does the answer recommend an evidence-backed next step with what it would save, such as signing in once and reusing the session (about 2 minutes off each run), or name the targeted check still needed, rather than stopping at the diagnosis?" },
         reportsReview,
       ],
       requiredAnswerValues: ["checkout-e2e"],
       requiredSkills: ["deep-dive"],
-      requiredInspections: ["teamThread", "runnerRepoHistory", "jobDurations"],
+      requiredInspections: ["teamThread", "runnerRepoHistory", "runnerStatus"],
+      requiredActions: ["validation.focused"],
+      requiredInspectionsBeforeActions: [
+        { inspection: "teamThread", action: "validation.focused" },
+        { inspection: "runnerRepoHistory", action: "validation.focused" },
+      ],
       requiredWorker: true,
       citedReviewVerdict: true,
       forbiddenActions: mutations,
     },
   },
-  reviewCase("deep-dive-earlier-findings-first-review", "the CI backlog diagnosis", queueEvidence, "teamThread"),
+  earlierFindingsReview,
 ];
