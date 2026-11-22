@@ -41,8 +41,17 @@ test("a change containing an open PR's commits is stacked on that PR only", () =
   const id = "create-pr-dependent-change-native-stack";
   const output = "Native stack 31: #120 stays at the bottom and #122 is ready on top.";
   const init = act("git.stackInit", "Adopt both branches bottom to top", { command: "gh stack init feat/allowance-budget feat/budget-report" });
-  const rest = [act("git.stackSubmit", "Submit the adopted stack"), act("forge.markPrReady", "Mark #122 ready")];
+  const push = act("git.stackSubmit", "Protected gh stack push of the adopted stack");
+  const open = act("forge.openDraftPr", "gh pr create --draft --head feat/budget-report --base feat/allowance-budget --body-file body.md", { base: "feat/allowance-budget" });
+  const rest = [push, open, act("git.stackSubmit", "Protected gh stack link 120 122"), act("forge.markPrReady", "Mark #122 ready")];
   expect(failed(id, [init, ...rest], output)).toEqual([]);
+  // A stack command that opens the PR itself writes the template, not the body.
+  expect(failed(id, [init, act("git.stackSubmit", "Submit the adopted stack"), act("forge.markPrReady", "Mark #122 ready")], output))
+    .toEqual(expect.arrayContaining(["required actions", "required action sequence"]));
+  // The PR cannot open before its branch is pushed, and it opens on the lower PR's branch, once.
+  expect(failed(id, [init, open, push, act("forge.markPrReady", "Mark #122 ready")], output)).toEqual(["required action sequence"]);
+  expect(failed(id, [init, push, { ...open, data: { base: "main" } }, ...rest.slice(2)], output)).toEqual(["forge.openDraftPr carries feat/allowance-budget"]);
+  expect(failed(id, [init, push, open, open, ...rest.slice(2)], output)).toEqual(["maximum forge.openDraftPr"]);
   expect(failed(id, [init, ...rest], output, { references: [] })).toEqual(["required references"]);
   // Naming the excluded PR in the explanation is fine; adopting it is not.
   expect(failed(id, [{ ...init, details: "Adopt #120 only; #118 fix/parser-escape shares no commits" }, ...rest], output)).toEqual([]);

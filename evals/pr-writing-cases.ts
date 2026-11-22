@@ -157,19 +157,19 @@ export const prWritingCases: EvalCase[] = [
     fixture: { environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } }, evidence: { ...createEvidence,
       finalDiff: "The report page preserves the selected month when switching chart/table; previously it reset to January. The final diff changes only that behavior.",
       template: "No mandatory headings. Put full PR text in data.body, title in data.title and local attachment paths in data.attachments of forge.openDraftPr. These are fixture arguments for a supported upload operation.",
-      mediaCapabilities: "Observed supported attachment client accepts PNG with #alt text and MP4 plain paths. Current recording /tmp/report-filter.mp4 was exported from the real validated scenario at the exact current revision. It shows selecting April, switching chart/table, and the month staying April. English voice-over, burnt-in subtitles from the same script and measured segment timings are present. Playback was inspected: text readable, audio intelligible, captions synchronized, behavior matches narration. Before and after images /tmp/report-before.png and /tmp/report-after.png show comparable viewport/data on target main and current candidate. All files are outside the repository. This observation is existing implementation evidence; no new recording or export is necessary.",
-      pullRequest: "No PR yet; inspect publishedAssets after creating it to verify reviewer access and retrieve URLs for the final body.",
+      mediaCapabilities: "Observed supported attachment client accepts PNG with #alt text and MP4 plain paths. It uploads each attachment in the call that writes the body and replaces every body reference to an attached path with that file's uploaded URL; a file the body does not reference is appended at its end. Current recording /tmp/report-filter.mp4 was exported from the real validated scenario at the exact current revision. It shows selecting April, switching chart/table, and the month staying April. English voice-over, burnt-in subtitles from the same script and measured segment timings are present. Playback was inspected: text readable, audio intelligible, captions synchronized, behavior matches narration. Before and after images /tmp/report-before.png and /tmp/report-after.png show comparable viewport/data on target main and current candidate. All files are outside the repository. This observation is existing implementation evidence; no new recording or export is necessary.",
+      pullRequest: "No PR yet; inspect publishedAssets after creating it to verify reviewer access.",
       publishedAssets: "No uploaded assets exist before creation.",
     }, actionResponses: { ...createResponses,
-      "forge.openDraftPr": "Draft PR #71 created at current head with three requested attachments: report-before.png, report-after.png and report-filter.mp4. Inspect publishedAssets for the observed links and playback result.",
+      "forge.openDraftPr": "Draft PR #71 created at current head with three requested attachments: report-before.png, report-after.png and report-filter.mp4. Each body reference to an attached path now points at its uploaded URL. Inspect publishedAssets for the observed links and playback result.",
     }, transitions: [{ after: "forge.openDraftPr", evidence: {
       publishedAssets: "Actual PR attachment inspection confirms all assets are accessible to repository reviewers. Before: https://github.com/user-attachments/assets/before71.png. After: https://github.com/user-attachments/assets/after71.png. Video: https://github.com/user-attachments/assets/walkthrough71.mp4. Embedded PR video playback has the same intelligible voice-over, readable burnt-in subtitles and synchronization as the inspected local export. The uploaded stills retain the comparable viewport/data.",
     } }] },
     expected: {
       rubric: [
         { id: "attachments-requested", question: "Does the recorded forge.openDraftPr action request all three existing assets (the before image, the after image and the walkthrough video) as attachments?" },
-        { id: "body-comparison-table", question: "Does the body of the recorded forge.updatePrMetadata action contain a labelled before/after table using the uploaded image URLs (not local /tmp paths)?" },
-        { id: "body-walkthrough-link", question: "Does the recorded forge.updatePrMetadata body include the uploaded walkthrough video (not a local /tmp path)?" },
+        { id: "body-comparison-table", question: "Does the body of the recorded forge.openDraftPr action contain a labelled before/after table whose cells reference the before and after images by the same paths that action attaches?" },
+        { id: "body-walkthrough-link", question: "Does the body of the recorded forge.openDraftPr action reference the walkthrough video by the same path that action attaches?" },
         { id: "pr-ready", question: "Does the final response report that PR #71 was marked ready for review after the required checks passed, with the uploaded before/after images and narrated walkthrough verified as accessible to reviewers, without claiming it was merged?" },
       ],
       requiredAnswerValues: [
@@ -177,13 +177,11 @@ export const prWritingCases: EvalCase[] = [
       ],
       requiredActionValues: [
         { action: "forge.openDraftPr", values: ["/tmp/report-before.png", "/tmp/report-after.png", "/tmp/report-filter.mp4"] },
-        { action: "forge.updatePrMetadata", values: ["https://github.com/user-attachments/assets/before71.png", "https://github.com/user-attachments/assets/after71.png", "https://github.com/user-attachments/assets/walkthrough71.mp4"] },
       ],
       requiredSkills: ["create-pr"], requiredReferences: ["create-pr/references/walkthroughs.md", "agent-writing/references/pr-descriptions.md"],
       requiredInspections: ["mediaCapabilities", "publishedAssets"],
-      requiredActions: ["forge.openDraftPr", "forge.updatePrMetadata", "monitor.wait", "forge.markPrReady"],
-      forbiddenActions: [...forbiddenPublicationExtras, "file.edit", "behaviorTest.run"],
-      requiredActionsBeforeActions: [{ before: "forge.openDraftPr", after: "forge.updatePrMetadata" }],
+      requiredActions: ["forge.openDraftPr", "monitor.wait", "forge.markPrReady"],
+      forbiddenActions: [...forbiddenPublicationExtras, "file.edit", "behaviorTest.run", "forge.updatePrMetadata"],
     },
   },
 ];
