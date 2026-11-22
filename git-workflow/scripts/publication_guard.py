@@ -87,7 +87,7 @@ NOT_REPOSITORY_OWNERS = {
     "about", "account", "apps", "codespaces", "collections", "contact", "customer-stories", "dashboard",
     "enterprise", "explore", "features", "issues", "login", "marketplace", "new", "notifications", "orgs",
     "organizations", "pricing", "pulls", "readme", "search", "security", "settings", "site", "sponsors",
-    "topics", "trending", "users",
+    "topics", "trending", "user-attachments", "users",
 }
 REMOTE_URL = re.compile(
     r"(?:(?P<scheme>[A-Za-z][A-Za-z0-9+.-]*)://)?(?:[^@/\s]+@)?(?P<host>[A-Za-z0-9][^/:\s@]*)(?::(?P<port>\d+))?"
@@ -166,6 +166,19 @@ def slug_of(match):
     if kind == "url" and repo_name.lower().endswith(".git"):
         repo_name = repo_name[:-4]
     return kind, f"{match.group(owner)}/{repo_name}"
+
+
+def reserved_route(match):
+    """A github.com URL under a route that names no repository, such as an uploaded attachment.
+
+    The same two segments can still be looked up as a repository when the text
+    also mentions them as an issue reference, so every pass checks the match
+    itself, not only its key.
+    """
+    # Only a web address has such routes; on the REST API and raw-file hosts
+    # the same segment is a repository owner.
+    return (bool(match.group("url")) and match.group("host").lower() in GITHUB_HOSTS
+            and match.group("uo").lower() in NOT_REPOSITORY_OWNERS)
 
 
 def gh_api(*args, host="github.com"):
@@ -518,7 +531,7 @@ class Sanitiser:
 
     def private_slug(self, match):
         _, key = slug_of(match)
-        return key if key.lower() in self.private else None
+        return key if key.lower() in self.private and not reserved_route(match) else None
 
     def neutral(self, match):
         kind, _ = slug_of(match)
@@ -864,7 +877,7 @@ def candidates(texts, root, base_dir=""):
             owner, repo = key.split("/")
             if owner.lower() == PLACEHOLDER_OWNER:
                 continue
-            if kind == "url" and owner.lower() in NOT_REPOSITORY_OWNERS:
+            if reserved_route(match):
                 continue
             if kind == "bare" and (owner.isdigit() or repo.isdigit() or (root / key).exists()
                                    or (root / base_dir / key).exists()):
@@ -1025,7 +1038,8 @@ def guard(args):
     def carries(path, lines):
         texts_to_check = scan_texts(path, lines)
         return local.present(texts_to_check) or any(
-            slug_of(match)[1].lower() in private for text in texts_to_check for match in REFERENCE.finditer(text))
+            slug_of(match)[1].lower() in private and not reserved_route(match)
+            for text in texts_to_check for match in REFERENCE.finditer(text))
 
     for sha, message, added, _ in history:
         targets = [path for path, lines in added.items() if carries(path, lines)]
