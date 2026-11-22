@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 import { evalCases } from "./cases.ts";
+import { createFixtureState } from "./fixture-state.ts";
 import { gradeRun, validateCases } from "./grading.ts";
 import { loadSkills } from "./skill-loader.ts";
 import type { RunLedger } from "./types.ts";
@@ -429,37 +430,60 @@ describe("eval grading", () => {
       return;
     }
 
-    const opened = (head: string, base: string) => ({
+    const commits = ["7bc95303180e691172935037e6433d7179aa365b", "8299eaae8b42638b07c4fb503ef54279527a5c46", "36b5ea66636d1661f44d8aac0404dedff27955bf"];
+    const opened = (head: string, base: string, commit: string) => ({
       action: "forge.openDraftPr" as const,
       details: `gh pr create --draft --head ${head} --base ${base} --body-file ${head}.md`,
-      data: { head, base },
+      data: { head, base, body: `## Summary\nOne layer of #90.\n\n## Evidence\nReview and behavior passed on ${commit}.` },
     });
+    const push = { action: "git.stackSubmit" as const, details: "Protected push of the three layers", data: { command: "python3 git-workflow/scripts/stack_push_guard.py run --admission a.json -- gh stack push --remote origin" } };
+    const createData = { command: "gh api --method POST repos/example/parser/stacks --input create.json", body: { pull_requests: [91, 92, 93] } };
     const layers = [
-      { action: "git.stackSubmit" as const, details: "Protected gh stack push of the three layers" },
-      opened("parser-contract", "main"),
-      opened("parser-implementation", "parser-contract"),
-      opened("parser-cli", "parser-implementation"),
-      { action: "git.stackSubmit" as const, details: "Create the native stack from the three PR numbers: gh api --method POST repos/example/project/stacks" },
+      push,
+      opened("parser-contract", "main", commits[0]!),
+      opened("parser-implementation", "parser-contract", commits[1]!),
+      opened("parser-cli", "parser-implementation", commits[2]!),
+      { action: "git.stackSubmit" as const, details: "Create the native stack from the three PR numbers", data: createData },
     ];
     const ready = { action: "forge.markPrReady" as const, details: "Mark each exact-head green layer ready" };
     const createOutput = "Submitted bottom-to-top stack for #90; every exact head is green.";
-    expect(
-      gradeRun(createCase, ordered({ loadedSkills: ["create-pr"], actions: [...layers, ready] }), createOutput).passed,
-    ).toBeTrue();
+    const grade = (actions: RunLedger["actions"]) =>
+      gradeRun(createCase, ordered({ loadedSkills: ["create-pr"], actions: [...actions, ready] }), createOutput);
+    const failing = (actions: RunLedger["actions"]) => grade(actions).checks.filter((c) => !c.passed).map((c) => c.name);
+    expect(failing(layers)).toEqual([]);
     // Layers opened top down, or a second push where the create request belongs, do not publish the stack.
-    expect(
-      gradeRun(createCase, ordered({ loadedSkills: ["create-pr"], actions: [layers[0]!, layers[3]!, layers[2]!, layers[1]!, layers[4]!, ready] }), createOutput).passed,
-    ).toBeFalse();
-    expect(
-      gradeRun(createCase, ordered({ loadedSkills: ["create-pr"], actions: [...layers.slice(0, 4), layers[0]!, ready] }), createOutput).passed,
-    ).toBeFalse();
-    expect(
-      gradeRun(createCase, ordered({ loadedSkills: ["create-pr"], actions: [
-        ...layers.slice(0, 4),
-        { action: "git.stackSubmit", details: "Join the layers", data: { command: "gh stack submit --remote origin --auto" } },
-        ready,
-      ] }), createOutput).passed,
-    ).toBeFalse();
+    expect(grade([layers[0]!, layers[3]!, layers[2]!, layers[1]!, layers[4]!]).passed).toBeFalse();
+    expect(grade([...layers.slice(0, 4), layers[0]!]).passed).toBeFalse();
+    expect(grade([...layers.slice(0, 4), { action: "git.stackSubmit", details: "Join the layers", data: { command: "gh stack submit --remote origin --auto" } }]).passed).toBeFalse();
+    // Head and base swapped on every opening, no protected push, or an empty first body fail.
+    const swapped = layers.map((a) => a.action === "forge.openDraftPr" ? { ...a, data: { ...a.data, head: a.data.base, base: a.data.head } } : a);
+    expect(failing(swapped)).toHaveLength(3);
+    expect(failing(layers.slice(1))).toEqual(expect.arrayContaining(["git.stackSubmit carries gh stack push before forge.openDraftPr"]));
+    const empty = layers.map((a) => a.action === "forge.openDraftPr" ? { ...a, data: { ...a.data, body: "## Summary\n\n## Evidence\n" } } : a);
+    expect(failing(empty)).toHaveLength(3);
+    // A read of the stacks path, PR numbers as strings, or branch names in place of numbers create nothing.
+    for (const data of [
+      { command: "gh api repos/example/parser/stacks" },
+      { ...createData, body: { pull_requests: ["91", "92", "93"] } },
+      { ...createData, body: { pull_requests: ["parser-contract", "parser-implementation", "parser-cli"] } },
+      { ...createData, body: { pull_requests: [93, 92, 91] } },
+    ])
+      expect(failing([...layers.slice(0, 4), { action: "git.stackSubmit", details: "Create", data }]))
+        .toEqual(['git.stackSubmit carries POST, repos/example/parser/stacks | /repos/example/parser/stacks, {"pull_requests":[91,92,93]} after forge.openDraftPr']);
+    // The fixture opens a layer only after the push and on its own head and base, and makes the stack only once all three opened.
+    const replay = (actions: RunLedger["actions"]) => {
+      const state = createFixtureState(createCase.fixture);
+      return { results: actions.map((a) => state.record(a.action, a.data, a.details)), topology: state.evidence.stackTopology! };
+    };
+    const full = replay(layers);
+    expect(full.results.slice(1, 4).every((r) => String(r).includes("PR Evidence check passed"))).toBeTrue();
+    expect(full.topology).toContain("native stack 9");
+    expect(replay(swapped).results.slice(1, 4).every((r) => String(r).startsWith("gh pr create failed"))).toBeTrue();
+    expect(replay([...layers.slice(1, 4), push, layers[4]!]).topology).not.toContain("native stack 9");
+    expect(replay([push, layers[1]!, layers[4]!]).topology).not.toContain("native stack 9");
+    expect(replay([...layers.slice(0, 4), { action: "git.stackSubmit", details: "Read", data: { command: "gh api repos/example/parser/stacks" } }]).topology)
+      .not.toContain("native stack 9");
+    expect(replay(empty).results.slice(1, 4).every((r) => String(r).includes("PR Evidence check failed"))).toBeTrue();
     // gh stack submit opening the layers with the template, then filling in their bodies, is the old two-write path.
     expect(
       gradeRun(
@@ -1964,15 +1988,18 @@ describe("eval grading", () => {
       },
       {
         action: "git.stackSubmit" as const,
-        details: "Protected gh stack push of the fix branch",
+        details: "Protected push of the fix branch",
+        data: { command: "python3 git-workflow/scripts/stack_push_guard.py run --admission a.json -- gh stack push --remote origin" },
       },
       {
         action: "forge.openDraftPr" as const,
         details: "Open top fix PR #713 with its claim, validation and finding links",
+        data: { head: "stack-18/review-fixes", base: "stack-18/list-limits", body: "## Summary\nFixes T711 and T712.\n\n## Evidence\nReview, behavior and the gate passed on 713cccc." },
       },
       {
         action: "git.stackSubmit" as const,
-        details: "Append #713 to stack 18: gh api --method POST repos/octo/app/stacks/18/add",
+        details: "Append #713 to stack 18",
+        data: { command: "gh api --method POST repos/octo/app/stacks/18/add --input append.json", body: { pull_requests: [713] } },
       },
       {
         action: "forge.replyInline" as const,
@@ -2021,6 +2048,36 @@ describe("eval grading", () => {
         "Stack 18 is ready and merged through #712.",
       ).passed,
     ).toBeFalse();
+
+    // A read in the append slot, an opening on another base, or an empty first body do not converge.
+    const fixLayer = (index: number, data: Record<string, unknown>) =>
+      gradeRun(
+        converged,
+        ordered({
+          loadedSkills: ["address-feedback", "code-review", "test-against-spec"],
+          loadedReferences: ["address-feedback/references/stack-readiness.md"],
+          actions: convergenceActions.map((a, at) => at === index ? { ...a, data } : a),
+        }),
+        convergenceOutput,
+      ).checks.filter((c) => !c.passed).map((c) => c.name);
+    const opening = convergenceActions[6]!.data!;
+    expect(fixLayer(7, { command: "gh api repos/octo/app/stacks/18" }))
+      .toEqual(['git.stackSubmit carries POST, repos/octo/app/stacks/18/add | /repos/octo/app/stacks/18/add, {"pull_requests":[713]} after forge.openDraftPr']);
+    expect(fixLayer(6, { ...opening, base: "main" })).toEqual(["forge.openDraftPr carries stack-18/list-limits, 713cccc"]);
+    expect(fixLayer(6, { ...opening, body: "## Summary\n\n## Evidence\n" })).toEqual(["forge.openDraftPr carries stack-18/list-limits, 713cccc"]);
+    expect(fixLayer(5, { command: "gh stack view" })).toEqual(["git.stackSubmit carries gh stack push before forge.openDraftPr"]);
+    // The fixture shows #713 in the stack only after an append naming it, and resolving the threads does not add it.
+    const replay = (actions: RunLedger["actions"]) => {
+      const state = createFixtureState(converged.fixture);
+      for (const a of actions) state.record(a.action, a.data, a.details);
+      return state.evidence;
+    };
+    const resolve = { action: "forge.resolveThread" as const, details: "Resolve" };
+    expect(replay([...convergenceActions.slice(5, 8), resolve, resolve]).finalAudit).toContain("#713 713cccc");
+    const withoutAppend = replay([...convergenceActions.slice(5, 7), { action: "git.stackSubmit", details: "Read", data: { command: "gh api repos/octo/app/stacks/18" } }, resolve, resolve]);
+    expect(withoutAppend.finalAudit).not.toContain("#713");
+    expect(withoutAppend.reviewThreads).toContain("resolved");
+    expect(replay(convergenceActions.slice(6, 8)).finalAudit).not.toContain("#713");
 
     // One combined submit, then replacing the generated metadata, writes the fix layer's body twice.
     expect(

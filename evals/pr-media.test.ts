@@ -39,19 +39,41 @@ const open = {
 };
 const wait = { action: "monitor.wait" as const, details: "checks on the head" };
 const ready = { action: "forge.markPrReady" as const, details: "PR #71" };
-const attachmentsCheck = `forge.openDraftPr carries ${files.slice(0, 2).join(", ")}`;
-const bodyCheck = `forge.openDraftPr carries ${files.map((f) => `](${f}) | ](<${f}>)`).join(", ")}`;
+const attachmentsCheck = `forge.openDraftPr carries ${files.join(", ")}`;
+const bodyCheck = `forge.openDraftPr carries ${files.map((f) => `](${f}) | ](<${f}>)`).join(", ")}, ${files[2]}`;
 
 test("the media case passes when the PR opens with its media in the body", () => {
   expect(failed([open, wait, ready])).toEqual([]);
   // Alt text given with an image's attachment still names the attached file.
   const images = files.slice(0, 2).map((f) => `${f}#Alt text`);
   expect(failed([{ ...open, data: { ...open.data, attachments: [...images, files[2]] } }, wait, ready])).toEqual([]);
-  // gh refuses alt text on a video, and a longer path is another file.
-  expect(failed([{ ...open, data: { ...open.data, attachments: [...images, `${files[2]}#Alt text`] } }, wait, ready]))
-    .toEqual([`forge.openDraftPr carries ${files[2]}`]);
-  expect(failed([{ ...open, data: { ...open.data, attachments: [`${files[0]}.bak`, files[1], files[2]] } }, wait, ready]))
-    .toEqual([`forge.openDraftPr carries ${files[0]}, ${files[1]}`]);
+  // gh refuses alt text on a video, and a longer or prefixed path is another file.
+  for (const attachments of [
+    [...images, `${files[2]}#Alt text`],
+    [`${files[0]}.bak`, files[1], files[2]],
+    [`${files[0]}.bak#Before`, files[1], files[2]],
+    [`x${files[0]}`, files[1], files[2]],
+    [files.join(" ")],
+  ])
+    expect(failed([{ ...open, data: { ...open.data, attachments } }, wait, ready])).toEqual([attachmentsCheck]);
+});
+
+test("the media case fails a video reference gh turns into a link", () => {
+  // Inline, on a line below other text in the same paragraph, in a list, or as a plain link, the video plays nowhere.
+  for (const placement of [
+    `Walkthrough: ![Video](${files[2]})`,
+    `Watch this:\n![Video](${files[2]})`,
+    `- ![Video](${files[2]})`,
+    `[Video](${files[2]})`,
+    `\`\`\`\n![Video](${files[2]})\n\`\`\``,
+  ]) {
+    const inline = body.replace(`![Walkthrough](<${files[2]}>)`, placement);
+    expect(failed([{ ...open, data: { ...open.data, body: inline } }, wait, ready])).toEqual([bodyCheck]);
+  }
+  // Alone in its paragraph, with or without angle brackets, it plays.
+  for (const alone of [`![Walkthrough](${files[2]})`, `  ![](${files[2]})  `, `![Walkthrough](${files[2]})\n\nMore text.`])
+    expect(failed([{ ...open, data: { ...open.data, body: body.replace(`![Walkthrough](<${files[2]}>)`, alone) } }, wait, ready]))
+      .toEqual([]);
 });
 
 test("a review note updated after CI is not a second media write", () => {
@@ -62,7 +84,7 @@ test("a review note updated after CI is not a second media write", () => {
 test("the media case fails a PR opened without its media", () => {
   // Naming the paths in the details does not attach them.
   expect(failed([{ ...open, details: `attach ${files.join(" ")}`, data: { ...open.data, body: "Keeps the month.", attachments: [] } }, wait, ready]))
-    .toEqual([attachmentsCheck, `forge.openDraftPr carries ${files[2]}`, bodyCheck]);
+    .toEqual([attachmentsCheck, bodyCheck]);
 });
 
 test("the media case fails a file that is attached but not referenced in the body", () => {
@@ -78,13 +100,21 @@ test("the media case fails a second creation and readiness before checks or asse
   );
 });
 
-test("the fixture reports uploads only when the creation attached every file", () => {
-  const attached = createFixtureState(media.fixture);
-  attached.record("forge.openDraftPr", open.data, open.details);
-  expect(attached.evidence.publishedAssets).toContain("accessible to repository reviewers");
-  const none = createFixtureState(media.fixture);
-  none.record("forge.openDraftPr", { ...open.data, attachments: [] }, `attach ${files.join(" ")}`);
-  expect(none.evidence.publishedAssets).toContain("no uploaded files");
+test("the fixture reports uploads only when the creation attached every file as gh accepts it", () => {
+  const assets = (data: Record<string, unknown>, details = open.details) => {
+    const state = createFixtureState(media.fixture);
+    state.record("forge.openDraftPr", data, details);
+    return state.evidence.publishedAssets;
+  };
+  expect(assets(open.data)).toContain("embedded as a player");
+  expect(assets({ ...open.data, attachments: [`${files[0]}#Before`, `${files[1]}#After`, files[2]] })).toContain("embedded as a player");
+  expect(assets({ ...open.data, attachments: [] }, `attach ${files.join(" ")}`)).toContain("no uploaded files");
+  expect(assets({ ...open.data, attachments: [files[0], files[1], `${files[2]}#Video`] })).toContain("no uploaded files");
+  expect(assets({ ...open.data, attachments: [`${files[0]}.bak`, files[1], files[2]] })).toContain("no uploaded files");
+  // Inline markup uploads the video but shows a link, not a player.
+  const inline = assets({ ...open.data, body: body.replace(`![Walkthrough](<${files[2]}>)`, `Walkthrough: ![Video](${files[2]})`) });
+  expect(inline).toContain("no embedded player");
+  expect(inline).not.toContain("playback");
 });
 
 test("an asset inspection before the creation does not verify the uploads", () => {

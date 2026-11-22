@@ -251,8 +251,18 @@ them (it confused a 40-character revision with a 42-character one):
   a rerun, and fails the same way. `within` matches each value inside the
   named fields instead of as the whole field, such as an image reference in
   a body; a letter, digit, dot, dash or slash beside the value continues it,
-  so `/tmp/a.png` is not inside `/tmp/a.png.bak`. It needs `fields`.
-  A named field is also read from a recorded `command`: `--head SHA` or
+  so `/tmp/a.png` is not inside `/tmp/a.png.bak`, while a dot that ends a
+  sentence does not. `suffix` lets a field or array element continue the
+  value after that separator, such as an image's `#alt text` in an
+  attachment argument. `alone` matches a path only as the destination of a
+  Markdown image that stands alone in its paragraph, where GitHub plays an
+  uploaded video. `json` compares the field as JSON, so a request body
+  matches in any spacing and fails with strings for numbers or another
+  order. Each of these needs `fields`, and a rule takes at most one. `also`
+  lists further conditions, each matched its own way, that the same action
+  must carry, such as a request's method, path and body together.
+  Without those options a named field is also read from a recorded
+  `command`: `--head SHA` or
   `--head=SHA` there carries the `head` field, as long as the command gives
   that flag no other value. The `performAction` tool's `data` description
   names a field for every action whose rules read one, so a run knows to

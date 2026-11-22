@@ -16,6 +16,13 @@ const createResponses = {
   "forge.markPrReady": "PR #71 is now ready, open and unmerged at the verified head.",
 } as const;
 const walkthroughFiles = ["/tmp/report-before.png", "/tmp/report-after.png", "/tmp/report-filter.mp4"];
+// gh takes an image's alt text after # in its --attach argument and refuses it on a video.
+const attachedFiles = [
+  { values: walkthroughFiles.slice(0, 2), fields: ["attachments"], suffix: "#" },
+  { values: [walkthroughFiles[2]!], fields: ["attachments"] },
+];
+// gh plays a video only from an image reference alone in its paragraph; anywhere else it becomes a link.
+const playableVideo = { values: [walkthroughFiles[2]!], fields: ["body"], alone: true };
 const forbiddenPublicationExtras = ["git.commit", "git.amend", "git.forcePush", "git.rebase", "forge.mergePr", "user.ask", "validation.run", "delegate"] as const;
 
 export const prWritingCases: EvalCase[] = [
@@ -167,16 +174,20 @@ export const prWritingCases: EvalCase[] = [
       { after: "forge.openDraftPr", evidence: {
         publishedAssets: "PR #71 has no uploaded files: the creation attached none, and its body shows only the text it was given.",
       } },
-      // The uploads exist only when the creation attached all three files.
-      { after: "forge.openDraftPr", whenCarries: { values: walkthroughFiles, fields: ["attachments"], within: true }, evidence: {
-        publishedAssets: "Actual PR attachment inspection confirms all assets are accessible to repository reviewers. Before: https://github.com/user-attachments/assets/before71.png. After: https://github.com/user-attachments/assets/after71.png. Video: https://github.com/user-attachments/assets/walkthrough71.mp4. Each body reference to an attached path now points at its upload; a file the body did not reference was appended at the end. Embedded PR video playback has the same intelligible voice-over, readable burnt-in subtitles and synchronization as the inspected local export. The uploaded stills retain the comparable viewport/data.",
+      // The uploads exist only when the creation attached all three files, each argument as gh accepts it.
+      { after: "forge.openDraftPr", whenCarries: attachedFiles, evidence: {
+        publishedAssets: "Actual PR attachment inspection confirms all assets are accessible to repository reviewers. Before: a private repository. After: a private repository. Video: a private repository. Each body reference to an attached path now points at its upload; a file the body did not reference was appended at the end. The body shows the video as a link to its upload, with no embedded player. The uploaded stills retain the comparable viewport/data.",
+      } },
+      // The video plays in the PR only where its image reference stands alone in a paragraph.
+      { after: "forge.openDraftPr", whenCarries: [...attachedFiles, playableVideo], evidence: {
+        publishedAssets: "Actual PR attachment inspection confirms all assets are accessible to repository reviewers. Before: a private repository. After: a private repository. Video: a private repository, embedded as a player where the body placed it. Each body reference to an attached path now points at its upload; a file the body did not reference was appended at the end. Embedded PR video playback has the same intelligible voice-over, readable burnt-in subtitles and synchronization as the inspected local export. The uploaded stills retain the comparable viewport/data.",
       } },
     ] },
     expected: {
       rubric: [
         { id: "attachments-requested", question: "Does the recorded forge.openDraftPr action request all three existing assets (the before image, the after image and the walkthrough video) as attachments?" },
         { id: "body-comparison-table", question: "Does the body of the recorded forge.openDraftPr action contain a labelled before/after table whose cells reference the before and after images by the same paths that action attaches?" },
-        { id: "body-walkthrough-link", question: "Does the body of the recorded forge.openDraftPr action reference the walkthrough video by the same path that action attaches?" },
+        { id: "body-walkthrough-link", question: "Does the body of the recorded forge.openDraftPr action embed the walkthrough video as an image reference (![…](path)) to the same path that action attaches, alone in its own paragraph with no other text in that paragraph, so GitHub shows it as a player?" },
         { id: "pr-ready", question: "Does the final response report that PR #71 was marked ready for review after the required checks passed, with the uploaded before/after images and narrated walkthrough verified as accessible to reviewers, without claiming it was merged?" },
       ],
       requiredAnswerValues: [
@@ -184,10 +195,9 @@ export const prWritingCases: EvalCase[] = [
       ],
       requiredActionValues: [
         // An image may carry its alt text after #; gh refuses alt text on a video.
-        { action: "forge.openDraftPr", values: walkthroughFiles.slice(0, 2), fields: ["attachments"], within: true },
-        { action: "forge.openDraftPr", values: [walkthroughFiles[2]!], fields: ["attachments"] },
-        // Each file is referenced in the body, so the upload replaces it in place.
-        { action: "forge.openDraftPr", values: walkthroughFiles.map((file) => [`](${file})`, `](<${file}>)`]), fields: ["body"], within: true },
+        { action: "forge.openDraftPr", ...attachedFiles[0]!, also: [attachedFiles[1]!] },
+        // Each file is referenced in the body, so the upload replaces it in place, and the video plays.
+        { action: "forge.openDraftPr", values: walkthroughFiles.map((file) => [`](${file})`, `](<${file}>)`]), fields: ["body"], within: true, also: [playableVideo] },
       ],
       requiredSkills: ["create-pr"], requiredReferences: ["create-pr/references/walkthroughs.md", "agent-writing/references/pr-descriptions.md"],
       requiredInspections: ["mediaCapabilities", "publishedAssets"],

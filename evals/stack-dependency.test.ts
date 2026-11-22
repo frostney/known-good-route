@@ -1,9 +1,12 @@
 import { expect, test } from "bun:test";
+import { createFixtureState } from "./fixture-state.ts";
 import { gradeRun } from "./grading.ts";
 import { historyInspections as inspections, stackDependencyCases } from "./stack-dependency-cases.ts";
 import type { ActionName, RunLedger } from "./types.ts";
 
 const byId = (id: string) => stackDependencyCases.find((c) => c.id === id)!;
+// The head of feat/budget-report in the fixture.
+const report = "222222246df57efe21b6921ac28a9ad5fd8b69f7";
 const failed = (
   id: string,
   actions: RunLedger["actions"],
@@ -41,17 +44,38 @@ test("a change containing an open PR's commits is stacked on that PR only", () =
   const id = "create-pr-dependent-change-native-stack";
   const output = "Native stack 31: #120 stays at the bottom and #122 is ready on top.";
   const init = act("git.stackInit", "Adopt both branches bottom to top", { command: "gh stack init feat/allowance-budget feat/budget-report" });
-  const push = act("git.stackSubmit", "Protected gh stack push of the adopted stack");
-  const open = act("forge.openDraftPr", "gh pr create --draft --head feat/budget-report --base feat/allowance-budget --body-file body.md", { base: "feat/allowance-budget", head: "feat/budget-report" });
-  const rest = [push, open, act("git.stackSubmit", "Create the native stack from PRs 120 and 122", { command: "gh api --method POST repos/example/project/stacks --input create.json" }), act("forge.markPrReady", "Mark #122 ready")];
+  const push = act("git.stackSubmit", "Protected gh stack push of the adopted stack", { command: "python3 git-workflow/scripts/stack_push_guard.py run --admission admission.json -- gh stack push --remote origin" });
+  const body = `## Summary\nShows the remaining allowance.\n\n## Evidence\nReview and behavior tests passed on ${report}.`;
+  const open = act("forge.openDraftPr", "gh pr create --draft --head feat/budget-report --base feat/allowance-budget --body-file body.md", { base: "feat/allowance-budget", head: "feat/budget-report", body });
+  const createData = { command: "gh api --method POST repos/example/project/stacks --input create.json", endpoint: "repos/example/project/stacks", body: { pull_requests: [120, 122] } };
+  const create = act("git.stackSubmit", "Create the native stack from PRs 120 and 122", createData);
+  const rest = [push, open, create, act("forge.markPrReady", "Mark #122 ready")];
+  const pushCheck = "git.stackSubmit carries gh stack push before forge.openDraftPr";
+  const openCheck = `forge.openDraftPr carries feat/budget-report, feat/allowance-budget, ${report} | 2222222`;
+  const createCheck = 'git.stackSubmit carries POST, repos/example/project/stacks | /repos/example/project/stacks, {"pull_requests":[120,122]} after forge.openDraftPr';
   expect(failed(id, [init, ...rest], output)).toEqual([]);
+  // The request may be recorded by its fields, its body as text in any spacing.
+  expect(failed(id, [init, push, open, act("git.stackSubmit", "Create", { command: "gh api repos/example/project/stacks --input create.json", method: "POST", endpoint: "/repos/example/project/stacks", body: '{ "pull_requests": [120, 122] }' }), rest[3]!], output)).toEqual([]);
+  // A read of the stacks path, numbers given as strings or in another order, or a body left out create nothing.
+  for (const data of [
+    { command: "gh api repos/example/project/stacks?pull_request=122" },
+    { ...createData, command: "gh api --method GET repos/example/project/stacks" },
+    { ...createData, body: { pull_requests: ["120", "122"] } },
+    { ...createData, body: { pull_requests: [122, 120] } },
+    { command: createData.command },
+  ])
+    expect(failed(id, [init, push, open, act("git.stackSubmit", "Create", data), rest[3]!], output)).toEqual([createCheck]);
+  // The PR opens after the push, with head and base each in its own field and an Evidence section naming its head.
+  expect(failed(id, [init, open, ...rest.slice(2)], output)).toEqual(expect.arrayContaining([pushCheck]));
+  expect(failed(id, [init, push, { ...open, data: { ...open.data, head: "feat/allowance-budget", base: "feat/budget-report" } }, ...rest.slice(2)], output)).toEqual([openCheck]);
+  expect(failed(id, [init, push, { ...open, data: { ...open.data, body: "## Summary\n\n## Evidence\n" } }, ...rest.slice(2)], output)).toEqual([openCheck]);
   // A stack command that opens the PR itself writes the template, not the body.
   expect(failed(id, [init, act("git.stackSubmit", "Submit the adopted stack"), act("forge.markPrReady", "Mark #122 ready")], output))
     .toEqual(expect.arrayContaining(["required actions", "required action sequence"]));
   // The PR cannot open before its branch is pushed, and it opens on the lower PR's branch, once.
   expect(failed(id, [init, open, push, act("forge.markPrReady", "Mark #122 ready")], output))
-    .toEqual(["git.stackSubmit carries /stacks | create endpoint after forge.openDraftPr", "required action sequence"]);
-  expect(failed(id, [init, push, { ...open, data: { base: "main", head: "feat/budget-report" } }, ...rest.slice(2)], output)).toEqual(["forge.openDraftPr carries feat/allowance-budget"]);
+    .toEqual([pushCheck, createCheck, "required action sequence"]);
+  expect(failed(id, [init, push, { ...open, data: { ...open.data, base: "main" } }, ...rest.slice(2)], output)).toEqual([openCheck]);
   expect(failed(id, [init, push, open, open, ...rest.slice(2)], output)).toEqual(["maximum forge.openDraftPr"]);
   // A stack command in the push slot opens the PR with the template, whatever follows it.
   const submit = act("git.stackSubmit", "Protected submit", { command: "gh stack submit --auto --remote origin" });
@@ -59,16 +83,16 @@ test("a change containing an open PR's commits is stacked on that PR only", () =
     .toEqual(expect.arrayContaining(["git.stackSubmit omits gh stack submit --auto, link 120 feat/budget-report", "git.stackSubmit omits stack submit, stack link"]));
   const linkBranch = act("git.stackSubmit", "Protected link", { command: "gh stack link 120 feat/budget-report --remote origin" });
   expect(failed(id, [init, linkBranch, open, rest[2]!, rest[3]!], output))
-    .toEqual(["git.stackSubmit omits gh stack submit --auto, link 120 feat/budget-report", "git.stackSubmit omits stack submit, stack link"]);
+    .toEqual([pushCheck, "git.stackSubmit omits gh stack submit --auto, link 120 feat/budget-report", "git.stackSubmit omits stack submit, stack link"]);
   // Filling in the body after the PR opened is a second write; a review note after CI is not.
   const fill = act("forge.updatePrMetadata", "Replace the template body of #122");
   expect(failed(id, [init, ...rest.slice(0, 3), fill, act("monitor.wait", "checks on 2222222"), rest[3]!], output))
     .toEqual(["no forge.updatePrMetadata before monitor.wait"]);
   expect(failed(id, [init, ...rest.slice(0, 3), act("monitor.wait", "checks on 2222222"), fill, rest[3]!], output)).toEqual([]);
-  expect(failed(id, [init, push, { ...open, data: { base: "feat/allowance-budget", head: "main" } }, ...rest.slice(2)], output))
-    .toEqual(["forge.openDraftPr carries feat/budget-report"]);
+  expect(failed(id, [init, push, { ...open, data: { ...open.data, head: "main" } }, ...rest.slice(2)], output))
+    .toEqual([openCheck]);
   // A second push where the create request belongs joins nothing.
-  expect(failed(id, [init, push, open, push, rest[3]!], output)).toEqual(["git.stackSubmit carries /stacks | create endpoint after forge.openDraftPr"]);
+  expect(failed(id, [init, push, open, push, rest[3]!], output)).toEqual([createCheck]);
   // Reordered flags still name the stack command.
   const reordered = act("git.stackSubmit", "Join", { command: "gh stack submit --remote origin --auto" });
   expect(failed(id, [init, push, open, reordered, rest[2]!, rest[3]!], output))
@@ -85,6 +109,40 @@ test("a change containing an open PR's commits is stacked on that PR only", () =
     act("forge.openDraftPr", "gh pr create --draft", { base: "feat/allowance-budget" }),
     act("forge.markPrReady", "Mark #122 ready"),
   ], output)).toEqual(expect.arrayContaining(["required actions", "forbidden actions"]));
+});
+
+test("the dependent-change fixture opens the PR and makes the stack only on the right calls", () => {
+  const evalCase = byId("create-pr-dependent-change-native-stack");
+  const pushData = { command: "python3 git-workflow/scripts/stack_push_guard.py run --admission admission.json -- gh stack push --remote origin" };
+  const body = `## Summary\nShows the remaining allowance.\n\n## Evidence\nReview and behavior tests passed on ${report}.`;
+  const openData = { head: "feat/budget-report", base: "feat/allowance-budget", body };
+  const createData = { command: "gh api --method POST repos/example/project/stacks --input create.json", body: { pull_requests: [120, 122] } };
+  const run = (calls: Array<[ActionName, Record<string, unknown>]>) => {
+    const state = createFixtureState(evalCase.fixture);
+    const results = calls.map(([action, data]) => state.record(action, data, ""));
+    return { results, topology: state.evidence.stackTopology! };
+  };
+  const done = run([["git.stackSubmit", pushData], ["forge.openDraftPr", openData], ["git.stackSubmit", createData]]);
+  expect(done.results[1]).toContain("PR Evidence check passed");
+  expect(done.topology).toContain("native stack 31");
+  // Before the push, or with head and base reversed, nothing opens and no stack forms.
+  for (const calls of [
+    [["forge.openDraftPr", openData], ["git.stackSubmit", pushData], ["git.stackSubmit", createData]],
+    [["git.stackSubmit", pushData], ["forge.openDraftPr", { ...openData, head: openData.base, base: openData.head }], ["git.stackSubmit", createData]],
+  ] as Array<Array<[ActionName, Record<string, unknown>]>>) {
+    const { results, topology } = run(calls);
+    expect(results.find((r) => String(r).startsWith("gh pr create failed"))).toBeDefined();
+    expect(topology).not.toContain("native stack 31");
+  }
+  // An empty Evidence section opens the PR with a failed first check.
+  expect(run([["git.stackSubmit", pushData], ["forge.openDraftPr", { ...openData, body: "## Summary\n\n## Evidence\n" }]]).results[1])
+    .toContain("PR Evidence check failed");
+  // A read of the stacks path is no create request.
+  expect(run([["git.stackSubmit", pushData], ["forge.openDraftPr", openData], ["git.stackSubmit", { command: "gh api repos/example/project/stacks" }]]).topology)
+    .not.toContain("native stack 31");
+  // A PR a stack command opened leaves the later creation refused as a duplicate.
+  expect(run([["git.stackSubmit", pushData], ["git.stackSubmit", { command: "gh stack submit --auto --remote origin" }], ["forge.openDraftPr", openData]]).results[2])
+    .toContain("already exists");
 });
 
 test("a lower PR based by hand on another PR's branch stops publication", () => {
