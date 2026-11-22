@@ -87,7 +87,7 @@ NOT_REPOSITORY_OWNERS = {
     "about", "account", "apps", "codespaces", "collections", "contact", "customer-stories", "dashboard",
     "enterprise", "explore", "features", "issues", "login", "marketplace", "new", "notifications", "orgs",
     "organizations", "pricing", "pulls", "readme", "search", "security", "settings", "site", "sponsors",
-    "topics", "trending", "users",
+    "topics", "trending", "user-attachments", "users",
 }
 REMOTE_URL = re.compile(
     r"(?:(?P<scheme>[A-Za-z][A-Za-z0-9+.-]*)://)?(?:[^@/\s]+@)?(?P<host>[A-Za-z0-9][^/:\s@]*)(?::(?P<port>\d+))?"

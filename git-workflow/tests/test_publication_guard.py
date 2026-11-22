@@ -212,6 +212,22 @@ class PublicationGuardTests(unittest.TestCase):
         self.assertEqual(self.staged("notes.md"), text)
         self.assertEqual(self.staged_json("a.json"), {"repo": PUBLIC, "pr": 12, "head": SHA})
 
+    def test_uploaded_attachment_urls_are_untouched(self):
+        # Files uploaded to issues, pull requests and comments, including by gh --attach,
+        # live under github.com/user-attachments, which names no repository.
+        text = ("| Before | After |\n| --- | --- |\n"
+                "| ![Before](https://github.com/user-attachments/assets/0f1e2d3c-1111-4222-8333-944445555666) "
+                "| ![After](https://github.com/user-attachments/assets/1a2b3c4d-5555-4666-8777-988889999000) |\n\n"
+                "[Log](https://github.com/user-attachments/files/123456/run.log)\n")
+        title = self.write("title", "fix: keep the selected month")
+        body = self.write("body", text)
+        self.assertIn("nothing to rewrite", self.guard("pr", "--title-file", str(title), "--body-file", str(body)))
+        self.assertEqual(body.read_text(), text)
+        self.stage({"notes.md": text})
+        self.assertIn("nothing to rewrite", self.guard("staged"))
+        self.assertEqual(self.staged("notes.md"), text)
+        self.assertNotIn("repos/user-attachments", self.log.read_text())
+
     def test_private_slug_in_json_maps_to_a_stable_placeholder_across_files_and_runs(self):
         self.stage({"one.json": {"repo": PRIVATE}, "two.json": {"source": f"https://github.com/{PRIVATE}"},
                     "three.json": {"repo": "example-private/other-thing"}})
