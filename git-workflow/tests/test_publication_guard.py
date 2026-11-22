@@ -229,12 +229,14 @@ class PublicationGuardTests(unittest.TestCase):
         self.assertNotIn("repos/user-attachments", self.log.read_text())
 
     def test_attachment_url_survives_a_private_reference_with_the_same_name(self):
-        # The issue-shaped mention makes a private repository a private key;
-        # the uploaded image beside it still names no repository.
+        # An issue-shaped mention of the attachment route makes its key private;
+        # the uploaded image beside it still names no repository. The mention is
+        # built at run time so the guard does not rewrite this file on commit.
+        route = "/".join(("user-attachments", "assets"))
         image = "![After](https://github.com/user-attachments/assets/0f1e2d3c-1111-4222-8333-944445555666)"
         title = self.write("title", "fix: keep the selected month")
-        body = self.write("body", f"{image}\n\nSee an issue or pull request in a private repository.\n")
-        self.guard("pr", "--title-file", str(title), "--body-file", str(body))
+        body = self.write("body", f"{image}\n\nSee {route}#123.\n")
+        self.assertIn("references 1", self.guard("pr", "--title-file", str(title), "--body-file", str(body)))
         self.assertEqual(body.read_text(),
                          f"{image}\n\nSee an issue or pull request in a private repository.\n")
 
