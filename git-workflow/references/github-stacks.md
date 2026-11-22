@@ -29,9 +29,9 @@ transition for a native stack.
   bottom to top with `gh stack init LOWER-BRANCH BRANCH`, which changes only
   local state, and publish this branch as
   [Open a layer's pull request](#open-a-layers-pull-request) describes: its
-  stack step links the new PR to the lower PR with `gh stack link`, which
-  leaves the lower PR's commits, base and body as they are, so it also serves
-  a lower PR that must stay frozen, for example because it is approved.
+  stack step creates the stack from both PR numbers, which leaves the lower
+  PR's commits, base and body as they are, so it also serves a lower PR that
+  must stay frozen, for example because it is approved.
 
 Joining a stack does not authorize changing the lower PR's commits, base or
 metadata. Fast-forward the local default branch before `init`, and never sync
@@ -162,16 +162,14 @@ update, merge the freshly fetched remote base and push normally.
   incomplete. Missing metadata is not evidence of a safe state. If two reads
   disagree during inspection, discard that observation and reassess before a
   write. Stable reads do not make subsequent GitHub mutations atomic.
-- `gh stack submit` remains the combined command for a broader authorized native
-  stack update. Its Git guard does not constrain later PR metadata writes; do not
-  use that combined path to preserve a frozen dependency during top-layer publication.
-  It opens a PR for a layer without one with the template unfilled and cannot
-  attach media, so open every such layer first, bottom to top, as
-  [Open a layer's pull request](#open-a-layers-pull-request) describes; submit
-  then creates no PR and writes no title or body. Check every
-  PR's title, body, base, draft state and linked requirements after submission,
-  and check each layer's observed validation. Put a closing keyword only on the layer that
-  completes the issue.
+- `gh stack submit` is the extension's combined command. Its Git guard does
+  not constrain later PR metadata writes, and it finds each layer's PR by
+  branch name and opens one with the template unfilled when it finds none, so
+  never use it to publish a layer: push, open and join every new layer as
+  [Open a layer's pull request](#open-a-layers-pull-request) describes. Check
+  every PR's title, body, base, draft state and linked requirements after
+  publication, and check each layer's observed validation. Put a closing
+  keyword only on the layer that completes the issue.
 - Treat every layer as a real PR. Validate its exact head and review its own
   claim; do not let evidence from one layer stand in for another.
 - `/address-feedback` is the explicit review exception for a whole native
@@ -331,9 +329,9 @@ take it for a flag or try it as a PR number first. A first number that names a
 stack and is not also a local branch name appends the rest to the stack's top.
 Otherwise list every PR the stack already holds, bottom to top, or link refuses
 to drop them. Link pushes only the arguments that name local branches and opens
-a draft PR for each branch without one, with the template unfilled, so give it
-PR numbers that [Open a layer's pull request](#open-a-layers-pull-request)
-created. It then moves each existing PR's base
+a draft PR for each branch without one, with the template unfilled, which is
+why [Open a layer's pull request](#open-a-layers-pull-request) joins new
+layers through the native endpoints instead. It then moves each existing PR's base
 onto the PR below it, and the bottom one onto the default branch, or onto the
 stack's top when appending; a refused base change only warns. Check every PR's
 base and the stack again afterwards.
@@ -359,55 +357,69 @@ disable or replace the supplied hook when launching the native command.
 ## Open a layer's pull request
 
 Open each new layer's PR with its complete title and body, media included, in
-one write. `gh stack submit` and `gh stack link` open a PR for a branch without
-one with the template unfilled, and neither they nor `gh api .../pulls` can
-attach media, so each would leave the PR without its body until a second
+one write. `gh stack submit --auto` and `gh stack link` open a PR for a branch
+without one with the template unfilled, and neither they nor `gh api .../pulls`
+can attach media, so each would leave the PR without its body until a second
 write. A repository check that validates the body when a PR is opened then
 fails its first run.
 
-1. Push the branch through the
+1. Before pushing, check that the repository answers
+   `gh api repos/OWNER/REPO/stacks` and that the PR below, when there is one,
+   is open or draft, not queued for merge and without auto-merge, as a stack
+   requires. A layer opened where no stack can take it is a PR whose base is
+   set by hand to another PR's branch.
+2. Push the branch through the
    [protected publication helper](#protected-publication-helper) with
    `gh stack push --remote REMOTE`, admitting each branch as that section
    says: a member the push does not move with equal source and expected IDs,
-   and each new branch as absent. Record the push's
-   completion and re-read the exact remote heads.
-2. Claim the creation once. Write the title and body files, run the
+   and each new branch as absent. Record the push's completion and re-read
+   the exact remote heads.
+3. Claim the creation once. Write the title and body files, run the
    [publication guard](../SKILL.md#publication-guard) on them, then, from the
    repository root, run
-   `gh pr create --repo HOST/OWNER/REPO --draft --head BRANCH --base LOWER-BRANCH --title TITLE --body-file FILE`,
-   where LOWER-BRANCH is the head branch of the PR directly below, or the
-   remote default for a bottom layer. Add
-   `--attach PATH` for each media file as
-   [PR media](../../create-pr/references/walkthroughs.md#upload-media)
+   `gh pr create --repo HOST/OWNER/REPO --draft --head BRANCH --base BASE-BRANCH --title TITLE --body-file FILE`,
+   where BASE-BRANCH is the head branch of the PR directly below, or the
+   stack's trunk for a bottom layer. Add `--attach PATH` for each media file
+   as [PR media](../../create-pr/references/walkthroughs.md#upload-media)
    describes. With `--head`, gh pushes nothing: it names the branch already on
-   the remote and fails without creating anything when the branch is not
-   there. It refuses when an open PR for that head and base already exists.
-3. Read the full PR: number, head branch and commit, base branch and base
+   the remote and creates no PR when the branch is not there. It refuses when
+   an open PR for that head and base already exists.
+4. Read the full PR: number, head branch and commit, base branch and base
    commit, draft and open state, auto-merge, and a body that matches the
    checked file with each media reference pointing at its upload. A non-zero
    exit or a lost response leaves creation uncertain: once the command has
    stopped, read GitHub for a PR on that head before anything else, and never
-   run the creation again while one may exist. A partial upload failure still
-   creates the PR and prints its URL; complete its body as PR media says.
-4. Add the PR to the stack, after reading the full PR and native stack again.
-   When the PR below is the top of a native stack, append it through the
-   endpoint in [Recover a partial publication](#recover-a-partial-publication).
-   When the PR below is in no stack yet, run
-   `gh stack link LOWER-PR NEW-PR --remote REMOTE` through the helper with
-   both branches admitted at equal source and expected IDs. Given two PR
-   numbers, link pushes nothing, opens no PR and writes no title or body; it
-   creates the stack and moves only a base that differs, and both already
-   match. Before a broader `gh stack submit`, open every layer that has no PR
-   this way, bottom to top after one protected push, and let submit create the
-   stack. Check every PR's base and the stack again afterwards.
+   run the creation again while one may exist. A failed upload can still
+   create the PR; complete its body as PR media says.
+5. Read the full PRs and the native stack again, then join the PR to its stack
+   with a native request that names the exact PR numbers. When the PR below is
+   the top of a native stack, append it through the endpoint in
+   [Recover a partial publication](#recover-a-partial-publication). Otherwise
+   create the stack through GitHub's
+   [create endpoint](https://docs.github.com/en/rest/pulls/stacks#create-a-pull-request-stack):
+   write the PR numbers bottom to top in a JSON body, for example
+   `{"pull_requests":[120,122]}`, and run
+   `gh api --method POST repos/OWNER/REPO/stacks -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' --input /path/to/create.json`.
+   Both requests require each PR's base to be the head branch of the PR below
+   and change no base. `gh stack link` instead takes its bottom base from the
+   local `origin/HEAD` and may retarget the lower PR before creating the
+   stack, and `gh stack submit` finds each layer's PR by branch name and opens
+   a new one when it finds none. For several new layers, open each one bottom
+   to top after one protected push, then name them all in one request. Handle
+   a conflict, validation error or lost response as that section says.
+6. Verify membership, order, heads and bases, then run
+   `gh stack checkout STACK-NUMBER` so the local stack records the native
+   stack's number; it only records it when the local layers match the stack's
+   PRs. Stop on a composition conflict it reports.
 
 ## Recover a partial publication
 
 If the approved branch was pushed but has no PR, claim a separate creation once
-and create it with steps 2 and 3 of
+and create it with steps 3 and 4 of
 [Open a layer's pull request](#open-a-layers-pull-request), at the exact
 approved head branch, base branch, title and body.
-Then read the full PR and native stack again before claiming append. Do not use
+Then read the full PR and native stack again before claiming the stack request
+of step 5 there. Do not use
 combined branch linking to choose a different base from a concurrently changed
 stack. Preserve creation evidence; a lost response requires reconciliation after
 its executor stops, not a second creation. An older uncertain link attempt with

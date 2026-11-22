@@ -129,8 +129,8 @@ push, and it fails when the file cannot be moved, which the guard then says.
   checked files). A stack command never writes a pull request's first title
   or body: the
   [stack reference](references/github-stacks.md#open-a-layers-pull-request)
-  opens each layer with `gh pr create` before `gh stack submit` or
-  `gh stack link` runs.
+  opens each layer with `gh pr create` and joins it through a native stack
+  request, so neither `gh stack submit` nor `gh stack link` publishes a layer.
 
 Act on its result:
 

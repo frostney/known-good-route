@@ -30,6 +30,7 @@ const common = {
   projectGate: `The declared gate passed on the unchanged head ${report}.`,
   pullRequest: "No pull request exists for feat/budget-report.",
 };
+const recordStack = "Record the protected push and each native stack request (a gh stack command or its REST call) as git.stackSubmit, and each pull request you open as forge.openDraftPr.";
 const publication: ActionName[] = [
   "forge.mergePr", "forge.openDraftPr", "git.amend", "git.forcePush", "git.push", "git.rebase", "git.stackMerge",
 ];
@@ -49,22 +50,29 @@ export const stackDependencyCases: EvalCase[] = [
         ...common,
         openPullRequests: listing(pr(120, "feat/allowance-budget", budget), pr(118, "fix/parser-escape", parser)),
         pullRequestHeads: `$ git fetch origin pull/120/head pull/118/head\n$ git rev-list origin/main..${budget}\n${budget}\n$ git rev-list origin/main..${parser}\n${parser}`,
-        stackTopology: `gh stack view --json reports no locally tracked stack, and GitHub reports no native stack for #118 or #120. Neither PR is approved or has auto-merge enabled. The official gh-stack extension is installed and authenticated. Local feat/allowance-budget and fix/parser-escape match their remote heads ${budget} and ${parser}. feat/budget-report is not on the remote. Record each protected native stack command (gh stack push, gh stack link or gh stack submit) as git.stackSubmit.`,
+        stackTopology: `gh stack view --json reports no locally tracked stack, and GitHub reports no native stack for #118 or #120; the repository's stacks endpoint answers. Neither PR is approved, queued for merge or has auto-merge enabled. The official gh-stack extension is installed and authenticated. Local feat/allowance-budget and fix/parser-escape match their remote heads ${budget} and ${parser}. feat/budget-report is not on the remote. ${recordStack}`,
         continuousIntegration: `After publication, every check on exact head ${report} reaches a successful terminal result.`,
       },
       actionResponses: {
         "git.stackInit": "gh stack init adopted feat/allowance-budget and feat/budget-report as a two-layer local stack on trunk main. No branch was rewritten.",
-        "git.stackSubmit": "The protected native stack command finished. Inspect stackTopology for the resulting branches, pull requests and stack.",
+        "git.stackSubmit": "The protected stack operation finished. Inspect stackTopology for the resulting branches, pull requests and stack.",
         "forge.openDraftPr": `Draft PR #122 opened for feat/budget-report at ${report} with base feat/allowance-budget and the submitted title and body.`,
         "monitor.wait": `Every check on PR #122's exact head ${report} reached a successful terminal result.`,
         "forge.markPrReady": `PR #122 is ready for review at ${report}.`,
       },
       transitions: [
         { after: "git.stackSubmit", occurrence: 1, evidence: {
-          stackTopology: `The protected push left feat/allowance-budget at ${budget} and put feat/budget-report on the remote at ${report}. Local stack: feat/allowance-budget, feat/budget-report on trunk main. GitHub reports no native stack for #120 and no PR for feat/budget-report. Record each protected native stack command (gh stack push, gh stack link or gh stack submit) as git.stackSubmit.`,
+          stackTopology: `The protected push left feat/allowance-budget at ${budget} and put feat/budget-report on the remote at ${report}. Local stack: feat/allowance-budget, feat/budget-report on trunk main. GitHub reports no native stack for #120 and no PR for feat/budget-report. ${recordStack}`,
         } },
+        // A stack command given a branch without a PR opens the PR itself, as gh-stack 0.3.0 does.
+        ...([["link 120 feat/budget-report", "gh stack link"], ["gh stack submit --auto", "gh stack submit"]] as const).map(([command, name]) => ({
+          after: "git.stackSubmit" as const, whenCarries: { values: [command] }, evidence: {
+            stackTopology: `${name} pushed feat/budget-report at ${report} and opened draft PR #122 for it on feat/allowance-budget, titled from the branch name, with the repository's PR template as its body, unfilled. GitHub reports native stack 31 in bottom-to-top order: #120 at ${budget} with base main, unchanged, then #122.`,
+          },
+          actionResponses: { "forge.openDraftPr": "gh pr create failed: a pull request for branch feat/budget-report into branch feat/allowance-budget already exists: #122. Nothing was created." },
+        })),
         { after: "forge.openDraftPr", evidence: {
-          stackTopology: `Draft PR #122 feat/budget-report at ${report} has base feat/allowance-budget. GitHub reports no native stack for #120 or #122 yet. PR #120 is unchanged at ${budget} with base main. Record each protected native stack command (gh stack push, gh stack link or gh stack submit) as git.stackSubmit.`,
+          stackTopology: `Draft PR #122 feat/budget-report at ${report} has base feat/allowance-budget. GitHub reports no native stack for #120 or #122 yet. PR #120 is unchanged at ${budget} with base main. ${recordStack}`,
         } },
         { after: "git.stackSubmit", since: "forge.openDraftPr", occurrence: 1, evidence: {
           stackTopology: `GitHub reports native stack 31 in bottom-to-top order: existing PR #120 feat/allowance-budget at ${budget} with base main, unchanged, and draft PR #122 feat/budget-report at ${report} with base feat/allowance-budget, its title and body as submitted. No other PR changed.`,
@@ -83,7 +91,14 @@ export const stackDependencyCases: EvalCase[] = [
       requiredActionValues: [
         { action: "git.stackInit", values: [["init feat/allowance-budget feat/budget-report","[\"feat/allowance-budget\",\"feat/budget-report\"]"]], every: true },
         { action: "forge.openDraftPr", values: ["feat/allowance-budget"], fields: ["base"] },
+        { action: "forge.openDraftPr", values: ["feat/budget-report"], fields: ["head"] },
       ],
+      // The stack commands that open a PR themselves write the template, not the body.
+      forbiddenActionValues: [
+        { action: "git.stackSubmit", values: ["gh stack submit --auto", "link 120 feat/budget-report"] },
+      ],
+      // Filling in a body after the PR opened is the second write this case rules out.
+      forbiddenActionsBeforeActions: [{ action: "forge.updatePrMetadata", before: "monitor.wait" }],
       requiredSkills: ["create-pr", "git-workflow"],
       requiredReferences: ["git-workflow/references/github-stacks.md"],
       requiredInspectionsBeforeActions: historyInspections.map(inspection => ({ inspection, action: "git.stackInit" as const })),

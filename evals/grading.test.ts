@@ -7,6 +7,11 @@ import type { RunLedger } from "./types.ts";
 
 const repositoryRoot = resolve(import.meta.dir, "..");
 
+// A ledger whose events follow its actions, for checks on their order.
+function ordered(overrides: Partial<RunLedger>): RunLedger {
+  return ledger({ ...overrides, events: (overrides.actions ?? []).map((a) => ({ kind: "action" as const, name: a.action })) });
+}
+
 function ledger(overrides: Partial<RunLedger> = {}): RunLedger {
   return {
     actions: [],
@@ -424,25 +429,38 @@ describe("eval grading", () => {
       return;
     }
 
+    const opened = (head: string, base: string) => ({
+      action: "forge.openDraftPr" as const,
+      details: `gh pr create --draft --head ${head} --base ${base} --body-file ${head}.md`,
+      data: { head, base },
+    });
+    const layers = [
+      { action: "git.stackSubmit" as const, details: "Protected gh stack push of the three layers" },
+      opened("parser-contract", "main"),
+      opened("parser-implementation", "parser-contract"),
+      opened("parser-cli", "parser-implementation"),
+      { action: "git.stackSubmit" as const, details: "Create the native stack from the three PR numbers" },
+    ];
+    const ready = { action: "forge.markPrReady" as const, details: "Mark each exact-head green layer ready" };
+    const createOutput = "Submitted bottom-to-top stack for #90; every exact head is green.";
+    expect(
+      gradeRun(createCase, ordered({ loadedSkills: ["create-pr"], actions: [...layers, ready] }), createOutput).passed,
+    ).toBeTrue();
+    // gh stack submit opening the layers with the template, then filling in their bodies, is the old two-write path.
     expect(
       gradeRun(
         createCase,
-        ledger({
+        ordered({
           loadedSkills: ["create-pr"],
           actions: [
-            {
-              action: "git.stackSubmit",
-              details: "Submit the verified three-layer native stack",
-            },
-            {
-              action: "forge.markPrReady",
-              details: "Mark each exact-head green layer ready",
-            },
+            { action: "git.stackSubmit", details: "Submit", data: { command: "gh stack submit --auto --remote origin" } },
+            { action: "forge.updatePrMetadata", details: "Replace each generated body" },
+            ready,
           ],
         }),
-        "Submitted bottom-to-top stack for #90; every exact head is green.",
+        createOutput,
       ).passed,
-    ).toBeTrue();
+    ).toBeFalse();
 
     expect(
       gradeRun(
@@ -1932,7 +1950,15 @@ describe("eval grading", () => {
       },
       {
         action: "git.stackSubmit" as const,
-        details: "Submit only top fix PR #713",
+        details: "Protected gh stack push of the fix branch",
+      },
+      {
+        action: "forge.openDraftPr" as const,
+        details: "Open top fix PR #713 with its claim, validation and finding links",
+      },
+      {
+        action: "git.stackSubmit" as const,
+        details: "Append #713 to stack 18 through the native endpoint",
       },
       {
         action: "forge.replyInline" as const,
@@ -1950,7 +1976,7 @@ describe("eval grading", () => {
     expect(
       gradeRun(
         converged,
-        ledger({
+        ordered({
           loadedSkills: [
             "address-feedback",
             "code-review",
@@ -1979,6 +2005,21 @@ describe("eval grading", () => {
           ],
         }),
         "Stack 18 is ready and merged through #712.",
+      ).passed,
+    ).toBeFalse();
+
+    // One combined submit, then replacing the generated metadata, writes the fix layer's body twice.
+    expect(
+      gradeRun(
+        converged,
+        ordered({
+          loadedSkills: ["address-feedback", "code-review", "test-against-spec"],
+          loadedReferences: ["address-feedback/references/stack-readiness.md"],
+          actions: convergenceActions.flatMap((a): RunLedger["actions"] =>
+            a.action === "forge.openDraftPr" ? [{ action: "forge.updatePrMetadata", details: "Replace generated metadata on #713" }]
+              : a.details.startsWith("Append") ? [] : [a]),
+        }),
+        convergenceOutput,
       ).passed,
     ).toBeFalse();
 

@@ -90,7 +90,7 @@ export interface EvalFixture {
     // Fire only when this call carries every value, matched as for
     // requiredActionValues, such as a wait on one exact head. Without an
     // occurrence, every matching call fires it.
-    whenCarries?: { values: ExactValue[]; fields?: string[] };
+    whenCarries?: { values: ExactValue[]; fields?: string[]; within?: boolean };
     evidence: Record<string, string>;
     // Overrides affect subsequent calls. A sequence starts at its first
     // response on the next call; a scalar replaces whatever was there.
@@ -130,6 +130,9 @@ export interface EvalExpectations {
     action: ActionName;
     values: ExactValue[];
     fields?: string[];
+    // Match each value as a whole token inside the named fields, such as a
+    // path inside a body, instead of as the whole field. Needs fields.
+    within?: boolean;
     every?: boolean;
     // Only actions recorded before this occurrence (default 1) of the named
     // action count; the check fails when that occurrence is absent.

@@ -104,15 +104,20 @@ function commandCarries(command: unknown, field: string, value: string, anywhere
   return anywhere ? given.includes(value) : given.length > 0 && given.every((one) => one === value);
 }
 
+// With within, a value counts as a whole token inside a named field, such as a
+// path inside a body, instead of only as the whole field.
 export function actionCarries(
   record: RunLedger["actions"][number],
   value: ExactValue,
   fields: string[] | undefined,
   forbidden = false,
+  within = false,
 ): boolean {
   return spellings(value).some((spelling) =>
     fields
-      ? fields.some((field) => fieldCarries(record.data?.[field], spelling) || commandCarries(record.data?.command, field, spelling, forbidden))
+      ? fields.some((field) => within
+          ? record.data?.[field] !== undefined && containsValue(rendered(record.data[field]), spelling)
+          : fieldCarries(record.data?.[field], spelling) || commandCarries(record.data?.command, field, spelling, forbidden))
       : containsValue(
           [record.details, ...Object.values(record.data ?? {}).map(rendered)].join("\n"),
           spelling,
@@ -392,13 +397,13 @@ export function gradeRun(
       : 0;
     const records = ledger.actions.slice(start, end).filter((a) => a.action === requirement.action);
     const carriesAll = (record: RunLedger["actions"][number]) =>
-      requirement.values.every((value) => actionCarries(record, value, requirement.fields));
+      requirement.values.every((value) => actionCarries(record, value, requirement.fields, false, requirement.within));
     checks.push({
       name: `${requirement.action} carries ${requirement.values.map(describe).join(", ")}${from ? ` after ${from.action}` : ""}${limit ? ` before ${limit.action}` : ""}`,
       passed:
         records.length > 0 &&
         (requirement.every ? records.every(carriesAll) : records.some(carriesAll)),
-      detail: `${requirement.every ? "every" : "one"} of ${records.length} recorded; fields=${requirement.fields?.join(",") ?? "details or any data"}`,
+      detail: `${requirement.every ? "every" : "one"} of ${records.length} recorded; fields=${requirement.fields?.join(",") ?? "details or any data"}${requirement.within ? " (within)" : ""}`,
     });
   }
 
@@ -702,7 +707,8 @@ function validateExactValues(evalCase: EvalCase): void {
     !(expected.requiredAnswerValues ?? []).every(valid) ||
     !(expected.forbiddenAnswerValues ?? []).every(valid) ||
     ![...(expected.requiredActionValues ?? []), ...(expected.forbiddenActionValues ?? [])].every(
-      (r) => r.values.length > 0 && r.values.every(valid) && (r.fields ?? ["x"]).length > 0 && (r.fields ?? []).every((f) => f.trim()),
+      (r) => r.values.length > 0 && r.values.every(valid) && (r.fields ?? ["x"]).length > 0 && (r.fields ?? []).every((f) => f.trim())
+        && (!("within" in r) || !r.within || r.fields !== undefined),
     )
   )
     throw new Error(`${evalCase.id}: invalid exact value check`);

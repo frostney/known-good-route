@@ -147,9 +147,9 @@ readiness. Recording a walkthrough does not replace behavior testing.
    `--attach` for each media file as the walkthroughs reference describes.
    For a verified native stack, follow the stack reference: each new layer is
    pushed through the protected helper, opened with its complete body in one
-   `gh pr create`, then appended to its stack or linked to the PR below it;
-   a broader authorized submission opens every new layer that way before
-   `gh stack submit`. Require current evidence for every published layer.
+   `gh pr create`, then joined to its stack through a native stack request
+   that names the exact PR numbers; `gh stack submit` and `gh stack link`
+   never publish a layer. Require current evidence for every published layer.
    Only guarded official stack operations may rebase or push with
    force-with-lease. Preserve bottom-to-top topology and keep each layer draft.
 10. Run the PR-specific phase. Compare the actual PR diff, body, links, metadata,

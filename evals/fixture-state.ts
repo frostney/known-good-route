@@ -34,7 +34,7 @@ export function createFixtureState(fixture: EvalFixture) {
              (action !== "file.edit" || data?.path !== transition.editPath))) continue;
         if (transition.whenResult !== undefined && !String(result ?? "").includes(transition.whenResult)) continue;
         const carries = transition.whenCarries;
-        if (carries && !carries.values.every((value) => actionCarries({ action, details, ...(data ? { data } : {}) }, value, carries.fields))) continue;
+        if (carries && !carries.values.every((value) => actionCarries({ action, details, ...(data ? { data } : {}) }, value, carries.fields, false, carries.within))) continue;
         const since = transition.since === undefined ? -1 :
           recorded.findIndex((r) => r.action === transition.since);
         if (transition.since !== undefined && since < 0) continue;

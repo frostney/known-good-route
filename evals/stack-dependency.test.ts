@@ -42,16 +42,30 @@ test("a change containing an open PR's commits is stacked on that PR only", () =
   const output = "Native stack 31: #120 stays at the bottom and #122 is ready on top.";
   const init = act("git.stackInit", "Adopt both branches bottom to top", { command: "gh stack init feat/allowance-budget feat/budget-report" });
   const push = act("git.stackSubmit", "Protected gh stack push of the adopted stack");
-  const open = act("forge.openDraftPr", "gh pr create --draft --head feat/budget-report --base feat/allowance-budget --body-file body.md", { base: "feat/allowance-budget" });
-  const rest = [push, open, act("git.stackSubmit", "Protected gh stack link 120 122"), act("forge.markPrReady", "Mark #122 ready")];
+  const open = act("forge.openDraftPr", "gh pr create --draft --head feat/budget-report --base feat/allowance-budget --body-file body.md", { base: "feat/allowance-budget", head: "feat/budget-report" });
+  const rest = [push, open, act("git.stackSubmit", "Create the native stack from PRs 120 and 122", { command: "gh api --method POST repos/example/project/stacks --input create.json" }), act("forge.markPrReady", "Mark #122 ready")];
   expect(failed(id, [init, ...rest], output)).toEqual([]);
   // A stack command that opens the PR itself writes the template, not the body.
   expect(failed(id, [init, act("git.stackSubmit", "Submit the adopted stack"), act("forge.markPrReady", "Mark #122 ready")], output))
     .toEqual(expect.arrayContaining(["required actions", "required action sequence"]));
   // The PR cannot open before its branch is pushed, and it opens on the lower PR's branch, once.
   expect(failed(id, [init, open, push, act("forge.markPrReady", "Mark #122 ready")], output)).toEqual(["required action sequence"]);
-  expect(failed(id, [init, push, { ...open, data: { base: "main" } }, ...rest.slice(2)], output)).toEqual(["forge.openDraftPr carries feat/allowance-budget"]);
+  expect(failed(id, [init, push, { ...open, data: { base: "main", head: "feat/budget-report" } }, ...rest.slice(2)], output)).toEqual(["forge.openDraftPr carries feat/allowance-budget"]);
   expect(failed(id, [init, push, open, open, ...rest.slice(2)], output)).toEqual(["maximum forge.openDraftPr"]);
+  // A stack command in the push slot opens the PR with the template, whatever follows it.
+  const submit = act("git.stackSubmit", "Protected submit", { command: "gh stack submit --auto --remote origin" });
+  expect(failed(id, [init, submit, open, push, act("forge.markPrReady", "Mark #122 ready")], output))
+    .toEqual(["git.stackSubmit omits gh stack submit --auto, link 120 feat/budget-report"]);
+  const linkBranch = act("git.stackSubmit", "Protected link", { command: "gh stack link 120 feat/budget-report --remote origin" });
+  expect(failed(id, [init, linkBranch, open, rest[2]!, rest[3]!], output))
+    .toEqual(["git.stackSubmit omits gh stack submit --auto, link 120 feat/budget-report"]);
+  // Filling in the body after the PR opened is a second write; a review note after CI is not.
+  const fill = act("forge.updatePrMetadata", "Replace the template body of #122");
+  expect(failed(id, [init, ...rest.slice(0, 3), fill, act("monitor.wait", "checks on 2222222"), rest[3]!], output))
+    .toEqual(["no forge.updatePrMetadata before monitor.wait"]);
+  expect(failed(id, [init, ...rest.slice(0, 3), act("monitor.wait", "checks on 2222222"), fill, rest[3]!], output)).toEqual([]);
+  expect(failed(id, [init, push, { ...open, data: { base: "feat/allowance-budget", head: "main" } }, ...rest.slice(2)], output))
+    .toEqual(["forge.openDraftPr carries feat/budget-report"]);
   expect(failed(id, [init, ...rest], output, { references: [] })).toEqual(["required references"]);
   // Naming the excluded PR in the explanation is fine; adopting it is not.
   expect(failed(id, [{ ...init, details: "Adopt #120 only; #118 fix/parser-escape shares no commits" }, ...rest], output)).toEqual([]);

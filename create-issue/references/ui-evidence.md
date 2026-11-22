@@ -14,5 +14,8 @@ local screenshots or videos.
   with the same path in the reference and the flag, and read the body back,
   as
   [PR media](../../create-pr/references/walkthroughs.md#upload-media)
-  describes. Media that belongs in a comment goes in with that comment's
-  `gh issue comment --body-file FILE --attach <path>`.
+  describes. When an upload fails, gh can still create the issue with the
+  files that uploaded and exit non-zero: search for the issue before
+  retrying, and write its complete body again with `gh issue edit`. Media
+  that belongs in a comment goes in with that comment's
+  `gh issue comment N --body-file FILE --attach <path>`.

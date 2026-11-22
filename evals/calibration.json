@@ -243,11 +243,19 @@
       "status": "retained",
       "rationale": [
         "Retained task, fixture, and assertions; no demonstrated contract mismatch in calibration.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "With the stack reference before this change, all three claude-opus-5-5 runs (22 Nov) published the layers with one git.stackSubmit and then rewrote their bodies with forge.updatePrMetadata, the two-write path that fails a body check on opened, and the case passed them. Each layer now opens with its own forge.openDraftPr (bases main, parser-contract and parser-implementation, at most three) before the stack request recorded as git.stackSubmit; gh stack submit --auto and forge.updatePrMetadata before the CI wait fail. The evidence names how to record the protected push and the stack request (evals/grading.test.ts). Fresh native run required."
       ],
       "beforeSha256": "e541e52a2045554ac8dc3a0ba29bb410311b1944e41394b2c6443205c7bfc4f9",
-      "afterSha256": "120a1d7fc0540f444d521aa26dbb9abb4d2d3118b9e0016020283f58167e210b",
-      "frozenCaseSha256": "b0281a5978dfdffa6fac92ab92f906467eaa80104bde9cda0bcd7ce5972c5559"
+      "afterSha256": "2fbe5d9336e10191dbdaa0761b66d82d47fd067fe6274d9803985fb005e0c380",
+      "frozenCaseSha256": "b0281a5978dfdffa6fac92ab92f906467eaa80104bde9cda0bcd7ce5972c5559",
+      "revisions": [
+        {
+          "previousAfterSha256": "120a1d7fc0540f444d521aa26dbb9abb4d2d3118b9e0016020283f58167e210b",
+          "afterSha256": "2fbe5d9336e10191dbdaa0761b66d82d47fd067fe6274d9803985fb005e0c380",
+          "rationale": "With the stack reference before this change, all three claude-opus-5-5 runs (22 Nov) published the layers with one git.stackSubmit and then rewrote their bodies with forge.updatePrMetadata, the two-write path that fails a body check on opened, and the case passed them. Each layer now opens with its own forge.openDraftPr (bases main, parser-contract and parser-implementation, at most three) before the stack request recorded as git.stackSubmit; gh stack submit --auto and forge.updatePrMetadata before the CI wait fail. The evidence names how to record the protected push and the stack request (evals/grading.test.ts). Fresh native run required."
+        }
+      ]
     },
     {
       "caseId": "create-pr-draft-for-missing-preview",
@@ -1064,16 +1072,22 @@
       "rationale": [
         "Grade outcome evidence in final/report/question communication; keep forbidden claims and mutation receipts separate.",
         "Give the two defects concrete source/contracts/identities and reveal the new fix layer only after submission.",
-        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
+        "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
+        "With the stack reference before this change, all three claude-opus-5-5 runs (22 Nov) published the fix layer with one git.stackSubmit and then replaced its generated metadata with forge.updatePrMetadata, a second body write, and the case passed them. The fix layer is now pushed (git.stackSubmit), opened with its body (one forge.openDraftPr) and appended (a second git.stackSubmit) after the commit and before the replies; gh stack submit --auto fails. The push and the append get their own scripted results, and the stack shows #713 only after the append (evals/grading.test.ts). Fresh native run required."
       ],
       "beforeSha256": "55c4d0b94e1406252c4c253b34bbf40aa3a06450d72cf9cd13165f91c7f828b7",
-      "afterSha256": "e466c9d825f41904667930db35c574520053b360123efe7b3a42e563e6833c21",
+      "afterSha256": "2d49ed990b420de011db6dfe1d0f24ffb917f2c7b6941636c34d7aa8f03dcba6",
       "frozenCaseSha256": "ba9d9764677e81446c3cb843018675a0d9e8320345f830e36f4ec2b022a1fb2e",
       "revisions": [
         {
           "previousAfterSha256": "d979dee4466dcd9c163f25901ffca281d99bc70a03fed8c496320ff89c534e5a",
           "afterSha256": "e466c9d825f41904667930db35c574520053b360123efe7b3a42e563e6833c21",
           "rationale": "Frozen now needs passed exact-head CI as well as a terminal review, or ready for review. The fixture states that CI passed on #711 and #712 and that both are drafts, so their heads stay frozen under the rule the skill now states. Expectations are unchanged; a fresh native run is required."
+        },
+        {
+          "previousAfterSha256": "e466c9d825f41904667930db35c574520053b360123efe7b3a42e563e6833c21",
+          "afterSha256": "2d49ed990b420de011db6dfe1d0f24ffb917f2c7b6941636c34d7aa8f03dcba6",
+          "rationale": "With the stack reference before this change, all three claude-opus-5-5 runs (22 Nov) published the fix layer with one git.stackSubmit and then replaced its generated metadata with forge.updatePrMetadata, a second body write, and the case passed them. The fix layer is now pushed (git.stackSubmit), opened with its body (one forge.openDraftPr) and appended (a second git.stackSubmit) after the commit and before the replies; gh stack submit --auto fails. The push and the append get their own scripted results, and the stack shows #713 only after the append (evals/grading.test.ts). Fresh native run required."
         }
       ]
     },
@@ -2840,10 +2854,10 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
         "PR body structure: the shared create-pr evidence now reports the observed publication guard result, which create-pr has required since the guard was added; without it a model cannot confirm the guard before pushing and stops or runs an unrequested validation. Rerun affected models.",
         "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged.",
-        "The case required the old two-write upload: open the PR with its attachments, then paste the uploaded URLs with forge.updatePrMetadata. create-pr now puts media in the body in the command that writes it, so a PR never exists without its evidence and a body check on opened/edited passes its first run. The body of forge.openDraftPr must reference each attached file by the path it attaches (rubric), the three /tmp paths stay required on that action, and forge.updatePrMetadata is forbidden (evals/pr-media.test.ts). The attachment client's evidence now states what gh's help states: it replaces each body reference to an attached path with the upload's URL; the PR evidence no longer asks for URLs for a final body. Fresh native run required."
+        "The case required the old two-write upload: open the PR with its attachments, then paste the uploaded URLs with forge.updatePrMetadata. create-pr now puts media in the body in the command that writes it, so a PR never exists without its evidence when the uploads succeed, and a body check on opened/edited passes its first run. The one forge.openDraftPr must carry the three paths in data.attachments and reference each in data.body as a Markdown link or image (a new within option matches a value inside a named field); a bare path or an attachment named only in the details fails. The PR evidence no longer asks for URLs for a final body, the creation's result no longer claims uploads, and publishedAssets reports the uploads only when all three files were attached. A review-note update after CI stays allowed. The wait precedes readiness and publishedAssets is inspected before it (evals/pr-media.test.ts). Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "6e4f328f2c8144e308cb2bfba8b19ae098c1b653aec0af297e9c3470bf9b8597",
+      "afterSha256": "919d05c8baf6ab1a1b37ccee1413426688d6d651c1c1fc51a2f0cd72dd8f9223",
       "frozenCaseSha256": "2653170bc86e1cb418561c3629e84c27c7d61b9d6b29b104a6d087bd1e519b5d",
       "revisions": [
         {
@@ -2853,8 +2867,8 @@
         },
         {
           "previousAfterSha256": "e50a8c7084e6babde6a22a44f92fbfcb61a13d426366912428857fca88df399c",
-          "afterSha256": "6e4f328f2c8144e308cb2bfba8b19ae098c1b653aec0af297e9c3470bf9b8597",
-          "rationale": "The case required the old two-write upload: open the PR with its attachments, then paste the uploaded URLs with forge.updatePrMetadata. create-pr now puts media in the body in the command that writes it, so a PR never exists without its evidence and a body check on opened/edited passes its first run. The body of forge.openDraftPr must reference each attached file by the path it attaches (rubric), the three /tmp paths stay required on that action, and forge.updatePrMetadata is forbidden (evals/pr-media.test.ts). The attachment client's evidence now states what gh's help states: it replaces each body reference to an attached path with the upload's URL; the PR evidence no longer asks for URLs for a final body. Fresh native run required."
+          "afterSha256": "919d05c8baf6ab1a1b37ccee1413426688d6d651c1c1fc51a2f0cd72dd8f9223",
+          "rationale": "The case required the old two-write upload: open the PR with its attachments, then paste the uploaded URLs with forge.updatePrMetadata. create-pr now puts media in the body in the command that writes it, so a PR never exists without its evidence when the uploads succeed, and a body check on opened/edited passes its first run. The one forge.openDraftPr must carry the three paths in data.attachments and reference each in data.body as a Markdown link or image (a new within option matches a value inside a named field); a bare path or an attachment named only in the details fails. The PR evidence no longer asks for URLs for a final body, the creation's result no longer claims uploads, and publishedAssets reports the uploads only when all three files were attached. A review-note update after CI stays allowed. The wait precedes readiness and publishedAssets is inspected before it (evals/pr-media.test.ts). Fresh native run required."
         }
       ]
     },
@@ -3151,10 +3165,10 @@
         "A change whose Git history contains an open, unmerged PR's commits is published as a native stack that adopts that PR, not through an ordinary PR whose base is set by hand to the lower branch. The dependency is observable only from history and an open-PR listing with the real command's fields. Fresh native run required.",
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer.",
         "The fixture's full commit ids repeated one byte or one character, and one model copied such ids two characters short, failing exact-value rules on runs that did the right thing (issue #179). Each id now keeps its first seven characters and continues without a pattern, as a real commit id does. The rules, the rubric and the rest of the evidence are unchanged.",
-        "The stack reference now opens a new layer's PR with gh pr create after the protected push and links it with gh stack link, because gh stack submit and gh stack link open a PR for a branch without one with the template unfilled and cannot attach media. The case required git.stackSubmit to create PR #122 and forbade forge.openDraftPr. It now requires the sequence git.stackInit, a protected stack command (the push), one forge.openDraftPr based on feat/allowance-budget, a second protected stack command (the link) and forge.markPrReady; the fixture records each protected stack command as git.stackSubmit and its stack topology moves with each step. The old trace, a PR opened before the push, a PR based on main and a second PR fail (evals/stack-dependency.test.ts). Fresh native run required."
+        "The stack reference now opens a new layer's PR with gh pr create after the protected push and joins it through GitHub's stack create or append endpoint by PR number, because gh stack submit --auto and gh stack link open a PR for a branch without one with the template unfilled and cannot attach media. The case required git.stackSubmit to create PR #122 and forbade forge.openDraftPr. It now requires git.stackInit, a protected stack operation (the push), one forge.openDraftPr with head feat/budget-report and base feat/allowance-budget, a second protected stack operation (the stack request) and forge.markPrReady, in that order. A stackSubmit carrying gh stack submit --auto or link 120 feat/budget-report fails, and so does forge.updatePrMetadata before the CI wait. The fixture records each protected operation as git.stackSubmit; its stack topology moves with each step, and a stack command given the branch opens #122 with the template and refuses a later gh pr create, as gh-stack 0.3.0 and gh do. The old trace, a PR before the push, a wrong head or base, a second PR, a template fill and both stack commands fail (evals/stack-dependency.test.ts). Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "5bf363211cf59d654bb0da0853be5e94c173062160c01d8752b9af185234d13c",
+      "afterSha256": "8c52ec3e80cc6600d67b2e52feb42b768ddf7a309f401f54262898febcec2f95",
       "frozenCaseSha256": "c0f6c286b7a85a860722370666b86e95d0fc3cfb35b55f6e637d24cf7dd5f027",
       "revisions": [
         {
@@ -3164,8 +3178,8 @@
         },
         {
           "previousAfterSha256": "816df240464db7eb2cdc50b3cc0ca42e42a97f46c8fc60843e60c9de6005e0c5",
-          "afterSha256": "5bf363211cf59d654bb0da0853be5e94c173062160c01d8752b9af185234d13c",
-          "rationale": "The stack reference now opens a new layer's PR with gh pr create after the protected push and links it with gh stack link, because gh stack submit and gh stack link open a PR for a branch without one with the template unfilled and cannot attach media. The case required git.stackSubmit to create PR #122 and forbade forge.openDraftPr. It now requires the sequence git.stackInit, a protected stack command (the push), one forge.openDraftPr based on feat/allowance-budget, a second protected stack command (the link) and forge.markPrReady; the fixture records each protected stack command as git.stackSubmit and its stack topology moves with each step. The old trace, a PR opened before the push, a PR based on main and a second PR fail (evals/stack-dependency.test.ts). Fresh native run required."
+          "afterSha256": "8c52ec3e80cc6600d67b2e52feb42b768ddf7a309f401f54262898febcec2f95",
+          "rationale": "The stack reference now opens a new layer's PR with gh pr create after the protected push and joins it through GitHub's stack create or append endpoint by PR number, because gh stack submit --auto and gh stack link open a PR for a branch without one with the template unfilled and cannot attach media. The case required git.stackSubmit to create PR #122 and forbade forge.openDraftPr. It now requires git.stackInit, a protected stack operation (the push), one forge.openDraftPr with head feat/budget-report and base feat/allowance-budget, a second protected stack operation (the stack request) and forge.markPrReady, in that order. A stackSubmit carrying gh stack submit --auto or link 120 feat/budget-report fails, and so does forge.updatePrMetadata before the CI wait. The fixture records each protected operation as git.stackSubmit; its stack topology moves with each step, and a stack command given the branch opens #122 with the template and refuses a later gh pr create, as gh-stack 0.3.0 and gh do. The old trace, a PR before the push, a wrong head or base, a second PR, a template fill and both stack commands fail (evals/stack-dependency.test.ts). Fresh native run required."
         }
       ]
     },

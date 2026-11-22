@@ -145,3 +145,16 @@ test("the action tool names a field for every action whose rules read named fiel
     expect({ action, named: [...fields].filter((field) => containsValue(clause, field)).length > 0 }).toEqual({ action, named: true });
   }
 });
+
+test("within matches a value as a whole token inside a named field only", () => {
+  const ref = scenario({ requiredActionValues: [{ action: "forge.openDraftPr", values: [["](/tmp/after.png)", "](</tmp/after.png>)"]], fields: ["body"], within: true }] });
+  const open = (data: Record<string, unknown>, details = "") => ({ action: "forge.openDraftPr" as const, details, data });
+  expect(failed(ref, ledger([open({ body: "| ![After](/tmp/after.png) |" })]), "")).toEqual([]);
+  expect(failed(ref, ledger([open({ body: "![After](</tmp/after.png>)" })]), "")).toEqual([]);
+  // A bare path, the path in another field or in the details, and a longer path do not count.
+  expect(failed(ref, ledger([open({ body: "See /tmp/after.png" })]), "")).toHaveLength(1);
+  expect(failed(ref, ledger([open({ body: "Done.", note: "![After](/tmp/after.png)" }, "![After](/tmp/after.png)")]), "")).toHaveLength(1);
+  expect(failed(ref, ledger([open({ body: "![After](/tmp/after.png.bak)" })]), "")).toHaveLength(1);
+  expect(() => validateCases([scenario({ requiredActionValues: [{ action: "forge.openDraftPr", values: ["x"], within: true }] })], new Set()))
+    .toThrow("invalid exact value check");
+});

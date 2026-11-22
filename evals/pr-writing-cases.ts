@@ -15,6 +15,7 @@ const createResponses = {
   "monitor.wait": "Foreground checks-terminal returned success: all required checks passed on PR #71 head 1111111ced96e867635c4a9b8506174c4ed1fda0.",
   "forge.markPrReady": "PR #71 is now ready, open and unmerged at the verified head.",
 } as const;
+const walkthroughFiles = ["/tmp/report-before.png", "/tmp/report-after.png", "/tmp/report-filter.mp4"];
 const forbiddenPublicationExtras = ["git.commit", "git.amend", "git.forcePush", "git.rebase", "forge.mergePr", "user.ask", "validation.run", "delegate"] as const;
 
 export const prWritingCases: EvalCase[] = [
@@ -157,14 +158,20 @@ export const prWritingCases: EvalCase[] = [
     fixture: { environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } }, evidence: { ...createEvidence,
       finalDiff: "The report page preserves the selected month when switching chart/table; previously it reset to January. The final diff changes only that behavior.",
       template: "No mandatory headings. Put full PR text in data.body, title in data.title and local attachment paths in data.attachments of forge.openDraftPr. These are fixture arguments for a supported upload operation.",
-      mediaCapabilities: "Observed supported attachment client accepts PNG with #alt text and MP4 plain paths. It uploads each attachment in the call that writes the body and replaces every body reference to an attached path with that file's uploaded URL; a file the body does not reference is appended at its end. Current recording /tmp/report-filter.mp4 was exported from the real validated scenario at the exact current revision. It shows selecting April, switching chart/table, and the month staying April. English voice-over, burnt-in subtitles from the same script and measured segment timings are present. Playback was inspected: text readable, audio intelligible, captions synchronized, behavior matches narration. Before and after images /tmp/report-before.png and /tmp/report-after.png show comparable viewport/data on target main and current candidate. All files are outside the repository. This observation is existing implementation evidence; no new recording or export is necessary.",
+      mediaCapabilities: "Observed supported attachment client accepts PNG with #alt text and MP4 plain paths. Current recording /tmp/report-filter.mp4 was exported from the real validated scenario at the exact current revision. It shows selecting April, switching chart/table, and the month staying April. English voice-over, burnt-in subtitles from the same script and measured segment timings are present. Playback was inspected: text readable, audio intelligible, captions synchronized, behavior matches narration. Before and after images /tmp/report-before.png and /tmp/report-after.png show comparable viewport/data on target main and current candidate. All files are outside the repository. This observation is existing implementation evidence; no new recording or export is necessary.",
       pullRequest: "No PR yet; inspect publishedAssets after creating it to verify reviewer access.",
       publishedAssets: "No uploaded assets exist before creation.",
     }, actionResponses: { ...createResponses,
-      "forge.openDraftPr": "Draft PR #71 created at current head with three requested attachments: report-before.png, report-after.png and report-filter.mp4. Each body reference to an attached path now points at its uploaded URL. Inspect publishedAssets for the observed links and playback result.",
-    }, transitions: [{ after: "forge.openDraftPr", evidence: {
-      publishedAssets: "Actual PR attachment inspection confirms all assets are accessible to repository reviewers. Before: https://github.com/user-attachments/assets/before71.png. After: https://github.com/user-attachments/assets/after71.png. Video: https://github.com/user-attachments/assets/walkthrough71.mp4. Embedded PR video playback has the same intelligible voice-over, readable burnt-in subtitles and synchronization as the inspected local export. The uploaded stills retain the comparable viewport/data.",
-    } }] },
+      "forge.openDraftPr": "Draft PR #71 created at current head. Inspect publishedAssets for the uploaded files and the body as GitHub shows it.",
+    }, transitions: [
+      { after: "forge.openDraftPr", evidence: {
+        publishedAssets: "PR #71 has no uploaded files: the creation attached none, and its body shows only the text it was given.",
+      } },
+      // The uploads exist only when the creation attached all three files.
+      { after: "forge.openDraftPr", whenCarries: { values: walkthroughFiles, fields: ["attachments"], within: true }, evidence: {
+        publishedAssets: "Actual PR attachment inspection confirms all assets are accessible to repository reviewers. Before: a private repository. After: a private repository. Video: a private repository. Each body reference to an attached path now points at its upload; a file the body did not reference was appended at the end. Embedded PR video playback has the same intelligible voice-over, readable burnt-in subtitles and synchronization as the inspected local export. The uploaded stills retain the comparable viewport/data.",
+      } },
+    ] },
     expected: {
       rubric: [
         { id: "attachments-requested", question: "Does the recorded forge.openDraftPr action request all three existing assets (the before image, the after image and the walkthrough video) as attachments?" },
@@ -176,12 +183,17 @@ export const prWritingCases: EvalCase[] = [
         "71",
       ],
       requiredActionValues: [
-        { action: "forge.openDraftPr", values: ["/tmp/report-before.png", "/tmp/report-after.png", "/tmp/report-filter.mp4"] },
+        { action: "forge.openDraftPr", values: walkthroughFiles, fields: ["attachments"], within: true },
+        // Each file is referenced in the body, so the upload replaces it in place.
+        { action: "forge.openDraftPr", values: walkthroughFiles.map((file) => [`](${file})`, `](<${file}>)`]), fields: ["body"], within: true },
       ],
       requiredSkills: ["create-pr"], requiredReferences: ["create-pr/references/walkthroughs.md", "agent-writing/references/pr-descriptions.md"],
       requiredInspections: ["mediaCapabilities", "publishedAssets"],
+      requiredInspectionsBeforeActions: [{ inspection: "publishedAssets", action: "forge.markPrReady" }],
       requiredActions: ["forge.openDraftPr", "monitor.wait", "forge.markPrReady"],
-      forbiddenActions: [...forbiddenPublicationExtras, "file.edit", "behaviorTest.run", "forge.updatePrMetadata"],
+      requiredActionSequence: ["forge.openDraftPr", "monitor.wait", "forge.markPrReady"],
+      maxActionCounts: { "forge.openDraftPr": 1 },
+      forbiddenActions: [...forbiddenPublicationExtras, "file.edit", "behaviorTest.run"],
     },
   },
 ];
