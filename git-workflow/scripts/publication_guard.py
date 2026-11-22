@@ -171,10 +171,14 @@ def slug_of(match):
 def reserved_route(match):
     """A github.com URL under a route that names no repository, such as an uploaded attachment.
 
-    Its key can still name a repository elsewhere in the same text, as in
-    an issue or pull request in a private repository, so every pass checks the match itself, not only the key.
+    The same two segments can still be looked up as a repository when the text
+    also mentions them as an issue reference, so every pass checks the match
+    itself, not only its key.
     """
-    return bool(match.group("url")) and match.group("uo").lower() in NOT_REPOSITORY_OWNERS
+    # Only a web address has such routes; on the REST API and raw-file hosts
+    # the same segment is a repository owner.
+    return (bool(match.group("url")) and match.group("host").lower() in GITHUB_HOSTS
+            and match.group("uo").lower() in NOT_REPOSITORY_OWNERS)
 
 
 def gh_api(*args, host="github.com"):

@@ -235,10 +235,14 @@ class PublicationGuardTests(unittest.TestCase):
         route = "/".join(("user-attachments", "assets"))
         image = "![After](https://github.com/user-attachments/assets/0f1e2d3c-1111-4222-8333-944445555666)"
         title = self.write("title", "fix: keep the selected month")
-        body = self.write("body", f"{image}\n\nSee {route}#123.\n")
-        self.assertIn("references 1", self.guard("pr", "--title-file", str(title), "--body-file", str(body)))
+        # On the REST API and raw-file hosts the same segments name a repository.
+        api = f"https://api.github.com/repos/{route}/pulls/4"
+        raw = f"https://raw.githubusercontent.com/{route}/main/a.txt"
+        body = self.write("body", f"{image}\n\nSee {route}#123, {api} and {raw}.\n")
+        self.assertIn("references 3", self.guard("pr", "--title-file", str(title), "--body-file", str(body)))
         self.assertEqual(body.read_text(),
-                         f"{image}\n\nSee an issue or pull request in a private repository.\n")
+                         f"{image}\n\nSee an issue or pull request in a private repository, "
+                         "a pull request in a private repository and a private repository.\n")
 
     def test_private_slug_in_json_maps_to_a_stable_placeholder_across_files_and_runs(self):
         self.stage({"one.json": {"repo": PRIVATE}, "two.json": {"source": f"https://github.com/{PRIVATE}"},
