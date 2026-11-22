@@ -169,7 +169,7 @@ export const prWritingCases: EvalCase[] = [
       } },
       // The uploads exist only when the creation attached all three files.
       { after: "forge.openDraftPr", whenCarries: { values: walkthroughFiles, fields: ["attachments"], within: true }, evidence: {
-        publishedAssets: "Actual PR attachment inspection confirms all assets are accessible to repository reviewers. Before: a private repository. After: a private repository. Video: a private repository. Each body reference to an attached path now points at its upload; a file the body did not reference was appended at the end. Embedded PR video playback has the same intelligible voice-over, readable burnt-in subtitles and synchronization as the inspected local export. The uploaded stills retain the comparable viewport/data.",
+        publishedAssets: "Actual PR attachment inspection confirms all assets are accessible to repository reviewers. Before: https://github.com/user-attachments/assets/before71.png. After: https://github.com/user-attachments/assets/after71.png. Video: https://github.com/user-attachments/assets/walkthrough71.mp4. Each body reference to an attached path now points at its upload; a file the body did not reference was appended at the end. Embedded PR video playback has the same intelligible voice-over, readable burnt-in subtitles and synchronization as the inspected local export. The uploaded stills retain the comparable viewport/data.",
       } },
     ] },
     expected: {
