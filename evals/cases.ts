@@ -29,6 +29,116 @@ const dateLibraryGatePass =
 const skillsMigrationValidationPass =
   "Validation results: paddy/skills-lock.json and paddy/.agents/skills list the same 14 skills, with code-review replacing review-pr and no other membership change; the generated diff touches only the review-pr removal and code-review addition, and every unrelated supporting file is byte-identical. actionlint 1.7.4 exited 0 on .github/workflows/update-project-skills.yml, and the repository workflow-contract check passed on the unchanged caller (full-SHA pin, Monday schedule, workflow_dispatch, permissions and skills-root paddy retained).";
 
+// Both local review round cases fix round 1's finding on the same retry-budget
+// PR. They differ in how the round is entered, the standing instructions, the
+// round count, what the answer must report, and any checks of their own.
+const retryBudgetBehaviorPass =
+  "Observed on the current content: a budget of 3 makes 3 attempts, and a non-retryable error stops after 1. Both requirements pass.";
+function retryBudgetRoundCase(round: {
+  id: string;
+  description: string;
+  prompt: string;
+  standingInstructions: string;
+  rounds: number;
+  rubric: NonNullable<EvalCase["expected"]["rubric"]>;
+  ownChecks?: Partial<EvalCase["expected"]>;
+}): EvalCase {
+  return {
+    id: round.id,
+    description: round.description,
+    prompt: round.prompt,
+    fixture: {
+      environment: {
+        orchestration: { endpoint: "ready-to-merge", entryPoints: "stop" },
+        standingInstructions: round.standingInstructions,
+      },
+      evidence: {
+        repositoryStatus:
+          "Clean checkout of example/project on branch fix/retry-budget, the head branch of PR #1040, at 4a01040, equal to the remote branch. No other local work.",
+        pullRequest:
+          "PR #1040 in example/project, ready for review at head 4a01040, links issue #94. Every CI check passed on 4a01040. CI PR cancels a run still in progress when a newer commit is pushed to the PR. No review threads exist.",
+        reviewRound1:
+          `Review round 1 of ${round.rounds} on 4a01040 (\`git diff origin/main...4a01040\`): one finding. src/retry.ts:14 retries while attempts <= maxAttempts, so a budget of 3 makes 4 attempts; issue #94 caps attempts at the budget.`,
+        specification:
+          "Issue #94: a request is attempted at most maxAttempts times in total, and a non-retryable error stops at once.",
+        projectGate:
+          "The repository declares `bun run check` as its local gate; it covers src/retry.ts's unit tests.",
+      },
+      actionResponses: {
+        "codeReview.run":
+          "Review of the committed diff completed with no findings.",
+        "behaviorTest.run":
+          "Observed on the current content: a budget of 3 makes 4 attempts, so the budget requirement fails; a non-retryable error stops after 1.",
+        "validation.focused": "src/retry.ts unit tests pass, including the new budget-boundary test.",
+        "validation.run": "bun run check passes on the current content.",
+        "git.commit": "Committed 5b01040 on fix/retry-budget.",
+        "git.push":
+          "Pushed fix/retry-budget. PR #1040's head is now the pushed commit; CI started on it.",
+        "monitor.wait":
+          "Every CI check passed on PR #1040's current head.",
+      },
+      transitions: [
+        // The fix is what makes the behavior pass: a test before the first
+        // edit sees the bug the round-1 finding names.
+        { after: "file.edit", evidence: {}, actionResponses: { "behaviorTest.run": retryBudgetBehaviorPass } },
+        {
+          after: "git.push",
+          evidence: {
+            pullRequest:
+              "PR #1040 in example/project, ready for review at the pushed head. CI started on it; CI on 4a01040 is no longer the current head's. No review threads exist.",
+          },
+        },
+      ],
+    },
+    expected: {
+      rubric: round.rubric,
+      requiredSkills: ["address-feedback"],
+      requiredInspections: ["pullRequest", "reviewRound1"],
+      ...round.ownChecks,
+      requiredActions: ["file.edit", "behaviorTest.run", "validation.run", "git.commit", "codeReview.run", "git.push", "monitor.wait"],
+      requiredActionSequence: ["file.edit", "git.commit", "codeReview.run", "git.push", "monitor.wait"],
+      // The round-2 review and the push must both name the one fix commit, so
+      // a review of the old head or a push of another commit cannot pass.
+      requiredActionValues: [
+        { action: "codeReview.run", values: ["5b01040"], after: { action: "git.commit" }, before: { action: "git.push" } },
+        { action: "git.push", values: ["5b01040"], every: true },
+        { action: "monitor.wait", values: ["5b01040"], after: { action: "git.push" } },
+      ],
+      // The gate and the behavior test must pass on the content that is pushed.
+      // They may run before the commit or on the commit after the last round;
+      // nothing may change the tree after the commit, so the gated content is the commit's.
+      // The behavior test that counts drives both of issue #94's inputs and is
+      // not the gate, so the gate recorded as a behavior test cannot pass. A
+      // unit-test run described with both inputs still clears this; each
+      // case's rubric asks for the probe through the real interface.
+      requiredCurrentGates: {
+        before: ["git.push"],
+        gates: [
+          { action: "validation.run", result: "bun run check passes on the current content." },
+          {
+            action: "behaviorTest.run",
+            result: retryBudgetBehaviorPass,
+            // Each input in the spellings runs used, or an equivalent description of it.
+            values: [
+              ["maxAttempts", "max attempts", "attempt budget", "budget of 3"],
+              ["non-retryable", "Non-retryable", "nonretryable", "non-retriable", "not retryable", "non retryable"],
+            ],
+            forbiddenValues: ["bun run check"],
+          },
+        ],
+      },
+      forbiddenActionsAfterActions: [
+        { action: "file.edit", after: "git.commit" },
+        { action: "git.merge", after: "git.commit" },
+        { action: "skills.migrate", after: "git.commit" },
+        { action: "git.createBranch", after: "git.commit" },
+      ],
+      maxActionCounts: { "git.push": 1, "git.commit": 1 },
+      forbiddenActions: ["forge.mergePr", "git.amend", "git.forcePush", "git.rebase"],
+    },
+  };
+}
+
 export const evalCases: EvalCase[] = [
   ...historyCases,
   ...prWritingCases,
@@ -1456,93 +1566,39 @@ export const evalCases: EvalCase[] = [
       ],
     },
   },
-  {
+  retryBudgetRoundCase({
     id: "address-pr-feedback-local-review-round-pushes-once",
     description:
       "When the next review round reads a local commit, the round's fix is committed, reviewed there, and pushed once after the last round.",
     prompt:
       "/address-feedback 1040. Review round 1 found one issue; its report is in the review evidence.",
-    fixture: {
-      environment: {
-        orchestration: { endpoint: "ready-to-merge", entryPoints: "stop" },
-        standingInstructions:
-          "Once a pull request is ready for review, review it in at most two rounds. You run each round yourself with codeReview.run; its brief names the PR's base branch and head SHA and limits the review to the committed diff `git diff origin/<base>...<head SHA>`. The reviewer posts nothing to GitHub. Check every finding against the code and fix the valid ones. Run the next round on the new head unless the round was clean or was the last.",
-      },
-      evidence: {
-        repositoryStatus:
-          "Clean checkout of example/project on branch fix/retry-budget, the head branch of PR #1040, at 4a01040, equal to the remote branch. No other local work.",
-        pullRequest:
-          "PR #1040 in example/project, ready for review at head 4a01040, links issue #94. Every CI check passed on 4a01040. CI PR cancels a run still in progress when a newer commit is pushed to the PR. No review threads exist.",
-        reviewRound1:
-          "Review round 1 of 2 on 4a01040 (`git diff origin/main...4a01040`): one finding. src/retry.ts:14 retries while attempts <= maxAttempts, so a budget of 3 makes 4 attempts; issue #94 caps attempts at the budget.",
-        specification:
-          "Issue #94: a request is attempted at most maxAttempts times in total, and a non-retryable error stops at once.",
-        projectGate:
-          "The repository declares `bun run check` as its local gate; it covers src/retry.ts's unit tests.",
-      },
-      actionResponses: {
-        "codeReview.run":
-          "Review of the committed diff completed with no findings.",
-        "behaviorTest.run":
-          "Observed on the current content: a budget of 3 makes 3 attempts, and a non-retryable error stops after 1. Both requirements pass.",
-        "validation.focused": "src/retry.ts unit tests pass, including the new budget-boundary test.",
-        "validation.run": "bun run check passes on the current content.",
-        "git.commit": "Committed 5b01040 on fix/retry-budget.",
-        "git.push":
-          "Pushed fix/retry-budget. PR #1040's head is now the pushed commit; CI started on it.",
-        "monitor.wait":
-          "Every CI check passed on PR #1040's current head.",
-      },
-      transitions: [
-        {
-          after: "git.push",
-          evidence: {
-            pullRequest:
-              "PR #1040 in example/project, ready for review at the pushed head. CI started on it; CI on 4a01040 is no longer the current head's. No review threads exist.",
-          },
-        },
-      ],
+    standingInstructions:
+      "Once a pull request is ready for review, review it in at most two rounds. You run each round yourself with codeReview.run; its brief names the PR's base branch and head SHA and limits the review to the committed diff `git diff origin/<base>...<head SHA>`. The reviewer posts nothing to GitHub. Check every finding against the code and fix the valid ones. Run the next round on the new head unless the round was clean or was the last.",
+    rounds: 2,
+    rubric: [
+      { id: "fix-reviewed-locally-then-pushed-once", question: "Does the answer report that the retry-budget fix was committed, that review round 2 ran on that commit before it was pushed and found nothing, that the fix was then pushed to PR #1040 once, and that CI passed on that pushed head?" },
+      { id: "fix-behavior-tested-through-interface", question: "Does the answer report a behavior test of the fixed retry code through its real interface, separate from the unit tests and the local gate, showing that a budget of 3 makes 3 attempts and that a non-retryable error stops after 1?" },
+    ],
+  }),
+  retryBudgetRoundCase({
+    id: "address-pr-feedback-delivery-round-fix-tests-behavior",
+    description:
+      "Mid-delivery, with review rounds run from the standing instructions, a round's fix is tested against the specification through the real interface, not only by the gate's unit tests, before the one push.",
+    prompt:
+      "Review round 1 on PR #1040 (issue #94) is back; its report is in the review evidence. Carry on with the delivery.",
+    standingInstructions:
+      "Pull request reviews are done by the reviewer you run with codeReview.run. Once the PR is ready for review, review it in at most three rounds. The brief names the PR's own base branch and head SHA, and limits the review to the committed diff `git diff origin/<base>...<head SHA>`. The reviewer returns its report and stops: no edits, no delivery, nothing posted to GitHub. From round two on, it still asks for a fresh review of the whole diff, and lists the earlier findings and what happened to each. In round three the brief adds: this is the last round, report only what must be fixed before merging. Check every finding against the code and fix the valid ones. Commit the fixes, and unless the round was clean or was the third, run the next round on that local commit: a round reads the committed diff, so it needs no push. Push once, when no round is left: after a clean round, or once the third round's fixes pass their checks, so CI runs only on the head that stays; push earlier only when a step needs the published head, such as a preview. After round three, fix its valid findings without a fourth review, check that each fix answers its finding and that the checks pass, and name any finding left open in the pull request. A review finding is review feedback: handle it with /address-feedback.",
+    rounds: 3,
+    rubric: [
+      { id: "fix-behavior-tested-before-push", question: "Does the answer report a behavior test of the fixed retry code through its real interface, showing that a budget of 3 makes 3 attempts and that a non-retryable error stops after 1, as evidence separate from the unit tests and the local gate, before the fix was pushed to PR #1040 once?" },
+    ],
+    // A passing run read the step that asks for the behavior test and ran it
+    // through test-against-spec, the skill that says unit tests are not proof.
+    ownChecks: {
+      requiredReferencesBeforeActions: [{ reference: "address-feedback/references/pr.md", action: "behaviorTest.run" }],
+      requiredSkillsBeforeActions: [{ skill: "test-against-spec", action: "behaviorTest.run" }],
     },
-    expected: {
-      rubric: [
-        { id: "fix-reviewed-locally-then-pushed-once", question: "Does the answer report that the retry-budget fix was committed, that review round 2 ran on that commit before it was pushed and found nothing, that the fix was then pushed to PR #1040 once, and that CI passed on that pushed head?" },
-      ],
-      requiredSkills: ["address-feedback"],
-      requiredInspections: ["pullRequest", "reviewRound1"],
-      requiredActions: ["file.edit", "behaviorTest.run", "validation.run", "git.commit", "codeReview.run", "git.push", "monitor.wait"],
-      requiredActionSequence: ["file.edit", "git.commit", "codeReview.run", "git.push", "monitor.wait"],
-      // The round-2 review and the push must both name the one fix commit, so
-      // a review of the old head or a push of another commit cannot pass.
-      requiredActionValues: [
-        { action: "codeReview.run", values: ["5b01040"], after: { action: "git.commit" }, before: { action: "git.push" } },
-        { action: "git.push", values: ["5b01040"], every: true },
-        { action: "monitor.wait", values: ["5b01040"], after: { action: "git.push" } },
-      ],
-      // The gate and the behavior test must pass on the content that is pushed.
-      // They may run before the commit or on the commit after the last round;
-      // nothing may change the tree after the commit, so the gated content is the commit's.
-      requiredCurrentGates: {
-        before: ["git.push"],
-        gates: [
-          { action: "validation.run", result: "bun run check passes on the current content." },
-          { action: "behaviorTest.run", result: "Observed on the current content: a budget of 3 makes 3 attempts, and a non-retryable error stops after 1. Both requirements pass." },
-        ],
-      },
-      forbiddenActionsAfterActions: [
-        { action: "file.edit", after: "git.commit" },
-        { action: "git.merge", after: "git.commit" },
-        { action: "skills.migrate", after: "git.commit" },
-        { action: "git.createBranch", after: "git.commit" },
-      ],
-      maxActionCounts: { "git.push": 1, "git.commit": 1 },
-      forbiddenActions: [
-        "forge.mergePr",
-        "git.amend",
-        "git.forcePush",
-        "git.rebase",
-      ],
-    },
-  },
+  }),
   {
     id: "address-pr-feedback-terminal-check-does-not-hide-finding",
     description:

@@ -238,6 +238,9 @@ export function gradeRun(
       const gate = contract.gates.find(g => g.action === action.action);
       if (gate) {
         current.delete(gate.action);
+        const qualifies =
+          (gate.values ?? []).every((value) => actionCarries(action, value, undefined)) &&
+          !(gate.forbiddenValues ?? []).some((value) => actionCarries(action, value, undefined, true));
         // Only the fixture's captured successful response renews a gate.
         // Candidate prose, acknowledgments and requested actions are not results.
         for (const raw of ledger.toolReceiptVersion === 1 ? ledger.toolReceipts ?? [] : []) {
@@ -251,7 +254,7 @@ export function gradeRun(
               params.arguments?.action !== gate.action || receipt.response.content.length !== 1) continue;
           try {
             const result = JSON.parse(receipt.response.content[0]!.text);
-            if (result.ok === true && result.isolated === true && result.result === gate.result)
+            if (qualifies && result.ok === true && result.isolated === true && result.result === gate.result)
               current.add(gate.action);
           } catch { /* A malformed response does not establish a gate result. */ }
         }
@@ -592,6 +595,20 @@ export function gradeRun(
     });
   }
 
+  for (const order of expected.requiredReferencesBeforeActions ?? []) {
+    const referenceIndex = ledger.events.findIndex(
+      (event) => event.kind === "reference" && event.name === order.reference,
+    );
+    const actionIndex = ledger.events.findIndex(
+      (event) => event.kind === "action" && event.name === order.action,
+    );
+    checks.push({
+      name: `${order.reference} before ${order.action}`,
+      passed: referenceIndex >= 0 && actionIndex >= 0 && referenceIndex < actionIndex,
+      detail: `referenceIndex=${referenceIndex} actionIndex=${actionIndex}`,
+    });
+  }
+
   for (const action of expected.requiredWorkerBeforeActions ?? []) {
     const started = ledger.workers?.[0]?.startedAtEvent;
     const actionIndex = ledger.events.findIndex(
@@ -797,7 +814,10 @@ function validateExactValues(evalCase: EvalCase): void {
     ![
       ...(expected.requiredActionValues ?? []).flatMap((r) => [r, ...(r.also ?? [])]),
       ...(expected.forbiddenActionValues ?? []),
-    ].every(validMatch)
+    ].every(validMatch) ||
+    !(expected.requiredCurrentGates?.gates ?? []).every(
+      (g) => (g.values ?? []).every(validValue) && (g.forbiddenValues ?? []).every(validValue),
+    )
   )
     throw new Error(`${evalCase.id}: invalid exact value check`);
 }
