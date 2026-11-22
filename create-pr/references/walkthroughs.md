@@ -78,8 +78,11 @@ check that validates the body when the PR is opened or edited fails that first
 run.
 
 - Reference each file in the body as an inline image, `![alt text](<path>)`.
-  A video takes the same form on a line of its own and renders as a player;
-  in a table cell or beside other text it becomes a link. A bare path is not
+  A video takes the same form in a paragraph of its own, with a blank line
+  before and after it, and renders as a player; in a table cell or beside
+  other text it becomes a link. Give alt text in the body: gh takes
+  `--attach '<image>#<alt text>'` for an image but refuses alt text on a
+  video. A bare path is not
   a reference: gh leaves it in the body as text and appends the upload at the
   end. Pass `--attach <path>`
   for each file in the command that writes that body:
@@ -113,7 +116,8 @@ run.
   write; when none uploaded, it creates no PR and writes no body. Read GitHub
   before acting again and never create a second PR. Once the cause is fixed,
   write the complete body again with `gh pr edit N --body-file FILE` and
-  every `--attach`.
+  every `--attach`. When GitHub shows no PR on that head and the command has
+  stopped, run the creation again instead.
 
 Never commit evidence media to the repository.
 

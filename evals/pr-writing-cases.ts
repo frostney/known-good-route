@@ -183,13 +183,15 @@ export const prWritingCases: EvalCase[] = [
         "71",
       ],
       requiredActionValues: [
-        { action: "forge.openDraftPr", values: walkthroughFiles, fields: ["attachments"], within: true },
+        // An image may carry its alt text after #; gh refuses alt text on a video.
+        { action: "forge.openDraftPr", values: walkthroughFiles.slice(0, 2), fields: ["attachments"], within: true },
+        { action: "forge.openDraftPr", values: [walkthroughFiles[2]!], fields: ["attachments"] },
         // Each file is referenced in the body, so the upload replaces it in place.
         { action: "forge.openDraftPr", values: walkthroughFiles.map((file) => [`](${file})`, `](<${file}>)`]), fields: ["body"], within: true },
       ],
       requiredSkills: ["create-pr"], requiredReferences: ["create-pr/references/walkthroughs.md", "agent-writing/references/pr-descriptions.md"],
       requiredInspections: ["mediaCapabilities", "publishedAssets"],
-      requiredInspectionsBeforeActions: [{ inspection: "publishedAssets", action: "forge.markPrReady" }],
+      requiredInspectionsBeforeActions: [{ inspection: "publishedAssets", action: "forge.markPrReady", after: "forge.openDraftPr" }],
       requiredActions: ["forge.openDraftPr", "monitor.wait", "forge.markPrReady"],
       requiredActionSequence: ["forge.openDraftPr", "monitor.wait", "forge.markPrReady"],
       maxActionCounts: { "forge.openDraftPr": 1 },

@@ -118,7 +118,7 @@ export function createEvalTools(
           .record(z.string(), z.unknown())
           .optional()
           .describe(
-            "Structured action arguments. For file.edit, give path; for monitor.wait, give the awaited commit as head; for forge.openDraftPr, give the head branch as head and the base branch as base; for git.removeWorktree, record one worktree per action and give its path, including each entry a prune drops; for migrations, use skills.migrate rather than hand-editing generated files.",
+            "Structured action arguments. For file.edit, give path; for monitor.wait, give the awaited commit as head; for forge.openDraftPr, give the head branch as head and the base branch as base; for git.stackSubmit, give the command it runs as command; for git.removeWorktree, record one worktree per action and give its path, including each entry a prune drops; for migrations, use skills.migrate rather than hand-editing generated files.",
           ),
       }),
       execute: async ({ action, details, data }) => {

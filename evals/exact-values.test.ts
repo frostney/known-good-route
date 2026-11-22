@@ -138,7 +138,7 @@ test("the action tool names a field for every action whose rules read named fiel
   for (const evalCase of evalCases)
     for (const rule of [...(evalCase.expected.requiredActionValues ?? []), ...(evalCase.expected.forbiddenActionValues ?? [])])
       for (const field of rule.fields ?? []) read.set(rule.action, (read.get(rule.action) ?? new Set()).add(field));
-  expect([...read.keys()].sort()).toEqual(["file.edit", "forge.openDraftPr", "git.removeWorktree", "monitor.wait"]);
+  expect([...read.keys()].sort()).toEqual(["file.edit", "forge.openDraftPr", "git.removeWorktree", "git.stackSubmit", "monitor.wait"]);
   // A run can only fill a field it was asked for: each such action has a clause that names one.
   for (const [action, fields] of read) {
     const clause = described.split(";").find((part) => containsValue(part, action)) ?? "";
@@ -157,4 +157,13 @@ test("within matches a value as a whole token inside a named field only", () => 
   expect(failed(ref, ledger([open({ body: "![After](/tmp/after.png.bak)" })]), "")).toHaveLength(1);
   expect(() => validateCases([scenario({ requiredActionValues: [{ action: "forge.openDraftPr", values: ["x"], within: true }] })], new Set()))
     .toThrow("invalid exact value check");
+});
+
+test("a transition that matches within a field must name the field", () => {
+  const c = scenario({});
+  c.fixture.environment = { orchestration: null };
+  c.fixture.transitions = [{ after: "forge.openDraftPr", whenCarries: { values: ["proof"], within: true }, evidence: { x: "y" } }];
+  expect(() => validateCases([c], new Set())).toThrow("invalid transition action-value condition");
+  c.fixture.transitions = [{ after: "forge.openDraftPr", whenCarries: { values: ["proof"], fields: ["body"], within: true }, evidence: { x: "y" } }];
+  expect(() => validateCases([c], new Set())).not.toThrow();
 });

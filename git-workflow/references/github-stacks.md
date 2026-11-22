@@ -157,14 +157,15 @@ update, merge the freshly fetched remote base and push normally.
   partial or uncertain push requires stopped ownership and fresh reconciliation
   before advancing.
 - Check each frozen PR's full metadata as well as its head: its base branch and
-  base commit must match the approved previous layer (or remote default for the
-  bottom PR), and auto-merge must be disabled while the required overlay is
+  base commit must match the approved previous layer (or the stack's trunk for
+  the bottom PR), and auto-merge must be disabled while the required overlay is
   incomplete. Missing metadata is not evidence of a safe state. If two reads
   disagree during inspection, discard that observation and reassess before a
   write. Stable reads do not make subsequent GitHub mutations atomic.
 - `gh stack submit` is the extension's combined command. Its Git guard does
   not constrain later PR metadata writes, and it finds each layer's PR by
-  branch name and opens one with the template unfilled when it finds none, so
+  branch name and opens one when it finds none, with the template unfilled
+  under `--auto`, the only form the protected helper runs, so
   never use it to publish a layer: push, open and join every new layer as
   [Open a layer's pull request](#open-a-layers-pull-request) describes. Check
   every PR's title, body, base, draft state and linked requirements after
@@ -401,10 +402,10 @@ fails its first run.
    `{"pull_requests":[120,122]}`, and run
    `gh api --method POST repos/OWNER/REPO/stacks -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' --input /path/to/create.json`.
    Both requests require each PR's base to be the head branch of the PR below
-   and change no base. `gh stack link` instead takes its bottom base from the
-   local `origin/HEAD` and may retarget the lower PR before creating the
-   stack, and `gh stack submit` finds each layer's PR by branch name and opens
-   a new one when it finds none. For several new layers, open each one bottom
+   and change no base. Without `--base`, `gh stack link` instead takes its
+   bottom base from the local `origin/HEAD`, and it may retarget the lower PR
+   before creating the stack; `gh stack submit` finds each layer's PR by
+   branch name and opens a new one when it finds none. For several new layers, open each one bottom
    to top after one protected push, then name them all in one request. Handle
    a conflict, validation error or lost response as that section says.
 6. Verify membership, order, heads and bases, then run

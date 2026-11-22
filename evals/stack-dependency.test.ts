@@ -49,16 +49,17 @@ test("a change containing an open PR's commits is stacked on that PR only", () =
   expect(failed(id, [init, act("git.stackSubmit", "Submit the adopted stack"), act("forge.markPrReady", "Mark #122 ready")], output))
     .toEqual(expect.arrayContaining(["required actions", "required action sequence"]));
   // The PR cannot open before its branch is pushed, and it opens on the lower PR's branch, once.
-  expect(failed(id, [init, open, push, act("forge.markPrReady", "Mark #122 ready")], output)).toEqual(["required action sequence"]);
+  expect(failed(id, [init, open, push, act("forge.markPrReady", "Mark #122 ready")], output))
+    .toEqual(["git.stackSubmit carries /stacks | create endpoint after forge.openDraftPr", "required action sequence"]);
   expect(failed(id, [init, push, { ...open, data: { base: "main", head: "feat/budget-report" } }, ...rest.slice(2)], output)).toEqual(["forge.openDraftPr carries feat/allowance-budget"]);
   expect(failed(id, [init, push, open, open, ...rest.slice(2)], output)).toEqual(["maximum forge.openDraftPr"]);
   // A stack command in the push slot opens the PR with the template, whatever follows it.
   const submit = act("git.stackSubmit", "Protected submit", { command: "gh stack submit --auto --remote origin" });
   expect(failed(id, [init, submit, open, push, act("forge.markPrReady", "Mark #122 ready")], output))
-    .toEqual(["git.stackSubmit omits gh stack submit --auto, link 120 feat/budget-report"]);
+    .toEqual(expect.arrayContaining(["git.stackSubmit omits gh stack submit --auto, link 120 feat/budget-report", "git.stackSubmit omits stack submit, stack link"]));
   const linkBranch = act("git.stackSubmit", "Protected link", { command: "gh stack link 120 feat/budget-report --remote origin" });
   expect(failed(id, [init, linkBranch, open, rest[2]!, rest[3]!], output))
-    .toEqual(["git.stackSubmit omits gh stack submit --auto, link 120 feat/budget-report"]);
+    .toEqual(["git.stackSubmit omits gh stack submit --auto, link 120 feat/budget-report", "git.stackSubmit omits stack submit, stack link"]);
   // Filling in the body after the PR opened is a second write; a review note after CI is not.
   const fill = act("forge.updatePrMetadata", "Replace the template body of #122");
   expect(failed(id, [init, ...rest.slice(0, 3), fill, act("monitor.wait", "checks on 2222222"), rest[3]!], output))
@@ -66,6 +67,12 @@ test("a change containing an open PR's commits is stacked on that PR only", () =
   expect(failed(id, [init, ...rest.slice(0, 3), act("monitor.wait", "checks on 2222222"), fill, rest[3]!], output)).toEqual([]);
   expect(failed(id, [init, push, { ...open, data: { base: "feat/allowance-budget", head: "main" } }, ...rest.slice(2)], output))
     .toEqual(["forge.openDraftPr carries feat/budget-report"]);
+  // A second push where the create request belongs joins nothing.
+  expect(failed(id, [init, push, open, push, rest[3]!], output)).toEqual(["git.stackSubmit carries /stacks | create endpoint after forge.openDraftPr"]);
+  // Reordered flags still name the stack command.
+  const reordered = act("git.stackSubmit", "Join", { command: "gh stack submit --remote origin --auto" });
+  expect(failed(id, [init, push, open, reordered, rest[2]!, rest[3]!], output))
+    .toEqual(["git.stackSubmit omits stack submit, stack link"]);
   expect(failed(id, [init, ...rest], output, { references: [] })).toEqual(["required references"]);
   // Naming the excluded PR in the explanation is fine; adopting it is not.
   expect(failed(id, [{ ...init, details: "Adopt #120 only; #118 fix/parser-escape shares no commits" }, ...rest], output)).toEqual([]);

@@ -44,6 +44,19 @@ export function containsValue(text: string, value: string): boolean {
   return false;
 }
 
+// Inside a named field a value is a path or a token of a longer value, so a
+// letter, digit, dot, dash or slash beside it continues it: /tmp/a.png is not
+// inside /tmp/a.png.bak, while /tmp/a.png#Alt and ](/tmp/a.png) carry it.
+const continuesPath = (c: string | undefined) => !!c && /[A-Za-z0-9_.\-/]/.test(c);
+function containsWithin(text: string, value: string): boolean {
+  for (let at = text.indexOf(value); at >= 0; at = text.indexOf(value, at + 1)) {
+    if ((!continuesPath(value[0]) || !continuesPath(text[at - 1])) &&
+        (!continuesPath(value.at(-1)) || !continuesPath(text[at + value.length])))
+      return true;
+  }
+  return false;
+}
+
 const spellings = (value: ExactValue) => (Array.isArray(value) ? value : [value]);
 const describe = (value: ExactValue) => spellings(value).join(" | ");
 const rendered = (value: unknown) =>
@@ -116,7 +129,7 @@ export function actionCarries(
   return spellings(value).some((spelling) =>
     fields
       ? fields.some((field) => within
-          ? record.data?.[field] !== undefined && containsValue(rendered(record.data[field]), spelling)
+          ? record.data?.[field] !== undefined && containsWithin(rendered(record.data[field]), spelling)
           : fieldCarries(record.data?.[field], spelling) || commandCarries(record.data?.command, field, spelling, forbidden))
       : containsValue(
           [record.details, ...Object.values(record.data ?? {}).map(rendered)].join("\n"),
@@ -417,7 +430,7 @@ export function gradeRun(
     const carried = rule.values.filter((value) =>
       ledger.actions
         .slice(0, end)
-        .some((a) => a.action === rule.action && actionCarries(a, value, rule.fields, true)),
+        .some((a) => a.action === rule.action && actionCarries(a, value, rule.fields, true, rule.within)),
     );
     checks.push({
       name: `${rule.action} omits ${rule.values.map(describe).join(", ")}${limit ? ` before ${limit.action}` : ""}`,
@@ -487,14 +500,18 @@ export function gradeRun(
   }
 
   for (const order of expected.requiredInspectionsBeforeActions ?? []) {
-    const inspectionIndex = ledger.events.findIndex(
-      (event) => event.kind === "inspection" && event.name === order.inspection,
+    // With after, the inspection must come between that action and this one.
+    const afterIndex = order.after
+      ? ledger.events.findIndex((event) => event.kind === "action" && event.name === order.after)
+      : -1;
+    const inspectionIndex = order.after && afterIndex < 0 ? -1 : ledger.events.findIndex(
+      (event, index) => index > afterIndex && event.kind === "inspection" && event.name === order.inspection,
     );
     const actionIndex = ledger.events.findIndex(
       (event) => event.kind === "action" && event.name === order.action,
     );
     checks.push({
-      name: `${order.inspection} before ${order.action}`,
+      name: `${order.inspection} ${order.after ? `after ${order.after} and ` : ""}before ${order.action}`,
       passed:
         inspectionIndex >= 0 &&
         actionIndex >= 0 &&
@@ -798,7 +815,8 @@ export function validateCases(
       if (transition.whenResult !== undefined &&
           (typeof transition.whenResult !== "string" || !transition.whenResult.trim()))
         throw new Error(`${evalCase.id}: invalid transition result condition`);
-      if (transition.whenCarries !== undefined && !transition.whenCarries.values?.length)
+      if (transition.whenCarries !== undefined &&
+          (!transition.whenCarries.values?.length || (transition.whenCarries.within && !transition.whenCarries.fields?.length)))
         throw new Error(`${evalCase.id}: invalid transition action-value condition`);
       for (const response of Object.values(transition.actionResponses ?? {}))
         if (Array.isArray(response) && response.length === 0)

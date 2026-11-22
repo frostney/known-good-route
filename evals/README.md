@@ -248,7 +248,10 @@ them (it confused a 40-character revision with a 42-character one):
   another action, such as a wait on the default-branch tip that must precede
   a merge, and fails when that occurrence is missing. `after` counts only
   actions recorded after a given occurrence, such as a wait that must follow
-  a rerun, and fails the same way.
+  a rerun, and fails the same way. `within` matches each value inside the
+  named fields instead of as the whole field, such as an image reference in
+  a body; a letter, digit, dot, dash or slash beside the value continues it,
+  so `/tmp/a.png` is not inside `/tmp/a.png.bak`. It needs `fields`.
   A named field is also read from a recorded `command`: `--head SHA` or
   `--head=SHA` there carries the `head` field, as long as the command gives
   that flag no other value. The `performAction` tool's `data` description

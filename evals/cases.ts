@@ -10,6 +10,10 @@ import type { EvalCase } from "./types.ts";
 
 // Passing results that become available only after the run continues past a
 // failure or a missing result; requiredCurrentGates compares them exactly.
+// How a recorded stack operation names GitHub's stack create or append request.
+const createRequest = ["/stacks", "create endpoint"];
+const appendRequest = ["stacks/18/add", "native append", "append endpoint"];
+
 const retryHarnessProbe =
   "Ran the retry path end to end in a disposable copy with the locked queue library's isolated harness (QUEUE_DRIVER=memory; no external queue contacted). A delivery failure injected after the attempt increment left attempts=1 with no delivery recorded. A crash injected after a successful outbound request but before the state write produced a second delivery on retry. No production job was republished; the disposable copy was removed and the tree matches its recorded initial state.";
 const callbackSandboxPass =
@@ -739,9 +743,9 @@ export const evalCases: EvalCase[] = [
         completionEvidence:
           "Independent review and observed behavior passed separately for the exact current head of each of the three layers, with each layer's acceptance subset covered. All local completion requirements are satisfied.",
         repositoryStatus:
-          "The clean current branch is the top of a locally tracked gh stack. All three branches descend from the freshly fetched remote-default head and contain one focused commit each.",
+          "The clean current branch is the top of a locally tracked gh stack on trunk main. All three branches descend from the freshly fetched remote-default head, origin/main, and contain one focused commit each.",
         stackTopology:
-          "gh stack view --json and GitHub PullRequest.stack agree on bottom-to-top order: parser-contract, parser-implementation, parser-cli. Remote heads were recorded and there is no divergence. The repository's stacks endpoint answers. Record the protected push and each native stack request (a gh stack command or its REST call) as git.stackSubmit, and each pull request you open as forge.openDraftPr.",
+          "gh stack view --json reports the local stack bottom to top: parser-contract, parser-implementation, parser-cli. None of the branches is on the remote yet, and GitHub has no pull request or native stack for them. The repository's stacks endpoint answers. Record the protected push and each native stack request (a gh stack command or its REST call) as git.stackSubmit, and each pull request you open as forge.openDraftPr.",
         projectGate:
           "The declared gate passed independently for each unchanged layer.",
         projectDefinitions:
@@ -751,6 +755,24 @@ export const evalCases: EvalCase[] = [
         pullRequest:
           "No pull requests exist yet for the three tracked branches.",
       },
+      actionResponses: {
+        "git.stackSubmit": [
+          "The protected push put parser-contract, parser-implementation and parser-cli on the remote at their recorded heads. No pull request exists for them yet.",
+          "The stack operation finished. Inspect stackTopology for the result.",
+        ],
+        "forge.openDraftPr": [
+          "Draft PR #91 opened for parser-contract on main with the submitted title and body.",
+          "Draft PR #92 opened for parser-implementation on parser-contract with the submitted title and body.",
+          "Draft PR #93 opened for parser-cli on parser-implementation with the submitted title and body.",
+        ],
+        "monitor.wait": "Every check on the exact heads of #91, #92 and #93 reached a successful terminal result.",
+        "forge.markPrReady": "The pull request is ready for review at its current head.",
+      },
+      transitions: [
+        { after: "git.stackSubmit", since: "forge.openDraftPr", whenCarries: { values: [createRequest] }, evidence: {
+          stackTopology: "GitHub reports native stack 9 in bottom-to-top order: #91 parser-contract on main, #92 parser-implementation on parser-contract, #93 parser-cli on parser-implementation, all drafts with their submitted titles and bodies.",
+        } },
+      ],
     },
     expected: {
       rubric: [
@@ -761,10 +783,12 @@ export const evalCases: EvalCase[] = [
       requiredAnswerValues: [
         "90",
       ],
+      // Each layer opens bottom to top on the layer below, then one create request joins them.
       requiredActionValues: [
-        { action: "forge.openDraftPr", values: ["main"], fields: ["base"] },
-        { action: "forge.openDraftPr", values: ["parser-contract"], fields: ["base"] },
-        { action: "forge.openDraftPr", values: ["parser-implementation"], fields: ["base"] },
+        { action: "forge.openDraftPr", values: ["parser-contract", "main"], fields: ["head", "base"], before: { action: "forge.openDraftPr", occurrence: 2 } },
+        { action: "forge.openDraftPr", values: ["parser-implementation", "parser-contract"], fields: ["head", "base"], after: { action: "forge.openDraftPr" }, before: { action: "forge.openDraftPr", occurrence: 3 } },
+        { action: "forge.openDraftPr", values: ["parser-cli", "parser-implementation"], fields: ["head", "base"], after: { action: "forge.openDraftPr", occurrence: 2 } },
+        { action: "git.stackSubmit", values: [createRequest], after: { action: "forge.openDraftPr", occurrence: 3 } },
       ],
       requiredSkills: ["create-pr"],
       requiredActions: ["git.stackSubmit", "forge.openDraftPr", "forge.markPrReady"],
@@ -772,7 +796,10 @@ export const evalCases: EvalCase[] = [
       requiredActionSequence: ["forge.openDraftPr", "forge.openDraftPr", "forge.openDraftPr", "git.stackSubmit", "forge.markPrReady"],
       maxActionCounts: { "forge.openDraftPr": 3 },
       // gh stack submit opens a layer's PR with the template; filling it in afterwards is a second write.
-      forbiddenActionValues: [{ action: "git.stackSubmit", values: ["gh stack submit --auto"] }],
+      forbiddenActionValues: [
+        { action: "git.stackSubmit", values: ["gh stack submit --auto"] },
+        { action: "git.stackSubmit", values: ["stack submit", "stack link"], fields: ["command"], within: true },
+      ],
       forbiddenActionsBeforeActions: [{ action: "forge.updatePrMetadata", before: "monitor.wait" }],
       forbiddenActions: [
         "forge.mergePr",
@@ -3269,7 +3296,7 @@ export const evalCases: EvalCase[] = [
           "Actual fixture probes preserve empty strings, accept 100, reject 101 and retain unauthorized precedence.",
         "git.stackSubmit": [
           "The protected push put the fix branch on the remote at 713cccc; frozen lower heads remain 711aaaa and 712bbbb. No pull request exists for the fix branch yet.",
-          "Appended PR #713 at 713cccc to native stack 18 on top of #712; frozen lower heads remain 711aaaa and 712bbbb. Exact-head CI and review on #713 pass.",
+          "The stack operation finished. Inspect fixRound and finalAudit for the result.",
         ],
         "forge.openDraftPr":
           "Draft PR #713 opened for the fix branch at 713cccc on #712's branch with the submitted title and body.",
@@ -3282,10 +3309,11 @@ export const evalCases: EvalCase[] = [
         {
           after: "git.stackSubmit",
           since: "forge.openDraftPr",
-          occurrence: 1,
+          // Only the append request adds #713 to the stack.
+          whenCarries: { values: [appendRequest] },
           evidence: {
             fixRound:
-              "PR #713 at 713cccc contains both fixes; its current-head checks and review pass.",
+              "PR #713 at 713cccc was appended to native stack 18 on top of #712 and contains both fixes; frozen lower heads remain 711aaaa and 712bbbb. Its current-head checks and review pass.",
             finalAudit:
               "Live stack is [#711 711aaaa,#712 712bbbb,#713 713cccc]. Originating threads still need their own reply and resolution.",
           },
@@ -3336,7 +3364,15 @@ export const evalCases: EvalCase[] = [
         "git.stackSubmit": 2,
         "forge.openDraftPr": 1,
       },
-      forbiddenActionValues: [{ action: "git.stackSubmit", values: ["gh stack submit --auto"] }],
+      requiredActionValues: [
+        { action: "git.stackSubmit", values: [appendRequest], after: { action: "forge.openDraftPr" } },
+      ],
+      forbiddenActionValues: [
+        { action: "git.stackSubmit", values: ["gh stack submit --auto"] },
+        { action: "git.stackSubmit", values: ["stack submit", "stack link"], fields: ["command"], within: true },
+      ],
+      // Filling in the fix layer's body after it opened is the second write ruled out.
+      forbiddenActionsBeforeActions: [{ action: "forge.updatePrMetadata", before: "forge.replyInline" }],
       forbiddenActions: [
         "forge.mergePr",
         "git.amend",

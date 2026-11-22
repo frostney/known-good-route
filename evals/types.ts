@@ -150,6 +150,8 @@ export interface EvalExpectations {
     action: ActionName;
     values: ExactValue[];
     fields?: string[];
+    // As for requiredActionValues.
+    within?: boolean;
     before?: { action: ActionName; occurrence?: number };
   }>;
 
@@ -171,6 +173,9 @@ export interface EvalExpectations {
   requiredInspectionsBeforeActions?: Array<{
     inspection: string;
     action: ActionName;
+    // The inspection must also follow the first such action, such as an
+    // inspection of what a creation published.
+    after?: ActionName;
   }>;
   requiredSkillsBeforeActions?: Array<{
     skill: string;

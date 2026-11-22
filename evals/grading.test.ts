@@ -439,13 +439,27 @@ describe("eval grading", () => {
       opened("parser-contract", "main"),
       opened("parser-implementation", "parser-contract"),
       opened("parser-cli", "parser-implementation"),
-      { action: "git.stackSubmit" as const, details: "Create the native stack from the three PR numbers" },
+      { action: "git.stackSubmit" as const, details: "Create the native stack from the three PR numbers: gh api --method POST repos/example/project/stacks" },
     ];
     const ready = { action: "forge.markPrReady" as const, details: "Mark each exact-head green layer ready" };
     const createOutput = "Submitted bottom-to-top stack for #90; every exact head is green.";
     expect(
       gradeRun(createCase, ordered({ loadedSkills: ["create-pr"], actions: [...layers, ready] }), createOutput).passed,
     ).toBeTrue();
+    // Layers opened top down, or a second push where the create request belongs, do not publish the stack.
+    expect(
+      gradeRun(createCase, ordered({ loadedSkills: ["create-pr"], actions: [layers[0]!, layers[3]!, layers[2]!, layers[1]!, layers[4]!, ready] }), createOutput).passed,
+    ).toBeFalse();
+    expect(
+      gradeRun(createCase, ordered({ loadedSkills: ["create-pr"], actions: [...layers.slice(0, 4), layers[0]!, ready] }), createOutput).passed,
+    ).toBeFalse();
+    expect(
+      gradeRun(createCase, ordered({ loadedSkills: ["create-pr"], actions: [
+        ...layers.slice(0, 4),
+        { action: "git.stackSubmit", details: "Join the layers", data: { command: "gh stack submit --remote origin --auto" } },
+        ready,
+      ] }), createOutput).passed,
+    ).toBeFalse();
     // gh stack submit opening the layers with the template, then filling in their bodies, is the old two-write path.
     expect(
       gradeRun(
@@ -1958,7 +1972,7 @@ describe("eval grading", () => {
       },
       {
         action: "git.stackSubmit" as const,
-        details: "Append #713 to stack 18 through the native endpoint",
+        details: "Append #713 to stack 18: gh api --method POST repos/octo/app/stacks/18/add",
       },
       {
         action: "forge.replyInline" as const,

@@ -30,6 +30,8 @@ const common = {
   projectGate: `The declared gate passed on the unchanged head ${report}.`,
   pullRequest: "No pull request exists for feat/budget-report.",
 };
+// How a recorded stack operation names GitHub's stack create request.
+const createRequest = ["/stacks", "create endpoint"];
 const recordStack = "Record the protected push and each native stack request (a gh stack command or its REST call) as git.stackSubmit, and each pull request you open as forge.openDraftPr.";
 const publication: ActionName[] = [
   "forge.mergePr", "forge.openDraftPr", "git.amend", "git.forcePush", "git.push", "git.rebase", "git.stackMerge",
@@ -74,7 +76,8 @@ export const stackDependencyCases: EvalCase[] = [
         { after: "forge.openDraftPr", evidence: {
           stackTopology: `Draft PR #122 feat/budget-report at ${report} has base feat/allowance-budget. GitHub reports no native stack for #120 or #122 yet. PR #120 is unchanged at ${budget} with base main. ${recordStack}`,
         } },
-        { after: "git.stackSubmit", since: "forge.openDraftPr", occurrence: 1, evidence: {
+        // Only the create request joins the PRs into a stack.
+        { after: "git.stackSubmit", since: "forge.openDraftPr", whenCarries: { values: [createRequest] }, evidence: {
           stackTopology: `GitHub reports native stack 31 in bottom-to-top order: existing PR #120 feat/allowance-budget at ${budget} with base main, unchanged, and draft PR #122 feat/budget-report at ${report} with base feat/allowance-budget, its title and body as submitted. No other PR changed.`,
         } },
       ],
@@ -92,10 +95,13 @@ export const stackDependencyCases: EvalCase[] = [
         { action: "git.stackInit", values: [["init feat/allowance-budget feat/budget-report","[\"feat/allowance-budget\",\"feat/budget-report\"]"]], every: true },
         { action: "forge.openDraftPr", values: ["feat/allowance-budget"], fields: ["base"] },
         { action: "forge.openDraftPr", values: ["feat/budget-report"], fields: ["head"] },
+        // The stack request after the PR is GitHub's stack create endpoint.
+        { action: "git.stackSubmit", values: [createRequest], after: { action: "forge.openDraftPr" } },
       ],
       // The stack commands that open a PR themselves write the template, not the body.
       forbiddenActionValues: [
         { action: "git.stackSubmit", values: ["gh stack submit --auto", "link 120 feat/budget-report"] },
+        { action: "git.stackSubmit", values: ["stack submit", "stack link"], fields: ["command"], within: true },
       ],
       // Filling in a body after the PR opened is the second write this case rules out.
       forbiddenActionsBeforeActions: [{ action: "forge.updatePrMetadata", before: "monitor.wait" }],
