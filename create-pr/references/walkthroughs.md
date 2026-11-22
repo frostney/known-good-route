@@ -71,11 +71,54 @@ Wayland capture needs a Wayland session and its capture backend or portal.
 
 ## Upload media
 
-Use a supported upload path for local screenshots and videos; inspect the
-installed GitHub CLI's attachment support. With `--attach`, use
-`'<image>#<alt text>'` for images and a plain file path for videos. Verify each
-uploaded asset in the actual PR. A partial upload failure can still create the
-PR: reconcile the returned URL and successful attachments before retrying.
+Put media into the body in the same command that writes the body, so that,
+when every upload succeeds, the PR never exists without it. A first body
+without its media shows reviewers an incomplete description, and a repository
+check that validates the body when the PR is opened or edited fails that first
+run.
+
+- Reference each file in the body as an inline image, `![alt text](<path>)`.
+  A video takes the same form in a paragraph of its own, with a blank line
+  before and after it, and renders as a player; in a table cell or beside
+  other text it becomes a link. Give alt text in the body: gh takes
+  `--attach '<image>#<alt text>'` for an image but refuses alt text on a
+  video. A bare path is not
+  a reference: gh leaves it in the body as text and appends the upload at the
+  end. Pass `--attach <path>`
+  for each file in the command that writes that body:
+  `gh pr create --draft --title TITLE --body-file FILE --attach PATH` opens a
+  PR, and `gh pr edit N --body-file FILE --attach PATH` rewrites an open PR's
+  body. gh 2.99 and newer uploads each file and replaces every reference to it
+  with the URL GitHub returns for the upload; a file the body does not
+  reference is appended at the end. gh cannot attach on GitHub Enterprise
+  Server or without write access to the repository; report that as an upload
+  gap, as below.
+- Run the command from the repository root and write each path the same in
+  the reference and in `--attach`: relative to the repository root, or a
+  plain `/tmp/...` path. From gh 2.103 a relative reference is looked up in
+  the body file's folder before the working directory, and the
+  [publication guard](../../git-workflow/SKILL.md#publication-guard) rewrites
+  an absolute path under the home directory or a per-session temporary
+  folder, which then no longer names the file. Keep the files where git
+  ignores them or outside the checkout.
+- Never open the PR first and add its media with a second write, such as
+  `gh pr edit --attach` or pasting the uploaded URLs into the body. A command
+  that cannot attach never writes a PR's first body: `gh stack submit --auto`
+  and `gh stack link` open a PR for a branch without one with the template
+  unfilled, so the
+  [stack reference](../../git-workflow/references/github-stacks.md#open-a-layers-pull-request)
+  opens each layer with `gh pr create` first.
+- Read the body back after the write: each reference must point at its
+  uploaded URL and no local path may remain. Verify each asset in the actual
+  PR. gh stops uploading at the first failure. When some files uploaded, it
+  still creates or updates the PR with their URLs and the remaining local
+  paths, prints its URL and exits non-zero, so a body check can fail on that
+  write; when none uploaded, it creates no PR and writes no body. Read GitHub
+  before acting again and never create a second PR. Once the cause is fixed,
+  write the complete body again with `gh pr edit N --body-file FILE` and
+  every `--attach`. When GitHub shows no PR on that head and the command has
+  stopped, run the creation again instead.
+
 Never commit evidence media to the repository.
 
 ## Report incomplete requirements without blocking the PR

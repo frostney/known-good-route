@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createFixtureState } from "./fixture-state.ts";
 import { containsValue, gradeRun, validateCases } from "./grading.ts";
 import type { EvalCase, RunLedger } from "./types.ts";
 
@@ -138,10 +139,95 @@ test("the action tool names a field for every action whose rules read named fiel
   for (const evalCase of evalCases)
     for (const rule of [...(evalCase.expected.requiredActionValues ?? []), ...(evalCase.expected.forbiddenActionValues ?? [])])
       for (const field of rule.fields ?? []) read.set(rule.action, (read.get(rule.action) ?? new Set()).add(field));
-  expect([...read.keys()].sort()).toEqual(["file.edit", "forge.openDraftPr", "git.removeWorktree", "monitor.wait"]);
+  expect([...read.keys()].sort()).toEqual(["file.edit", "forge.openDraftPr", "git.removeWorktree", "git.stackSubmit", "monitor.wait"]);
   // A run can only fill a field it was asked for: each such action has a clause that names one.
   for (const [action, fields] of read) {
     const clause = described.split(";").find((part) => containsValue(part, action)) ?? "";
     expect({ action, named: [...fields].filter((field) => containsValue(clause, field)).length > 0 }).toEqual({ action, named: true });
   }
+});
+
+test("within matches a value as a whole token inside a named field only", () => {
+  const ref = scenario({ requiredActionValues: [{ action: "forge.openDraftPr", values: [["](/tmp/after.png)", "](</tmp/after.png>)"]], fields: ["body"], within: true }] });
+  const open = (data: Record<string, unknown>, details = "") => ({ action: "forge.openDraftPr" as const, details, data });
+  expect(failed(ref, ledger([open({ body: "| ![After](/tmp/after.png) |" })]), "")).toEqual([]);
+  expect(failed(ref, ledger([open({ body: "![After](</tmp/after.png>)" })]), "")).toEqual([]);
+  // A bare path, the path in another field or in the details, and a longer path do not count.
+  expect(failed(ref, ledger([open({ body: "See /tmp/after.png" })]), "")).toHaveLength(1);
+  expect(failed(ref, ledger([open({ body: "Done.", note: "![After](/tmp/after.png)" }, "![After](/tmp/after.png)")]), "")).toHaveLength(1);
+  expect(failed(ref, ledger([open({ body: "![After](/tmp/after.png.bak)" })]), "")).toHaveLength(1);
+  expect(() => validateCases([scenario({ requiredActionValues: [{ action: "forge.openDraftPr", values: ["x"], within: true }] })], new Set()))
+    .toThrow("invalid exact value check");
+});
+
+test("a transition that matches within a field must name the field", () => {
+  const c = scenario({});
+  c.fixture.environment = { orchestration: null };
+  c.fixture.transitions = [{ after: "forge.openDraftPr", whenCarries: { values: ["proof"], within: true }, evidence: { x: "y" } }];
+  expect(() => validateCases([c], new Set())).toThrow("invalid transition action-value condition");
+  c.fixture.transitions = [{ after: "forge.openDraftPr", whenCarries: { values: ["proof"], fields: ["body"], within: true }, evidence: { x: "y" } }];
+  expect(() => validateCases([c], new Set())).not.toThrow();
+});
+
+test("within ends a value at a sentence's dot but not at a longer path", () => {
+  const head = scenario({ requiredActionValues: [{ action: "forge.openDraftPr", values: [revision], fields: ["body"], within: true }] });
+  const open = (body: string) => ledger([{ action: "forge.openDraftPr", details: "", data: { body } }]);
+  expect(failed(head, open(`Passed on ${revision}.`), "")).toEqual([]);
+  expect(failed(head, open(`Passed on ${revision}.\nNext line.`), "")).toEqual([]);
+  expect(failed(head, open(`Passed on ${revision}.tar`), "")).toHaveLength(1);
+});
+
+test("suffix, alone and json each match a named field their own way, and also binds them to one action", () => {
+  const open = (data: Record<string, unknown>) => ({ action: "forge.openDraftPr" as const, details: "", data });
+  const suffix = scenario({ requiredActionValues: [{ action: "forge.openDraftPr", values: ["/tmp/a.png"], fields: ["attachments"], suffix: "#" }] });
+  expect(failed(suffix, ledger([open({ attachments: ["/tmp/a.png#Alt"] })]), "")).toEqual([]);
+  expect(failed(suffix, ledger([open({ attachments: ["/tmp/a.png"] })]), "")).toEqual([]);
+  for (const attachments of [["/tmp/a.png.bak"], ["x/tmp/a.png"], ["/tmp/a.png /tmp/b.png"]])
+    expect(failed(suffix, ledger([open({ attachments })]), "")).toHaveLength(1);
+  const alone = scenario({ requiredActionValues: [{ action: "forge.openDraftPr", values: ["/tmp/v.mp4"], fields: ["body"], alone: true }] });
+  expect(failed(alone, ledger([open({ body: "Text.\n\n![Demo](/tmp/v.mp4)\n\nMore." })]), "")).toEqual([]);
+  for (const body of ["Demo: ![Demo](/tmp/v.mp4)", "Text.\n![Demo](/tmp/v.mp4)", "> ![Demo](/tmp/v.mp4)", "    ![Demo](/tmp/v.mp4)", "![Demo](/tmp/v.mp4.bak)"])
+    expect(failed(alone, ledger([open({ body })]), "")).toHaveLength(1);
+  const request = scenario({ requiredActionValues: [{
+    action: "git.stackSubmit", values: ["POST"], fields: ["method"],
+    also: [{ values: ['{"pull_requests":[1,2]}'], fields: ["body"], json: true }],
+  }] });
+  const submit = (data: Record<string, unknown>) => ({ action: "git.stackSubmit" as const, details: "", data });
+  expect(failed(request, ledger([submit({ command: "gh api --method POST x", body: '{ "pull_requests": [1, 2] }' })]), "")).toEqual([]);
+  expect(failed(request, ledger([submit({ method: "POST", body: { pull_requests: [1, 2] } })]), "")).toEqual([]);
+  for (const data of [{ method: "POST", body: { pull_requests: ["1", "2"] } }, { method: "POST", body: { pull_requests: [2, 1] } }, { method: "GET", body: { pull_requests: [1, 2] } }])
+    expect(failed(request, ledger([submit(data)]), "")).toHaveLength(1);
+  // The method on one action and the body on another do not make one request.
+  expect(failed(request, ledger([submit({ method: "POST" }), submit({ body: { pull_requests: [1, 2] } })]), "")).toHaveLength(1);
+});
+
+test("a match option needs fields, a rule takes one, and a JSON value must parse", () => {
+  for (const rule of [
+    { values: ["x"], alone: true }, { values: ["x"], fields: ["body"], within: true, alone: true },
+    { values: ["not json"], fields: ["body"], json: true }, { values: ["x"], fields: ["a"], suffix: "" },
+  ])
+    expect(() => validateCases([scenario({ requiredActionValues: [{ action: "forge.openDraftPr", ...rule }] })], new Set()))
+      .toThrow("invalid exact value check");
+  expect(() => validateCases([scenario({ requiredActionValues: [{ action: "forge.openDraftPr", values: ["x"], fields: ["a"], also: [{ values: ["y"], json: true }] }] })], new Set()))
+    .toThrow("invalid exact value check");
+});
+
+test("a transition result replaces only the matching call's result, and whenRecorded reads earlier results", () => {
+  const c = scenario({});
+  c.fixture.actionResponses = { "git.push": "Pushed.", "forge.openDraftPr": "Refused." };
+  c.fixture.transitions = [
+    { after: "forge.openDraftPr", whenRecorded: [{ action: "git.push", withResult: "Pushed" }], whenCarries: { values: ["main"], fields: ["base"] }, result: "Opened.", evidence: {} },
+    { after: "monitor.wait", whenRecorded: [{ action: "forge.openDraftPr", withResult: "Opened" }], evidence: { state: "open" } },
+  ];
+  const run = (calls: Array<[RunLedger["actions"][number]["action"], Record<string, unknown>]>) => {
+    const state = createFixtureState(c.fixture);
+    return { results: calls.map(([action, data]) => state.record(action, data)), evidence: state.evidence };
+  };
+  expect(run([["forge.openDraftPr", { base: "main" }], ["git.push", {}], ["monitor.wait", {}]])).toEqual({ results: ["Refused.", "Pushed.", undefined], evidence: {} });
+  expect(run([["git.push", {}], ["forge.openDraftPr", { base: "dev" }], ["monitor.wait", {}]]).evidence).toEqual({});
+  expect(run([["git.push", {}], ["forge.openDraftPr", { base: "main" }], ["monitor.wait", {}]])).toEqual({ results: ["Pushed.", "Opened.", undefined], evidence: { state: "open" } });
+  c.expected.rubric = [{ id: "outcome", question: "Does the answer report the outcome?" }];
+  c.fixture.environment = { orchestration: null };
+  c.fixture.transitions = [{ after: "git.push", whenRecorded: [{ action: "git.push", withResult: " " }], evidence: {} }];
+  expect(() => validateCases([c], new Set())).toThrow("invalid transition recorded-action condition");
 });

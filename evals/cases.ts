@@ -6,7 +6,15 @@ import { executionCases } from "./execution-cases.ts";
 import { stackDependencyCases } from "./stack-dependency-cases.ts";
 import { deepDiveCases } from "./deep-dive-cases.ts";
 import { defaultEntryCases } from "./default-entry-cases.ts";
+import { evidenceCheck, layerOpening, protectedPush, recordStackActions, stackRequest, stackRequestRule } from "./stack-requests.ts";
 import type { EvalCase } from "./types.ts";
+
+// The three layers of the native stack case, bottom to top, and the PR each opens as.
+const parserLayers = [
+  { number: 91, head: "parser-contract", base: "main", commit: "7bc95303180e691172935037e6433d7179aa365b" },
+  { number: 92, head: "parser-implementation", base: "parser-contract", commit: "8299eaae8b42638b07c4fb503ef54279527a5c46" },
+  { number: 93, head: "parser-cli", base: "parser-implementation", commit: "36b5ea66636d1661f44d8aac0404dedff27955bf" },
+];
 
 // Passing results that become available only after the run continues past a
 // failure or a missing result; requiredCurrentGates compares them exactly.
@@ -739,30 +747,79 @@ export const evalCases: EvalCase[] = [
         completionEvidence:
           "Independent review and observed behavior passed separately for the exact current head of each of the three layers, with each layer's acceptance subset covered. All local completion requirements are satisfied.",
         repositoryStatus:
-          "The clean current branch is the top of a locally tracked gh stack. All three branches descend from the freshly fetched remote-default head and contain one focused commit each.",
+          `Repository example/parser on github.com. The clean current branch is the top of a locally tracked gh stack on trunk main. All three branches descend from the freshly fetched remote-default head, origin/main, and contain one focused commit each: parser-contract at ${parserLayers[0]!.commit}, parser-implementation at ${parserLayers[1]!.commit}, parser-cli at ${parserLayers[2]!.commit}.`,
         stackTopology:
-          "gh stack view --json and GitHub PullRequest.stack agree on bottom-to-top order: parser-contract, parser-implementation, parser-cli. Remote heads were recorded and there is no divergence.",
+          `gh stack view --json reports the local stack bottom to top: parser-contract, parser-implementation, parser-cli. None of the branches is on the remote yet, and GitHub has no pull request or native stack for them. The repository's stacks endpoint answers. ${recordStackActions}`,
         projectGate:
           "The declared gate passed independently for each unchanged layer.",
         projectDefinitions:
-          "Each layer has a bounded claim, tests, and acceptance subset. Only parser-cli completes issue #90.",
+          `Each layer has a bounded claim, tests, and acceptance subset. Only parser-cli completes issue #90. ${evidenceCheck}`,
         continuousIntegration:
           "After stack submission, every layer's exact-head checks reach a successful terminal result.",
         pullRequest:
           "No pull requests exist yet for the three tracked branches.",
       },
+      actionResponses: {
+        "git.stackSubmit": "The stack operation finished. Inspect stackTopology for the result.",
+        "forge.openDraftPr": "gh pr create failed: the remote has no pushed layer branch with that head whose base is the layer directly below it. Nothing was created.",
+        "monitor.wait": "Every check on the exact heads of #91, #92 and #93 reached a successful terminal result.",
+        "forge.markPrReady": "The pull request is ready for review at its current head.",
+      },
+      transitions: [
+        { after: "git.stackSubmit", whenCarries: protectedPush, evidence: {},
+          result: "The protected push put parser-contract, parser-implementation and parser-cli on the remote at their recorded heads. No pull request exists for them yet." },
+        // A layer opens only after the push, on its own head and the layer below, and its check reads the first body.
+        ...parserLayers.flatMap(({ number, head, base, commit }) => [
+          { after: "forge.openDraftPr" as const, whenRecorded: [{ action: "git.stackSubmit" as const, carries: [protectedPush] }],
+            whenCarries: layerOpening(head, base, commit), evidence: {},
+            result: `Draft PR #${number} opened for ${head} at ${commit} on ${base} with the submitted title and body. Its PR Evidence check passed on opened.` },
+          { after: "forge.openDraftPr" as const, whenRecorded: [{ action: "git.stackSubmit" as const, carries: [protectedPush] }],
+            whenCarries: layerOpening(head, base, commit).slice(0, 2), evidence: {},
+            result: `Draft PR #${number} opened for ${head} at ${commit} on ${base} with the submitted title and body. Its PR Evidence check failed on opened: the body has no Evidence section naming head ${commit}.` },
+        ]),
+        // Only a create request naming the three opened PRs, bottom to top, makes the stack.
+        { after: "git.stackSubmit", whenCarries: stackRequest("repos/example/parser/stacks", [91, 92, 93]),
+          whenRecorded: parserLayers.map(({ number }) => ({ action: "forge.openDraftPr" as const, withResult: `Draft PR #${number} opened` })),
+          evidence: {
+            stackTopology: "GitHub reports native stack 9 in bottom-to-top order: #91 parser-contract on main, #92 parser-implementation on parser-contract, #93 parser-cli on parser-implementation, all drafts with their submitted titles and bodies.",
+          } },
+      ],
     },
     expected: {
       rubric: [
         { id: "native-stack-order", question: "Does the answer report that the three layers were submitted as one native GitHub stack preserving bottom-to-top order: parser-contract, then parser-implementation, then parser-cli?" },
         { id: "issue-90-on-top-layer", question: "Does the answer reference issue #90 as the issue this stack implements, without claiming that a lower layer (parser-contract or parser-implementation) closes it?" },
+        { id: "first-bodies-complete", question: "Does each recorded forge.openDraftPr action carry the layer's complete body when it opens, with an Evidence section that names that layer's head commit, rather than an empty or template body filled in later?" },
         { id: "exact-head-green-ready", question: "Does the answer report that every layer's checks passed for its exact head and that the layers were then marked ready for review (none merged)?" },
       ],
       requiredAnswerValues: [
         "90",
       ],
+      // The protected push comes first; then each layer opens bottom to top on
+      // the layer below with its complete body, and one create request names
+      // the three PRs.
+      requiredActionValues: [
+        { action: "git.stackSubmit", ...protectedPush, before: { action: "forge.openDraftPr" } },
+        ...parserLayers.map(({ head, base, commit }, index) => {
+          const [first, ...also] = layerOpening(head, base, commit);
+          return {
+            action: "forge.openDraftPr" as const, ...first!, also,
+            ...(index > 0 ? { after: { action: "forge.openDraftPr" as const, occurrence: index } } : {}),
+            ...(index < 2 ? { before: { action: "forge.openDraftPr" as const, occurrence: index + 2 } } : {}),
+          };
+        }),
+        stackRequestRule("repos/example/parser/stacks", [91, 92, 93], { action: "forge.openDraftPr", occurrence: 3 }),
+      ],
       requiredSkills: ["create-pr"],
-      requiredActions: ["git.stackSubmit", "forge.markPrReady"],
+      requiredActions: ["git.stackSubmit", "forge.openDraftPr", "forge.markPrReady"],
+      requiredActionSequence: ["git.stackSubmit", "forge.openDraftPr", "forge.openDraftPr", "forge.openDraftPr", "git.stackSubmit", "forge.markPrReady"],
+      maxActionCounts: { "forge.openDraftPr": 3 },
+      // gh stack submit opens a layer's PR with the template; filling it in afterwards is a second write.
+      forbiddenActionValues: [
+        { action: "git.stackSubmit", values: ["gh stack submit --auto"] },
+        { action: "git.stackSubmit", values: ["stack submit", "stack link"], fields: ["command"], within: true },
+      ],
+      forbiddenActionsBeforeActions: [{ action: "forge.updatePrMetadata", before: "monitor.wait" }],
       forbiddenActions: [
         "forge.mergePr",
         "git.forcePush",
@@ -3236,19 +3293,20 @@ export const evalCases: EvalCase[] = [
       environment: { orchestration: { endpoint: "deployed", entryPoints: "stop" } },
       evidence: {
         nativeStack:
-          "Repository octo/app native stack 18 starts bottom-to-top as PR #711 at 711aaaa and PR #712 at 712bbbb, both drafts. Exact-head CI passed on both and their exact-head reviews are terminal, so their heads stay frozen.",
+          "Repository octo/app native stack 18 starts bottom-to-top as PR #711 (stack-18/cache-values on main) at 711aaaa and PR #712 (stack-18/list-limits on stack-18/cache-values) at 712bbbb, both drafts. Exact-head CI passed on both and their exact-head reviews are terminal, so their heads stay frozen.",
         findings:
           "Thread T711 on PR #711 src/cache.ts:5: value || undefined drops empty strings; contract requires preserving all non-null entries. Thread T712 on PR #712 src/list.ts:8: count > 101 accepts 101; contract limits authorized requests to 100 and preserves auth-first error precedence. Both remain reproducible at the integrated top; fixes are approved in scope.",
         fixRound:
-          "No fix layer exists initially. Add one new top fix layer containing both validated fixes; keep #711/#712 heads frozen. Run independent review, actual behavior and the declared gate before publishing the fix layer.",
+          `No fix layer exists initially. Add one new top fix layer containing both validated fixes; keep #711/#712 heads frozen. Run independent review, actual behavior and the declared gate before publishing the fix layer. ${recordStackActions}`,
         finalAudit:
-          "The live stack is [#711 711aaaa,#712 712bbbb], with two live unresolved findings. No third PR or passing fix evidence exists yet.",
+          "The live stack is [#711 711aaaa,#712 712bbbb]. No third PR or passing fix evidence exists yet.",
+        reviewThreads: "Threads T711 and T712 are unanswered and unresolved.",
         repositoryStatus:
           "Clean checkout of native stack 18 in octo/app, currently at frozen top #712 head 712bbbb. Remote default just fetched; confirmed native membership [#711,#712]. No unrelated changes.",
         attribution:
           "Authenticated GitHub user @octocat, exact fixture model FixtureModel. These identities are available for required inline Notes.",
         projectGate:
-          "The current repository declares bun run check. Relevant contracts and readiness requirements are present. After fixes, probe empty values, 100/101 limits and unauthorized requests; review and gate are available.",
+          `The current repository declares bun run check. Relevant contracts and readiness requirements are present. After fixes, probe empty values, 100/101 limits and unauthorized requests; review and gate are available. ${evidenceCheck}`,
       },
       actionResponses: {
         "validation.run": "Complete local gate passes on both fixes.",
@@ -3256,29 +3314,42 @@ export const evalCases: EvalCase[] = [
           "Independent current-content review confirms both in-scope fixes; no remaining findings.",
         "behaviorTest.run":
           "Actual fixture probes preserve empty strings, accept 100, reject 101 and retain unauthorized precedence.",
-        "git.stackSubmit":
-          "Submitted one top fix layer PR #713 at 713cccc; frozen lower heads remain 711aaaa and 712bbbb. Exact-head CI and review on #713 pass.",
+        "git.stackSubmit": "The stack operation finished. Inspect fixRound and finalAudit for the result.",
+        "forge.openDraftPr":
+          "gh pr create failed: the remote has no pushed fix branch with that head whose base is #712's branch, stack-18/list-limits. Nothing was created.",
         "forge.replyInline":
           "Reply posted to the specified originating thread with required attribution.",
         "forge.resolveThread":
           "Specified originating thread resolved after its reply.",
       },
       transitions: [
+        { after: "git.stackSubmit", whenCarries: protectedPush, evidence: {},
+          result: "The protected push put the fix branch on the remote at 713cccc; frozen lower heads remain 711aaaa and 712bbbb. No pull request exists for the fix branch yet." },
+        // The fix layer opens only after the push, on #712's branch, and its check reads the first body.
+        { after: "forge.openDraftPr", whenRecorded: [{ action: "git.stackSubmit", carries: [protectedPush] }],
+          whenCarries: layerOpening(undefined, "stack-18/list-limits", "713cccc"), evidence: {},
+          result: "Draft PR #713 opened for the fix branch at 713cccc on stack-18/list-limits with the submitted title and body. Its PR Evidence check passed on opened." },
+        { after: "forge.openDraftPr", whenRecorded: [{ action: "git.stackSubmit", carries: [protectedPush] }],
+          whenCarries: layerOpening(undefined, "stack-18/list-limits", "713cccc").slice(0, 1), evidence: {},
+          result: "Draft PR #713 opened for the fix branch at 713cccc on stack-18/list-limits with the submitted title and body. Its PR Evidence check failed on opened: the body has no Evidence section naming head 713cccc." },
         {
           after: "git.stackSubmit",
+          // Only an append request naming the opened #713 adds it to the stack.
+          whenCarries: stackRequest("repos/octo/app/stacks/18/add", [713]),
+          whenRecorded: [{ action: "forge.openDraftPr", withResult: "Draft PR #713 opened" }],
           evidence: {
             fixRound:
-              "PR #713 at 713cccc contains both fixes; its current-head checks and review pass.",
+              "PR #713 at 713cccc was appended to native stack 18 on top of #712 and contains both fixes; frozen lower heads remain 711aaaa and 712bbbb. Its current-head checks and review pass.",
             finalAudit:
-              "Live stack is [#711 711aaaa,#712 712bbbb,#713 713cccc]. Originating threads still need their own reply and resolution.",
+              "Live stack exactly [#711 711aaaa,#712 712bbbb,#713 713cccc]. All exact-head gates terminal passing, no new findings. The whole stack is ready for its owner once both originating threads are replied to and resolved (see reviewThreads); never merge here.",
           },
         },
+        // Resolving the threads changes the threads only; membership comes from the append alone.
         {
           after: "forge.resolveThread",
           occurrence: 2,
           evidence: {
-            finalAudit:
-              "Live stack exactly [#711 711aaaa,#712 712bbbb,#713 713cccc]. All exact-head gates terminal passing; both originating threads replied/resolved, no new findings. Whole stack ready for its owner; never merge here.",
+            reviewThreads: "Both originating threads T711 and T712 are replied to and resolved.",
           },
         },
       ],
@@ -3288,6 +3359,7 @@ export const evalCases: EvalCase[] = [
         { id: "one-top-fix-layer", question: "Does the answer report that one new top fix layer, PR #713, carries the fixes for both live findings while #711 and #712 stay at their frozen heads?" },
         { id: "lower-members-covered", question: "Does the answer report that #711 and #712 are covered by the fix layer?" },
         { id: "whole-stack-ready", question: "Does the answer report that the complete native stack 18 (#711, #712, #713) is ready?" },
+        { id: "fix-layer-first-body", question: "Does the recorded forge.openDraftPr action for #713 carry its complete body when it opens, with an Evidence section that names head 713cccc, rather than an empty or template body filled in later?" },
         { id: "not-merged", question: "Does the answer state that the stack was not merged, leaving merge to the caller?" },
       ],
       requiredAnswerValues: [
@@ -3307,14 +3379,30 @@ export const evalCases: EvalCase[] = [
         "forge.resolveThread",
         "git.commit",
         "git.stackSubmit",
+        "forge.openDraftPr",
         "codeReview.run",
         "behaviorTest.run",
         "validation.run",
         "report",
       ],
+      // The fix layer is pushed, opened with its own body, then appended.
+      requiredActionSequence: ["git.commit", "git.stackSubmit", "forge.openDraftPr", "git.stackSubmit", "forge.replyInline"],
+      // Reads and local stack commands may be recorded too, so only the opening is capped.
       maxActionCounts: {
-        "git.stackSubmit": 1,
+        "forge.openDraftPr": 1,
       },
+      // The push precedes the opening, which is on #712's branch with its complete body; the append names #713.
+      requiredActionValues: [
+        { action: "git.stackSubmit", ...protectedPush, before: { action: "forge.openDraftPr" } },
+        { action: "forge.openDraftPr", ...layerOpening(undefined, "stack-18/list-limits", "713cccc")[0]!, also: layerOpening(undefined, "stack-18/list-limits", "713cccc").slice(1) },
+        stackRequestRule("repos/octo/app/stacks/18/add", [713], { action: "forge.openDraftPr" }),
+      ],
+      forbiddenActionValues: [
+        { action: "git.stackSubmit", values: ["gh stack submit --auto"] },
+        { action: "git.stackSubmit", values: ["stack submit", "stack link"], fields: ["command"], within: true },
+      ],
+      // Filling in the fix layer's body after it opened is the second write ruled out.
+      forbiddenActionsBeforeActions: [{ action: "forge.updatePrMetadata", before: "forge.replyInline" }],
       forbiddenActions: [
         "forge.mergePr",
         "git.amend",

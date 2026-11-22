@@ -127,16 +127,17 @@ run only `status`, with every exact `PR=SHA`.
    branch when there are any, check that every layer below kept its head,
    run step 8's review, specification test and project gate on the restacked
    top, push through the protected helper with each moved branch admitted, and
-   cancel the superseded runs it names. Publish a new fix layer with its
-   protected `gh stack push` followed by separate PR creation and native
-   append procedure. The helper
+   cancel the superseded runs it names. Publish a new fix layer as the
+   native-stack reference's
+   [Open a layer's pull request](../../git-workflow/references/github-stacks.md#open-a-layers-pull-request)
+   describes: protected `gh stack push`, its PR opened in one write with its
+   actual claim, validation, originating finding links and the project's PR
+   evidence, then native append. The helper
    refuses to move a layer that is ready for review or a draft whose CI passed;
    never list a frozen member under `rewrite` to land a fix. A fix in place
    moves the layer and every layer above it, so each moved head needs its
    exact-head CI, review and coverage again under step 11. Reconcile a
-   partial result before continuing. For a new layer, immediately replace
-   generated metadata with its actual claim, validation, and originating
-   finding links, and satisfy the project's PR evidence contract. Keep a layer
+   partial result before continuing. Keep a layer
    that took a fix draft until its own local evidence and checks permit
    review. Trigger and collect its exact-head review under the active provider
    contract.

@@ -125,9 +125,13 @@ push, and it fails when the file cannot be moved, which the guard then says.
   files and run `pr --repo OWNER/REPO --title-file FILE --body-file FILE`, where
   `OWNER/REPO` is the repository the pull request is opened in. Then create or
   edit the pull request from those files. This covers `gh pr create`,
-  `gh pr edit`, `gh api .../pulls --input FILE` (build its JSON from the
-  checked files), and the titles and bodies that `gh stack submit` and
-  `gh stack link` create, which you reconcile with `gh pr edit` afterwards.
+  `gh pr edit` and `gh api .../pulls --input FILE` (build its JSON from the
+  checked files). A stack command never writes a pull request's first title
+  or body: the
+  [stack reference](references/github-stacks.md#open-a-layers-pull-request)
+  opens each layer with `gh pr create` and joins it to the stack it observes
+  through a native stack request, so neither `gh stack submit` nor
+  `gh stack link` publishes a layer.
 
 Act on its result:
 
