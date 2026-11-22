@@ -1461,9 +1461,10 @@ export const evalCases: EvalCase[] = [
         { action: "git.push", values: ["5b01040"], every: true },
         { action: "monitor.wait", values: ["5b01040"], after: { action: "git.push" } },
       ],
-      // The gate and the behavior test must pass on the content that is committed.
+      // The gate and the behavior test must pass on the content that is pushed.
+      // They may run before the commit or on the commit after the last round.
       requiredCurrentGates: {
-        before: ["git.commit"],
+        before: ["git.push"],
         gates: [
           { action: "validation.run", result: "bun run check passes on the current content." },
           { action: "behaviorTest.run", result: "Observed on the current content: a budget of 3 makes 3 attempts, and a non-retryable error stops after 1. Both requirements pass." },
