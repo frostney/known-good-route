@@ -10,7 +10,8 @@ import type { ActionName, RunLedger } from "./types.ts";
 // The gates must pass on the pushed content; they may run before or after the commit.
 const scenario = evalCases.find((c) => c.id === "address-pr-feedback-local-review-round-pushes-once")!;
 
-type Step = ActionName | [ActionName, string];
+// A step records an action, or loads a skill or reads a reference at that point in the run.
+type Step = ActionName | [ActionName, string] | { skill: string } | { reference: string };
 
 // Replays the steps through the fixture tools, so gate results come from captured receipts.
 async function replay(steps: Step[], evalCase = scenario) {
@@ -25,6 +26,16 @@ async function replay(steps: Step[], evalCase = scenario) {
   );
   const tools = createEvalTools(new Map(), evalCase, ledger);
   for (const step of steps) {
+    if (typeof step === "object" && "skill" in step) {
+      ledger.loadedSkills.push(step.skill);
+      ledger.events.push({ kind: "skill", name: step.skill });
+      continue;
+    }
+    if (typeof step === "object" && "reference" in step) {
+      ledger.loadedReferences.push(step.reference);
+      ledger.events.push({ kind: "reference", name: step.reference });
+      continue;
+    }
     const [action, details] = typeof step === "string" ? [step, step] : step;
     const input = { action, details };
     await captureToolCall({
@@ -41,7 +52,9 @@ async function failedChecks(steps: Step[], evalCase = scenario) {
     .map((check) => check.name);
 }
 
-const fix: Step[] = ["file.edit", "codeReview.run", "behaviorTest.run", "validation.run", "git.commit"];
+// A behavior test through the retry entry point that drives both of issue #94's inputs.
+const probe: Step = ["behaviorTest.run", "Retry entry point: maxAttempts=3 with an always-retryable failure, then a non-retryable error"];
+const fix: Step[] = ["file.edit", "codeReview.run", probe, "validation.run", "git.commit"];
 const round2: Step = ["codeReview.run", "Review round 2 on git diff origin/main...5b01040"];
 const push: Step = ["git.push", "Push fix/retry-budget at 5b01040"];
 const ciWait: Step = ["monitor.wait", "Await CI on PR #1040 head 5b01040"];
@@ -93,7 +106,7 @@ test("a merge or migration after the gates and before the commit makes the gates
 });
 
 test("gates run on the committed fix after round 2 and before the push pass", async () => {
-  const lateGates: Step[] = ["file.edit", "git.commit", round2, "behaviorTest.run", "validation.run", push, ciWait];
+  const lateGates: Step[] = ["file.edit", "git.commit", round2, probe, "validation.run", push, ciWait];
   expect(await failedChecks(lateGates)).toEqual([]);
 });
 
@@ -114,13 +127,29 @@ test("a behavior test reports the round-1 bug until the first edit", async () =>
   }
 });
 
+// Read step 6, then load test-against-spec before the behavior test.
+const step6: Step[] = [{ reference: "address-feedback/references/pr.md" }, { skill: "test-against-spec" }];
+
 test("mid-delivery, the fix behavior-tested before its one push passes", async () => {
-  expect(await failedChecks([...fix, round2, push, ciWait], delivery)).toEqual([]);
+  expect(await failedChecks([...step6, ...fix, round2, push, ciWait], delivery)).toEqual([]);
+});
+
+test("the gate recorded as a behavior test fails in both cases", async () => {
+  const relabeledGate: Step[] = ["file.edit", ["behaviorTest.run", "bun run check"], "validation.run", "git.commit", round2, push, ciWait];
+  for (const [evalCase, reads] of [[scenario, []], [delivery, step6]] as const) {
+    expect((await failedChecks([...reads, ...relabeledGate], evalCase)).some((name) => name.startsWith("behaviorTest.run carries"))).toBe(true);
+  }
+});
+
+test("mid-delivery, a run that never read step 6 or loaded test-against-spec only after its behavior test fails", async () => {
+  expect(await failedChecks([{ skill: "test-against-spec" }, ...fix, round2, push, ciWait], delivery)).toContain("required references");
+  const lateSkill: Step[] = [{ reference: "address-feedback/references/pr.md" }, ...fix, { skill: "test-against-spec" }, round2, push, ciWait];
+  expect(await failedChecks(lateSkill, delivery)).toContain("test-against-spec before behaviorTest.run");
 });
 
 test("mid-delivery, the gate alone, or a behavior test only before the fix, fails", async () => {
-  const gateOnly: Step[] = ["file.edit", "validation.run", "git.commit", round2, push, ciWait];
+  const gateOnly: Step[] = [...step6, "file.edit", "validation.run", "git.commit", round2, push, ciWait];
   expect(await failedChecks(gateOnly, delivery)).toEqual(expect.arrayContaining(["required actions", "current gates before git.push"]));
-  const testedBeforeFix: Step[] = ["behaviorTest.run", "file.edit", "validation.run", "git.commit", round2, push, ciWait];
+  const testedBeforeFix: Step[] = [...step6, probe, "file.edit", "validation.run", "git.commit", round2, push, ciWait];
   expect(await failedChecks(testedBeforeFix, delivery)).toContain("current gates before git.push");
 });

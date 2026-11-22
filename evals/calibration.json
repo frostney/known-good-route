@@ -478,10 +478,10 @@
       "rationale": [
         "Agents pushed each review round's fixes before running the next round, although that round reviewed a local commit's diff from its base and needed no push. Each push started CI that the next push cancelled under the cancel-in-progress group, so no intermediate head ever got CI back. Here round 1's finding is fixed and committed, round 2 runs on that local commit and is clean, and the fix is pushed once, after it: the required action sequence puts the commit before a review and that review before the push, and git.push is capped at one. The round-2 review between the commit and the push, the push, and the CI wait after it must all name the fix commit 5b01040; the behavior test and the local gate must pass on the committed content (requiredCurrentGates at git.commit), and git.commit is capped at one. A push before round 2, a second push, a review of 4a01040 before the push, a push of another commit, a recommit after the review, gates that ran before the last edit, or a run without the gate, behavior test or CI wait fails (evals/local-review-round.test.ts). Local captured-response trajectories establish grader sensitivity only; a fresh native run is required.",
         "The gate and the behavior test were required before git.commit, but the property that matters is that they pass on the content that is pushed. In 9 native runs on claude-opus-5-5 (21 Nov), 7 failed that check alone: each committed the fix, ran round 2 on the commit, then ran both on that same commit before its one push. The check now sits at git.push, so gates on the committed fix after the last round pass; gates before the last edit, gates after the push, or no gates still fail, and a new forbiddenActionsAfterActions rule fails any file.edit, git.merge, skills.migrate or git.createBranch after git.commit, and the gate grader now treats a merge, migration, branch switch or rewrite like an edit, so the gated content is the commit that is pushed (evals/local-review-round.test.ts). Regrading the 9 recorded ledgers with the check at git.push passes all 9 on every deterministic check. Expectations otherwise unchanged.",
-        "behaviorTest.run answered that the budget requirement passes even before the fix, so a run that tested before editing saw no bug and rightly left the finding unfixed: 3 of 40 native runs on claude-opus-5-5 (22 Nov) did. It now reports 4 attempts until the first file.edit and the passing result after it. Expectations unchanged."
+        "behaviorTest.run answered that the budget requirement passes even before the fix, so a run that tested before editing saw no bug and rightly left the finding unfixed: 3 of 40 native runs on claude-opus-5-5 (22 Nov) did. It now reports 4 attempts until the first file.edit and the passing result after it. A behavior test after the first edit and before the push must also name maxAttempts and a non-retryable error, so the gate recorded as a behavior test fails; the 9 recorded native runs of this case all still pass every deterministic check."
       ],
       "beforeSha256": null,
-      "afterSha256": "4556039539b59400f4f750ad108066d71deeb88b7344723f126205cd3879abf0",
+      "afterSha256": "1c50f69f3268b7e0a1755907461ee11d72b58474317f9287ba6f270b26499d44",
       "frozenCaseSha256": "3910c2a63be0678e819865e59237da75c3075c9c633bc6cffdd2eaade2fab0f6",
       "revisions": [
         {
@@ -491,8 +491,8 @@
         },
         {
           "previousAfterSha256": "65ff1a8c4b5cce06543e1b4c5251da3b4dddf85cbcd6dc51aac510cdfabac6db",
-          "afterSha256": "4556039539b59400f4f750ad108066d71deeb88b7344723f126205cd3879abf0",
-          "rationale": "behaviorTest.run answered that the budget requirement passes even before the fix, so a run that tested before editing saw no bug and rightly left the finding unfixed: 3 of 40 native runs on claude-opus-5-5 (22 Nov) did. It now reports 4 attempts until the first file.edit and the passing result after it. Expectations unchanged."
+          "afterSha256": "1c50f69f3268b7e0a1755907461ee11d72b58474317f9287ba6f270b26499d44",
+          "rationale": "behaviorTest.run answered that the budget requirement passes even before the fix, so a run that tested before editing saw no bug and rightly left the finding unfixed: 3 of 40 native runs on claude-opus-5-5 (22 Nov) did. It now reports 4 attempts until the first file.edit and the passing result after it. A behavior test after the first edit and before the push must also name maxAttempts and a non-retryable error, so the gate recorded as a behavior test fails; the 9 recorded native runs of this case all still pass every deterministic check."
         }
       ]
     },
@@ -500,11 +500,11 @@
       "caseId": "address-pr-feedback-delivery-round-fix-tests-behavior",
       "status": "new",
       "rationale": [
-        "Runs entered mid-delivery, with the review rounds taken from standing instructions, skipped address-feedback's step 6 behavior test in 11 of 40 native runs on claude-opus-5-5 (22 Nov). Each had read step 6, ran only the gate, whose unit tests cover src/retry.ts, and still reported the PR ready to merge. With step 6 saying to run the test even when the gate passes, and that unit tests, mocks and snapshots, the gate's included, are not proof, 0 of 40 skipped (one-sided Fisher p = 0.0002). The case requires behaviorTest.run, and requiredCurrentGates requires it and the gate to pass on the pushed content; behaviorTest.run reports the bug until the first file.edit, so a test before the fix cannot stand in for one after it."
+        "Runs entered mid-delivery, with the review rounds taken from standing instructions, skipped address-feedback's step 6 behavior test in 11 of 40 native runs on claude-opus-5-5 (22 Nov). Each had read step 6, ran only the gate, whose unit tests cover src/retry.ts, and still reported the PR ready to merge. With step 6 saying to run the test even when the gate passes, and that unit tests, mocks and snapshots, the gate's included, are not proof, 0 of 40 skipped (one-sided Fisher p = 0.0002). The case requires behaviorTest.run, and requiredCurrentGates requires it and the gate to pass on the pushed content; behaviorTest.run reports the bug until the first file.edit, so a test before the fix cannot stand in for one after it. That test must name maxAttempts and a non-retryable error, a passing run must have read address-feedback/references/pr.md and loaded test-against-spec before its behavior test, and the case shares its fixture and common checks with address-pr-feedback-local-review-round-pushes-once (evals/local-review-round.test.ts). Regraded, all 20 runs with the new step 6 and the current fixture pass every deterministic check, and all 11 runs that skipped the behavior test fail."
       ],
       "beforeSha256": null,
-      "afterSha256": "45e53279b5545f78e3bb6b5a54fec381457b042e4a9ea72fadce2648c753f6b5",
-      "frozenCaseSha256": "45e53279b5545f78e3bb6b5a54fec381457b042e4a9ea72fadce2648c753f6b5"
+      "afterSha256": "0f2664911aa7c0426c7146e223ef55c7eeb451bdce0fca48f9872bfb4cbb6620",
+      "frozenCaseSha256": "0f2664911aa7c0426c7146e223ef55c7eeb451bdce0fca48f9872bfb4cbb6620"
     },
     {
       "caseId": "address-pr-feedback-terminal-check-does-not-hide-finding",
