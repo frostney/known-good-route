@@ -168,6 +168,15 @@ def slug_of(match):
     return kind, f"{match.group(owner)}/{repo_name}"
 
 
+def reserved_route(match):
+    """A github.com URL under a route that names no repository, such as an uploaded attachment.
+
+    Its key can still name a repository elsewhere in the same text, as in
+    an issue or pull request in a private repository, so every pass checks the match itself, not only the key.
+    """
+    return bool(match.group("url")) and match.group("uo").lower() in NOT_REPOSITORY_OWNERS
+
+
 def gh_api(*args, host="github.com"):
     return run(["gh", "api", "--hostname", host, *args], check=False)
 
@@ -518,7 +527,7 @@ class Sanitiser:
 
     def private_slug(self, match):
         _, key = slug_of(match)
-        return key if key.lower() in self.private else None
+        return key if key.lower() in self.private and not reserved_route(match) else None
 
     def neutral(self, match):
         kind, _ = slug_of(match)
@@ -864,7 +873,7 @@ def candidates(texts, root, base_dir=""):
             owner, repo = key.split("/")
             if owner.lower() == PLACEHOLDER_OWNER:
                 continue
-            if kind == "url" and owner.lower() in NOT_REPOSITORY_OWNERS:
+            if reserved_route(match):
                 continue
             if kind == "bare" and (owner.isdigit() or repo.isdigit() or (root / key).exists()
                                    or (root / base_dir / key).exists()):
@@ -1025,7 +1034,8 @@ def guard(args):
     def carries(path, lines):
         texts_to_check = scan_texts(path, lines)
         return local.present(texts_to_check) or any(
-            slug_of(match)[1].lower() in private for text in texts_to_check for match in REFERENCE.finditer(text))
+            slug_of(match)[1].lower() in private and not reserved_route(match)
+            for text in texts_to_check for match in REFERENCE.finditer(text))
 
     for sha, message, added, _ in history:
         targets = [path for path, lines in added.items() if carries(path, lines)]
