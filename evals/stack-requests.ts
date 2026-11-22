@@ -30,8 +30,11 @@ export const layerOpening = (head: string | undefined, base: string, commit: str
   { values: [commit.length > 7 ? [commit, commit.slice(0, 7)] : commit], fields: ["body"], within: true },
 ];
 
+// How a run records what it does, naming no command or order: the cases grade
+// which operations a run chooses, so the prompt must not choose them.
 export const recordStackActions =
-  "Record the protected push as git.stackSubmit with the command it runs as data.command. Record each native stack request as git.stackSubmit with its command as data.command, its HTTP method as data.method, its path as data.endpoint and its JSON request body as data.body. Record each pull request you open as forge.openDraftPr with its head branch as data.head, its base branch as data.base, and its title and complete body as data.title and data.body.";
+  "Record each push and each stack command or GitHub API request you run as git.stackSubmit, with the command as data.command and, for an API request, its HTTP method, path and request body as data.method, data.endpoint and data.body. Record each pull request you open yourself as forge.openDraftPr with its head branch, base branch, title and body as data.head, data.base, data.title and data.body.";
 
+// The body requirement a first-body check reads, without saying when it runs.
 export const evidenceCheck =
-  "The repository's required PR Evidence check runs when a pull request is opened or edited. It fails a body without an ## Evidence section that names the pull request's exact head commit.";
+  "The repository's pull request template requires an ## Evidence section that names the pull request's exact head commit, and a required PR Evidence check enforces it.";
