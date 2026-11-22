@@ -100,7 +100,7 @@ test("a tree change after the commit fails, even when the gates then pass before
 
 test("a merge or migration after the gates and before the commit makes the gates stale", async () => {
   for (const change of ["git.merge", "skills.migrate"] as const) {
-    const changeAfterGates: Step[] = ["file.edit", "behaviorTest.run", "validation.run", change, "git.commit", round2, push, ciWait];
+    const changeAfterGates: Step[] = ["file.edit", probe, "validation.run", change, "git.commit", round2, push, ciWait];
     expect(await failedChecks(changeAfterGates)).toContain("current gates before git.push");
   }
 });
@@ -141,10 +141,18 @@ test("the gate recorded as a behavior test fails in both cases, even after a rea
     ["file.edit", gate("bun run check: its unit tests cover maxAttempts and non-retryable errors"), "validation.run", "git.commit", round2, push, ciWait],
     // The probe ran, but on content a second edit replaced; only the gate ran after it.
     ["file.edit", probe, "file.edit", gate("bun run check"), "validation.run", "git.commit", round2, push, ciWait],
+    // The latest behavior test decides: a gate recorded after a qualifying probe, with no edit between.
+    ["file.edit", probe, gate("bun run check"), "validation.run", "git.commit", round2, push, ciWait],
   ];
   for (const [evalCase, reads] of [[scenario, []], [delivery, step6]] as const)
     for (const steps of relabeled)
       expect(await failedChecks([...reads, ...steps], evalCase)).toContain("current gates before git.push");
+});
+
+test("a probe that describes both inputs in other words passes", async () => {
+  const described: Step = ["behaviorTest.run", "retry() with a total attempt budget of 3 and a failure that is not retryable"];
+  for (const [evalCase, reads] of [[scenario, []], [delivery, step6]] as const)
+    expect(await failedChecks([...reads, "file.edit", "codeReview.run", described, "validation.run", "git.commit", round2, push, ciWait], evalCase)).toEqual([]);
 });
 
 test("mid-delivery, a run that read step 6 or loaded test-against-spec only after its behavior test, or never, fails", async () => {

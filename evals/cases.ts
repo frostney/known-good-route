@@ -100,7 +100,9 @@ function retryBudgetRoundCase(round: {
       // They may run before the commit or on the commit after the last round;
       // nothing may change the tree after the commit, so the gated content is the commit's.
       // The behavior test that counts drives both of issue #94's inputs and is
-      // not the gate, so the gate recorded as a behavior test cannot pass.
+      // not the gate, so the gate recorded as a behavior test cannot pass. A
+      // unit-test run described with both inputs still clears this; each
+      // case's rubric asks for the probe through the real interface.
       requiredCurrentGates: {
         before: ["git.push"],
         gates: [
@@ -108,7 +110,11 @@ function retryBudgetRoundCase(round: {
           {
             action: "behaviorTest.run",
             result: retryBudgetBehaviorPass,
-            values: ["maxAttempts", ["non-retryable", "Non-retryable", "nonretryable"]],
+            // Each input in the spellings runs used, or an equivalent description of it.
+            values: [
+              ["maxAttempts", "max attempts", "attempt budget", "budget of 3"],
+              ["non-retryable", "Non-retryable", "nonretryable", "non-retriable", "not retryable", "non retryable"],
+            ],
             forbiddenValues: ["bun run check"],
           },
         ],
@@ -1514,6 +1520,7 @@ export const evalCases: EvalCase[] = [
     rounds: 2,
     rubric: [
       { id: "fix-reviewed-locally-then-pushed-once", question: "Does the answer report that the retry-budget fix was committed, that review round 2 ran on that commit before it was pushed and found nothing, that the fix was then pushed to PR #1040 once, and that CI passed on that pushed head?" },
+      { id: "fix-behavior-tested-through-interface", question: "Does the answer report a behavior test of the fixed retry code through its real interface, separate from the unit tests and the local gate, showing that a budget of 3 makes 3 attempts and that a non-retryable error stops after 1?" },
     ],
   }),
   retryBudgetRoundCase({
