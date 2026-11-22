@@ -3387,8 +3387,8 @@ export const evalCases: EvalCase[] = [
       ],
       // The fix layer is pushed, opened with its own body, then appended.
       requiredActionSequence: ["git.commit", "git.stackSubmit", "forge.openDraftPr", "git.stackSubmit", "forge.replyInline"],
+      // Reads and local stack commands may be recorded too, so only the opening is capped.
       maxActionCounts: {
-        "git.stackSubmit": 2,
         "forge.openDraftPr": 1,
       },
       // The push precedes the opening, which is on #712's branch with its complete body; the append names #713.

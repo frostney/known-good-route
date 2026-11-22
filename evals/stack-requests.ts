@@ -33,7 +33,7 @@ export const layerOpening = (head: string | undefined, base: string, commit: str
 // How a run records what it does, naming no command or order: the cases grade
 // which operations a run chooses, so the prompt must not choose them.
 export const recordStackActions =
-  "Record each push and each stack command or GitHub API request you run as git.stackSubmit, with the command as data.command and, for an API request, its HTTP method, path and request body as data.method, data.endpoint and data.body. Record each pull request you open yourself as forge.openDraftPr with its head branch, base branch, title and body as data.head, data.base, data.title and data.body.";
+  "Record gh stack init as git.stackInit. Record each push, and each other stack command or GitHub API request that changes GitHub, as git.stackSubmit, with the command as data.command and, for an API request, its HTTP method, path and request body as data.method, data.endpoint and data.body. Record each pull request you open yourself as forge.openDraftPr with its head branch, base branch, title and body as data.head, data.base, data.title and data.body.";
 
 // The body requirement a first-body check reads, without saying when it runs.
 export const evidenceCheck =
