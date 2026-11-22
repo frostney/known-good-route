@@ -47,7 +47,7 @@ test("the media case fails a body written again to add media after the PR opened
   const paste = {
     action: "forge.updatePrMetadata" as const,
     details: "paste the uploaded URLs into the body",
-    data: { body: "!a private repository" },
+    data: { body: "| Before | After |\n| --- | --- |\n| ![Before](uploaded-before-url) | ![After](uploaded-after-url) |" },
   };
   expect(failed([open, paste, ...rest])).toEqual(["forbidden actions"]);
 });
