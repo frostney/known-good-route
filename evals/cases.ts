@@ -1475,6 +1475,7 @@ export const evalCases: EvalCase[] = [
         { action: "file.edit", after: "git.commit" },
         { action: "git.merge", after: "git.commit" },
         { action: "skills.migrate", after: "git.commit" },
+        { action: "git.createBranch", after: "git.commit" },
       ],
       maxActionCounts: { "git.push": 1, "git.commit": 1 },
       forbiddenActions: [

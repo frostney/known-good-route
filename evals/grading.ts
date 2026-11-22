@@ -120,6 +120,10 @@ export function actionCarries(
   );
 }
 
+const TREE_CHANGING_ACTIONS = new Set<ActionName>([
+  "git.merge", "skills.migrate", "git.createBranch", "git.rebase", "git.amend", "git.stackSync",
+]);
+
 export function gradeRun(
   evalCase: EvalCase,
   ledger: RunLedger,
@@ -149,8 +153,11 @@ export function gradeRun(
         checks.push({ name: "current gate ledger", passed: false, detail: "Action and event ledgers disagree." });
         break;
       }
-      if (action.action === "file.edit" &&
-          !(typeof action.data?.path === "string" && contract.ignoreEditPaths?.includes(action.data.path)))
+      // A recorded edit, merge, migration, branch switch or rewrite changes the
+      // content under test, so every gate result before it is stale.
+      if ((action.action === "file.edit" &&
+           !(typeof action.data?.path === "string" && contract.ignoreEditPaths?.includes(action.data.path))) ||
+          TREE_CHANGING_ACTIONS.has(action.action))
         current.clear();
       const gate = contract.gates.find(g => g.action === action.action);
       if (gate) {

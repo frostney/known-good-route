@@ -75,9 +75,16 @@ test("gates that ran before the last edit, after the push, or not at all, fail a
 });
 
 test("a tree change after the commit fails, even when the gates then pass before the push", async () => {
-  for (const change of ["file.edit", "git.merge", "skills.migrate"] as const) {
+  for (const change of ["file.edit", "git.merge", "skills.migrate", "git.createBranch"] as const) {
     const changeAfterCommit: Step[] = ["file.edit", "git.commit", round2, change, "behaviorTest.run", "validation.run", push, ciWait];
     expect(await failedChecks(changeAfterCommit)).toContain(`no ${change} after git.commit`);
+  }
+});
+
+test("a merge or migration after the gates and before the commit makes the gates stale", async () => {
+  for (const change of ["git.merge", "skills.migrate"] as const) {
+    const changeAfterGates: Step[] = ["file.edit", "behaviorTest.run", "validation.run", change, "git.commit", round2, push, ciWait];
+    expect(await failedChecks(changeAfterGates)).toContain("current gates before git.push");
   }
 });
 
