@@ -90,28 +90,27 @@ function retryBudgetRoundCase(round: {
       requiredActions: ["file.edit", "behaviorTest.run", "validation.run", "git.commit", "codeReview.run", "git.push", "monitor.wait"],
       requiredActionSequence: ["file.edit", "git.commit", "codeReview.run", "git.push", "monitor.wait"],
       // The round-2 review and the push must both name the one fix commit, so
-      // a review of the old head or a push of another commit cannot pass. The
-      // behavior test on the fix must drive both of issue #94's inputs, so the
-      // gate recorded as a behavior test cannot pass.
+      // a review of the old head or a push of another commit cannot pass.
       requiredActionValues: [
         { action: "codeReview.run", values: ["5b01040"], after: { action: "git.commit" }, before: { action: "git.push" } },
         { action: "git.push", values: ["5b01040"], every: true },
         { action: "monitor.wait", values: ["5b01040"], after: { action: "git.push" } },
-        {
-          action: "behaviorTest.run",
-          values: ["maxAttempts", ["non-retryable", "Non-retryable", "nonretryable"]],
-          after: { action: "file.edit" },
-          before: { action: "git.push" },
-        },
       ],
       // The gate and the behavior test must pass on the content that is pushed.
       // They may run before the commit or on the commit after the last round;
       // nothing may change the tree after the commit, so the gated content is the commit's.
+      // The behavior test that counts drives both of issue #94's inputs and is
+      // not the gate, so the gate recorded as a behavior test cannot pass.
       requiredCurrentGates: {
         before: ["git.push"],
         gates: [
           { action: "validation.run", result: "bun run check passes on the current content." },
-          { action: "behaviorTest.run", result: retryBudgetBehaviorPass },
+          {
+            action: "behaviorTest.run",
+            result: retryBudgetBehaviorPass,
+            values: ["maxAttempts", ["non-retryable", "Non-retryable", "nonretryable"]],
+            forbiddenValues: ["bun run check"],
+          },
         ],
       },
       forbiddenActionsAfterActions: [
@@ -1532,7 +1531,7 @@ export const evalCases: EvalCase[] = [
     // A passing run read the step that asks for the behavior test and ran it
     // through test-against-spec, the skill that says unit tests are not proof.
     ownChecks: {
-      requiredReferences: ["address-feedback/references/pr.md"],
+      requiredReferencesBeforeActions: [{ reference: "address-feedback/references/pr.md", action: "behaviorTest.run" }],
       requiredSkillsBeforeActions: [{ skill: "test-against-spec", action: "behaviorTest.run" }],
     },
   }),

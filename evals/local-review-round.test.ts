@@ -134,15 +134,24 @@ test("mid-delivery, the fix behavior-tested before its one push passes", async (
   expect(await failedChecks([...step6, ...fix, round2, push, ciWait], delivery)).toEqual([]);
 });
 
-test("the gate recorded as a behavior test fails in both cases", async () => {
-  const relabeledGate: Step[] = ["file.edit", ["behaviorTest.run", "bun run check"], "validation.run", "git.commit", round2, push, ciWait];
-  for (const [evalCase, reads] of [[scenario, []], [delivery, step6]] as const) {
-    expect((await failedChecks([...reads, ...relabeledGate], evalCase)).some((name) => name.startsWith("behaviorTest.run carries"))).toBe(true);
-  }
+test("the gate recorded as a behavior test fails in both cases, even after a real probe or naming both inputs", async () => {
+  const gate = (details: string): Step => ["behaviorTest.run", details];
+  const relabeled: Step[][] = [
+    ["file.edit", gate("bun run check"), "validation.run", "git.commit", round2, push, ciWait],
+    ["file.edit", gate("bun run check: its unit tests cover maxAttempts and non-retryable errors"), "validation.run", "git.commit", round2, push, ciWait],
+    // The probe ran, but on content a second edit replaced; only the gate ran after it.
+    ["file.edit", probe, "file.edit", gate("bun run check"), "validation.run", "git.commit", round2, push, ciWait],
+  ];
+  for (const [evalCase, reads] of [[scenario, []], [delivery, step6]] as const)
+    for (const steps of relabeled)
+      expect(await failedChecks([...reads, ...steps], evalCase)).toContain("current gates before git.push");
 });
 
-test("mid-delivery, a run that never read step 6 or loaded test-against-spec only after its behavior test fails", async () => {
-  expect(await failedChecks([{ skill: "test-against-spec" }, ...fix, round2, push, ciWait], delivery)).toContain("required references");
+test("mid-delivery, a run that read step 6 or loaded test-against-spec only after its behavior test, or never, fails", async () => {
+  const readStep6 = "address-feedback/references/pr.md before behaviorTest.run";
+  expect(await failedChecks([{ skill: "test-against-spec" }, ...fix, round2, push, ciWait], delivery)).toContain(readStep6);
+  const lateRead: Step[] = [{ skill: "test-against-spec" }, ...fix, round2, push, ciWait, { reference: "address-feedback/references/pr.md" }];
+  expect(await failedChecks(lateRead, delivery)).toContain(readStep6);
   const lateSkill: Step[] = [{ reference: "address-feedback/references/pr.md" }, ...fix, { skill: "test-against-spec" }, round2, push, ciWait];
   expect(await failedChecks(lateSkill, delivery)).toContain("test-against-spec before behaviorTest.run");
 });

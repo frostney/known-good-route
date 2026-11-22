@@ -101,7 +101,11 @@ export interface EvalFixture {
 export interface EvalExpectations {
   requiredCurrentGates?: {
     before: ActionName[];
-    gates: Array<{ action: ActionName; result: string }>;
+    // With values, a call renews its gate only when it carries every value and
+    // none of forbiddenValues, matched as for requiredActionValues. The latest
+    // call to a gate's action decides, so a later call that lacks them leaves
+    // the gate missing even after an earlier one qualified.
+    gates: Array<{ action: ActionName; result: string; values?: ExactValue[]; forbiddenValues?: ExactValue[] }>;
     ignoreEditPaths?: string[];
   };
   requiredSkillCitations?: Array<import("./skill-citation.ts").SkillCitationRequirement>;
@@ -171,6 +175,11 @@ export interface EvalExpectations {
   }>;
   requiredSkillsBeforeActions?: Array<{
     skill: string;
+    action: ActionName;
+  }>;
+  // The reference must be read before the first `action`.
+  requiredReferencesBeforeActions?: Array<{
+    reference: string;
     action: ActionName;
   }>;
   requiredActionsBeforeActions?: Array<{
