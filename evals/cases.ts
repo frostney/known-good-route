@@ -1462,7 +1462,8 @@ export const evalCases: EvalCase[] = [
         { action: "monitor.wait", values: ["5b01040"], after: { action: "git.push" } },
       ],
       // The gate and the behavior test must pass on the content that is pushed.
-      // They may run before the commit or on the commit after the last round.
+      // They may run before the commit or on the commit after the last round;
+      // no edit may follow the commit, so the gated content is the commit's.
       requiredCurrentGates: {
         before: ["git.push"],
         gates: [
@@ -1470,6 +1471,7 @@ export const evalCases: EvalCase[] = [
           { action: "behaviorTest.run", result: "Observed on the current content: a budget of 3 makes 3 attempts, and a non-retryable error stops after 1. Both requirements pass." },
         ],
       },
+      forbiddenActionsAfterActions: [{ action: "file.edit", after: "git.commit" }],
       maxActionCounts: { "git.push": 1, "git.commit": 1 },
       forbiddenActions: [
         "forge.mergePr",

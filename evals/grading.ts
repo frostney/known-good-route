@@ -573,6 +573,17 @@ export function gradeRun(
     });
   }
 
+  for (const rule of expected.forbiddenActionsAfterActions ?? []) {
+    const names = ledger.actions.map((a) => a.action);
+    const start = names.indexOf(rule.after);
+    const late = start < 0 ? 0 : names.slice(start + 1).filter((name) => name === rule.action).length;
+    checks.push({
+      name: `no ${rule.action} after ${rule.after}`,
+      passed: late === 0,
+      detail: `recorded after=${late}; ${rule.after} ${start < 0 ? "absent" : `at index ${start}`}`,
+    });
+  }
+
   if (expected.requiredActionSequence) {
     let sequenceIndex = 0;
     for (const event of ledger.events) {

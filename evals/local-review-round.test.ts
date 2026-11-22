@@ -74,6 +74,11 @@ test("gates that ran before the last edit, after the push, or not at all, fail a
     .toContain("current gates before git.push");
 });
 
+test("an edit after the commit fails, even when the gates then pass before the push", async () => {
+  const editAfterCommit: Step[] = ["file.edit", "git.commit", round2, "file.edit", "behaviorTest.run", "validation.run", push, ciWait];
+  expect(await failedChecks(editAfterCommit)).toContain("no file.edit after git.commit");
+});
+
 test("gates run on the committed fix after round 2 and before the push pass", async () => {
   const lateGates: Step[] = ["file.edit", "git.commit", round2, "behaviorTest.run", "validation.run", push, ciWait];
   expect(await failedChecks(lateGates)).toEqual([]);
