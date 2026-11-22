@@ -88,9 +88,18 @@ export interface EvalFixture {
     // Without an occurrence, every matching call fires it.
     whenResult?: string;
     // Fire only when this call carries every value, matched as for
-    // requiredActionValues, such as a wait on one exact head. Without an
+    // requiredActionValues, such as a wait on one exact head. A list of
+    // conditions needs all of them, each matched its own way. Without an
     // occurrence, every matching call fires it.
-    whenCarries?: { values: ExactValue[]; fields?: string[] };
+    whenCarries?: ValueMatch | ValueMatch[];
+    // Fire only when, for each entry, an earlier call of that action carried
+    // every condition and, with withResult, got a result containing that
+    // text, such as a push before a PR can open on its branch.
+    whenRecorded?: Array<{ action: ActionName; carries?: ValueMatch[]; withResult?: string }>;
+    // This call's own result in place of its scripted one, so only a call
+    // that carries the right values succeeds. The first matching transition
+    // with a result gives it, and its whenResult reads the scripted result.
+    result?: string;
     evidence: Record<string, string>;
     // Overrides affect subsequent calls. A sequence starts at its first
     // response on the next call; a scalar replaces whatever was there.
@@ -125,16 +134,15 @@ export interface EvalExpectations {
   requiredAnswerValues?: ExactValue[];
   // Values that must not appear as a whole token in that communication.
   forbiddenAnswerValues?: string[];
-  // Each value must be carried by a recorded action of that kind: equal to one
-  // of the named data fields (or an element of an array field), or, without
-  // fields, a whole token in its details or data. A named field is also read
-  // from a recorded `command`, as its `--field value` or `--field=value` flag.
-  // With every, all such actions must carry it; otherwise one is enough.
-  requiredActionValues?: Array<{
+  // Each value must be carried by a recorded action of that kind, matched as
+  // ValueMatch describes. With every, all such actions must carry it;
+  // otherwise one is enough.
+  requiredActionValues?: Array<ValueMatch & {
     action: ActionName;
-    values: ExactValue[];
-    fields?: string[];
     every?: boolean;
+    // The same action must also carry each of these, matched its own way,
+    // such as a request's method, path and JSON body together.
+    also?: ValueMatch[];
     // Only actions recorded before this occurrence (default 1) of the named
     // action count; the check fails when that occurrence is absent.
     before?: { action: ActionName; occurrence?: number };
@@ -147,10 +155,8 @@ export interface EvalExpectations {
   // occurrence (default 1) of the named action count, and every action counts
   // when that occurrence is absent. Use it where an action is wrong only for
   // some targets, such as a wait on the default branch's run.
-  forbiddenActionValues?: Array<{
+  forbiddenActionValues?: Array<ValueMatch & {
     action: ActionName;
-    values: ExactValue[];
-    fields?: string[];
     before?: { action: ActionName; occurrence?: number };
   }>;
 
@@ -172,6 +178,9 @@ export interface EvalExpectations {
   requiredInspectionsBeforeActions?: Array<{
     inspection: string;
     action: ActionName;
+    // The inspection must also follow the first such action, such as an
+    // inspection of what a creation published.
+    after?: ActionName;
   }>;
   requiredSkillsBeforeActions?: Array<{
     skill: string;
@@ -219,6 +228,29 @@ export interface EvalExpectations {
 }
 
 export type ExactValue = string | string[];
+
+// Values a recorded action carries: equal to one of the named data fields (or
+// an element of an array field), or, without fields, a whole token in its
+// details or data. A named field is also read from a recorded `command`, as
+// its `--field value` or `--field=value` flag. The options below change how a
+// value matches inside the named fields; each needs fields, and a rule takes
+// at most one of them.
+export interface ValueMatch {
+  values: ExactValue[];
+  fields?: string[];
+  // A whole token inside the field, such as a path inside a body, instead of
+  // the whole field.
+  within?: boolean;
+  // The field, or an element of it, may continue the value with this
+  // separator and more text, such as an attachment's `#alt text`.
+  suffix?: string;
+  // The value is the destination of a Markdown image that stands alone in its
+  // paragraph, the placement where GitHub plays an uploaded video.
+  alone?: boolean;
+  // The field holds JSON, as an object or a string that parses, equal to the
+  // value's JSON whatever its spacing or key order.
+  json?: boolean;
+}
 
 export interface RubricItem {
   id: string;

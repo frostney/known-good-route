@@ -141,14 +141,17 @@ readiness. Recording a walkthrough does not replace behavior testing.
    before publishing.
 9. After the publication checks pass, or under the preview-only draft rule
    above, push an ordinary branch normally and set its upstream when needed,
-   then open one draft PR against the remote default or the named base.
-   For a verified native stack, follow the stack reference: a new top layer
-   above frozen PRs uses protected push, separate PR creation and
-   native append; a new stack on a frozen lower PR uses protected
-   `gh stack link`; broader authorized submissions use `gh stack submit`. Require
-   current evidence for every published layer. Only guarded official stack
-   operations may rebase or push with force-with-lease. Preserve bottom-to-top
-   topology and keep each layer draft.
+   then open one draft PR against the remote default or the named base. Its
+   first write carries the complete title and body, media included:
+   `gh pr create --draft --base BASE --title TITLE --body-file FILE`, with an
+   `--attach` for each media file as the walkthroughs reference describes.
+   For a verified native stack, follow the stack reference: each new layer is
+   pushed through the protected helper, opened with its complete body in one
+   `gh pr create`, then joined to its stack through a native stack request
+   that names the exact PR numbers; `gh stack submit` and `gh stack link`
+   never publish a layer. Require current evidence for every published layer.
+   Only guarded official stack operations may rebase or push with
+   force-with-lease. Preserve bottom-to-top topology and keep each layer draft.
 10. Run the PR-specific phase. Compare the actual PR diff, body, links, metadata,
     committed tests and documentation, supplied completion evidence, and facts
     that exist only after publication. Run `template-check` on the live body

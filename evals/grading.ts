@@ -9,6 +9,7 @@ import type {
   GradeCheck,
   GradeResult,
   RunLedger,
+  ValueMatch,
 } from "./types.ts";
 
 function includesEvery(actual: string[], expected: string[]): boolean {
@@ -44,8 +45,27 @@ export function containsValue(text: string, value: string): boolean {
   return false;
 }
 
+// Inside a named field a value is a path or a token of a longer value, so a
+// letter, digit, dot, dash or slash beside it continues it: /tmp/a.png is not
+// inside /tmp/a.png.bak, while /tmp/a.png#Alt and ](/tmp/a.png) carry it. A
+// dot that ends a sentence continues nothing.
+const continuesPath = (c: string | undefined) => !!c && /[A-Za-z0-9_.\-/]/.test(c);
+function containsWithin(text: string, value: string): boolean {
+  for (let at = text.indexOf(value); at >= 0; at = text.indexOf(value, at + 1)) {
+    const end = at + value.length;
+    const continued = continuesPath(text[end]) && !(text[end] === "." && !continuesPath(text[end + 1]));
+    if ((!continuesPath(value[0]) || !continuesPath(text[at - 1])) &&
+        (!continuesPath(value.at(-1)) || !continued))
+      return true;
+  }
+  return false;
+}
+
 const spellings = (value: ExactValue) => (Array.isArray(value) ? value : [value]);
 const describe = (value: ExactValue) => spellings(value).join(" | ");
+const matchDescription = (match: ValueMatch) =>
+  `fields=${match.fields?.join(",") ?? "details or any data"}${
+    match.within ? " (within)" : match.alone ? " (alone)" : match.json ? " (json)" : match.suffix !== undefined ? ` (suffix ${match.suffix})` : ""}`;
 const rendered = (value: unknown) =>
   typeof value === "string" ? value : JSON.stringify(value) ?? "";
 
@@ -104,20 +124,76 @@ function commandCarries(command: unknown, field: string, value: string, anywhere
   return anywhere ? given.includes(value) : given.length > 0 && given.every((one) => one === value);
 }
 
+// A Markdown image whose destination is the path, alone in its paragraph, as
+// gh's attachment rewriting requires before a video becomes a player. Fenced
+// and indented code is not a paragraph; a list item, quote or table cell
+// around the image is other text.
+function embedsAlone(text: string, path: string): boolean {
+  const prose = text.replace(/^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?^ {0,3}\1[^\n]*$/gm, "");
+  return prose.split(/\n[ \t]*\n/).some((block) => {
+    const paragraph = block.replace(/^(?:[ \t]*\n)+/, "");
+    if (/^( {4}|\t)/.test(paragraph)) return false;
+    const image = paragraph.trim();
+    const close = image.indexOf("](");
+    return image.startsWith("![") && close > 0 && !/[[\]\n]/.test(image.slice(2, close)) &&
+      [`](${path})`, `](<${path}>)`].includes(image.slice(close));
+  });
+}
+
+// JSON with its object keys sorted, so spacing and key order do not matter.
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object")
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson((value as Record<string, unknown>)[key])}`).join(",")}}`;
+  return JSON.stringify(value) ?? "";
+}
+function sameJson(field: unknown, value: string): boolean {
+  if (field === undefined) return false;
+  try {
+    return canonicalJson(typeof field === "string" ? JSON.parse(field) : field) === canonicalJson(JSON.parse(value));
+  } catch {
+    return false;
+  }
+}
+
+function fieldMatches(field: unknown, value: string, match: Omit<ValueMatch, "values" | "fields">): boolean {
+  if (field === undefined) return false;
+  if (match.json) return sameJson(field, value);
+  if (match.within) return containsWithin(rendered(field), value);
+  if (match.alone) return embedsAlone(rendered(field), value);
+  const suffix = match.suffix;
+  if (suffix !== undefined) {
+    const continues = (item: unknown) => rendered(item) === value || rendered(item).startsWith(value + suffix);
+    return Array.isArray(field) ? field.some(continues) : continues(field);
+  }
+  return fieldCarries(field, value);
+}
+
+// The match options read only the named fields; without them a named field
+// is also read from a recorded command's flags.
 export function actionCarries(
   record: RunLedger["actions"][number],
   value: ExactValue,
   fields: string[] | undefined,
   forbidden = false,
+  match: Omit<ValueMatch, "values" | "fields"> = {},
 ): boolean {
+  const plain = !match.within && !match.alone && !match.json && match.suffix === undefined;
   return spellings(value).some((spelling) =>
     fields
-      ? fields.some((field) => fieldCarries(record.data?.[field], spelling) || commandCarries(record.data?.command, field, spelling, forbidden))
+      ? fields.some((field) => fieldMatches(record.data?.[field], spelling, match) ||
+          (plain && commandCarries(record.data?.command, field, spelling, forbidden)))
       : containsValue(
           [record.details, ...Object.values(record.data ?? {}).map(rendered)].join("\n"),
           spelling,
         ),
   );
+}
+
+// Whether a record carries every value of each condition, each matched its own way.
+export function carriesAll(record: RunLedger["actions"][number], conditions: ValueMatch[], forbidden = false): boolean {
+  return conditions.every((condition) =>
+    condition.values.every((value) => actionCarries(record, value, condition.fields, forbidden, condition)));
 }
 
 const TREE_CHANGING_ACTIONS = new Set<ActionName>([
@@ -394,14 +470,14 @@ export function gradeRun(
           .filter((index) => index >= 0)[(from.occurrence ?? 1) - 1] ?? ledger.actions.length) + 1
       : 0;
     const records = ledger.actions.slice(start, end).filter((a) => a.action === requirement.action);
-    const carriesAll = (record: RunLedger["actions"][number]) =>
-      requirement.values.every((value) => actionCarries(record, value, requirement.fields));
+    const conditions = [requirement, ...(requirement.also ?? [])];
+    const carries = (record: RunLedger["actions"][number]) => carriesAll(record, conditions);
     checks.push({
-      name: `${requirement.action} carries ${requirement.values.map(describe).join(", ")}${from ? ` after ${from.action}` : ""}${limit ? ` before ${limit.action}` : ""}`,
+      name: `${requirement.action} carries ${conditions.flatMap((c) => c.values).map(describe).join(", ")}${from ? ` after ${from.action}` : ""}${limit ? ` before ${limit.action}` : ""}`,
       passed:
         records.length > 0 &&
-        (requirement.every ? records.every(carriesAll) : records.some(carriesAll)),
-      detail: `${requirement.every ? "every" : "one"} of ${records.length} recorded; fields=${requirement.fields?.join(",") ?? "details or any data"}`,
+        (requirement.every ? records.every(carries) : records.some(carries)),
+      detail: `${requirement.every ? "every" : "one"} of ${records.length} recorded; ${conditions.map(matchDescription).join("; ")}`,
     });
   }
 
@@ -415,12 +491,12 @@ export function gradeRun(
     const carried = rule.values.filter((value) =>
       ledger.actions
         .slice(0, end)
-        .some((a) => a.action === rule.action && actionCarries(a, value, rule.fields, true)),
+        .some((a) => a.action === rule.action && actionCarries(a, value, rule.fields, true, rule)),
     );
     checks.push({
       name: `${rule.action} omits ${rule.values.map(describe).join(", ")}${limit ? ` before ${limit.action}` : ""}`,
       passed: carried.length === 0,
-      detail: `carried=${carried.map(describe).join(",") || "none"}; fields=${rule.fields?.join(",") ?? "details or any data"}`,
+      detail: `carried=${carried.map(describe).join(",") || "none"}; ${matchDescription(rule)}`,
     });
   }
 
@@ -485,14 +561,18 @@ export function gradeRun(
   }
 
   for (const order of expected.requiredInspectionsBeforeActions ?? []) {
-    const inspectionIndex = ledger.events.findIndex(
-      (event) => event.kind === "inspection" && event.name === order.inspection,
+    // With after, the inspection must come between that action and this one.
+    const afterIndex = order.after
+      ? ledger.events.findIndex((event) => event.kind === "action" && event.name === order.after)
+      : -1;
+    const inspectionIndex = order.after && afterIndex < 0 ? -1 : ledger.events.findIndex(
+      (event, index) => index > afterIndex && event.kind === "inspection" && event.name === order.inspection,
     );
     const actionIndex = ledger.events.findIndex(
       (event) => event.kind === "action" && event.name === order.action,
     );
     checks.push({
-      name: `${order.inspection} before ${order.action}`,
+      name: `${order.inspection} ${order.after ? `after ${order.after} and ` : ""}before ${order.action}`,
       passed:
         inspectionIndex >= 0 &&
         actionIndex >= 0 &&
@@ -711,18 +791,32 @@ const listFields = new Set([
   "allowedDelegateWorkflows",
 ]);
 
+const validValue = (value: ExactValue) =>
+  spellings(value).length > 0 && spellings(value).every((v) => typeof v === "string" && v.trim() === v && v.length > 0);
+// A match option needs named fields, a rule takes at most one, and a JSON
+// value must parse.
+export function validMatch(match: ValueMatch): boolean {
+  const options = [match.within, match.alone, match.json, match.suffix !== undefined].filter(Boolean).length;
+  return Array.isArray(match.values) && match.values.length > 0 && match.values.every(validValue) &&
+    (match.fields ?? ["x"]).length > 0 && (match.fields ?? []).every((f) => f.trim()) &&
+    options <= 1 && (options === 0 || match.fields !== undefined) &&
+    (match.suffix === undefined || match.suffix.length > 0) &&
+    (!match.json || match.values.every((value) => spellings(value).every((v) => {
+      try { JSON.parse(v); return true; } catch { return false; }
+    })));
+}
+
 function validateExactValues(evalCase: EvalCase): void {
-  const valid = (value: ExactValue) =>
-    spellings(value).length > 0 && spellings(value).every((v) => typeof v === "string" && v.trim() === v && v.length > 0);
   const expected = evalCase.expected;
   if (
-    !(expected.requiredAnswerValues ?? []).every(valid) ||
-    !(expected.forbiddenAnswerValues ?? []).every(valid) ||
-    ![...(expected.requiredActionValues ?? []), ...(expected.forbiddenActionValues ?? [])].every(
-      (r) => r.values.length > 0 && r.values.every(valid) && (r.fields ?? ["x"]).length > 0 && (r.fields ?? []).every((f) => f.trim()),
-    ) ||
+    !(expected.requiredAnswerValues ?? []).every(validValue) ||
+    !(expected.forbiddenAnswerValues ?? []).every(validValue) ||
+    ![
+      ...(expected.requiredActionValues ?? []).flatMap((r) => [r, ...(r.also ?? [])]),
+      ...(expected.forbiddenActionValues ?? []),
+    ].every(validMatch) ||
     !(expected.requiredCurrentGates?.gates ?? []).every(
-      (g) => (g.values ?? []).every(valid) && (g.forbiddenValues ?? []).every(valid),
+      (g) => (g.values ?? []).every(validValue) && (g.forbiddenValues ?? []).every(validValue),
     )
   )
     throw new Error(`${evalCase.id}: invalid exact value check`);
@@ -812,8 +906,16 @@ export function validateCases(
       if (transition.whenResult !== undefined &&
           (typeof transition.whenResult !== "string" || !transition.whenResult.trim()))
         throw new Error(`${evalCase.id}: invalid transition result condition`);
-      if (transition.whenCarries !== undefined && !transition.whenCarries.values?.length)
+      const conditions = transition.whenCarries === undefined ? [] : [transition.whenCarries].flat();
+      if (transition.whenCarries !== undefined && (!conditions.length || !conditions.every(validMatch)))
         throw new Error(`${evalCase.id}: invalid transition action-value condition`);
+      if (transition.whenRecorded !== undefined &&
+          (!transition.whenRecorded.length || transition.whenRecorded.some((r) => !actionNames.includes(r.action) || !(r.carries ?? []).every(validMatch) ||
+            (r.withResult !== undefined && !r.withResult.trim()))))
+        throw new Error(`${evalCase.id}: invalid transition recorded-action condition`);
+      if (transition.result !== undefined &&
+          (typeof transition.result !== "string" || !transition.result.trim()))
+        throw new Error(`${evalCase.id}: invalid transition result`);
       for (const response of Object.values(transition.actionResponses ?? {}))
         if (Array.isArray(response) && response.length === 0)
           throw new Error(`${evalCase.id}: empty action response sequence`);
