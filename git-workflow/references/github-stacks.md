@@ -420,8 +420,8 @@ fails its first run.
    bottom base from the local `origin/HEAD`, and it may retarget the lower PR
    before creating the stack; `gh stack submit` finds each layer's PR by
    branch name and opens a new one when it finds none. For several new layers,
-   open each one bottom to top after one protected push, then name them all in
-   one request. On a conflict, validation error or lost response, keep the
+   open each one bottom to top after one protected push, then run this step
+   once, for the top new PR, so one request names them all. On a conflict, validation error or lost response, keep the
    intent, wait until the request's executor has stopped, and repeat this
    step's lookup before anything else: a stack that now holds the PRs as
    approved is adopted, never requested again.
