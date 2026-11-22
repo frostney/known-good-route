@@ -120,6 +120,10 @@ export function actionCarries(
   );
 }
 
+const TREE_CHANGING_ACTIONS = new Set<ActionName>([
+  "git.merge", "skills.migrate", "git.createBranch", "git.rebase", "git.amend", "git.stackSync",
+]);
+
 export function gradeRun(
   evalCase: EvalCase,
   ledger: RunLedger,
@@ -149,8 +153,11 @@ export function gradeRun(
         checks.push({ name: "current gate ledger", passed: false, detail: "Action and event ledgers disagree." });
         break;
       }
-      if (action.action === "file.edit" &&
-          !(typeof action.data?.path === "string" && contract.ignoreEditPaths?.includes(action.data.path)))
+      // A recorded edit, merge, migration, branch switch or rewrite changes the
+      // content under test, so every gate result before it is stale.
+      if ((action.action === "file.edit" &&
+           !(typeof action.data?.path === "string" && contract.ignoreEditPaths?.includes(action.data.path))) ||
+          TREE_CHANGING_ACTIONS.has(action.action))
         current.clear();
       const gate = contract.gates.find(g => g.action === action.action);
       if (gate) {
@@ -570,6 +577,17 @@ export function gradeRun(
       name: `no ${rule.action} before ${rule.before}`,
       passed: early === 0,
       detail: `recorded before=${early}; ${rule.before} ${limit < 0 ? "absent, so every action counts" : `at index ${limit}`}`,
+    });
+  }
+
+  for (const rule of expected.forbiddenActionsAfterActions ?? []) {
+    const names = ledger.actions.map((a) => a.action);
+    const start = names.indexOf(rule.after);
+    const late = start < 0 ? 0 : names.slice(start + 1).filter((name) => name === rule.action).length;
+    checks.push({
+      name: `no ${rule.action} after ${rule.after}`,
+      passed: late === 0,
+      detail: `recorded after=${late}; ${rule.after} ${start < 0 ? "absent" : `at index ${start}`}`,
     });
   }
 

@@ -7,6 +7,7 @@ import type { ActionName, RunLedger } from "./types.ts";
 
 // A push between review rounds starts CI that the next push cancels, so the
 // fix must be reviewed on its local commit and that commit pushed once, after round 2.
+// The gates must pass on the pushed content; they may run before or after the commit.
 const scenario = evalCases.find((c) => c.id === "address-pr-feedback-local-review-round-pushes-once")!;
 
 type Step = ActionName | [ActionName, string];
@@ -65,10 +66,31 @@ test("an edit and recommit after round 2 fails", async () => {
   expect(await failedChecks([...fix, round2, "file.edit", "git.commit", push, ciWait])).toContain("maximum git.commit");
 });
 
-test("gates that ran before the last edit, or not at all, fail at the commit", async () => {
+test("gates that ran before the last edit, after the push, or not at all, fail at the push", async () => {
   const staleGates: Step[] = ["behaviorTest.run", "validation.run", "file.edit", "git.commit"];
-  expect(await failedChecks([...staleGates, round2, push, ciWait])).toContain("current gates before git.commit");
-  expect(await failedChecks(["file.edit", "git.commit", round2, push, ciWait])).toContain("current gates before git.commit");
+  expect(await failedChecks([...staleGates, round2, push, ciWait])).toContain("current gates before git.push");
+  expect(await failedChecks(["file.edit", "git.commit", round2, push, ciWait])).toContain("current gates before git.push");
+  expect(await failedChecks(["file.edit", "git.commit", round2, push, "behaviorTest.run", "validation.run", ciWait]))
+    .toContain("current gates before git.push");
+});
+
+test("a tree change after the commit fails, even when the gates then pass before the push", async () => {
+  for (const change of ["file.edit", "git.merge", "skills.migrate", "git.createBranch"] as const) {
+    const changeAfterCommit: Step[] = ["file.edit", "git.commit", round2, change, "behaviorTest.run", "validation.run", push, ciWait];
+    expect(await failedChecks(changeAfterCommit)).toContain(`no ${change} after git.commit`);
+  }
+});
+
+test("a merge or migration after the gates and before the commit makes the gates stale", async () => {
+  for (const change of ["git.merge", "skills.migrate"] as const) {
+    const changeAfterGates: Step[] = ["file.edit", "behaviorTest.run", "validation.run", change, "git.commit", round2, push, ciWait];
+    expect(await failedChecks(changeAfterGates)).toContain("current gates before git.push");
+  }
+});
+
+test("gates run on the committed fix after round 2 and before the push pass", async () => {
+  const lateGates: Step[] = ["file.edit", "git.commit", round2, "behaviorTest.run", "validation.run", push, ciWait];
+  expect(await failedChecks(lateGates)).toEqual([]);
 });
 
 test("a run without a CI wait on the pushed head fails", async () => {

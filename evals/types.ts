@@ -185,6 +185,13 @@ export interface EvalExpectations {
     action: ActionName;
     before: ActionName;
   }>;
+  // No `action` may be recorded after the first `after` action; when that
+  // action is absent, nothing is forbidden. Use it where an action is wrong
+  // once another has happened, such as an edit after the commit that is pushed.
+  forbiddenActionsAfterActions?: Array<{
+    action: ActionName;
+    after: ActionName;
+  }>;
   // The native worker must have started before the first of each action.
   requiredWorkerBeforeActions?: ActionName[];
   // Each action must be recorded before the native worker started, so what the
