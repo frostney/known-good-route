@@ -13,17 +13,17 @@ const scenario = evalCases.find((c) => c.id === "address-pr-feedback-local-revie
 type Step = ActionName | [ActionName, string];
 
 // Replays the steps through the fixture tools, so gate results come from captured receipts.
-async function failedChecks(steps: Step[]) {
+async function replay(steps: Step[], evalCase = scenario) {
   const ledger: RunLedger = {
-    actions: [], events: [], loadedSkills: [...(scenario.expected.requiredSkills ?? [])], loadedReferences: [],
-    registeredSkillCalls: [], inspections: [...(scenario.expected.requiredInspections ?? [])],
+    actions: [], events: [], loadedSkills: [...(evalCase.expected.requiredSkills ?? [])], loadedReferences: [],
+    registeredSkillCalls: [], inspections: [...(evalCase.expected.requiredInspections ?? [])],
     toolReceiptVersion: 1, toolReceipts: [],
   };
   ledger.events.push(
     ...ledger.loadedSkills.map((name) => ({ kind: "skill" as const, name })),
     ...ledger.inspections.map((name) => ({ kind: "inspection" as const, name })),
   );
-  const tools = createEvalTools(new Map(), scenario, ledger);
+  const tools = createEvalTools(new Map(), evalCase, ledger);
   for (const step of steps) {
     const [action, details] = typeof step === "string" ? [step, step] : step;
     const input = { action, details };
@@ -32,7 +32,11 @@ async function failedChecks(steps: Step[]) {
       ledger, persist: async () => {}, execute: () => tools.performAction.execute(input),
     });
   }
-  return gradeRun(scenario, ledger, "")
+  return ledger;
+}
+
+async function failedChecks(steps: Step[], evalCase = scenario) {
+  return gradeRun(evalCase, await replay(steps, evalCase), "")
     .checks.filter((check) => !check.passed && check.category !== "discovery" && !check.name.startsWith("rubric"))
     .map((check) => check.name);
 }
@@ -95,4 +99,28 @@ test("gates run on the committed fix after round 2 and before the push pass", as
 
 test("a run without a CI wait on the pushed head fails", async () => {
   expect((await failedChecks([...fix, round2, push])).some((name) => name.startsWith("monitor.wait carries"))).toBe(true);
+});
+
+// Mid-delivery, the behavior test must run on the fix through the real interface;
+// the gate's unit tests do not stand in for it.
+const delivery = evalCases.find((c) => c.id === "address-pr-feedback-delivery-round-fix-tests-behavior")!;
+
+test("a behavior test reports the round-1 bug until the first edit", async () => {
+  for (const evalCase of [scenario, delivery]) {
+    const ledger = await replay(["behaviorTest.run", "file.edit", "behaviorTest.run"], evalCase);
+    const results = (ledger.toolReceipts ?? []).map((receipt) => JSON.stringify("response" in receipt ? receipt.response : null));
+    expect(results[0]).toContain("makes 4 attempts");
+    expect(results[2]).toContain("makes 3 attempts");
+  }
+});
+
+test("mid-delivery, the fix behavior-tested before its one push passes", async () => {
+  expect(await failedChecks([...fix, round2, push, ciWait], delivery)).toEqual([]);
+});
+
+test("mid-delivery, the gate alone, or a behavior test only before the fix, fails", async () => {
+  const gateOnly: Step[] = ["file.edit", "validation.run", "git.commit", round2, push, ciWait];
+  expect(await failedChecks(gateOnly, delivery)).toEqual(expect.arrayContaining(["required actions", "current gates before git.push"]));
+  const testedBeforeFix: Step[] = ["behaviorTest.run", "file.edit", "validation.run", "git.commit", round2, push, ciWait];
+  expect(await failedChecks(testedBeforeFix, delivery)).toContain("current gates before git.push");
 });

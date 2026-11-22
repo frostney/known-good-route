@@ -117,9 +117,10 @@ it is no gate and its adapter posts no trigger.
    exhausted. An unresolved required finding prevents readiness. If
    `/code-review` is unavailable, perform the same bounded review and fix pass
    directly.
-6. Run `/test-against-spec fix` when it is available. Otherwise perform the same
-   black-box test directly against the explicit PR specification. Do not use
-   source as proof of behavior. Prefer an exact-revision preview deployment when
+6. Run `/test-against-spec fix` when it is available, even when the project
+   gate passes. Otherwise perform the same black-box test directly against the
+   explicit PR specification. Do not use source, unit tests, mocks or
+   snapshots as proof of behavior, including those the gate runs. Prefer an exact-revision preview deployment when
    available, then use the local environment. Record each requirement,
    environment, setup, action or command, input, expected result, observed
    result, and limitation. If neither environment nor a route in the project's
