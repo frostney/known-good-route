@@ -604,7 +604,11 @@ def wait_for_transition(
             metrics.observations += 1
             delay = pause()
             terminal, reason = classify(observation)
-            digest = stable_digest(transition_key(observation) if transition_key else observation)
+            key = transition_key(observation) if transition_key else observation
+            # A key of None marks an observation with nothing to compare, such
+            # as a pull request head GitHub has not moved to the pushed commit
+            # yet; the checkpoint keeps the digest it had.
+            digest = (prior.get("digest") if prior else None) if key is None else stable_digest(key)
             checkpoint = {
                 "schemaVersion": 1,
                 "kind": kind,

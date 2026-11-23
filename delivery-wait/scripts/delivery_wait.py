@@ -220,14 +220,125 @@ def failed_checks(expected: set[str], observed: dict[str, list[dict[str, Any]]])
     )
 
 
+# How long a wait keeps going while GitHub still reports a pull request head
+# that may be the one before a push, counted from the first such observation.
+HEAD_GRACE = 300
+
+# How an observed head relates to the expected one, from GitHub's comparison
+# of the two. Only the relations a push can leave behind are lagging.
+HEAD_RELATIONS = {
+    "ahead": "ancestor",
+    "behind": "descendant",
+    "diverged": "diverged",
+    "identical": "identical",
+}
+LAGGING_HEADS = {
+    "ancestor": "an ancestor of the expected commit",
+    "diverged": "a commit the expected one diverged from, as after a force-push",
+    "missing": "while GitHub does not yet know the expected commit",
+}
+DIFFERENT_HEADS = {
+    "descendant": "a later commit than the expected one",
+    "identical": "the same commit under another name; pass the full SHA",
+}
+
+
+class ExpectedHead:
+    """Tell a pull request head GitHub has not yet moved to a pushed commit from a different head.
+
+    GitHub moves a pull request's head to a pushed commit some seconds after
+    `git push` returns, so a wait armed at once can still see the head before
+    the push: an ancestor of the expected commit, or after a force-push a
+    commit it diverged from. Until the wait has seen the expected head, such
+    a head is recorded as `headLag` and the wait keeps going for HEAD_GRACE
+    seconds from the first lagging observation, across resumed runs. A head
+    that descends from the expected commit is a later push and has no lag;
+    neither has any head once the expected one was seen.
+    """
+
+    def __init__(self, gh: Gh, repo: str, expected: str) -> None:
+        self.gh = gh
+        self.repo = repo
+        self.expected = expected
+        self.seen = False
+        self.since: float | None = None
+
+    def resume(self, prior: dict[str, Any] | None) -> None:
+        """Carry over what a checkpoint of this same wait observed."""
+        observation = (prior or {}).get("observation") or {}
+        self.seen = observation.get("head") == self.expected
+        try:
+            self.since = parse_time(str(observation["headLag"]["since"]))
+        except (KeyError, TypeError, WaitError):
+            pass
+
+    def relation(self, observed: str) -> str:
+        try:
+            compared = self.gh.rest(
+                f"repos/{self.repo}/compare/{quote(observed, safe='')}...{quote(self.expected, safe='')}?per_page=1"
+            )
+        except (RateLimited, TransientError):
+            raise
+        except WaitError as error:
+            if "404" in str(error) or "not found" in str(error).lower():
+                return "missing"
+            raise
+        status = compared.get("status") if isinstance(compared, dict) else None
+        if status not in HEAD_RELATIONS:
+            raise WaitError(f"GitHub compared {observed} with {self.expected} as {status!r}")
+        return HEAD_RELATIONS[status]
+
+    def annotate(self, observation: dict[str, Any]) -> dict[str, Any]:
+        observed = observation.get("head")
+        if observed == self.expected:
+            self.seen = True
+        elif not self.seen and isinstance(observed, str) and observed:
+            relation = self.relation(observed)
+            lag: dict[str, Any] = {"relation": relation}
+            if relation in LAGGING_HEADS:
+                self.since = time.time() if self.since is None else self.since
+                lag["since"] = timestamp(self.since)
+                lag["until"] = timestamp(self.since + HEAD_GRACE)
+            observation["headLag"] = lag
+        return observation
+
+
+def timestamp(value: float) -> str:
+    return datetime.fromtimestamp(value, timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def classify_head(expected_head: str, observation: dict[str, Any]) -> tuple[str, str] | None:
+    """The result for an observed head other than the expected one; None for the expected head."""
+    observed = observation.get("head")
+    if observed == expected_head:
+        return None
+    mismatch = f"expected head {expected_head}, observed {observed}"
+    lag = observation.get("headLag") or {}
+    relation = lag.get("relation")
+    if relation in DIFFERENT_HEADS:
+        return "invalidated", f"{mismatch}, {DIFFERENT_HEADS[relation]}"
+    if relation not in LAGGING_HEADS:
+        return "invalidated", mismatch
+    if time.time() >= parse_time(str(lag.get("until"))):
+        return "invalidated", (
+            f"{mismatch}: GitHub still reported a head other than the expected one "
+            f"{HEAD_GRACE} seconds after the wait first saw it; check that the push reached the pull request's branch"
+        )
+    return "waiting", (
+        f"GitHub still reports head {observed}, {LAGGING_HEADS[relation]}; "
+        f"waiting until {lag.get('until')} for it to move to {expected_head}"
+    )
+
+
 def classify_pr(
     kind: str,
     expected_head: str,
     expected_checks: set[str],
     observation: dict[str, Any],
 ) -> tuple[str, str]:
-    if observation.get("head") != expected_head:
-        return "invalidated", f"expected head {expected_head}, observed {observation.get('head')}"
+    head = classify_head(expected_head, observation)
+    if head:
+        return head
     if kind == "pr-merged":
         if observation.get("merged"):
             return "satisfied", "pull request merged"
@@ -594,9 +705,10 @@ class WorkflowCensusGate:
         return failures
 
     def __call__(self, observation: dict[str, Any]) -> tuple[str, str]:
-        if observation.get("head") != self.head:
+        head = classify_head(self.head, observation)
+        if head:
             self.previous = None
-            return "invalidated", f"expected head {self.head}, observed {observation.get('head')}"
+            return head
         failures = self.failures(observation)
         if failures:
             self.previous = None
@@ -739,7 +851,10 @@ def rekey_legacy_checkpoint(path: Path | None, identity: dict[str, Any], transit
     # Another wait's checkpoint is invalidated, never rewritten.
     if not observation or prior.get("kind") != "checks-terminal" or prior.get("identity") != identity:
         return
-    digest = stable_digest(transition_key(observation))
+    key = transition_key(observation)
+    if key is None:
+        return
+    digest = stable_digest(key)
     if prior.get("digest") != digest and prior.get("digest") in legacy_checks_digests(observation):
         write_state(path, {**prior, "digest": digest})
 
@@ -814,19 +929,23 @@ def main() -> int:
             gh = Gh(metrics, reserve=CORE_RESERVE if args.command == "wait" else None)
             if args.all_workflows and args.kind != "checks-terminal":
                 raise WaitError("--all-workflows applies only to checks-terminal")
-            if args.kind in {"checks-terminal", "pr-merged"}:
+            pull_request = args.kind in {"checks-terminal", "pr-merged"}
+            if pull_request:
                 if not args.pr or not args.head:
                     raise WaitError("--pr and --head are required")
                 if args.kind == "checks-terminal" and not args.check and not args.all_workflows:
                     raise WaitError(
                         "checks-terminal requires --all-workflows or at least one --check context"
                     )
+                expected_head = ExpectedHead(gh, args.repo, args.head)
                 if args.all_workflows:
-                    observe = lambda: workflow_census(gh, args.repo, args.pr, args.head, bool(args.check), args.rest_page_size)
+                    observe = lambda: expected_head.annotate(
+                        workflow_census(gh, args.repo, args.pr, args.head, bool(args.check), args.rest_page_size)
+                    )
                     gate = WorkflowCensusGate(args.head, set(args.check), args.command == "wait")
                     classify = gate
                 else:
-                    observe = lambda: pr_snapshot(gh, args.repo, args.pr, args.rest_page_size)
+                    observe = lambda: expected_head.annotate(pr_snapshot(gh, args.repo, args.pr, args.rest_page_size))
                     classify = lambda value: classify_pr(args.kind, args.head, set(args.check), value)
             elif args.kind == "workflow-terminal":
                 if not args.run_id or not args.head:
@@ -870,6 +989,11 @@ def main() -> int:
                 output = result_envelope(args.kind, state, identity, observation, metrics, reason)
             else:
                 def transition_key(value: dict[str, Any]) -> Any:
+                    if pull_request and value.get("head") != args.head:
+                        # Another head is judged by classify_head alone, and
+                        # one GitHub has not moved yet must not make the
+                        # expected head look like a change once it arrives.
+                        return None
                     if args.all_workflows:
                         # The gate is stateful, so the key must not call it.
                         return {"head": value.get("head"), "failures": gate.failures(value)}
@@ -899,6 +1023,11 @@ def main() -> int:
                 deadline = parse_time(args.deadline)
                 args.interval = positive_interval(args.interval)
                 with StateLock(state_path):
+                    if pull_request:
+                        prior = load_state(state_path)
+                        # Another wait's checkpoint is invalidated by wait_for_transition.
+                        if prior and prior.get("kind") == args.kind and prior.get("identity") == identity:
+                            expected_head.resume(prior)
                     if args.kind == "checks-terminal" and not args.all_workflows:
                         rekey_legacy_checkpoint(state_path, identity, transition_key)
                     output = wait_for_transition(kind=args.kind, identity=identity, observe=observe, classify=classify, state_path=state_path, deadline=deadline, interval=args.interval, metrics=metrics, transition_key=transition_key, pace=gh.pace, not_before=gh.not_before, limits=gh)

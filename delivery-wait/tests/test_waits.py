@@ -134,6 +134,14 @@ if "per_page=" in endpoint and "expectedRestPageSize" in scenario:
         sys.exit(3)
 if "user" in args:
     output({"login":"maintainer"})
+if "/compare/" in endpoint:
+    # GitHub's comparison of the observed head with the expected one, keyed "observed...expected".
+    compared = scenario.get("compare", {}).get(endpoint.split("/compare/", 1)[1].split("?", 1)[0])
+    if compared is None:
+        print("HTTP/2.0 404 Not Found\r\n\r\n" + json.dumps({"message": "Not Found"}))
+        print("gh: Not Found (HTTP 404)", file=sys.stderr)
+        sys.exit(1)
+    output(compared)
 if endpoint.endswith("/pulls/comments/10"):
     output({"id":10,"pull_request_url":"https://api.github.com/repos/owner/repo/pulls/7","body":"finding","user":{"login":"reviewer"}})
 if endpoint.endswith("/pulls/7"):
@@ -437,13 +445,85 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertIn("timezone", output["reason"])
 
     def test_head_change_invalidates(self) -> None:
-        self.write_scenario(pull=pull("head-2", []))
+        self.write_scenario(pull=pull("head-2", []), compare={"head-2...head-1": {"status": "behind"}})
         _, output = self.run_json(
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
             "--head", "head-1", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01",
         )
         self.assertEqual(output["state"], "invalidated")
         self.assertEqual(output["observation"]["head"], "head-2")
+        self.assertIn("a later commit than the expected one", output["reason"])
+        self.assertEqual(output["metrics"]["observations"], 1)
+
+    def lagging_head_wait(self, *selector: str, state: Path | None = None, seconds: float = 3) -> dict:
+        deadline = (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat()
+        return self.run_json(
+            DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+            *(selector or ("--check", "CI")), "--deadline", deadline, "--interval", "0.05",
+            *(("--state", str(state)) if state else ()),
+        )[1]
+
+    def test_a_wait_armed_right_after_a_push_waits_for_github_to_move_the_head(self) -> None:
+        # Corkboard post 985: GitHub still reported the head before the push.
+        for relation, status in (("ancestor", "ahead"), ("diverged", "diverged")):
+            with self.subTest(relation=relation):
+                self.counter.unlink(missing_ok=True)
+                before = pull("head-0", [check("CI", "COMPLETED", "SUCCESS")])
+                self.write_scenario(
+                    pullsByRequest=[before] * 4 + [pull("head-1", [check("CI", "IN_PROGRESS", None)])] * 4
+                    + [pull("head-1", [check("CI", "COMPLETED", "SUCCESS")])],
+                    compare={"head-0...head-1": {"status": status}},
+                )
+                output = self.lagging_head_wait(state=self.directory / f"{relation}.json")
+                self.assertEqual(output["state"], "satisfied", output["reason"])
+                self.assertEqual(output["observation"]["head"], "head-1")
+                self.assertGreaterEqual(output["metrics"]["observations"], 4)
+
+    def test_a_lagging_head_is_reported_as_waiting_with_its_relation(self) -> None:
+        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        _, inspected = self.run_json(
+            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
+            "--pr", "7", "--head", "head-1", "--check", "CI",
+        )
+        self.assertEqual(inspected["state"], "waiting")
+        self.assertIn("an ancestor of the expected commit", inspected["reason"])
+        self.assertEqual(inspected["observation"]["headLag"]["relation"], "ancestor")
+        # A commit GitHub does not know yet is given the same grace.
+        self.write_scenario(pull=pull("head-0", []))
+        state = self.directory / "wait.json"
+        output = self.lagging_head_wait(state=state, seconds=0.3)
+        self.assertEqual(output["state"], "timed-out")
+        self.assertEqual(output["observation"]["headLag"]["relation"], "missing")
+
+    def test_a_resumed_wait_keeps_the_grace_its_first_lagging_observation_started(self) -> None:
+        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        state = self.directory / "wait.json"
+        first = self.lagging_head_wait(state=state, seconds=0.3)
+        self.assertEqual(first["state"], "timed-out")
+        since = first["observation"]["headLag"]["since"]
+        second = self.lagging_head_wait(state=state, seconds=0.3)
+        self.assertEqual(second["state"], "timed-out")
+        self.assertEqual(second["observation"]["headLag"]["since"], since)
+        # Once the grace has passed, a head that never moved invalidates the wait.
+        checkpoint = json.loads(state.read_text())
+        checkpoint["observation"]["headLag"]["since"] = "2026-08-12T08:00:00Z"
+        state.write_text(json.dumps(checkpoint))
+        expired = self.lagging_head_wait(state=state)
+        self.assertEqual(expired["state"], "invalidated")
+        self.assertIn("expected head head-1, observed head-0", expired["reason"])
+        self.assertIn("check that the push reached", expired["reason"])
+        self.assertEqual(expired["metrics"]["observations"], 1)
+
+    def test_a_head_that_moves_off_the_expected_one_invalidates_at_once(self) -> None:
+        # Seen by this wait, then replaced: even an ancestor is not a lag.
+        self.write_scenario(pull=pull("head-1", [check("CI", "IN_PROGRESS", None)]))
+        state = self.directory / "wait.json"
+        self.assertEqual(self.lagging_head_wait(state=state, seconds=0.3)["state"], "timed-out")
+        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        output = self.lagging_head_wait(state=state)
+        self.assertEqual(output["state"], "invalidated")
+        self.assertEqual(output["reason"], "expected head head-1, observed head-0")
+        self.assertNotIn("headLag", output["observation"])
 
     def test_deadline_performs_a_final_authoritative_observation(self) -> None:
         self.write_scenario()
@@ -721,7 +801,7 @@ class WaitCommandsTest(unittest.TestCase):
                 self.assertEqual(output["state"], "changed")
                 self.assertIn("closed without merging", output["reason"])
                 self.assertEqual(output["metrics"]["observations"], 1)
-        self.write_scenario(pull=pull("head-2", [], state="CLOSED"))
+        self.write_scenario(pull=pull("head-2", [], state="CLOSED"), compare={"head-2...head-1": {"status": "behind"}})
         self.assertEqual(self.merge_wait()["state"], "invalidated")
 
     def test_pr_merged_rest_fallback_tells_closed_from_merged(self) -> None:
@@ -1939,10 +2019,24 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(output["observation"]["runs"], [])
 
     def test_all_workflows_invalidates_a_changed_head(self) -> None:
-        self.write_scenario(pull=pull("head-2", []), census=[census(workflow_run(101, matrix_jobs(2)))])
+        self.write_scenario(
+            pull=pull("head-2", []), census=[census(workflow_run(101, matrix_jobs(2)))],
+            compare={"head-2...head-1": {"status": "behind"}},
+        )
         _, output = self.census_wait()
         self.assertEqual(output["state"], "invalidated")
         self.assertEqual(output["observation"]["head"], "head-2")
+        self.assertIn("a later commit than the expected one", output["reason"])
+
+    def test_all_workflows_waits_for_github_to_move_the_head_after_a_push(self) -> None:
+        self.write_scenario(
+            pullsByRequest=[pull("head-0", [])] * 4 + [pull("head-1", [])],
+            census=[census(workflow_run(101, matrix_jobs(2)))],
+            compare={"head-0...head-1": {"status": "ahead"}},
+        )
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertEqual(output["observation"]["head"], "head-1")
 
     def test_all_workflows_refuses_a_pull_request_without_a_head(self) -> None:
         self.write_scenario(pull={"headRefOid": None}, census=[census(workflow_run(101, matrix_jobs(2)))])
