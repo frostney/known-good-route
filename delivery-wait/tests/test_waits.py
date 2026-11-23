@@ -136,6 +136,14 @@ if "user" in args:
     output({"login":"maintainer"})
 if "/compare/" in endpoint:
     # GitHub's comparison of the observed head with the expected one, keyed "observed...expected".
+    import time
+    time.sleep(scenario.get("compareSeconds", 0))
+    unavailable = pathlib.Path(os.environ["FAKE_GH_COUNTER"] + ".compare-unavailable")
+    if scenario.get("compareUnavailableOnce") and not unavailable.exists():
+        unavailable.write_text("1")
+        print("HTTP/2.0 503 Service Unavailable\r\n\r\n" + json.dumps({"message": "unavailable"}))
+        print("gh: Service Unavailable (HTTP 503)", file=sys.stderr)
+        sys.exit(1)
     compared = scenario.get("compare", {}).get(endpoint.split("/compare/", 1)[1].split("?", 1)[0])
     if compared is None:
         print("HTTP/2.0 404 Not Found\r\n\r\n" + json.dumps({"message": "Not Found"}))
@@ -599,6 +607,69 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(output["state"], "invalidated", output["reason"])
         self.assertEqual(output["metrics"]["retries"], 1)
         self.assertLess(time.monotonic() - started, 4)
+
+    def grace_nearly_over(self, state: Path, seconds_left: float) -> None:
+        """A checkpoint of a lagging wait whose grace ends SECONDS_LEFT from now."""
+        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        self.lagging_head_wait(state=state, seconds=0.3)
+        checkpoint = json.loads(state.read_text())
+        since = datetime.now(timezone.utc) - timedelta(seconds=300 - seconds_left)
+        checkpoint["expectedHead"]["since"] = since.isoformat().replace("+00:00", "Z")
+        checkpoint["observation"]["headLag"].update(
+            since=checkpoint["expectedHead"]["since"],
+            until=(since + timedelta(seconds=300)).isoformat().replace("+00:00", "Z"),
+        )
+        state.write_text(json.dumps(checkpoint))
+        self.counter.unlink()
+
+    def slow_wait(self, state: Path, seconds: float) -> tuple[dict, float]:
+        deadline = (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat()
+        started = time.monotonic()
+        result = subprocess.run(
+            [sys.executable, str(DELIVERY), "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
+             "--head", "head-1", "--check", "CI", "--deadline", deadline, "--interval", "600",
+             "--state", str(state), "--json"],
+            text=True, capture_output=True, cwd=self.directory, env=self.environment, timeout=seconds + 5,
+        )
+        return json.loads(result.stdout), time.monotonic() - started
+
+    def test_a_head_read_before_the_grace_ended_is_read_again_before_it_expires_the_wait(self) -> None:
+        # The comparison finishes after the grace ends; the head GitHub then reports decides.
+        state = self.directory / "wait.json"
+        self.grace_nearly_over(state, 0.5)
+        arrived = pull("head-1", [check("CI", "COMPLETED", "SUCCESS")])
+        self.write_scenario(
+            pullsByRequest=[pull("head-0", [])] * 2 + [arrived],
+            compare={"head-0...head-1": {"status": "ahead"}}, compareSeconds=1,
+        )
+        output, elapsed = self.slow_wait(state, 6)
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertLess(elapsed, 4)
+
+    def test_a_comparison_that_fails_at_the_end_of_the_grace_is_retried_promptly(self) -> None:
+        state = self.directory / "wait.json"
+        self.grace_nearly_over(state, 0.5)
+        arrived = pull("head-1", [check("CI", "COMPLETED", "SUCCESS")])
+        self.write_scenario(
+            pullsByRequest=[pull("head-0", [])] * 2 + [arrived],
+            compare={"head-0...head-1": {"status": "ahead"}}, compareUnavailableOnce=True, compareSeconds=1,
+        )
+        output, elapsed = self.slow_wait(state, 10)
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertEqual(output["metrics"]["retries"], 1)
+        # FOLLOW_UP_RETRY seconds later, not at the deadline.
+        self.assertLess(elapsed, 8.5)
+
+    def test_the_expected_head_stays_seen_after_an_operational_error(self) -> None:
+        crowded = pull("head-1", [])
+        crowded["commits"]["nodes"][0]["commit"]["statusCheckRollup"]["contexts"]["pageInfo"] = {"hasNextPage": True}
+        self.write_scenario(pull=crowded)
+        state = self.directory / "wait.json"
+        self.assertEqual(self.lagging_head_wait(state=state, seconds=0.3)["state"], "operational-error")
+        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        output = self.lagging_head_wait(state=state)
+        self.assertEqual(output["state"], "invalidated")
+        self.assertIn("after this wait had seen the expected head", output["reason"])
 
     def test_a_checkpoint_digest_of_no_head_is_no_baseline(self) -> None:
         self.write_scenario(pull=pull("head-1", [check("CI", "IN_PROGRESS", None)]))

@@ -44,6 +44,8 @@ CORE_SHARE = 0.25
 # GitHub asks a client that hit a secondary limit without a Retry-After to
 # wait at least a minute.
 SECONDARY_BACKOFF = 60
+# A retry for a follow-up read that is already due waits this long first.
+FOLLOW_UP_RETRY = 5
 NEXT_LINK = re.compile(r'<([^>]+)>\s*;\s*rel="next"')
 
 
@@ -499,12 +501,18 @@ def wait_for_transition(
             extra["githubLimits"] = limits.export()
         write_state(path, {**value, **extra})
 
-    def follow_up(observation: dict[str, Any], delay: float) -> float:
-        """DELAY, shortened to an earlier time `wake_by` names for OBSERVATION."""
+    def follow_up(observation: dict[str, Any], delay: float, retry: bool = False) -> float:
+        """DELAY, shortened to an earlier time `wake_by` names for OBSERVATION.
+
+        A time already past means at once, or for a RETRY after
+        FOLLOW_UP_RETRY seconds, so a read that keeps failing cannot spin.
+        """
         nonlocal held
         due = wake_by(observation) if wake_by else None
-        if due is None or due <= time.time():
+        if due is None:
             return delay
+        if due <= time.time():
+            due = time.time() + (min(interval, FOLLOW_UP_RETRY) if retry else 0.0)
         blocked = not_before() if not_before else None
         due = max(due, blocked or 0.0)
         if due < time.time() + delay:
@@ -607,7 +615,7 @@ def wait_for_transition(
                     )
                     return result
                 # A retry still looks again when the last observation asked to.
-                delay = follow_up(prior.get("observation") or {} if prior else {}, pause())
+                delay = follow_up(prior.get("observation") or {} if prior else {}, pause(), retry=True)
                 retry_at = min(deadline, time.time() + delay)
                 save(
                     state_path,
@@ -629,6 +637,12 @@ def wait_for_transition(
                 )
                 nap(min(delay, max(0.0, deadline - time.time())))
                 continue
+            except WaitError:
+                # What `keep` learned before the error, such as a head GitHub
+                # reported, outlives it; the observation and digest stay.
+                base = prior or {"schemaVersion": 1, "kind": kind, "identity": identity, "observation": {}, "digest": None}
+                save(state_path, {**base, "updatedAt": utc_now()})
+                raise
             metrics.observations += 1
             delay = pause()
             terminal, reason = classify(observation)

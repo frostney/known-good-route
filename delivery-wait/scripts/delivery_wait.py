@@ -343,21 +343,30 @@ class ExpectedHead:
         if self.seen:
             observation["headLag"] = {"relation": "replaced"}
             return observation
-        # Once the grace has passed, the head is judged without asking GitHub again.
-        expired = self.since is not None and time.time() >= self.since + HEAD_GRACE
+        # The head was read just now; the grace is judged at that time, not
+        # after a comparison that can take long. Once the grace has passed,
+        # the head is judged without asking GitHub again.
+        read = time.time()
+        expired = self.since is not None and read >= self.since + HEAD_GRACE
         relation = self.relation if expired else self.compare(observed)
         lag: dict[str, Any] = {"relation": relation}
         if relation in LAGGING_HEADS:
             self.relation = relation
-            self.since = time.time() if self.since is None else self.since
+            self.since = read if self.since is None else self.since
             lag["since"] = timestamp(self.since)
             lag["until"] = timestamp(self.since + HEAD_GRACE)
+            lag["readAt"] = timestamp(read)
         observation["headLag"] = lag
         return observation
 
     @staticmethod
     def due(observation: dict[str, Any]) -> float | None:
-        """When a lagging head's grace ends, so the wait looks again then; None otherwise."""
+        """When a lagging head's grace ends, so the wait reads the head again then; None otherwise.
+
+        A head read before the grace ended keeps the wait waiting even when
+        the comparison finished after it, so a time already past asks for a
+        prompt fresh read.
+        """
         lag = observation.get("headLag") or {}
         if lag.get("relation") not in LAGGING_HEADS:
             return None
@@ -380,7 +389,8 @@ def classify_head(expected_head: str, observation: dict[str, Any]) -> tuple[str,
         return "invalidated", f"{mismatch}, {DIFFERENT_HEADS[relation]}"
     if relation not in LAGGING_HEADS:
         return "invalidated", mismatch
-    if time.time() >= parse_time(str(lag.get("until"))):
+    read = parse_time(str(lag["readAt"])) if lag.get("readAt") else time.time()
+    if read >= parse_time(str(lag.get("until"))):
         return "invalidated", (
             f"{mismatch}: GitHub still reported a head other than the expected one "
             f"{HEAD_GRACE} seconds after the wait first saw it; check that the push reached the pull request's branch"
