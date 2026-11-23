@@ -471,12 +471,14 @@ def wait_for_transition(
     not_before: Callable[[], float | None] | None = None,
     limits: Any = None,
     wake_by: Callable[[dict[str, Any]], float | None] | None = None,
+    keep: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Observe until a transition, sleeping `pace(interval)`, or `interval`, between observations.
 
     `wake_by` can name an earlier time an observation must be followed up,
     such as the end of a grace period; GitHub's earliest permitted read
-    still comes first.
+    still comes first. Each object in `keep` saves its state in the
+    checkpoint under its key through `export` and `restore`, like `limits`.
 
     When pacing or `not_before`, GitHub's earliest permitted read, holds the
     next observation past the deadline, the wait ends at the deadline
@@ -492,7 +494,24 @@ def wait_for_transition(
         stopped = True
 
     def save(path: Path | None, value: dict[str, Any]) -> None:
-        write_state(path, {**value, "githubLimits": limits.export()} if limits else value)
+        extra = {key: item.export() for key, item in (keep or {}).items()}
+        if limits:
+            extra["githubLimits"] = limits.export()
+        write_state(path, {**value, **extra})
+
+    def follow_up(observation: dict[str, Any], delay: float) -> float:
+        """DELAY, shortened to an earlier time `wake_by` names for OBSERVATION."""
+        nonlocal held
+        due = wake_by(observation) if wake_by else None
+        if due is None or due <= time.time():
+            return delay
+        blocked = not_before() if not_before else None
+        due = max(due, blocked or 0.0)
+        if due < time.time() + delay:
+            delay = max(0.0, due - time.time())
+            if due < deadline:
+                held = None
+        return delay
 
     def nap(seconds: float) -> None:
         """Sleep, waking early once a signal asks the wait to stop."""
@@ -531,6 +550,9 @@ def wait_for_transition(
             )
         if limits and prior:
             limits.restore(prior.get("githubLimits"))
+        for key, item in (keep or {}).items():
+            if prior:
+                item.restore(prior.get(key))
         blocked = not_before() if not_before else None
         if blocked is not None:
             # A hold an earlier run learned comes before this run's first read.
@@ -584,7 +606,8 @@ def wait_for_transition(
                         },
                     )
                     return result
-                delay = pause()
+                # A retry still looks again when the last observation asked to.
+                delay = follow_up(prior.get("observation") or {} if prior else {}, pause())
                 retry_at = min(deadline, time.time() + delay)
                 save(
                     state_path,
@@ -609,14 +632,8 @@ def wait_for_transition(
             metrics.observations += 1
             delay = pause()
             terminal, reason = classify(observation)
-            due = wake_by(observation) if wake_by and terminal == "waiting" else None
-            if due is not None:
-                blocked = not_before() if not_before else None
-                due = max(due, blocked or 0.0)
-                if due < time.time() + delay:
-                    delay = max(0.0, due - time.time())
-                    if due < deadline:
-                        held = None
+            if terminal == "waiting":
+                delay = follow_up(observation, delay)
             key = transition_key(observation) if transition_key else observation
             # A key of None marks an observation with nothing to compare, such
             # as a pull request head GitHub has not moved to the pushed commit

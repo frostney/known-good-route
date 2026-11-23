@@ -506,7 +506,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(second["observation"]["headLag"]["since"], since)
         # Once the grace has passed, a head that never moved invalidates the wait.
         checkpoint = json.loads(state.read_text())
-        checkpoint["observation"]["headLag"]["since"] = "2026-08-12T08:00:00Z"
+        checkpoint["expectedHead"]["since"] = "2026-08-12T08:00:00Z"
         state.write_text(json.dumps(checkpoint))
         self.counter.with_name("counter.log").unlink()
         expired = self.lagging_head_wait(state=state)
@@ -543,6 +543,74 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(output["state"], "invalidated")
         self.assertIn("after this wait had seen the expected head", output["reason"])
 
+    def test_the_expected_head_stays_seen_when_every_census_after_it_failed(self) -> None:
+        incomplete = {"runPages": [{"total_count": 2, "workflow_runs": []}], "jobPages": {}}
+        self.write_scenario(pull=pull("head-1", []), census=[incomplete])
+        state = self.directory / "wait.json"
+        self.assertEqual(self.lagging_head_wait("--all-workflows", state=state, seconds=0.3)["state"], "timed-out")
+        self.assertEqual(json.loads(state.read_text()).get("expectedHead", {}).get("seen"), True)
+        self.write_scenario(pull=pull("head-0", []), census=[incomplete], compare={"head-0...head-1": {"status": "ahead"}})
+        output = self.lagging_head_wait("--all-workflows", state=state)
+        self.assertEqual(output["state"], "invalidated")
+        self.assertIn("after this wait had seen the expected head", output["reason"])
+
+    def test_the_checks_of_another_head_are_not_read(self) -> None:
+        # Through the REST fallback, no check runs or statuses are read for a lagging head.
+        self.write_scenario(
+            graphqlRateLimited=True, restPull={"head": {"sha": "head-0"}, "merged": False, "merged_at": None, "merge_commit_sha": None},
+            compare={"head-0...head-1": {"status": "ahead"}},
+        )
+        _, output = self.run_json(
+            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--check", "CI",
+        )
+        self.assertEqual(output["state"], "waiting", output["reason"])
+        log = self.counter.with_name("counter.log").read_text()
+        self.assertNotIn("/check-runs", log)
+        self.assertNotIn("/statuses", log)
+        # Nor are more than 100 contexts on a lagging head an error.
+        crowded = pull("head-0", [])
+        crowded["commits"]["nodes"][0]["commit"]["statusCheckRollup"]["contexts"]["pageInfo"] = {"hasNextPage": True}
+        self.write_scenario(pull=crowded, compare={"head-0...head-1": {"status": "ahead"}})
+        _, output = self.run_json(
+            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--check", "CI",
+        )
+        self.assertEqual(output["state"], "waiting", output["reason"])
+
+    def test_a_retry_after_a_lagging_head_still_looks_again_when_its_grace_ends(self) -> None:
+        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        state = self.directory / "wait.json"
+        self.lagging_head_wait(state=state, seconds=0.3)
+        checkpoint = json.loads(state.read_text())
+        almost = (datetime.now(timezone.utc) - timedelta(seconds=299)).isoformat().replace("+00:00", "Z")
+        soon = (datetime.now(timezone.utc) + timedelta(seconds=1)).isoformat().replace("+00:00", "Z")
+        checkpoint.setdefault("expectedHead", {})["since"] = almost
+        checkpoint["observation"]["headLag"].update(since=almost, until=soon)
+        state.write_text(json.dumps(checkpoint))
+        self.counter.unlink()
+        self.write_scenario(
+            pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}}, transientFailures=1,
+        )
+        deadline = (datetime.now(timezone.utc) + timedelta(seconds=5.5)).isoformat()
+        started = time.monotonic()
+        _, output = self.run_json(
+            DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+            "--check", "CI", "--deadline", deadline, "--interval", "600", "--state", str(state),
+        )
+        self.assertEqual(output["state"], "invalidated", output["reason"])
+        self.assertEqual(output["metrics"]["retries"], 1)
+        self.assertLess(time.monotonic() - started, 4)
+
+    def test_a_checkpoint_digest_of_no_head_is_no_baseline(self) -> None:
+        self.write_scenario(pull=pull("head-1", [check("CI", "IN_PROGRESS", None)]))
+        state = self.directory / "wait.json"
+        self.lagging_head_wait(state=state, seconds=0.3)
+        checkpoint = json.loads(state.read_text())
+        checkpoint.pop("expectedHead", None)
+        checkpoint["observation"] = {"head": None, "checks": []}
+        checkpoint["digest"] = "0" * 64
+        state.write_text(json.dumps(checkpoint))
+        self.assertEqual(self.lagging_head_wait(state=state, seconds=0.3)["state"], "timed-out")
+
     def test_a_checkpoint_digest_of_another_head_is_no_baseline(self) -> None:
         # An earlier helper saved the stale head's digest when it invalidated the wait.
         self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
@@ -572,7 +640,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.lagging_head_wait(state=state, seconds=0.3)
         checkpoint = json.loads(state.read_text())
         almost = datetime.now(timezone.utc) - timedelta(seconds=299)
-        checkpoint["observation"]["headLag"]["since"] = almost.isoformat().replace("+00:00", "Z")
+        checkpoint["expectedHead"]["since"] = almost.isoformat().replace("+00:00", "Z")
         state.write_text(json.dumps(checkpoint))
         deadline = (datetime.now(timezone.utc) + timedelta(seconds=5.5)).isoformat()
         started = time.monotonic()
