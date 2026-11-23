@@ -470,8 +470,13 @@ def wait_for_transition(
     pace: Callable[[float], float] | None = None,
     not_before: Callable[[], float | None] | None = None,
     limits: Any = None,
+    wake_by: Callable[[dict[str, Any]], float | None] | None = None,
 ) -> dict[str, Any]:
     """Observe until a transition, sleeping `pace(interval)`, or `interval`, between observations.
+
+    `wake_by` can name an earlier time an observation must be followed up,
+    such as the end of a grace period; GitHub's earliest permitted read
+    still comes first.
 
     When pacing or `not_before`, GitHub's earliest permitted read, holds the
     next observation past the deadline, the wait ends at the deadline
@@ -604,11 +609,20 @@ def wait_for_transition(
             metrics.observations += 1
             delay = pause()
             terminal, reason = classify(observation)
+            due = wake_by(observation) if wake_by and terminal == "waiting" else None
+            if due is not None:
+                blocked = not_before() if not_before else None
+                due = max(due, blocked or 0.0)
+                if due < time.time() + delay:
+                    delay = max(0.0, due - time.time())
+                    if due < deadline:
+                        held = None
             key = transition_key(observation) if transition_key else observation
             # A key of None marks an observation with nothing to compare, such
             # as a pull request head GitHub has not moved to the pushed commit
-            # yet; the checkpoint keeps the digest it had.
-            digest = (prior.get("digest") if prior else None) if key is None else stable_digest(key)
+            # yet. It is no baseline either: the next comparable observation
+            # sets one.
+            digest = None if key is None else stable_digest(key)
             checkpoint = {
                 "schemaVersion": 1,
                 "kind": kind,

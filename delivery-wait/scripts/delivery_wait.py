@@ -240,6 +240,7 @@ LAGGING_HEADS = {
 DIFFERENT_HEADS = {
     "descendant": "a later commit than the expected one",
     "identical": "the same commit under another name; pass the full SHA",
+    "replaced": "after this wait had seen the expected head",
 }
 
 
@@ -253,7 +254,8 @@ class ExpectedHead:
     a head is recorded as `headLag` and the wait keeps going for HEAD_GRACE
     seconds from the first lagging observation, across resumed runs. A head
     that descends from the expected commit is a later push and has no lag;
-    neither has any head once the expected one was seen.
+    neither has any head once the expected one was seen, which the
+    checkpoint keeps as the relation `replaced`.
     """
 
     def __init__(self, gh: Gh, repo: str, expected: str) -> None:
@@ -262,17 +264,26 @@ class ExpectedHead:
         self.expected = expected
         self.seen = False
         self.since: float | None = None
+        self.relation = "missing"  # The last lagging relation GitHub reported.
 
     def resume(self, prior: dict[str, Any] | None) -> None:
         """Carry over what a checkpoint of this same wait observed."""
         observation = (prior or {}).get("observation") or {}
-        self.seen = observation.get("head") == self.expected
+        lag = observation.get("headLag") if isinstance(observation.get("headLag"), dict) else {}
+        self.seen = observation.get("head") == self.expected or lag.get("relation") == "replaced"
+        if lag.get("relation") in LAGGING_HEADS:
+            self.relation = lag["relation"]
         try:
-            self.since = parse_time(str(observation["headLag"]["since"]))
-        except (KeyError, TypeError, WaitError):
+            self.since = parse_time(str(lag["since"]))
+        except (KeyError, WaitError):
             pass
 
-    def relation(self, observed: str) -> str:
+    def note(self, observed: Any) -> None:
+        """Record a head GitHub reported, before anything else read with it can fail."""
+        if observed == self.expected:
+            self.seen = True
+
+    def compare(self, observed: str) -> str:
         try:
             compared = self.gh.rest(
                 f"repos/{self.repo}/compare/{quote(observed, safe='')}...{quote(self.expected, safe='')}?per_page=1"
@@ -290,17 +301,31 @@ class ExpectedHead:
 
     def annotate(self, observation: dict[str, Any]) -> dict[str, Any]:
         observed = observation.get("head")
-        if observed == self.expected:
-            self.seen = True
-        elif not self.seen and isinstance(observed, str) and observed:
-            relation = self.relation(observed)
-            lag: dict[str, Any] = {"relation": relation}
-            if relation in LAGGING_HEADS:
-                self.since = time.time() if self.since is None else self.since
-                lag["since"] = timestamp(self.since)
-                lag["until"] = timestamp(self.since + HEAD_GRACE)
-            observation["headLag"] = lag
+        self.note(observed)
+        if observed == self.expected or not isinstance(observed, str) or not observed:
+            return observation
+        if self.seen:
+            observation["headLag"] = {"relation": "replaced"}
+            return observation
+        # Once the grace has passed, the head is judged without asking GitHub again.
+        expired = self.since is not None and time.time() >= self.since + HEAD_GRACE
+        relation = self.relation if expired else self.compare(observed)
+        lag: dict[str, Any] = {"relation": relation}
+        if relation in LAGGING_HEADS:
+            self.relation = relation
+            self.since = time.time() if self.since is None else self.since
+            lag["since"] = timestamp(self.since)
+            lag["until"] = timestamp(self.since + HEAD_GRACE)
+        observation["headLag"] = lag
         return observation
+
+    @staticmethod
+    def due(observation: dict[str, Any]) -> float | None:
+        """When a lagging head's grace ends, so the wait looks again then; None otherwise."""
+        lag = observation.get("headLag") or {}
+        if lag.get("relation") not in LAGGING_HEADS:
+            return None
+        return parse_time(str(lag.get("until")))
 
 
 def timestamp(value: float) -> str:
@@ -413,12 +438,17 @@ def rest_census(pages: list[Any], field: str, label: str) -> list[dict[str, Any]
     return sorted(items, key=lambda item: item["id"])
 
 
-def workflow_census(gh: Gh, repo: str, number: int, head: str, checks: bool, rest_page_size: int = 100) -> dict[str, Any]:
+def workflow_census(
+    gh: Gh, repo: str, number: int, head: str, checks: bool, rest_page_size: int = 100,
+    expected: ExpectedHead | None = None,
+) -> dict[str, Any]:
     """Every GitHub Actions run for the pull request's exact head, with its jobs."""
     snapshot = pr_snapshot(gh, repo, number, rest_page_size) if checks else {"head": pr_head(gh, repo, number)}
     observed = snapshot.get("head")
     if not isinstance(observed, str) or not observed:
         raise WaitError(f"pull request {repo}#{number} has no verified head")
+    if expected:
+        expected.note(observed)
     observation: dict[str, Any] = {"head": observed}
     if checks:
         observation["checks"] = snapshot["checks"]
@@ -940,7 +970,7 @@ def main() -> int:
                 expected_head = ExpectedHead(gh, args.repo, args.head)
                 if args.all_workflows:
                     observe = lambda: expected_head.annotate(
-                        workflow_census(gh, args.repo, args.pr, args.head, bool(args.check), args.rest_page_size)
+                        workflow_census(gh, args.repo, args.pr, args.head, bool(args.check), args.rest_page_size, expected_head)
                     )
                     gate = WorkflowCensusGate(args.head, set(args.check), args.command == "wait")
                     classify = gate
@@ -1028,9 +1058,14 @@ def main() -> int:
                         # Another wait's checkpoint is invalidated by wait_for_transition.
                         if prior and prior.get("kind") == args.kind and prior.get("identity") == identity:
                             expected_head.resume(prior)
+                            observed = (prior.get("observation") or {}).get("head")
+                            if observed and observed != args.head and prior.get("digest") is not None:
+                                # A digest of another head, such as one an earlier helper
+                                # saved when it invalidated, is no baseline for this one.
+                                write_state(state_path, {**prior, "digest": None})
                     if args.kind == "checks-terminal" and not args.all_workflows:
                         rekey_legacy_checkpoint(state_path, identity, transition_key)
-                    output = wait_for_transition(kind=args.kind, identity=identity, observe=observe, classify=classify, state_path=state_path, deadline=deadline, interval=args.interval, metrics=metrics, transition_key=transition_key, pace=gh.pace, not_before=gh.not_before, limits=gh)
+                    output = wait_for_transition(kind=args.kind, identity=identity, observe=observe, classify=classify, state_path=state_path, deadline=deadline, interval=args.interval, metrics=metrics, transition_key=transition_key, pace=gh.pace, not_before=gh.not_before, limits=gh, wake_by=ExpectedHead.due if pull_request else None)
         emit(output, args.json)
         return 0
     except WaitError as error:
