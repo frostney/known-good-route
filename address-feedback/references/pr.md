@@ -48,7 +48,10 @@ waits under
 which keep a wait armed without waking a model to report unchanged state. The
 repository policy defaults to `.github/delivery/review-automations.json` and may
 be overridden explicitly. Use a caller-owned `--state` path below
-`.agent/waits/`, which the repository must gitignore.
+`.agent/waits/`, which the repository must gitignore. A wait armed right
+after a push waits for GitHub to move the PR's head to the pushed commit,
+as [`delivery-wait`](../../delivery-wait/SKILL.md#results) describes
+for `checks-terminal`.
 
 ## Active review automation
 

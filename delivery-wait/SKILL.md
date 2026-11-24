@@ -226,7 +226,8 @@ deadline passed, and `cancelled` means the wait was interrupted. These exit 0;
 
 GitHub moves a pull request's head to a pushed commit some seconds after
 `git push` returns, so `checks-terminal` and `pr-merged` can be armed right
-after a push. Until the wait has seen the expected head, a head that is an
+after a push, and so can `address-feedback`'s review wait and CodeRabbit
+`run`. Until the wait has seen the expected head, a head that is an
 ancestor of it, one it diverged from as after a force-push, or any head while
 GitHub does not yet know the expected commit is recorded as `headLag` and
 keeps the wait `waiting` for five minutes from the first such observation,
@@ -235,7 +236,10 @@ end, whatever `--interval` is, unless GitHub's limits hold the read. A head
 that descends from the expected commit is a later push and reports
 `invalidated` at once, and so does any other head once the wait has seen the
 expected one, which the state file keeps, or once the five minutes have
-passed: then check that the push reached the pull request's branch.
+passed: then check that the push reached the pull request's branch. The
+CodeRabbit `run` keeps no state file, so its five minutes start with each
+run, and it posts no trigger while it waits for the head; on a closed pull
+request it reports `closed` instead, unless the head is a later commit.
 
 Use `inspect` for a single authoritative delivery snapshot and `wait` to
 await a transition. Supported predicates are exact-head checks,

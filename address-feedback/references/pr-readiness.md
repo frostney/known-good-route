@@ -205,7 +205,7 @@ automation and checks still need to pass their gates.
 | `not-active` | `run`, `status` | CodeRabbit is not in use on this repository, so no CodeRabbit review applies and nothing was triggered. Continue the remaining gates. |
 | `satisfied` | `status` | Every head is complete or has a `bot-skip` or `not-active` exemption. |
 | `trigger-incremental`, `trigger-full` | `run`, `status` | Pending: `run`, which posts it. |
-| `awaiting-automatic`, `triggered`, `in-progress`, `waiting` | `run`, `status` | Pending: `run` waits; after its deadline, `run` again. `triggered` also covers a trigger on another open PR of the same head, for up to 10 minutes. |
+| `awaiting-automatic`, `triggered`, `in-progress`, `waiting` | `run`, `status` | Pending: `run` waits; after its deadline, `run` again. `triggered` also covers a trigger on another open PR of the same head, for up to 10 minutes. `waiting` with `headLag` means GitHub has not yet moved the PR's head to the pushed commit; `run` waits up to five minutes for it, as [`delivery-wait`](../../delivery-wait/SKILL.md#results) describes. |
 | `rate-limited-unknown-wait` | `run`, `status` | Pending: CodeRabbit refused the head without a wait the adapter can read. `run` waits until `retryAt`, 15, 30 or 60 minutes after the head's first, second or third refusal since its latest push, open or ready event, then posts one trigger. A refusal counts once for each such event or trigger on any open PR of the head. Never trigger by hand. |
 | `pending` | `run`, `status` | A head is pending, or GitHub was unreachable until the deadline: `run` again. |
 | `lock-held` | `run` | Pending: another `run` holds the trigger lock; `run` again later. |
@@ -221,7 +221,7 @@ automation and checks still need to pass their gates.
 | `blocked-lock-loss` | `run`, `status` | Blocked: CodeRabbit stopped the head's review after lock loss again after one retry. A person checks CodeRabbit on the PR, then triggers again or pushes. |
 | `blocked-unconfirmed`, `unrecognized-status` | `run`, `status` | Blocked: escalate to a person. |
 | `closed` | `run`, `status` | Stop. |
-| `invalidated` | `run`, `status` | The head changed: restart on the new head. |
+| `invalidated` | `run`, `status` | The head changed: restart on the new head. When the reason says GitHub still showed another head after five minutes, first check that the push reached the PR's branch. |
 | `operational-error` | `run`, `status` | Report the error; a person fixes the arguments or GitHub access. |
 
 ## Result contract

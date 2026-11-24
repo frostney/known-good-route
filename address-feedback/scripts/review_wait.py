@@ -18,10 +18,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from kgr_github import (  # noqa: E402
     CORE_RESERVE,
+    ExpectedHead,
     Gh,
     Metrics,
     StateLock,
     WaitError,
+    classify_head,
     default_state_path,
     emit,
     parse_time,
@@ -101,10 +103,18 @@ def review_snapshot(
     policy: dict[str, Any],
     include_bodies: bool = False,
     page_size: int = 100,
+    expected: ExpectedHead | None = None,
 ) -> dict[str, Any]:
+    """The pull request's review evidence.
+
+    With EXPECTED, the head is recorded as soon as GitHub reports it, and the
+    reviews, threads and checks of any other head are neither read nor judged.
+    """
     policy_available = not policy.get("unavailableReason")
     owner, name = repo_parts(repo)
-    census = review_census(gh, {"owner": owner, "name": name, "number": number}, page_size)
+    census = review_census(gh, {"owner": owner, "name": name, "number": number}, page_size, expected)
+    if expected is not None and census["headRefOid"] != expected.expected:
+        return {"head": census["headRefOid"], "policyAvailable": policy_available}
 
     threads = []
     unanswered = 0
@@ -328,8 +338,9 @@ def review_snapshot(
 
 
 def classify(expected_head: str, observation: dict[str, Any]) -> tuple[str, str]:
-    if observation.get("head") != expected_head:
-        return "invalidated", f"expected head {expected_head}, observed {observation.get('head')}"
+    head = classify_head(expected_head, observation)
+    if head is not None:
+        return head
     if observation.get("policyAvailable") is False:
         return "waiting", "current feedback was inspected but review policy is unavailable; completion is unverified"
     automations_terminal = all(
@@ -349,8 +360,13 @@ def classify(expected_head: str, observation: dict[str, Any]) -> tuple[str, str]
     return "waiting", "review gates are pending"
 
 
-def review_transition_key(observation: dict[str, Any]) -> dict[str, Any]:
+def review_transition_key(expected_head: str, observation: dict[str, Any]) -> dict[str, Any] | None:
     """Ignore polling progress while retaining evidence that needs judgment."""
+    if observation.get("head") != expected_head:
+        # Another head is judged by classify_head alone, and one GitHub has
+        # not moved yet must not make the expected head look like a change
+        # once it arrives.
+        return None
     automations = []
     for automation in observation.get("automations", []):
         completed_checks = [
@@ -427,33 +443,49 @@ def main() -> int:
                     raise
                 policy = {"automations": [], "unavailableReason": str(error)}
             identity["policyDigest"] = stable_digest(policy)
-            observe = lambda: review_snapshot(
-                gh, args.repo, args.pr, policy, include_bodies=args.command == "inspect", page_size=args.page_size
-            )
+            expected_head = ExpectedHead(gh, args.repo, args.head)
+            # A wait reads only the head of another one; an inspection, below,
+            # reads the whole census of any head, as its callers expect.
+            observe = lambda: expected_head.annotate(review_snapshot(
+                gh, args.repo, args.pr, policy, page_size=args.page_size, expected=expected_head,
+            ))
             if args.command == "inspect":
-                observation = observe()
+                census = review_snapshot(
+                    gh, args.repo, args.pr, policy, include_bodies=True, page_size=args.page_size,
+                )
+                try:
+                    observation = expected_head.annotate(census)
+                except WaitError as error:
+                    # The census stays for its callers; without the comparison
+                    # another head counts as different, as before head lag.
+                    observation = census | {"headLag": {"relation": "unverified", "error": str(error)}}
                 metrics.observations += 1
                 state, reason = classify(args.head, observation)
                 output = result_envelope("review", state, identity, observation, metrics, reason)
             else:
                 args.interval = positive_interval(args.interval)
+                # Rejected arguments leave the checkpoint as it was.
+                deadline = parse_time(args.deadline)
                 gh.reserve = CORE_RESERVE
                 state_path = args.state or default_state_path("review", identity)
                 with StateLock(state_path):
+                    expected_head.resume(state_path, "review", identity)
                     output = wait_for_transition(
                         kind="review",
                         identity=identity,
                         observe=observe,
                         classify=lambda value: classify(args.head, value),
                         state_path=state_path,
-                        deadline=parse_time(args.deadline),
+                        deadline=deadline,
                         interval=args.interval,
                         metrics=metrics,
-                        transition_key=review_transition_key,
+                        transition_key=lambda value: review_transition_key(args.head, value),
                         change_precedes_terminal=True,
                         pace=gh.pace,
                         not_before=gh.not_before,
                         limits=gh,
+                        wake_by=ExpectedHead.due,
+                        keep={"expectedHead": expected_head},
                     )
         elif args.command == "reply":
             repo_parts(args.repo)
