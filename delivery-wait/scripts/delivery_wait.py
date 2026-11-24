@@ -7,7 +7,6 @@ import argparse
 import json
 import sys
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -19,12 +18,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from kgr_github import (  # noqa: E402
     CORE_RESERVE,
+    ExpectedHead,
     Gh,
     Metrics,
     RateLimited,
     StateLock,
     TransientError,
     WaitError,
+    classify_head,
     default_state_path,
     emit,
     load_state,
@@ -246,158 +247,6 @@ def failed_checks(expected: set[str], observed: dict[str, list[dict[str, Any]]])
     return sorted(
         name for name in expected & set(observed)
         if any(check_failed(check) for check in observed[name])
-    )
-
-
-# How long a wait keeps going while GitHub still reports a pull request head
-# that may be the one before a push, counted from the first such observation.
-HEAD_GRACE = 300
-
-# How an observed head relates to the expected one, from GitHub's comparison
-# of the two. Only the relations a push can leave behind are lagging.
-HEAD_RELATIONS = {
-    "ahead": "ancestor",
-    "behind": "descendant",
-    "diverged": "diverged",
-    "identical": "identical",
-}
-LAGGING_HEADS = {
-    "ancestor": "an ancestor of the expected commit",
-    "diverged": "a commit the expected one diverged from, as after a force-push",
-    "missing": "while GitHub does not yet know the expected commit",
-}
-DIFFERENT_HEADS = {
-    "descendant": "a later commit than the expected one",
-    "identical": "the same commit under another name; pass the full SHA",
-    "replaced": "after this wait had seen the expected head",
-}
-
-
-class ExpectedHead:
-    """Tell a pull request head GitHub has not yet moved to a pushed commit from a different head.
-
-    GitHub moves a pull request's head to a pushed commit some seconds after
-    `git push` returns, so a wait armed at once can still see the head before
-    the push: an ancestor of the expected commit, or after a force-push a
-    commit it diverged from. Until the wait has seen the expected head, such
-    a head is recorded as `headLag` and the wait keeps going for HEAD_GRACE
-    seconds from the first lagging observation, across resumed runs. A head
-    that descends from the expected commit is a later push and has no lag;
-    neither has any head once the expected one was seen. The checkpoint
-    keeps this state under `expectedHead`.
-    """
-
-    def __init__(self, gh: Gh, repo: str, expected: str) -> None:
-        self.gh = gh
-        self.repo = repo
-        self.expected = expected
-        self.seen = False
-        self.since: float | None = None
-        self.relation = "missing"  # The last lagging relation GitHub reported.
-
-    def resume(self, prior: dict[str, Any] | None) -> None:
-        """Count the expected head as seen when a checkpoint without `expectedHead`, such as an earlier helper's, observed it."""
-        self.seen = self.seen or ((prior or {}).get("observation") or {}).get("head") == self.expected
-
-    def export(self) -> dict[str, Any]:
-        """What the checkpoint keeps, so a resumed wait neither forgets the expected head nor restarts the grace."""
-        return {"seen": self.seen, "since": None if self.since is None else timestamp(self.since), "relation": self.relation}
-
-    def restore(self, saved: Any) -> None:
-        if not isinstance(saved, dict):
-            return
-        self.seen = self.seen or saved.get("seen") is True
-        if saved.get("relation") in LAGGING_HEADS:
-            self.relation = saved["relation"]
-        try:
-            self.since = parse_time(str(saved["since"])) if saved.get("since") else self.since
-        except WaitError:
-            pass
-
-    def note(self, observed: Any) -> None:
-        """Record a head GitHub reported, before anything else read with it can fail."""
-        if observed == self.expected:
-            self.seen = True
-
-    def compare(self, observed: str) -> str:
-        try:
-            compared = self.gh.rest(
-                f"repos/{self.repo}/compare/{quote(observed, safe='')}...{quote(self.expected, safe='')}?per_page=1"
-            )
-        except (RateLimited, TransientError):
-            raise
-        except WaitError as error:
-            if "404" in str(error) or "not found" in str(error).lower():
-                return "missing"
-            raise
-        status = compared.get("status") if isinstance(compared, dict) else None
-        if status not in HEAD_RELATIONS:
-            raise WaitError(f"GitHub compared {observed} with {self.expected} as {status!r}")
-        return HEAD_RELATIONS[status]
-
-    def annotate(self, observation: dict[str, Any]) -> dict[str, Any]:
-        observed = observation.get("head")
-        self.note(observed)
-        if observed == self.expected or not isinstance(observed, str) or not observed:
-            return observation
-        if self.seen:
-            observation["headLag"] = {"relation": "replaced"}
-            return observation
-        # The head was read just now; the grace is judged at that time, not
-        # after a comparison that can take long. Once the grace has passed,
-        # the head is judged without asking GitHub again.
-        read = time.time()
-        expired = self.since is not None and read >= self.since + HEAD_GRACE
-        relation = self.relation if expired else self.compare(observed)
-        lag: dict[str, Any] = {"relation": relation}
-        if relation in LAGGING_HEADS:
-            self.relation = relation
-            self.since = read if self.since is None else self.since
-            lag["since"] = timestamp(self.since)
-            lag["until"] = timestamp(self.since + HEAD_GRACE)
-            lag["readAt"] = timestamp(read)
-        observation["headLag"] = lag
-        return observation
-
-    @staticmethod
-    def due(observation: dict[str, Any]) -> float | None:
-        """When a lagging head's grace ends, so the wait reads the head again then; None otherwise.
-
-        A head read before the grace ended keeps the wait waiting even when
-        the comparison finished after it, so a time already past asks for a
-        prompt fresh read.
-        """
-        lag = observation.get("headLag") or {}
-        if lag.get("relation") not in LAGGING_HEADS:
-            return None
-        return parse_time(str(lag.get("until")))
-
-
-def timestamp(value: float) -> str:
-    return datetime.fromtimestamp(value, timezone.utc).isoformat().replace("+00:00", "Z")
-
-
-def classify_head(expected_head: str, observation: dict[str, Any]) -> tuple[str, str] | None:
-    """The result for an observed head other than the expected one; None for the expected head."""
-    observed = observation.get("head")
-    if observed == expected_head:
-        return None
-    mismatch = f"expected head {expected_head}, observed {observed}"
-    lag = observation.get("headLag") or {}
-    relation = lag.get("relation")
-    if relation in DIFFERENT_HEADS:
-        return "invalidated", f"{mismatch}, {DIFFERENT_HEADS[relation]}"
-    if relation not in LAGGING_HEADS:
-        return "invalidated", mismatch
-    read = parse_time(str(lag["readAt"])) if lag.get("readAt") else time.time()
-    if read >= parse_time(str(lag.get("until"))):
-        return "invalidated", (
-            f"{mismatch}: GitHub still reported a head other than the expected one "
-            f"{HEAD_GRACE} seconds after the wait first saw it; check that the push reached the pull request's branch"
-        )
-    return "waiting", (
-        f"GitHub still reports head {observed}, {LAGGING_HEADS[relation]}; "
-        f"waiting until {lag.get('until')} for it to move to {expected_head}"
     )
 
 
@@ -1100,15 +949,7 @@ def main() -> int:
                 args.interval = positive_interval(args.interval)
                 with StateLock(state_path):
                     if pull_request:
-                        prior = load_state(state_path)
-                        # Another wait's checkpoint is invalidated by wait_for_transition.
-                        if prior and prior.get("kind") == args.kind and prior.get("identity") == identity:
-                            expected_head.resume(prior)
-                            observed = (prior.get("observation") or {}).get("head")
-                            if observed != args.head and prior.get("digest") is not None:
-                                # A digest of another head, such as one an earlier helper
-                                # saved when it invalidated, is no baseline for this one.
-                                write_state(state_path, {**prior, "digest": None})
+                        expected_head.resume(state_path, args.kind, identity)
                     if args.kind == "checks-terminal" and not args.all_workflows:
                         rekey_legacy_checkpoint(state_path, identity, transition_key)
                     output = wait_for_transition(kind=args.kind, identity=identity, observe=observe, classify=classify, state_path=state_path, deadline=deadline, interval=args.interval, metrics=metrics, transition_key=transition_key, pace=gh.pace, not_before=gh.not_before, limits=gh, wake_by=ExpectedHead.due if pull_request else None, keep={"expectedHead": expected_head} if pull_request else None)

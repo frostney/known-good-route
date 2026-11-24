@@ -69,11 +69,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "delivery-wait" / "
 
 from kgr_github import (  # noqa: E402
     CORE_RESERVE,
+    ExpectedHead,
     Gh,
     Metrics,
     RateLimited,
     TransientError,
     WaitError,
+    classify_head,
     emit,
     parse_time,
     positive_interval,
@@ -925,7 +927,8 @@ def sharing_pulls(gh: Gh, repo: str, pr: int, head: str) -> list[int]:
     )
 
 
-def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
+def pull_evidence(gh: Gh, repo: str, pr: int, expected: ExpectedHead | None = None) -> dict[str, Any]:
+    """The head's evidence; with EXPECTED, another head's is neither read nor judged."""
     repo_parts(repo)
     pr = positive_pr(pr)
     pull = gh.rest(f"repos/{repo}/pulls/{pr}")
@@ -934,6 +937,14 @@ def pull_evidence(gh: Gh, repo: str, pr: int) -> dict[str, Any]:
     head = (pull.get("head") or {}).get("sha")
     if not isinstance(head, str) or not head:
         raise WaitError(f"pull request {repo}#{pr} is missing its head SHA")
+    if expected is not None:
+        expected.note(head)
+        if head != expected.expected:
+            return expected.annotate({
+                "repo": repo, "pr": pr, "head": head,
+                "open": pull.get("state") == "open", "draft": bool(pull.get("draft")),
+                "triggers": [], "sharedTriggers": [], "rateLimit": None,
+            })
     author = pull.get("user")
     timeline = pull_timeline(gh, repo, pr)
     readied = [
@@ -1131,8 +1142,14 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
             boundAt=format_timestamp(until),
         )
 
-    if evidence["head"] != expected_head:
-        return result("invalidated", f"expected head {expected_head}, observed {evidence['head']}")
+    head = classify_head(expected_head, evidence)
+    if head is not None and (head[0] == "invalidated" or evidence["open"]):
+        # A head GitHub has not yet moved to the pushed commit is waited on
+        # until its grace ends, and never triggered. A push no longer moves
+        # a closed pull request's head, so closed wins over that wait.
+        lag = evidence.get("headLag") or {}
+        bound = {"boundAt": lag["until"]} if head[0] == "waiting" and lag.get("until") else {}
+        return result(*head, **bound)
     if not evidence["open"]:
         return result("closed", "the pull request is closed")
     automatic = evidence["automaticReview"]
@@ -1359,10 +1376,11 @@ def observation(
     now: float,
     posted: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    gh = ObservationCache(gh)  # type: ignore[assignment]
+    cache = ObservationCache(gh)
     results = []
     for pr in prs:
-        evidence = with_posted(pull_evidence(gh, repo, pr), posted or [])
+        expected = ExpectedHead(gh, repo, expected_heads[pr], clock=lambda: now)
+        evidence = with_posted(pull_evidence(cache, repo, pr, expected), posted or [])  # type: ignore[arg-type]
         results.append(public(evidence) | decide(evidence, expected_heads[pr], now))
     return {"pullRequests": results}
 
@@ -1503,6 +1521,8 @@ def run_review(
     """Trigger, wait and poll until the head reaches a final state or the deadline."""
     posted: list[dict[str, Any]] = []
     last: dict[str, Any] = {}
+    # Kept across reads, so a head the run has seen is never taken for one GitHub has not moved yet.
+    expected = ExpectedHead(gh, repo, head, clock=clock)
     # The shared client stretches the interval while the REST budget runs low,
     # and names the earliest time GitHub's limits let the next read go.
     pace = getattr(gh, "pace", lambda value: value)
@@ -1530,7 +1550,7 @@ def run_review(
         if blocked is not None and blocked > clock():
             sleeper(blocked - clock())
         try:
-            evidence = pull_evidence(ObservationCache(gh), repo, pr)  # type: ignore[arg-type]
+            evidence = pull_evidence(ObservationCache(gh), repo, pr, expected)  # type: ignore[arg-type]
         except (RateLimited, TransientError):
             gh.metrics.retries += 1
             if clock() >= deadline:

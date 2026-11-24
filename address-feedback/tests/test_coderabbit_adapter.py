@@ -136,7 +136,9 @@ def observed_at(gh: Replay, ref: str, now: str) -> dict[str, Any]:
     return observe(gh, ref)
 
 
-def run(gh: Replay, ref: str, deadline: str, interval: float = 60) -> tuple[str, str, dict[str, Any]]:
+def run(
+    gh: Replay, ref: str, deadline: str, interval: float = 60, head: str | None = None
+) -> tuple[str, str, dict[str, Any]]:
     sleeps = [0]
 
     def sleep(seconds: float) -> None:
@@ -147,7 +149,7 @@ def run(gh: Replay, ref: str, deadline: str, interval: float = 60) -> tuple[str,
 
     repo, number = gh.refs[ref]
     return ADAPTER.run_review(
-        gh, repo, number, gh.head(ref), at(deadline), interval, clock=lambda: gh.now, sleeper=sleep
+        gh, repo, number, head or gh.head(ref), at(deadline), interval, clock=lambda: gh.now, sleeper=sleep
     )
 
 
@@ -848,7 +850,10 @@ class BotSkipTest(unittest.TestCase):
 
     def test_head_and_closed_guards_still_apply(self) -> None:
         gh = Invented({"bot": self.pull({"type": "Bot"}, events=[{"type": "closed", "at": offset(25)}])}, now=offset(30))
+        gh.comparisons[f"{self.HEAD}...different"] = "behind"
         self.assertEqual(observe(gh, "bot", head="different")["state"], "invalidated")
+        # A push no longer moves a closed pull request's head, so it is not waited for.
+        self.assertEqual(observe(gh, "bot", head="unknown")["state"], "closed")
         self.assertEqual(observe(gh, "bot")["state"], "closed")
 
 
@@ -1893,9 +1898,69 @@ def head(pull: dict[str, Any], prefix: str) -> str:
 class HeadScopeTest(unittest.TestCase):
     """Evidence about another head never completes the current one."""
 
-    def test_a_changed_head_invalidates(self) -> None:
-        result = observe(Replay("GocciaScript#1162", now="2026-08-15T17:00:00Z"), "GocciaScript#1162", head="0" * 40)
+    def test_a_later_push_invalidates_at_once(self) -> None:
+        # duetto#55: 39a6ab08, pushed at 06:41:16, descends from 4bccca05.
+        gh = Replay("duetto#55", now="2026-09-26T06:42:00Z")
+        older = head(gh.case("duetto#55"), "4bccca05")
+        result = observe(gh, "duetto#55", head=older)
         self.assertEqual(result["state"], "invalidated")
+        self.assertIn("a later commit than the expected one", result["reason"])
+        self.assertEqual(run(gh, "duetto#55", "2026-09-26T06:46:00Z", head=older)[0], "invalidated")
+        self.assertEqual((gh.now, gh.posts), (at("2026-09-26T06:42:00Z"), []))
+
+
+class PushedHeadTest(unittest.TestCase):
+    """A run armed right after a push waits for GitHub to move the pull request's head.
+
+    duetto#55: 39a6ab08 reached the branch at 06:41:16; until then GitHub
+    reported 4bccca05, its parent. Corkboard post 985 saw the same lag.
+    """
+
+    REF = "duetto#55"
+    PUSHED = "39a6ab0841192d9b791606b3af413acb0ba5dcd5"
+
+    def test_a_head_github_has_not_moved_yet_is_waited_on_and_never_triggered(self) -> None:
+        gh = Replay(self.REF, now="2026-09-26T06:41:00Z")
+        result = observe(gh, self.REF, head=self.PUSHED)
+        self.assertEqual(result["state"], "waiting")
+        self.assertIn("an ancestor of the expected commit", result["reason"])
+        self.assertEqual(result["headLag"]["relation"], "ancestor")
+        self.assertEqual(result["boundAt"], result["headLag"]["until"])
+        self.assertEqual(ADAPTER.aggregate_status({"pullRequests": [result]})[0], "pending")
+        # Run from the same moment: it keeps reading until the head arrives, then judges that head.
+        final, _reason, value = run(gh, self.REF, "2026-09-26T06:42:30Z", interval=10, head=self.PUSHED)
+        self.assertNotEqual(final, "invalidated")
+        self.assertEqual(value["pullRequests"][0]["head"], self.PUSHED)
+        self.assertNotIn("headLag", value["pullRequests"][0])
+        self.assertEqual(gh.posts, [])
+
+    def test_a_force_pushed_head_is_waited_on_too(self) -> None:
+        gh = Replay(self.REF, now="2026-09-26T06:41:00Z")
+        gh.comparisons[f"{gh.head(self.REF)}...{'f' * 40}"] = "diverged"
+        result = observe(gh, self.REF, head="f" * 40)
+        self.assertEqual((result["state"], result["headLag"]["relation"]), ("waiting", "diverged"))
+
+    def test_a_head_that_never_moves_invalidates_when_the_grace_ends(self) -> None:
+        # Synthetic: GitHub never learns the expected commit, as when the push went to another branch.
+        gh = Replay(self.REF, now="2026-09-26T06:35:00Z")
+        final, reason, _value = run(gh, self.REF, "2026-09-26T06:45:00Z", interval=60, head="0" * 40)
+        self.assertEqual(final, "invalidated")
+        self.assertIn("check that the push reached", reason)
+        # The run read again as the grace ended, not at its next interval after it.
+        self.assertEqual(gh.now, at("2026-09-26T06:40:00Z"))
+        self.assertEqual(gh.posts, [])
+
+    def test_a_run_that_saw_the_expected_head_gives_a_head_that_moves_off_it_no_grace(self) -> None:
+        # Synthetic: CodeRabbit's review of 4bccca05 is still running when 39a6ab08 arrives, and
+        # GitHub compares 39a6ab08 as an ancestor of 4bccca05, which a push can leave behind.
+        gh = Replay(self.REF, now="2026-09-26T06:38:00Z")
+        gh.truncate(self.REF, "2026-09-26T06:38:00Z")
+        older = head(gh.case(self.REF), "4bccca05")
+        self.assertEqual(observe(gh, self.REF, head=older)["state"], "in-progress")
+        gh.comparisons[f"{self.PUSHED}...{older}"] = "ahead"
+        final, reason, _value = run(gh, self.REF, "2026-09-26T06:46:00Z", interval=30, head=older)
+        self.assertEqual(final, "invalidated")
+        self.assertIn("after this wait had seen the expected head", reason)
 
     def test_the_previous_heads_review_and_marker_do_not_complete_the_new_head(self) -> None:
         # duetto#55: 39a6ab08 pushed at 06:41:14 while the summary still marked 4bccca05.

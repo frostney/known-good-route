@@ -1116,6 +1116,90 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(output["metrics"]["observations"], 1)
         self.assertEqual(output["observation"]["head"], "head-2")
 
+    def review_wait(self, state: Path, seconds: float = 3) -> dict:
+        deadline = (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat()
+        return self.run_json(
+            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--policy", str(self.policy),
+            "--deadline", deadline, "--interval", "0.05", "--state", str(state),
+        )[1]
+
+    def test_a_review_wait_armed_right_after_a_push_waits_for_github_to_move_the_head(self) -> None:
+        # Corkboard post 985: GitHub still reported the head before the push.
+        for relation, status in (("ancestor", "ahead"), ("diverged", "diverged")):
+            with self.subTest(relation=relation):
+                self.counter.unlink(missing_ok=True)
+                # Each observation reads the census twice; a lagging one also compares the heads.
+                self.write_scenario(
+                    reviewHeadsByRequest=["head-0"] * 6 + ["head-1"],
+                    compare={"head-0...head-1": {"status": status}},
+                )
+                output = self.review_wait(self.directory / f"{relation}.json")
+                self.assertEqual(output["state"], "satisfied", output["reason"])
+                self.assertEqual(output["observation"]["head"], "head-1")
+                self.assertGreaterEqual(output["metrics"]["observations"], 3)
+
+    def test_a_review_wait_reports_a_lagging_head_without_judging_its_reviews(self) -> None:
+        self.write_scenario(reviewHeadsByRequest=["head-0"], compare={"head-0...head-1": {"status": "ahead"}})
+        _, inspected = self.run_json(
+            REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--policy", str(self.policy),
+        )
+        self.assertEqual(inspected["state"], "waiting")
+        self.assertIn("an ancestor of the expected commit", inspected["reason"])
+        self.assertEqual(inspected["observation"]["headLag"]["relation"], "ancestor")
+        self.assertNotIn("automations", inspected["observation"])
+        output = self.review_wait(self.directory / "review.json", seconds=0.3)
+        self.assertEqual(output["state"], "timed-out")
+        self.assertEqual(output["observation"]["headLag"]["relation"], "ancestor")
+
+    def test_a_review_wait_invalidates_a_later_push_at_once(self) -> None:
+        self.write_scenario(reviewHeadsByRequest=["head-2"], compare={"head-2...head-1": {"status": "behind"}})
+        output = self.review_wait(self.directory / "review.json")
+        self.assertEqual(output["state"], "invalidated")
+        self.assertIn("a later commit than the expected one", output["reason"])
+        self.assertEqual(output["metrics"]["observations"], 1)
+
+    def test_a_review_wait_keeps_the_expected_head_seen_and_the_grace_in_its_checkpoint(self) -> None:
+        state = self.directory / "review.json"
+        self.write_scenario(reviewHeadsByRequest=["head-0"], compare={"head-0...head-1": {"status": "ahead"}})
+        first = self.review_wait(state, seconds=0.3)
+        self.assertEqual(first["state"], "timed-out")
+        since = first["observation"]["headLag"]["since"]
+        self.assertEqual(self.review_wait(state, seconds=0.3)["observation"]["headLag"]["since"], since)
+        # Once the grace has passed, a head that never moved invalidates the wait.
+        checkpoint = json.loads(state.read_text())
+        checkpoint["expectedHead"]["since"] = "2026-08-12T08:00:00Z"
+        state.write_text(json.dumps(checkpoint))
+        expired = self.review_wait(state)
+        self.assertEqual(expired["state"], "invalidated")
+        self.assertIn("check that the push reached", expired["reason"])
+        # A wait that saw the expected head gives a head that moves off it no grace, on a rerun too.
+        state.unlink()
+        self.counter.unlink(missing_ok=True)
+        self.write_scenario(reviewHeadsByRequest=["head-1"] * 2 + ["head-0"], compare={"head-0...head-1": {"status": "ahead"}})
+        scenario = json.loads(self.scenario.read_text())
+        scenario["review"]["commits"]["nodes"][0]["commit"]["statusCheckRollup"]["contexts"]["nodes"] = [
+            check("Automated review", "IN_PROGRESS", None)
+        ]
+        self.scenario.write_text(json.dumps(scenario))
+        changed = self.review_wait(state)
+        self.assertEqual(changed["state"], "invalidated", changed["reason"])
+        self.assertIn("after this wait had seen the expected head", changed["reason"])
+        self.assertEqual(json.loads(state.read_text())["expectedHead"]["seen"], True)
+        self.assertEqual(self.review_wait(state)["observation"]["headLag"], {"relation": "replaced"})
+
+    def test_a_review_checkpoint_digest_of_another_head_is_no_baseline(self) -> None:
+        # An earlier helper saved the later push's digest when it invalidated at once.
+        state = self.directory / "review.json"
+        self.write_scenario(reviewHeadsByRequest=["head-0"], compare={"head-0...head-1": {"status": "ahead"}})
+        self.review_wait(state, seconds=0.3)
+        checkpoint = json.loads(state.read_text())
+        checkpoint.pop("expectedHead", None)
+        checkpoint["digest"] = "digest-of-head-0"
+        state.write_text(json.dumps(checkpoint))
+        self.counter.unlink(missing_ok=True)
+        self.write_scenario()
+        self.assertEqual(self.review_wait(state)["state"], "satisfied")
+
     def test_review_policy_accepts_the_existing_single_context_shape(self) -> None:
         self.write_scenario()
         self.policy.write_text(json.dumps({"automations":[{
@@ -1228,7 +1312,7 @@ class WaitCommandsTest(unittest.TestCase):
                 self.assertEqual(observation["unclassifiedTopLevelComments"][0]["body"], "Please handle rollback.")
 
     def test_missing_policy_never_turns_empty_feedback_into_success(self) -> None:
-        self.write_scenario()
+        self.write_scenario(compare={"head-1...old-head": {"status": "behind"}})
         self.policy.unlink()
         _, output = self.run_json(
             REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7",
@@ -1344,7 +1428,7 @@ class WaitCommandsTest(unittest.TestCase):
         }
         state.write_text(json.dumps({
             "schemaVersion":1, "kind":"review", "identity":identity,
-            "observation":{}, "digest":"prior", "updatedAt":"earlier",
+            "observation":{"head":"head-1"}, "digest":"prior", "updatedAt":"earlier",
         }))
         _, output = self.run_json(
             REVIEW, "wait", "--repo", "owner/repo", "--pr", "7",

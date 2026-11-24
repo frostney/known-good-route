@@ -115,6 +115,8 @@ class RecordedGitHub:
         # A repository listed here has no review policy, no configuration and no closed pull requests.
         self.unconfigured: set[str] = set()
         self.next_id = 9_000_000_000
+        # GitHub's comparison of invented commits, as "base...head": status.
+        self.comparisons: dict[str, str] = {}
         self.timelines = {key: head_timeline(pull) for key, pull in self.pulls.items()}
 
     # Recorded state at `now` --------------------------------------------------
@@ -215,6 +217,11 @@ class RecordedGitHub:
                 "user": pull.get("user"),
                 "created_at": pull["createdAt"],
             }
+        match = re.fullmatch(r"repos/([^/]+/[^/]+)/compare/([^/?]+)\.\.\.([^/?]+)(\?.*)?", endpoint)
+        if match:
+            status = self.compare(*match.groups()[:3])
+            if status:
+                return {"status": status}
         match = re.fullmatch(r"repos/([^/]+/[^/]+)/commits/([0-9a-f]{40})", endpoint)
         if match:
             repo, sha = match.groups()
@@ -228,6 +235,38 @@ class RecordedGitHub:
                         "commit": {"committer": {"date": iso(arrival)}},
                     }
         raise ADAPTER.WaitError(f"gh: Not Found (HTTP 404) {endpoint}")
+
+    def compare(self, repo: str, base: str, head: str) -> str | None:
+        """GitHub's comparison of two recorded commits through their recorded parents; None for an unknown one.
+
+        A pair in `comparisons` answers as set there, for invented commits.
+        """
+        if f"{base}...{head}" in self.comparisons:
+            return self.comparisons[f"{base}...{head}"]
+        parents = {
+            sha: list(recorded["parents"])
+            for pull in self.pulls.values() if pull["repo"] == repo
+            for sha, recorded in pull["heads"].items()
+        }
+        if base not in parents or head not in parents:
+            return None
+
+        def ancestors(sha: str) -> set[str]:
+            found, pending = set(), list(parents.get(sha, []))
+            while pending:
+                commit = pending.pop()
+                if commit not in found:
+                    found.add(commit)
+                    pending += parents.get(commit, [])
+            return found
+
+        if base == head:
+            return "identical"
+        if base in ancestors(head):
+            return "ahead"
+        if head in ancestors(base):
+            return "behind"
+        return "diverged"
 
     def rest_pages(self, endpoint: str) -> list[Any]:
         path = urlparse(endpoint).path

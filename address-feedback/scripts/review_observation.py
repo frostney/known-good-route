@@ -90,10 +90,17 @@ def collect(first: dict[str, Any], fetch, label: str) -> list[dict[str, Any]]:
     return sorted(nodes, key=lambda item: str(item.get("id") or stable_digest(item)))
 
 
-def read_census(gh, variables: dict[str, Any], page_size: int) -> dict[str, Any]:
+def read_census(gh, variables: dict[str, Any], page_size: int, expected=None) -> dict[str, Any]:
+    """The pull request's review facts; with EXPECTED, only the head of any other head."""
     sized = lambda query: query.replace("first:100", f"first:{page_size}")
     pull = deepcopy(extract_pull(gh.graphql(sized(REVIEW_QUERY), variables)))
     head = pull["headRefOid"]
+    if expected is not None:
+        # Recorded before a later page can fail, and another head's reviews,
+        # threads and checks are neither read further nor judged.
+        expected.note(head)
+        if head != expected.expected:
+            return {"headRefOid": head}
 
     def fetch(field: str, after: str):
         body = connection(field, True)
@@ -130,11 +137,11 @@ def read_census(gh, variables: dict[str, Any], page_size: int) -> dict[str, Any]
     return result
 
 
-def review_census(gh, variables: dict[str, Any], page_size: int = 100) -> dict[str, Any]:
+def review_census(gh, variables: dict[str, Any], page_size: int = 100, expected=None) -> dict[str, Any]:
     if type(page_size) is not int or not 1 <= page_size <= 100:
         raise WaitError("review page size must be between 1 and 100")
-    first = read_census(gh, variables, page_size)
-    second = read_census(gh, variables, page_size)
+    first = read_census(gh, variables, page_size, expected)
+    second = read_census(gh, variables, page_size, expected)
     if first != second:
         raise TransientError("review census changed during observation; fresh evidence is required")
     return second
