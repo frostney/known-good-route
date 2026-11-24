@@ -78,9 +78,15 @@ check that validates the body when the PR is opened or edited fails that first
 run.
 
 - Reference each file in the body as an inline image, `![alt text](<path>)`.
-  A video takes the same form in a paragraph of its own, with a blank line
-  before and after it, and renders as a player; in a table cell or beside
-  other text it becomes a link. Give alt text in the body: gh takes
+  A video takes the same form. When the repository's template or its body
+  check names a field for the media, such as `- Evidence link or path:`, put
+  the reference on that field's line, image or video: a check that reads only
+  that line finds the field empty when the video sits elsewhere. A video in a
+  paragraph of its own, with a blank line before and after it, renders as a
+  player; it is an optional extra beside the field's reference, never the only
+  one. Where no field is named, that paragraph is the form. In a table cell or
+  beside other text, as on a field's line, a video becomes a link, not a
+  player. Give alt text in the body: gh takes
   `--attach '<image>#<alt text>'` for an image but refuses alt text on a
   video. A bare path is not
   a reference: gh leaves it in the body as text and appends the upload at the
