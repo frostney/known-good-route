@@ -221,7 +221,7 @@ automation and checks still need to pass their gates.
 | `blocked-lock-loss` | `run`, `status` | Blocked: CodeRabbit stopped the head's review after lock loss again after one retry. A person checks CodeRabbit on the PR, then triggers again or pushes. |
 | `blocked-unconfirmed`, `unrecognized-status` | `run`, `status` | Blocked: escalate to a person. |
 | `closed` | `run`, `status` | Stop. |
-| `invalidated` | `run`, `status` | The head changed: restart on the new head. |
+| `invalidated` | `run`, `status` | The head changed: restart on the new head. When the reason says GitHub still showed another head after five minutes, first check that the push reached the PR's branch. |
 | `operational-error` | `run`, `status` | Report the error; a person fixes the arguments or GitHub access. |
 
 ## Result contract

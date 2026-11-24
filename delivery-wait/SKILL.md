@@ -239,7 +239,7 @@ expected one, which the state file keeps, or once the five minutes have
 passed: then check that the push reached the pull request's branch. The
 CodeRabbit `run` keeps no state file, so its five minutes start with each
 run, and it posts no trigger while it waits for the head; on a closed pull
-request it reports `closed` instead.
+request it reports `closed` instead, unless the head is a later commit.
 
 Use `inspect` for a single authoritative delivery snapshot and `wait` to
 await a transition. Supported predicates are exact-head checks,

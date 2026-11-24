@@ -537,7 +537,8 @@ class ExpectedHead:
             raise WaitError(f"GitHub compared {observed} with {self.expected} as {status!r}")
         return HEAD_RELATIONS[status]
 
-    def annotate(self, observation: dict[str, Any]) -> dict[str, Any]:
+    def annotate(self, observation: dict[str, Any], fresh: bool = False) -> dict[str, Any]:
+        """Record how the observed head relates to the expected one; FRESH asks GitHub even after the grace."""
         observed = observation.get("head")
         self.note(observed)
         if observed == self.expected or not isinstance(observed, str) or not observed:
@@ -550,7 +551,7 @@ class ExpectedHead:
         # the head is judged without asking GitHub again.
         read = self.clock()
         expired = self.since is not None and read >= self.since + HEAD_GRACE
-        relation = self.relation if expired else self.compare(observed)
+        relation = self.relation if expired and not fresh else self.compare(observed)
         lag: dict[str, Any] = {"relation": relation}
         if relation in LAGGING_HEADS:
             self.relation = relation

@@ -1180,6 +1180,29 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(output["state"], "timed-out", output["reason"])
         self.assertEqual(output["observation"]["headLag"]["relation"], "ancestor")
 
+    def test_a_review_wait_counts_the_expected_head_its_confirmation_saw(self) -> None:
+        # The census sees head-0, its confirmation head-1, and then GitHub shows a force-push replacing head-1.
+        self.write_scenario(
+            reviewHeadsByRequest=["head-0", "head-1", "head-2"],
+            compare={"head-0...head-1": {"status": "ahead"}, "head-2...head-1": {"status": "diverged"}},
+        )
+        output = self.review_wait(self.directory / "review.json")
+        self.assertEqual(output["state"], "invalidated", output["reason"])
+        self.assertIn("after this wait had seen the expected head", output["reason"])
+
+    def test_a_review_wait_classifies_another_head_when_github_refuses_its_census(self) -> None:
+        self.write_scenario(
+            reviewHeadsByRequest=["head-0"], compare={"head-0...head-1": {"status": "ahead"}}, reviewQueriesAllowed=0,
+        )
+        output = self.review_wait(self.directory / "review.json", seconds=0.3)
+        self.assertEqual(output["state"], "timed-out", output["reason"])
+        self.assertEqual(output["observation"]["headLag"]["relation"], "ancestor")
+        # The expected head's census is still required.
+        self.write_scenario(reviewQueriesAllowed=0)
+        self.counter.with_name("counter.review-queries").unlink(missing_ok=True)
+        output = self.review_wait(self.directory / "expected.json", seconds=0.3)
+        self.assertEqual(output["state"], "operational-error")
+
     def test_a_review_wait_with_a_rejected_deadline_leaves_its_checkpoint_alone(self) -> None:
         state = self.directory / "review.json"
         self.write_scenario(reviewHeadsByRequest=["head-0"], compare={"head-0...head-1": {"status": "ahead"}})

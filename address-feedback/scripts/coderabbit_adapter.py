@@ -947,12 +947,13 @@ def pull_evidence(gh: Gh, repo: str, pr: int, expected: ExpectedHead | None = No
                 "open": pull.get("state") == "open", "draft": bool(pull.get("draft")),
                 "triggers": [], "sharedTriggers": [], "rateLimit": None,
             }
-            try:
+            if other["open"]:
                 return expected.annotate(other)
-            except (RateLimited, TransientError):
-                if other["open"]:
-                    raise
-                # Closure decides a closed pull request's state without the comparison.
+            # A push no longer moves a closed pull request's head: only a head known to have
+            # moved on, from a fresh comparison, invalidates; otherwise closure decides.
+            try:
+                return expected.annotate(other, fresh=True)
+            except WaitError:
                 return other
     author = pull.get("user")
     timeline = pull_timeline(gh, repo, pr)
@@ -1571,9 +1572,9 @@ def run_review(
                 return "pending", "GitHub transport remained unavailable until the deadline", last
             delay = pace(interval)
             # A lagging head is read again when its grace ends, or promptly once it has.
-            due = expected.grace_end()
+            due, now = expected.grace_end(), clock()
             if due is not None:
-                delay = min(interval, FOLLOW_UP_RETRY) if due <= clock() else min(delay, due - clock())
+                delay = min(interval, FOLLOW_UP_RETRY) if due <= now else min(delay, due - now)
             reason = held()
             if reason:
                 last["triggers"] = public_posted(posted)

@@ -2,7 +2,7 @@
 from copy import deepcopy
 from typing import Any
 
-from kgr_github import TransientError, WaitError, parse_time, stable_digest
+from kgr_github import RateLimited, TransientError, WaitError, parse_time, stable_digest
 
 PAGE_INFO = "pageInfo{hasNextPage endCursor} totalCount"
 COMMENT_FIELDS = "id databaseId body createdAt updatedAt author{login} authorAssociation"
@@ -90,10 +90,27 @@ def collect(first: dict[str, Any], fetch, label: str) -> list[dict[str, Any]]:
     return sorted(nodes, key=lambda item: str(item.get("id") or stable_digest(item)))
 
 
+def read_head(gh, variables: dict[str, Any]) -> str:
+    return extract_pull(gh.graphql(pull_query(""), variables))["headRefOid"]
+
+
 def read_census(gh, variables: dict[str, Any], page_size: int, expected=None) -> dict[str, Any]:
     """The pull request's review facts; with EXPECTED, only the head of any other head."""
     sized = lambda query: query.replace("first:100", f"first:{page_size}")
-    pull = deepcopy(extract_pull(gh.graphql(sized(REVIEW_QUERY), variables)))
+    try:
+        pull = deepcopy(extract_pull(gh.graphql(sized(REVIEW_QUERY), variables)))
+    except (RateLimited, TransientError):
+        raise
+    except WaitError:
+        # Review evidence GitHub refuses is needed only for the expected head:
+        # another head is classified by its head alone.
+        if expected is None:
+            raise
+        head = read_head(gh, variables)
+        expected.note(head)
+        if head == expected.expected:
+            raise
+        return {"headRefOid": head}
     head = pull["headRefOid"]
     if expected is not None:
         # Recorded before a later page can fail, and another head's reviews,
@@ -144,10 +161,10 @@ def review_census(gh, variables: dict[str, Any], page_size: int = 100, expected=
     if expected is not None and first["headRefOid"] != expected.expected:
         # Another head is confirmed by its head alone, so review fields it
         # does not need cannot fail its classification.
-        confirmed = extract_pull(gh.graphql(pull_query(""), variables))["headRefOid"]
+        confirmed = read_head(gh, variables)
+        expected.note(confirmed)
         if confirmed != first["headRefOid"]:
             raise TransientError("pull request head changed during observation; fresh evidence is required")
-        expected.note(confirmed)
         return first
     second = read_census(gh, variables, page_size, expected)
     if first != second:

@@ -1983,12 +1983,27 @@ class PushedHeadTest(unittest.TestCase):
 
         gh.rest = rest
         self.assertEqual(observe(gh, self.REF, head="0" * 40)["state"], "closed")
+
+        def refused(endpoint: str, *args: Any) -> Any:
+            if "/compare/" in endpoint:
+                raise ADAPTER.WaitError("gh: Resource not accessible by integration (HTTP 403)")
+            return read(endpoint, *args)
+
+        gh.rest = refused
+        self.assertEqual(observe(gh, self.REF, head="0" * 40)["state"], "closed")
         # A later push still invalidates.
         gh.rest = read
         self.assertEqual(observe(gh, self.REF, head=head(gh.case(self.REF), "4bccca05"))["state"], "invalidated")
 
     def test_status_dates_each_heads_grace_from_its_own_read_and_compares_each_pair_once(self) -> None:
-        gh = Replay(self.REF, now="2026-09-26T06:35:00Z")
+        # Synthetic: two pull requests on one head, which GitHub compares as an ancestor of an invented commit.
+        sha = "1b2c3d4e" * 5
+        pulls = {
+            f"pr{number}": invented_pull(number, 5, sha, "shared", commit=invented_commit(branch="shared"))
+            for number in (1, 2)
+        }
+        gh = Invented(pulls, now=offset(20))
+        gh.comparisons[f"{sha}...{'f' * 40}"] = "ahead"
         read, compared = gh.rest, []
 
         def rest(endpoint: str, *args: Any) -> Any:
@@ -1996,14 +2011,56 @@ class PushedHeadTest(unittest.TestCase):
             return read(endpoint, *args)
 
         gh.rest = rest
-        # Synthetic: GitHub compares the head as an ancestor of an invented pushed commit.
-        gh.comparisons[f"{gh.head(self.REF)}...{'f' * 40}"] = "ahead"
-        repo, number = gh.refs[self.REF]
+        reads = iter([at(offset(30)), at(offset(90))])
         value = ADAPTER.observation(
-            gh, repo, [number, number], {number: "f" * 40}, gh.now, clock=lambda: at("2026-09-26T06:36:00Z"),
+            gh, INVENTED_REPO, [1, 2], {1: "f" * 40, 2: "f" * 40}, gh.now, clock=lambda: next(reads),
         )
-        self.assertEqual([item["boundAt"] for item in value["pullRequests"]], ["2026-09-26T06:41:00Z"] * 2)
+        self.assertEqual([item["boundAt"] for item in value["pullRequests"]], [offset(330), offset(390)])
         self.assertEqual(sum(compared), 1)
+
+    def test_a_closed_pull_request_whose_head_moved_on_invalidates_after_the_grace(self) -> None:
+        # Synthetic: GitHub compared 39a6ab08 as an ancestor of an invented commit until the pull
+        # request merged at 06:47, and as a descendant from then on.
+        gh = Replay(self.REF, now="2026-09-26T06:43:00Z")
+        read = gh.rest
+
+        def rest(endpoint: str, *args: Any) -> Any:
+            if "/compare/" in endpoint:
+                return {"status": "ahead" if gh.now < at("2026-09-26T06:47:00Z") else "behind"}
+            return read(endpoint, *args)
+
+        gh.rest = rest
+        final, reason, _value = run(gh, self.REF, "2026-09-26T06:58:00Z", interval=600, head="f" * 40)
+        self.assertEqual(gh.now, at("2026-09-26T06:48:00Z"))
+        self.assertEqual(final, "invalidated", reason)
+        self.assertIn("a later commit than the expected one", reason)
+
+    def test_a_retry_never_sleeps_a_negative_time(self) -> None:
+        # Synthetic: the second comparison fails 0.1 s before the grace ends, and the clock
+        # passes the grace end while the run works out when to retry.
+        gh = Replay(self.REF, now="2026-09-26T06:35:00Z")
+        read, compared, pending = gh.rest, [], []
+
+        def rest(endpoint: str, *args: Any) -> Any:
+            if "/compare/" in endpoint:
+                compared.append(gh.now)
+                if len(compared) == 2:
+                    gh.now = compared[0] + 299.9
+                    pending.extend([gh.now, gh.now, compared[0] + 300.1])
+                    raise ADAPTER.TransientError("gh: Bad Gateway (HTTP 502)")
+            return read(endpoint, *args)
+
+        def sleep(seconds: float) -> None:
+            self.assertGreaterEqual(seconds, 0)
+            gh.now += seconds
+
+        gh.rest = rest
+        repo, number = gh.refs[self.REF]
+        final, reason, _value = ADAPTER.run_review(
+            gh, repo, number, "0" * 40, at("2026-09-26T06:45:00Z"), 200,
+            clock=lambda: pending.pop(0) if pending else gh.now, sleeper=sleep,
+        )
+        self.assertEqual(final, "invalidated", reason)
 
     def test_a_recorded_parent_that_was_never_a_head_is_known_to_github(self) -> None:
         # 4bccca05 is a merge commit; its second parent cc98e18a was never the pull request's head.
