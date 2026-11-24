@@ -444,14 +444,21 @@ def main() -> int:
                 policy = {"automations": [], "unavailableReason": str(error)}
             identity["policyDigest"] = stable_digest(policy)
             expected_head = ExpectedHead(gh, args.repo, args.head)
-            # An inspection reads the whole census of any head, as its callers expect;
-            # a wait reads only the head of another one.
+            # A wait reads only the head of another one; an inspection, below,
+            # reads the whole census of any head, as its callers expect.
             observe = lambda: expected_head.annotate(review_snapshot(
-                gh, args.repo, args.pr, policy, include_bodies=args.command == "inspect", page_size=args.page_size,
-                expected=expected_head if args.command == "wait" else None,
+                gh, args.repo, args.pr, policy, page_size=args.page_size, expected=expected_head,
             ))
             if args.command == "inspect":
-                observation = observe()
+                census = review_snapshot(
+                    gh, args.repo, args.pr, policy, include_bodies=True, page_size=args.page_size,
+                )
+                try:
+                    observation = expected_head.annotate(census)
+                except WaitError as error:
+                    # The census stays for its callers; without the comparison
+                    # another head counts as different, as before head lag.
+                    observation = census | {"headLag": {"relation": "unverified", "error": str(error)}}
                 metrics.observations += 1
                 state, reason = classify(args.head, observation)
                 output = result_envelope("review", state, identity, observation, metrics, reason)

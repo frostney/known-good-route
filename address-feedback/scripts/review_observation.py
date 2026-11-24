@@ -99,11 +99,11 @@ def read_census(gh, variables: dict[str, Any], page_size: int, expected=None) ->
     sized = lambda query: query.replace("first:100", f"first:{page_size}")
     try:
         pull = deepcopy(extract_pull(gh.graphql(sized(REVIEW_QUERY), variables)))
-    except (RateLimited, TransientError):
+    except RateLimited:
         raise
     except WaitError:
-        # Review evidence GitHub refuses is needed only for the expected head:
-        # another head is classified by its head alone.
+        # Review evidence GitHub refuses or times out on is needed only for
+        # the expected head: another head is classified by its head alone.
         if expected is None:
             raise
         head = read_head(gh, variables)

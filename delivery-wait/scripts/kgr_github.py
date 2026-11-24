@@ -594,6 +594,8 @@ def classify_head(expected_head: str, observation: dict[str, Any]) -> tuple[str,
     relation = lag.get("relation")
     if relation in DIFFERENT_HEADS:
         return "invalidated", f"{mismatch}, {DIFFERENT_HEADS[relation]}"
+    if relation == "unverified":
+        return "invalidated", f"{mismatch}; GitHub could not compare them: {lag.get('error')}"
     if relation not in LAGGING_HEADS:
         return "invalidated", mismatch
     read = parse_time(str(lag["readAt"])) if lag.get("readAt") else time.time()

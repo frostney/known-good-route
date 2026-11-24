@@ -106,6 +106,9 @@ if args[:2] == ["api", "graphql"]:
             heads = scenario["reviewHeadsByRequest"]
             scenario["review"]["headRefOid"] = heads[min(counter, len(heads) - 1)]
         output({"data":{"repository":{"pullRequest":{"headRefOid":scenario["review"]["headRefOid"]}}}})
+    if "reviewThreads" in query and scenario.get("reviewCensusTimesOut"):
+        print("gh: Something went wrong while executing your query. This may be the result of a timeout (HTTP 502)", file=sys.stderr)
+        sys.exit(1)
     if "reviewThreads" in query and scenario.get("reviewQueriesAllowed") is not None:
         allowed = pathlib.Path(os.environ["FAKE_GH_COUNTER"] + ".review-queries")
         used = int(allowed.read_text()) if allowed.exists() else 0
@@ -485,7 +488,7 @@ class WaitCommandsTest(unittest.TestCase):
         )[1]
 
     def test_a_wait_armed_right_after_a_push_waits_for_github_to_move_the_head(self) -> None:
-        # Corkboard post 985: GitHub still reported the head before the push.
+        # Seen in practice: GitHub still reported the head before the push.
         for relation, status in (("ancestor", "ahead"), ("diverged", "diverged")):
             with self.subTest(relation=relation):
                 self.counter.unlink(missing_ok=True)
@@ -1137,7 +1140,7 @@ class WaitCommandsTest(unittest.TestCase):
         )[1]
 
     def test_a_review_wait_armed_right_after_a_push_waits_for_github_to_move_the_head(self) -> None:
-        # Corkboard post 985: GitHub still reported the head before the push.
+        # Seen in practice: GitHub still reported the head before the push.
         for relation, status in (("ancestor", "ahead"), ("diverged", "diverged")):
             with self.subTest(relation=relation):
                 self.counter.unlink(missing_ok=True)
@@ -1202,6 +1205,23 @@ class WaitCommandsTest(unittest.TestCase):
         self.counter.with_name("counter.review-queries").unlink(missing_ok=True)
         output = self.review_wait(self.directory / "expected.json", seconds=0.3)
         self.assertEqual(output["state"], "operational-error")
+
+    def test_a_review_wait_classifies_another_head_when_its_census_times_out(self) -> None:
+        self.write_scenario(reviewHeadsByRequest=["head-2"], compare={"head-2...head-1": {"status": "behind"}}, reviewCensusTimesOut=True)
+        output = self.review_wait(self.directory / "review.json")
+        self.assertEqual(output["state"], "invalidated", output["reason"])
+        self.assertIn("a later commit than the expected one", output["reason"])
+
+    def test_a_review_inspection_keeps_its_census_when_github_cannot_compare_the_heads(self) -> None:
+        self.write_scenario(reviewHeadsByRequest=["head-0"], compareUnavailableOnce=True)
+        result, inspected = self.run_json(
+            REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--policy", str(self.policy),
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(inspected["state"], "invalidated")
+        self.assertIn("GitHub could not compare them", inspected["reason"])
+        self.assertEqual(inspected["observation"]["threads"], [])
+        self.assertEqual(inspected["observation"]["headLag"]["relation"], "unverified")
 
     def test_a_review_wait_with_a_rejected_deadline_leaves_its_checkpoint_alone(self) -> None:
         state = self.directory / "review.json"

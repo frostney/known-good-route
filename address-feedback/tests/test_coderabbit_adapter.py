@@ -1913,7 +1913,7 @@ class PushedHeadTest(unittest.TestCase):
     """A run armed right after a push waits for GitHub to move the pull request's head.
 
     duetto#55: 39a6ab08 reached the branch at 06:41:16; until then GitHub
-    reported 4bccca05, its parent. Corkboard post 985 saw the same lag.
+    reported 4bccca05, its parent.
     """
 
     REF = "duetto#55"
