@@ -392,36 +392,54 @@ fails its first run.
    stopped, read GitHub for a PR on that head before anything else, and never
    run the creation again while one may exist. A failed upload can still
    create the PR; complete its body as PR media says.
-5. Read the full PRs again and look up the native stack of the new PR and of
-   the PR below with `gh api 'repos/OWNER/REPO/stacks?pull_request=NUMBER'`.
-   Then join by the topology you observe, naming exact PR numbers bottom to
-   top:
-   - **The new PR is already in a stack** whose order, heads and bases match
+5. Open every new layer first, bottom to top, then run this step once, with
+   every approved new PR open. Read the full PRs again and look up the native
+   stack of each new PR and of the PR below the lowest one with
+   `gh api 'repos/OWNER/REPO/stacks?pull_request=NUMBER'`. Then join by the
+   topology you observe, naming exact PR numbers bottom to top. Judge the join
+   by the first unjoined PR: the lowest new PR that is in no stack, and the
+   PR directly below it. Normally the first unjoined PR is the lowest new PR.
+   After a lost response it can be a higher one, whose PR below is then a
+   new PR already in a stack:
+   - **Every new PR is already in a stack** whose order, heads and bases match
      the approved layers, as after an earlier request whose response was lost:
-     adopt that stack and send no request. Any other membership is a conflict:
-     stop and reconcile.
-   - **The PR below is the top of a native stack:** append the new PR through
-     the endpoint in
-     [Recover a partial publication](#recover-a-partial-publication).
-   - **The PR below is in a native stack but not its top:** stop. Another layer
-     took its place, so the approved dependency no longer holds.
-   - **The PR below and the chain under it are in no stack**, and each is
-     eligible as step 1 says: create the stack through GitHub's
+     adopt that stack and send no request. Any other membership is a conflict,
+     such as new PRs split across stacks or a stack that does not match the
+     approved order: stop and reconcile. A stack that holds only the lower new
+     PRs, in the approved order, is not a conflict: its next new PR is the
+     first unjoined PR, handled by the bullets below.
+   - **The PR below the first unjoined PR is the top of a native stack:**
+     append the first unjoined PR and every new PR above it in one request,
+     bottom to top, through the endpoint in
+     [Recover a partial publication](#recover-a-partial-publication). For
+     native stack `[120, 121]` and new PRs `122` (based on `121`'s branch) and
+     `123` (based on `122`'s branch), the body is
+     `{"pull_requests":[122,123]}`; with `122` already in the stack, it is
+     `{"pull_requests":[123]}`.
+   - **The PR below the first unjoined PR is in a native stack but not its
+     top:** stop. Another layer took its place, so the approved dependency no
+     longer holds.
+   - **The PR below the first unjoined PR and the chain under it are in no
+     stack**, and each is eligible as step 1 says: create the stack through
+     GitHub's
      [create endpoint](https://docs.github.com/en/rest/pulls/stacks#create-a-pull-request-stack).
-     Write every PR number of the chain bottom to top as integers in a JSON
-     body, for example `{"pull_requests":[120,122]}`, and run
+     Write every PR number of the chain, new PRs included, bottom to top as
+     integers in a JSON body, for example `{"pull_requests":[120,122,123]}`,
+     and run
      `gh api --method POST repos/OWNER/REPO/stacks -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' --input /path/to/create.json`.
-   - **No PR below:** the PR is a bottom layer on the trunk. A stack needs at
-     least two PRs, so it stays a standalone PR and no request is sent; the
-     next layer's step 5 creates the stack with both. Skip step 6.
+   - **No PR below the first unjoined PR:** it is a bottom layer on the trunk.
+     With one new layer, a stack needs at least two PRs, so it stays a
+     standalone PR and no request is sent; the next layer's step 5 creates the
+     stack with both, and step 6 is skipped. With several, create the stack
+     from all the new PRs, bottom to top.
 
    Both requests require each PR's base to be the head branch of the PR below
    and change no base. Without `--base`, `gh stack link` instead takes its
    bottom base from the local `origin/HEAD`, and it may retarget the lower PR
    before creating the stack; `gh stack submit` finds each layer's PR by
    branch name and opens a new one when it finds none. For several new layers,
-   open each one bottom to top after one protected push, then run this step
-   once, for the top new PR, so one request names them all. On a conflict, validation error or lost response, keep the
+   push once through the protected helper before opening them, so one request
+   names them all. On a conflict, validation error or lost response, keep the
    intent, wait until the request's executor has stopped, and repeat this
    step's lookup before anything else: a stack that now holds the PRs as
    approved is adopted, never requested again.
@@ -436,30 +454,36 @@ If the approved branch was pushed but has no PR, claim a separate creation once
 and create it with steps 3 and 4 of
 [Open a layer's pull request](#open-a-layers-pull-request), at the exact
 approved head branch, base branch, title and body.
-Then read the full PR and native stack again and join it by the topology step 5
-there observes. Do not use
+Once every approved new PR exists, read the full PRs and native stack again and
+join them by the topology step 5 there observes.
+Do not use
 combined branch linking to choose a different base from a concurrently changed
 stack. Preserve creation evidence; a lost response requires reconciliation after
 its executor stops, not a second creation. An older uncertain link attempt with
 no visible PR does not establish that creation would be safe.
 
-When recovery has an existing PR at the approved head and base, step 5 selects
-its request in the same way: adopt a stack that already holds it as approved,
-append it when the PR below is a native stack's top, create the stack when the
-PR below is in none, and send nothing for a bottom layer on the trunk. Only
-the append below needs a stack number. For the append, use GitHub's
+When recovery has existing PRs at the approved heads and bases, step 5 selects
+its request in the same way, from the first unjoined PR: adopt a stack that
+already holds every new PR as approved, append the first unjoined PR and every
+new PR above it when the PR below it is a native stack's top, create the stack
+when that PR below is in none, and send nothing for a lone bottom layer on the
+trunk. Only the append below needs a stack number. For the append, use GitHub's
 [native stack append endpoint](https://docs.github.com/en/rest/pulls/stacks#add-pull-requests-to-a-pull-request-stack).
 `gh stack link` can retarget that PR's base before appending; a concurrent new
 top could therefore change the approved dependency. The direct endpoint requires
-the candidate's base ref to match the current native top's head ref and does not
-first change the candidate's base.
+the first candidate's base ref to match the current native top's head ref, each
+later candidate's base to be the head of the one before it, and does not first
+change any candidate's base.
 
 Before the append, verify the repository, native stack identity and order, exact branch heads,
 candidate PR number/head/base branch/base commit, and intended draft/open/unmerged
 state with auto-merge disabled. Retain the original operation intent and verify
 that its previous executor has stopped. Claim the remaining append once. Write
-only the admitted PR number in a JSON body, for example `{"pull_requests":[123]}`,
-then use the observed repository and stack number:
+only the admitted PR numbers that are not yet in the stack in a JSON body,
+bottom to top, from the current top upward: GitHub's endpoint takes an ordered list, and the first PR's base must be
+the current top's head. One PR is `{"pull_requests":[123]}`; several new layers
+are one request, `{"pull_requests":[122,123]}`. Then use the observed repository
+and stack number:
 
 ```sh
 gh api --method POST repos/OWNER/REPO/stacks/STACK_NUMBER/add \
