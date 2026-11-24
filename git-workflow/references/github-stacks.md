@@ -403,11 +403,14 @@ fails its first run.
    - **The new PRs are already in a stack** whose order, heads and bases match
      the approved layers, as after an earlier request whose response was lost:
      adopt that stack and send no request. A stack that ends with only the
-     lower new PRs, in order, leaves the rest to append: judge the join by
-     the lowest new PR outside it, whose PR below is that stack's top. Any
-     other membership is a conflict: stop and reconcile.
+     lower new PRs, in order, and matches the approved layers up to there,
+     leaves the rest to append: judge the join by the lowest new PR outside
+     it, whose PR below is that stack's top, and send only the new PRs not yet
+     in it, as the next bullet says. Any other membership is a conflict: stop
+     and reconcile.
    - **The PR below the lowest new PR is the top of a native stack:** append
-     every new PR in one request, bottom to top, through the endpoint in
+     the new PRs not yet in it, all of them when none is, in one request,
+     bottom to top, through the endpoint in
      [Recover a partial publication](#recover-a-partial-publication). For
      native stack `[120, 121]` and new PRs `122` (based on `121`'s branch) and
      `123` (based on `122`'s branch), the body is
@@ -459,8 +462,8 @@ no visible PR does not establish that creation would be safe.
 
 When recovery has an existing PR at the approved head and base, step 5 selects
 its request in the same way: adopt a stack that already holds it as approved,
-append it, and every new PR above it, when the PR below the lowest of them
-is a native stack's top, create the stack when that PR below is in none, and
+append it, and every new PR above it not yet in the stack, when the PR below
+the lowest of them is a native stack's top, create the stack when that PR below is in none, and
 send nothing for a lone bottom layer on the trunk. Only
 the append below needs a stack number. For the append, use GitHub's
 [native stack append endpoint](https://docs.github.com/en/rest/pulls/stacks#add-pull-requests-to-a-pull-request-stack).
@@ -474,7 +477,7 @@ Before the append, verify the repository, native stack identity and order, exact
 candidate PR number/head/base branch/base commit, and intended draft/open/unmerged
 state with auto-merge disabled. Retain the original operation intent and verify
 that its previous executor has stopped. Claim the remaining append once. Write
-only the admitted PR numbers in a JSON body, bottom to top, from the current top
+only the admitted PR numbers that are not yet in the stack in a JSON body, bottom to top, from the current top
 upward: GitHub's endpoint takes an ordered list, and the first PR's base must be
 the current top's head. One PR is `{"pull_requests":[123]}`; several new layers
 are one request, `{"pull_requests":[122,123]}`. Then use the observed repository
