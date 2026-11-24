@@ -398,9 +398,9 @@ fails its first run.
    `gh api 'repos/OWNER/REPO/stacks?pull_request=NUMBER'`. Then join by the
    topology you observe, naming exact PR numbers bottom to top. Judge the join
    by the first unjoined PR: the lowest new PR that is in no stack, and the
-   PR directly below it, never the PR below the top new PR, which is itself
-   new. Normally the first unjoined PR is the lowest new PR. After a lost
-   response it can be a higher one:
+   PR directly below it. Normally the first unjoined PR is the lowest new PR.
+   After a lost response it can be a higher one, whose PR below is then a
+   new PR already in a stack:
    - **Every new PR is already in a stack** whose order, heads and bases match
      the approved layers, as after an earlier request whose response was lost:
      adopt that stack and send no request. Any other membership is a conflict,
