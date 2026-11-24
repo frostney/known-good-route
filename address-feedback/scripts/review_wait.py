@@ -444,9 +444,11 @@ def main() -> int:
                 policy = {"automations": [], "unavailableReason": str(error)}
             identity["policyDigest"] = stable_digest(policy)
             expected_head = ExpectedHead(gh, args.repo, args.head)
+            # An inspection reads the whole census of any head, as its callers expect;
+            # a wait reads only the head of another one.
             observe = lambda: expected_head.annotate(review_snapshot(
                 gh, args.repo, args.pr, policy, include_bodies=args.command == "inspect", page_size=args.page_size,
-                expected=expected_head,
+                expected=expected_head if args.command == "wait" else None,
             ))
             if args.command == "inspect":
                 observation = observe()
@@ -455,6 +457,8 @@ def main() -> int:
                 output = result_envelope("review", state, identity, observation, metrics, reason)
             else:
                 args.interval = positive_interval(args.interval)
+                # Rejected arguments leave the checkpoint as it was.
+                deadline = parse_time(args.deadline)
                 gh.reserve = CORE_RESERVE
                 state_path = args.state or default_state_path("review", identity)
                 with StateLock(state_path):
@@ -465,7 +469,7 @@ def main() -> int:
                         observe=observe,
                         classify=lambda value: classify(args.head, value),
                         state_path=state_path,
-                        deadline=parse_time(args.deadline),
+                        deadline=deadline,
                         interval=args.interval,
                         metrics=metrics,
                         transition_key=lambda value: review_transition_key(args.head, value),

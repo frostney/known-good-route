@@ -561,6 +561,10 @@ class ExpectedHead:
         observation["headLag"] = lag
         return observation
 
+    def grace_end(self) -> float | None:
+        """When the grace of a lagging head ends, or None while no head lags."""
+        return None if self.seen or self.since is None else self.since + HEAD_GRACE
+
     @staticmethod
     def due(observation: dict[str, Any]) -> float | None:
         """When a lagging head's grace ends, so the wait reads the head again then; None otherwise.

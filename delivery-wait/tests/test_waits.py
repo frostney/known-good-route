@@ -100,6 +100,19 @@ if args[:2] == ["api", "graphql"]:
         output({"data":{"resolveReviewThread":{"thread":{"id":request["variables"]["thread"],"isResolved":True}}}})
     if "node(id:" in query:
         output({"data":{"node":scenario["thread"]}})
+    if "{headRefOid }" in query:
+        # The review helper confirms another head by its head alone.
+        if scenario.get("reviewHeadsByRequest"):
+            heads = scenario["reviewHeadsByRequest"]
+            scenario["review"]["headRefOid"] = heads[min(counter, len(heads) - 1)]
+        output({"data":{"repository":{"pullRequest":{"headRefOid":scenario["review"]["headRefOid"]}}}})
+    if "reviewThreads" in query and scenario.get("reviewQueriesAllowed") is not None:
+        allowed = pathlib.Path(os.environ["FAKE_GH_COUNTER"] + ".review-queries")
+        used = int(allowed.read_text()) if allowed.exists() else 0
+        allowed.write_text(str(used + 1))
+        if used >= scenario["reviewQueriesAllowed"]:
+            print("gh: Resource limits for this query exceeded (RESOURCE_LIMITS_EXCEEDED)", file=sys.stderr)
+            sys.exit(1)
     if "reviewThreads" in query:
         if scenario.get("reviewHeadsByRequest"):
             heads = scenario["reviewHeadsByRequest"]
@@ -1146,10 +1159,41 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(inspected["state"], "waiting")
         self.assertIn("an ancestor of the expected commit", inspected["reason"])
         self.assertEqual(inspected["observation"]["headLag"]["relation"], "ancestor")
-        self.assertNotIn("automations", inspected["observation"])
+        # An inspection keeps the whole census its callers read, such as the threads.
+        self.assertEqual(inspected["observation"]["threads"], [])
         output = self.review_wait(self.directory / "review.json", seconds=0.3)
         self.assertEqual(output["state"], "timed-out")
         self.assertEqual(output["observation"]["headLag"]["relation"], "ancestor")
+        self.assertNotIn("automations", output["observation"])
+
+    def test_a_review_wait_confirms_another_head_by_its_head_alone(self) -> None:
+        # GitHub answers two review censuses, one for each observation (the second at the deadline),
+        # and refuses any more: each observation confirms the lagging head by its head alone.
+        self.write_scenario(
+            reviewHeadsByRequest=["head-0"], compare={"head-0...head-1": {"status": "ahead"}}, reviewQueriesAllowed=2,
+        )
+        deadline = (datetime.now(timezone.utc) + timedelta(seconds=0.3)).isoformat()
+        output = self.run_json(
+            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--policy", str(self.policy),
+            "--deadline", deadline, "--interval", "5", "--state", str(self.directory / "review.json"),
+        )[1]
+        self.assertEqual(output["state"], "timed-out", output["reason"])
+        self.assertEqual(output["observation"]["headLag"]["relation"], "ancestor")
+
+    def test_a_review_wait_with_a_rejected_deadline_leaves_its_checkpoint_alone(self) -> None:
+        state = self.directory / "review.json"
+        self.write_scenario(reviewHeadsByRequest=["head-0"], compare={"head-0...head-1": {"status": "ahead"}})
+        self.review_wait(state, seconds=0.3)
+        checkpoint = json.loads(state.read_text())
+        checkpoint.pop("expectedHead", None)
+        checkpoint["digest"] = "digest-of-head-0"
+        state.write_text(json.dumps(checkpoint))
+        result, output = self.run_json(
+            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--policy", str(self.policy),
+            "--deadline", "mistyped", "--state", str(state),
+        )
+        self.assertEqual((result.returncode, output["state"]), (2, "operational-error"))
+        self.assertEqual(json.loads(state.read_text()), checkpoint)
 
     def test_a_review_wait_invalidates_a_later_push_at_once(self) -> None:
         self.write_scenario(reviewHeadsByRequest=["head-2"], compare={"head-2...head-1": {"status": "behind"}})

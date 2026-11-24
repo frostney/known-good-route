@@ -248,7 +248,8 @@ class RecordedGitHub:
             for pull in self.pulls.values() if pull["repo"] == repo
             for sha, recorded in pull["heads"].items()
         }
-        if base not in parents or head not in parents:
+        known = set(parents).union(*parents.values())
+        if base not in known or head not in known:
             return None
 
         def ancestors(sha: str) -> set[str]:

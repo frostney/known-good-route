@@ -141,6 +141,14 @@ def review_census(gh, variables: dict[str, Any], page_size: int = 100, expected=
     if type(page_size) is not int or not 1 <= page_size <= 100:
         raise WaitError("review page size must be between 1 and 100")
     first = read_census(gh, variables, page_size, expected)
+    if expected is not None and first["headRefOid"] != expected.expected:
+        # Another head is confirmed by its head alone, so review fields it
+        # does not need cannot fail its classification.
+        confirmed = extract_pull(gh.graphql(pull_query(""), variables))["headRefOid"]
+        if confirmed != first["headRefOid"]:
+            raise TransientError("pull request head changed during observation; fresh evidence is required")
+        expected.note(confirmed)
+        return first
     second = read_census(gh, variables, page_size, expected)
     if first != second:
         raise TransientError("review census changed during observation; fresh evidence is required")

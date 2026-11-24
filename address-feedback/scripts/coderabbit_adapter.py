@@ -69,7 +69,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "delivery-wait" / "
 
 from kgr_github import (  # noqa: E402
     CORE_RESERVE,
+    DIFFERENT_HEADS,
     ExpectedHead,
+    FOLLOW_UP_RETRY,
     Gh,
     Metrics,
     RateLimited,
@@ -940,11 +942,18 @@ def pull_evidence(gh: Gh, repo: str, pr: int, expected: ExpectedHead | None = No
     if expected is not None:
         expected.note(head)
         if head != expected.expected:
-            return expected.annotate({
+            other = {
                 "repo": repo, "pr": pr, "head": head,
                 "open": pull.get("state") == "open", "draft": bool(pull.get("draft")),
                 "triggers": [], "sharedTriggers": [], "rateLimit": None,
-            })
+            }
+            try:
+                return expected.annotate(other)
+            except (RateLimited, TransientError):
+                if other["open"]:
+                    raise
+                # Closure decides a closed pull request's state without the comparison.
+                return other
     author = pull.get("user")
     timeline = pull_timeline(gh, repo, pr)
     readied = [
@@ -1143,11 +1152,12 @@ def decide(evidence: dict[str, Any], expected_head: str, now: float) -> dict[str
         )
 
     head = classify_head(expected_head, evidence)
-    if head is not None and (head[0] == "invalidated" or evidence["open"]):
+    lag = evidence.get("headLag") or {}
+    if head is not None and (evidence["open"] or lag.get("relation") in DIFFERENT_HEADS):
         # A head GitHub has not yet moved to the pushed commit is waited on
         # until its grace ends, and never triggered. A push no longer moves
-        # a closed pull request's head, so closed wins over that wait.
-        lag = evidence.get("headLag") or {}
+        # a closed pull request's head, so closure decides there unless the
+        # head is known to have moved on.
         bound = {"boundAt": lag["until"]} if head[0] == "waiting" and lag.get("until") else {}
         return result(*head, **bound)
     if not evidence["open"]:
@@ -1375,11 +1385,14 @@ def observation(
     expected_heads: dict[int, str],
     now: float,
     posted: list[dict[str, Any]] | None = None,
+    clock: Callable[[], float] | None = None,
 ) -> dict[str, Any]:
+    """Each head's evidence and state; CLOCK dates each head read, `now` by default."""
     cache = ObservationCache(gh)
     results = []
     for pr in prs:
-        expected = ExpectedHead(gh, repo, expected_heads[pr], clock=lambda: now)
+        # Comparisons go through the cache too, so a batch asks GitHub once per pair of heads.
+        expected = ExpectedHead(cache, repo, expected_heads[pr], clock=clock or (lambda: now))  # type: ignore[arg-type]
         evidence = with_posted(pull_evidence(cache, repo, pr, expected), posted or [])  # type: ignore[arg-type]
         results.append(public(evidence) | decide(evidence, expected_heads[pr], now))
     return {"pullRequests": results}
@@ -1557,6 +1570,10 @@ def run_review(
                 last["triggers"] = public_posted(posted)
                 return "pending", "GitHub transport remained unavailable until the deadline", last
             delay = pace(interval)
+            # A lagging head is read again when its grace ends, or promptly once it has.
+            due = expected.grace_end()
+            if due is not None:
+                delay = min(interval, FOLLOW_UP_RETRY) if due <= clock() else min(delay, due - clock())
             reason = held()
             if reason:
                 last["triggers"] = public_posted(posted)
@@ -1660,7 +1677,7 @@ def main() -> int:
             heads = parse_heads(args.head, prs)
             identity["heads"] = heads
             lock = lock_status(root, owner)
-            value = observation(gh, args.repo, prs, heads, time.time()) | {"lock": lock}
+            value = observation(gh, args.repo, prs, heads, time.time(), clock=time.time) | {"lock": lock}
             metrics.observations += 1
             state, reason = aggregate_status(value)
             output = envelope("status", state, identity, value, metrics, reason)
