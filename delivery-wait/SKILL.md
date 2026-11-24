@@ -224,6 +224,19 @@ expected head, ref, or saved identity no longer matches, `timed-out` means the
 deadline passed, and `cancelled` means the wait was interrupted. These exit 0;
 `operational-error` exits 2. `inspect` can also report `waiting`.
 
+GitHub moves a pull request's head to a pushed commit some seconds after
+`git push` returns, so `checks-terminal` and `pr-merged` can be armed right
+after a push. Until the wait has seen the expected head, a head that is an
+ancestor of it, one it diverged from as after a force-push, or any head while
+GitHub does not yet know the expected commit is recorded as `headLag` and
+keeps the wait `waiting` for five minutes from the first such observation,
+across runs on the same `--state`. The wait looks again when the five minutes
+end, whatever `--interval` is, unless GitHub's limits hold the read. A head
+that descends from the expected commit is a later push and reports
+`invalidated` at once, and so does any other head once the wait has seen the
+expected one, which the state file keeps, or once the five minutes have
+passed: then check that the push reached the pull request's branch.
+
 Use `inspect` for a single authoritative delivery snapshot and `wait` to
 await a transition. Supported predicates are exact-head checks,
 pull-request merge, workflow completion, tag target, release assets, and an

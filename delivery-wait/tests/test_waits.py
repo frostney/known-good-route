@@ -134,6 +134,22 @@ if "per_page=" in endpoint and "expectedRestPageSize" in scenario:
         sys.exit(3)
 if "user" in args:
     output({"login":"maintainer"})
+if "/compare/" in endpoint:
+    # GitHub's comparison of the observed head with the expected one, keyed "observed...expected".
+    import time
+    time.sleep(scenario.get("compareSeconds", 0))
+    unavailable = pathlib.Path(os.environ["FAKE_GH_COUNTER"] + ".compare-unavailable")
+    if scenario.get("compareUnavailableOnce") and not unavailable.exists():
+        unavailable.write_text("1")
+        print("HTTP/2.0 503 Service Unavailable\r\n\r\n" + json.dumps({"message": "unavailable"}))
+        print("gh: Service Unavailable (HTTP 503)", file=sys.stderr)
+        sys.exit(1)
+    compared = scenario.get("compare", {}).get(endpoint.split("/compare/", 1)[1].split("?", 1)[0])
+    if compared is None:
+        print("HTTP/2.0 404 Not Found\r\n\r\n" + json.dumps({"message": "Not Found"}))
+        print("gh: Not Found (HTTP 404)", file=sys.stderr)
+        sys.exit(1)
+    output(compared)
 if endpoint.endswith("/pulls/comments/10"):
     output({"id":10,"pull_request_url":"https://api.github.com/repos/owner/repo/pulls/7","body":"finding","user":{"login":"reviewer"}})
 if endpoint.endswith("/pulls/7"):
@@ -437,13 +453,276 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertIn("timezone", output["reason"])
 
     def test_head_change_invalidates(self) -> None:
-        self.write_scenario(pull=pull("head-2", []))
+        self.write_scenario(pull=pull("head-2", []), compare={"head-2...head-1": {"status": "behind"}})
         _, output = self.run_json(
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
             "--head", "head-1", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01",
         )
         self.assertEqual(output["state"], "invalidated")
         self.assertEqual(output["observation"]["head"], "head-2")
+        self.assertIn("a later commit than the expected one", output["reason"])
+        self.assertEqual(output["metrics"]["observations"], 1)
+
+    def lagging_head_wait(self, *selector: str, state: Path | None = None, seconds: float = 3) -> dict:
+        deadline = (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat()
+        return self.run_json(
+            DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+            *(selector or ("--check", "CI")), "--deadline", deadline, "--interval", "0.05",
+            *(("--state", str(state)) if state else ()),
+        )[1]
+
+    def test_a_wait_armed_right_after_a_push_waits_for_github_to_move_the_head(self) -> None:
+        # Corkboard post 985: GitHub still reported the head before the push.
+        for relation, status in (("ancestor", "ahead"), ("diverged", "diverged")):
+            with self.subTest(relation=relation):
+                self.counter.unlink(missing_ok=True)
+                before = pull("head-0", [check("CI", "COMPLETED", "SUCCESS")])
+                self.write_scenario(
+                    pullsByRequest=[before] * 4 + [pull("head-1", [check("CI", "IN_PROGRESS", None)])] * 4
+                    + [pull("head-1", [check("CI", "COMPLETED", "SUCCESS")])],
+                    compare={"head-0...head-1": {"status": status}},
+                )
+                output = self.lagging_head_wait(state=self.directory / f"{relation}.json")
+                self.assertEqual(output["state"], "satisfied", output["reason"])
+                self.assertEqual(output["observation"]["head"], "head-1")
+                self.assertGreaterEqual(output["metrics"]["observations"], 4)
+
+    def test_a_lagging_head_is_reported_as_waiting_with_its_relation(self) -> None:
+        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        _, inspected = self.run_json(
+            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
+            "--pr", "7", "--head", "head-1", "--check", "CI",
+        )
+        self.assertEqual(inspected["state"], "waiting")
+        self.assertIn("an ancestor of the expected commit", inspected["reason"])
+        self.assertEqual(inspected["observation"]["headLag"]["relation"], "ancestor")
+        # A commit GitHub does not know yet is given the same grace.
+        self.write_scenario(pull=pull("head-0", []))
+        state = self.directory / "wait.json"
+        output = self.lagging_head_wait(state=state, seconds=0.3)
+        self.assertEqual(output["state"], "timed-out")
+        self.assertEqual(output["observation"]["headLag"]["relation"], "missing")
+
+    def test_a_resumed_wait_keeps_the_grace_its_first_lagging_observation_started(self) -> None:
+        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        state = self.directory / "wait.json"
+        first = self.lagging_head_wait(state=state, seconds=0.3)
+        self.assertEqual(first["state"], "timed-out")
+        since = first["observation"]["headLag"]["since"]
+        second = self.lagging_head_wait(state=state, seconds=0.3)
+        self.assertEqual(second["state"], "timed-out")
+        self.assertEqual(second["observation"]["headLag"]["since"], since)
+        # Once the grace has passed, a head that never moved invalidates the wait.
+        checkpoint = json.loads(state.read_text())
+        checkpoint["expectedHead"]["since"] = "2026-08-12T08:00:00Z"
+        state.write_text(json.dumps(checkpoint))
+        self.counter.with_name("counter.log").unlink()
+        expired = self.lagging_head_wait(state=state)
+        self.assertEqual(expired["state"], "invalidated")
+        self.assertIn("expected head head-1, observed head-0", expired["reason"])
+        self.assertIn("check that the push reached", expired["reason"])
+        self.assertEqual(expired["metrics"]["observations"], 1)
+        # GitHub is not asked again once the grace has passed.
+        self.assertNotIn("/compare/", self.counter.with_name("counter.log").read_text())
+
+    def test_a_head_that_moves_off_the_expected_one_invalidates_at_once(self) -> None:
+        # Seen by this wait, then replaced: even an ancestor is not a lag.
+        self.write_scenario(pull=pull("head-1", [check("CI", "IN_PROGRESS", None)]))
+        state = self.directory / "wait.json"
+        self.assertEqual(self.lagging_head_wait(state=state, seconds=0.3)["state"], "timed-out")
+        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        output = self.lagging_head_wait(state=state)
+        self.assertEqual(output["state"], "invalidated")
+        self.assertEqual(output["reason"], "expected head head-1, observed head-0, after this wait had seen the expected head")
+        # The checkpoint keeps that the expected head was seen, so a rerun gives no grace either.
+        again = self.lagging_head_wait(state=state)
+        self.assertEqual(again["state"], "invalidated")
+        self.assertEqual(again["observation"]["headLag"], {"relation": "replaced"})
+        self.assertNotIn("/compare/", self.counter.with_name("counter.log").read_text())
+
+    def test_a_head_read_before_a_failed_census_counts_as_seen(self) -> None:
+        # The census for head-1 is incomplete, then GitHub reports head-0.
+        incomplete = {"runPages": [{"total_count": 2, "workflow_runs": []}], "jobPages": {}}
+        self.write_scenario(
+            pullsByRequest=[pull("head-1", [])] * 2 + [pull("head-0", [])],
+            census=[incomplete], compare={"head-0...head-1": {"status": "ahead"}},
+        )
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "invalidated")
+        self.assertIn("after this wait had seen the expected head", output["reason"])
+
+    def test_the_expected_head_stays_seen_when_every_census_after_it_failed(self) -> None:
+        incomplete = {"runPages": [{"total_count": 2, "workflow_runs": []}], "jobPages": {}}
+        self.write_scenario(pull=pull("head-1", []), census=[incomplete])
+        state = self.directory / "wait.json"
+        self.assertEqual(self.lagging_head_wait("--all-workflows", state=state, seconds=0.3)["state"], "timed-out")
+        self.assertEqual(json.loads(state.read_text()).get("expectedHead", {}).get("seen"), True)
+        self.write_scenario(pull=pull("head-0", []), census=[incomplete], compare={"head-0...head-1": {"status": "ahead"}})
+        output = self.lagging_head_wait("--all-workflows", state=state)
+        self.assertEqual(output["state"], "invalidated")
+        self.assertIn("after this wait had seen the expected head", output["reason"])
+
+    def test_the_checks_of_another_head_are_not_read(self) -> None:
+        # Through the REST fallback, no check runs or statuses are read for a lagging head.
+        self.write_scenario(
+            graphqlRateLimited=True, restPull={"head": {"sha": "head-0"}, "merged": False, "merged_at": None, "merge_commit_sha": None},
+            compare={"head-0...head-1": {"status": "ahead"}},
+        )
+        _, output = self.run_json(
+            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--check", "CI",
+        )
+        self.assertEqual(output["state"], "waiting", output["reason"])
+        log = self.counter.with_name("counter.log").read_text()
+        self.assertNotIn("/check-runs", log)
+        self.assertNotIn("/statuses", log)
+        # Nor are more than 100 contexts on a lagging head an error.
+        crowded = pull("head-0", [])
+        crowded["commits"]["nodes"][0]["commit"]["statusCheckRollup"]["contexts"]["pageInfo"] = {"hasNextPage": True}
+        self.write_scenario(pull=crowded, compare={"head-0...head-1": {"status": "ahead"}})
+        _, output = self.run_json(
+            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--check", "CI",
+        )
+        self.assertEqual(output["state"], "waiting", output["reason"])
+
+    def test_a_retry_after_a_lagging_head_still_looks_again_when_its_grace_ends(self) -> None:
+        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        state = self.directory / "wait.json"
+        self.lagging_head_wait(state=state, seconds=0.3)
+        checkpoint = json.loads(state.read_text())
+        almost = (datetime.now(timezone.utc) - timedelta(seconds=299)).isoformat().replace("+00:00", "Z")
+        soon = (datetime.now(timezone.utc) + timedelta(seconds=1)).isoformat().replace("+00:00", "Z")
+        checkpoint.setdefault("expectedHead", {})["since"] = almost
+        checkpoint["observation"]["headLag"].update(since=almost, until=soon)
+        state.write_text(json.dumps(checkpoint))
+        self.counter.unlink()
+        self.write_scenario(
+            pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}}, transientFailures=1,
+        )
+        deadline = (datetime.now(timezone.utc) + timedelta(seconds=5.5)).isoformat()
+        started = time.monotonic()
+        _, output = self.run_json(
+            DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+            "--check", "CI", "--deadline", deadline, "--interval", "600", "--state", str(state),
+        )
+        self.assertEqual(output["state"], "invalidated", output["reason"])
+        self.assertEqual(output["metrics"]["retries"], 1)
+        self.assertLess(time.monotonic() - started, 4)
+
+    def grace_nearly_over(self, state: Path, seconds_left: float) -> None:
+        """A checkpoint of a lagging wait whose grace ends SECONDS_LEFT from now."""
+        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        self.lagging_head_wait(state=state, seconds=0.3)
+        checkpoint = json.loads(state.read_text())
+        since = datetime.now(timezone.utc) - timedelta(seconds=300 - seconds_left)
+        checkpoint["expectedHead"]["since"] = since.isoformat().replace("+00:00", "Z")
+        checkpoint["observation"]["headLag"].update(
+            since=checkpoint["expectedHead"]["since"],
+            until=(since + timedelta(seconds=300)).isoformat().replace("+00:00", "Z"),
+        )
+        state.write_text(json.dumps(checkpoint))
+        self.counter.unlink()
+
+    def slow_wait(self, state: Path, seconds: float) -> tuple[dict, float]:
+        deadline = (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat()
+        started = time.monotonic()
+        result = subprocess.run(
+            [sys.executable, str(DELIVERY), "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
+             "--head", "head-1", "--check", "CI", "--deadline", deadline, "--interval", "600",
+             "--state", str(state), "--json"],
+            text=True, capture_output=True, cwd=self.directory, env=self.environment, timeout=seconds + 5,
+        )
+        return json.loads(result.stdout), time.monotonic() - started
+
+    def test_a_head_read_before_the_grace_ended_is_read_again_before_it_expires_the_wait(self) -> None:
+        # The comparison finishes after the grace ends; the head GitHub then reports decides.
+        state = self.directory / "wait.json"
+        self.grace_nearly_over(state, 0.5)
+        arrived = pull("head-1", [check("CI", "COMPLETED", "SUCCESS")])
+        self.write_scenario(
+            pullsByRequest=[pull("head-0", [])] * 2 + [arrived],
+            compare={"head-0...head-1": {"status": "ahead"}}, compareSeconds=1,
+        )
+        output, elapsed = self.slow_wait(state, 6)
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertLess(elapsed, 4)
+
+    def test_a_comparison_that_fails_at_the_end_of_the_grace_is_retried_promptly(self) -> None:
+        state = self.directory / "wait.json"
+        self.grace_nearly_over(state, 0.5)
+        arrived = pull("head-1", [check("CI", "COMPLETED", "SUCCESS")])
+        self.write_scenario(
+            pullsByRequest=[pull("head-0", [])] * 2 + [arrived],
+            compare={"head-0...head-1": {"status": "ahead"}}, compareUnavailableOnce=True, compareSeconds=1,
+        )
+        output, elapsed = self.slow_wait(state, 10)
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertEqual(output["metrics"]["retries"], 1)
+        # FOLLOW_UP_RETRY seconds later, not at the deadline.
+        self.assertLess(elapsed, 8.5)
+
+    def test_the_expected_head_stays_seen_after_an_operational_error(self) -> None:
+        crowded = pull("head-1", [])
+        crowded["commits"]["nodes"][0]["commit"]["statusCheckRollup"]["contexts"]["pageInfo"] = {"hasNextPage": True}
+        self.write_scenario(pull=crowded)
+        state = self.directory / "wait.json"
+        self.assertEqual(self.lagging_head_wait(state=state, seconds=0.3)["state"], "operational-error")
+        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        output = self.lagging_head_wait(state=state)
+        self.assertEqual(output["state"], "invalidated")
+        self.assertIn("after this wait had seen the expected head", output["reason"])
+
+    def test_a_checkpoint_digest_of_no_head_is_no_baseline(self) -> None:
+        self.write_scenario(pull=pull("head-1", [check("CI", "IN_PROGRESS", None)]))
+        state = self.directory / "wait.json"
+        self.lagging_head_wait(state=state, seconds=0.3)
+        checkpoint = json.loads(state.read_text())
+        checkpoint.pop("expectedHead", None)
+        checkpoint["observation"] = {"head": None, "checks": []}
+        checkpoint["digest"] = "0" * 64
+        state.write_text(json.dumps(checkpoint))
+        self.assertEqual(self.lagging_head_wait(state=state, seconds=0.3)["state"], "timed-out")
+
+    def test_a_checkpoint_digest_of_another_head_is_no_baseline(self) -> None:
+        # An earlier helper saved the stale head's digest when it invalidated the wait.
+        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        for selector in (("--check", "CI"), ("--all-workflows",)):
+            with self.subTest(selector=selector):
+                state = self.directory / f"{selector[0]}.json"
+                self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+                self.lagging_head_wait(*selector, state=state, seconds=0.3)
+                checkpoint = json.loads(state.read_text())
+                checkpoint["observation"].pop("headLag")
+                checkpoint["digest"] = "0" * 64
+                for lagging in (True, False):
+                    state.write_text(json.dumps(checkpoint))
+                    arrived = [pull("head-1", [check("CI", "IN_PROGRESS", None)])]
+                    self.write_scenario(
+                        pullsByRequest=([pull("head-0", [])] * 2 if lagging else []) + arrived,
+                        census=[census(workflow_run(101, matrix_jobs(1, "in_progress", None), status="in_progress", conclusion=None))],
+                        compare={"head-0...head-1": {"status": "ahead"}},
+                    )
+                    self.counter.unlink(missing_ok=True)
+                    output = self.lagging_head_wait(*selector, state=state, seconds=0.5)
+                    self.assertEqual(output["state"], "timed-out", output["reason"])
+
+    def test_a_lagging_head_is_looked_at_again_when_its_grace_ends(self) -> None:
+        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        state = self.directory / "wait.json"
+        self.lagging_head_wait(state=state, seconds=0.3)
+        checkpoint = json.loads(state.read_text())
+        almost = datetime.now(timezone.utc) - timedelta(seconds=299)
+        checkpoint["expectedHead"]["since"] = almost.isoformat().replace("+00:00", "Z")
+        state.write_text(json.dumps(checkpoint))
+        deadline = (datetime.now(timezone.utc) + timedelta(seconds=5.5)).isoformat()
+        started = time.monotonic()
+        _, output = self.run_json(
+            DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+            "--check", "CI", "--deadline", deadline, "--interval", "600", "--state", str(state),
+        )
+        self.assertEqual(output["state"], "invalidated", output["reason"])
+        self.assertEqual(output["metrics"]["observations"], 2)
+        # It looked again when the grace ended, not at the deadline or after the interval.
+        self.assertLess(time.monotonic() - started, 4)
 
     def test_deadline_performs_a_final_authoritative_observation(self) -> None:
         self.write_scenario()
@@ -721,7 +1000,7 @@ class WaitCommandsTest(unittest.TestCase):
                 self.assertEqual(output["state"], "changed")
                 self.assertIn("closed without merging", output["reason"])
                 self.assertEqual(output["metrics"]["observations"], 1)
-        self.write_scenario(pull=pull("head-2", [], state="CLOSED"))
+        self.write_scenario(pull=pull("head-2", [], state="CLOSED"), compare={"head-2...head-1": {"status": "behind"}})
         self.assertEqual(self.merge_wait()["state"], "invalidated")
 
     def test_pr_merged_rest_fallback_tells_closed_from_merged(self) -> None:
@@ -1939,10 +2218,24 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(output["observation"]["runs"], [])
 
     def test_all_workflows_invalidates_a_changed_head(self) -> None:
-        self.write_scenario(pull=pull("head-2", []), census=[census(workflow_run(101, matrix_jobs(2)))])
+        self.write_scenario(
+            pull=pull("head-2", []), census=[census(workflow_run(101, matrix_jobs(2)))],
+            compare={"head-2...head-1": {"status": "behind"}},
+        )
         _, output = self.census_wait()
         self.assertEqual(output["state"], "invalidated")
         self.assertEqual(output["observation"]["head"], "head-2")
+        self.assertIn("a later commit than the expected one", output["reason"])
+
+    def test_all_workflows_waits_for_github_to_move_the_head_after_a_push(self) -> None:
+        self.write_scenario(
+            pullsByRequest=[pull("head-0", [])] * 4 + [pull("head-1", [])],
+            census=[census(workflow_run(101, matrix_jobs(2)))],
+            compare={"head-0...head-1": {"status": "ahead"}},
+        )
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertEqual(output["observation"]["head"], "head-1")
 
     def test_all_workflows_refuses_a_pull_request_without_a_head(self) -> None:
         self.write_scenario(pull={"headRefOid": None}, census=[census(workflow_run(101, matrix_jobs(2)))])

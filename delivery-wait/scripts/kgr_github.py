@@ -44,6 +44,8 @@ CORE_SHARE = 0.25
 # GitHub asks a client that hit a secondary limit without a Retry-After to
 # wait at least a minute.
 SECONDARY_BACKOFF = 60
+# A retry for a follow-up read that is already due waits this long first.
+FOLLOW_UP_RETRY = 5
 NEXT_LINK = re.compile(r'<([^>]+)>\s*;\s*rel="next"')
 
 
@@ -470,8 +472,15 @@ def wait_for_transition(
     pace: Callable[[float], float] | None = None,
     not_before: Callable[[], float | None] | None = None,
     limits: Any = None,
+    wake_by: Callable[[dict[str, Any]], float | None] | None = None,
+    keep: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Observe until a transition, sleeping `pace(interval)`, or `interval`, between observations.
+
+    `wake_by` can name an earlier time an observation must be followed up,
+    such as the end of a grace period; GitHub's earliest permitted read
+    still comes first. Each object in `keep` saves its state in the
+    checkpoint under its key through `export` and `restore`, like `limits`.
 
     When pacing or `not_before`, GitHub's earliest permitted read, holds the
     next observation past the deadline, the wait ends at the deadline
@@ -487,7 +496,30 @@ def wait_for_transition(
         stopped = True
 
     def save(path: Path | None, value: dict[str, Any]) -> None:
-        write_state(path, {**value, "githubLimits": limits.export()} if limits else value)
+        extra = {key: item.export() for key, item in (keep or {}).items()}
+        if limits:
+            extra["githubLimits"] = limits.export()
+        write_state(path, {**value, **extra})
+
+    def follow_up(observation: dict[str, Any], delay: float, retry: bool = False) -> float:
+        """DELAY, shortened to an earlier time `wake_by` names for OBSERVATION.
+
+        A time already past means at once, or for a RETRY after
+        FOLLOW_UP_RETRY seconds, so a read that keeps failing cannot spin.
+        """
+        nonlocal held
+        due = wake_by(observation) if wake_by else None
+        if due is None:
+            return delay
+        if due <= time.time():
+            due = time.time() + (min(interval, FOLLOW_UP_RETRY) if retry else 0.0)
+        blocked = not_before() if not_before else None
+        due = max(due, blocked or 0.0)
+        if due < time.time() + delay:
+            delay = max(0.0, due - time.time())
+            if due < deadline:
+                held = None
+        return delay
 
     def nap(seconds: float) -> None:
         """Sleep, waking early once a signal asks the wait to stop."""
@@ -526,6 +558,9 @@ def wait_for_transition(
             )
         if limits and prior:
             limits.restore(prior.get("githubLimits"))
+        for key, item in (keep or {}).items():
+            if prior:
+                item.restore(prior.get(key))
         blocked = not_before() if not_before else None
         if blocked is not None:
             # A hold an earlier run learned comes before this run's first read.
@@ -579,7 +614,8 @@ def wait_for_transition(
                         },
                     )
                     return result
-                delay = pause()
+                # A retry still looks again when the last observation asked to.
+                delay = follow_up(prior.get("observation") or {} if prior else {}, pause(), retry=True)
                 retry_at = min(deadline, time.time() + delay)
                 save(
                     state_path,
@@ -601,10 +637,23 @@ def wait_for_transition(
                 )
                 nap(min(delay, max(0.0, deadline - time.time())))
                 continue
+            except WaitError:
+                # What `keep` learned before the error, such as a head GitHub
+                # reported, outlives it; the observation and digest stay.
+                base = prior or {"schemaVersion": 1, "kind": kind, "identity": identity, "observation": {}, "digest": None}
+                save(state_path, {**base, "updatedAt": utc_now()})
+                raise
             metrics.observations += 1
             delay = pause()
             terminal, reason = classify(observation)
-            digest = stable_digest(transition_key(observation) if transition_key else observation)
+            if terminal == "waiting":
+                delay = follow_up(observation, delay)
+            key = transition_key(observation) if transition_key else observation
+            # A key of None marks an observation with nothing to compare, such
+            # as a pull request head GitHub has not moved to the pushed commit
+            # yet. It is no baseline either: the next comparable observation
+            # sets one.
+            digest = None if key is None else stable_digest(key)
             checkpoint = {
                 "schemaVersion": 1,
                 "kind": kind,
