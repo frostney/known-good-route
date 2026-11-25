@@ -43,7 +43,7 @@ ROLLUP_PAGE = """statusCheckRollup{contexts(first:100%s){nodes{
         __typename ... on CheckRun{name status conclusion detailsUrl startedAt completedAt databaseId
           checkSuite{databaseId app{slug} workflowRun{event workflow{databaseId}}}}
         ... on StatusContext{context state targetUrl createdAt}
-      } pageInfo{hasNextPage endCursor}}}"""
+      } totalCount pageInfo{hasNextPage endCursor}}}"""
 ROLLUP = ROLLUP_PAGE % ""
 
 
@@ -194,20 +194,31 @@ def rollup_checks(gh: Gh, repo: str, oid: Any, rollup: Any) -> list[dict[str, An
         if not isinstance(oid, str) or not oid:
             raise WaitError("a check rollup with more than 100 contexts has no commit to read it from")
         owner, name = repo_parts(repo)
-        nodes, after = [], None
+        nodes, after, cursors, total = [], None, set(), None
         for _ in range(ROLLUP_PAGE_LIMIT):
             data = gh.graphql(COMMIT_ROLLUP_QUERY, {"owner": owner, "name": name, "oid": oid, "after": after})
-            commit = (data.get("repository") or {}).get("object") or {}
-            page = (commit.get("statusCheckRollup") or {}).get("contexts") or {}
-            nodes += page.get("nodes") or []
+            commit = (data.get("repository") or {}).get("object")
+            page = ((commit or {}).get("statusCheckRollup") or {}).get("contexts")
+            # A page that is missing or changes its count is a read to retry, never the end of the list.
+            if (not isinstance(commit, dict) or commit.get("__typename") != "Commit" or commit.get("oid") != oid
+                    or not isinstance(page, dict) or not isinstance(page.get("nodes"), list)
+                    or type(page.get("totalCount")) is not int):
+                raise TransientError(f"commit {oid}'s check rollup page after {after!r} is incomplete")
+            if total is not None and page["totalCount"] != total:
+                raise TransientError(f"commit {oid}'s check rollup count changed while it was read")
+            total = page["totalCount"]
+            nodes += page["nodes"]
             info = page.get("pageInfo") or {}
             if not info.get("hasNextPage"):
                 break
             after = info.get("endCursor")
-            if not after:
-                raise WaitError(f"commit {oid}'s check rollup has another page but no cursor")
+            if not after or after in cursors:
+                raise TransientError(f"commit {oid}'s check rollup has another page but no new cursor")
+            cursors.add(after)
         else:
             raise WaitError(f"commit {oid} has more than {ROLLUP_PAGE_LIMIT * 100} check contexts")
+        if len(nodes) != total:
+            raise TransientError(f"commit {oid}'s check rollup listed {len(nodes)} of {total} contexts")
     checks = []
     for node in nodes:
         if node.get("__typename") == "CheckRun":
@@ -474,6 +485,7 @@ def workflow_census(
                 "id": run["id"],
                 "name": run.get("name"),
                 "event": run.get("event"),
+                "checkSuiteId": run.get("check_suite_id"),
                 "status": run.get("status"),
                 "conclusion": run.get("conclusion"),
                 "url": run.get("html_url"),
@@ -516,9 +528,51 @@ def workflow_census(
                 for job in jobs
             ],
         })
+    # A check run GraphQL could not tie to its workflow run still belongs to
+    # that run's suite, which the census names.
+    drop_unbound_checks(observation)
     mark_superseded_runs(observation["runs"])
     mark_cancelled_duplicates(observation["runs"], repo, number)
     return observation
+
+
+def drop_unbound_checks(observation: dict[str, Any]) -> None:
+    """Leave out the check runs of the unbound runs' suites, and those whose source names an unbound event."""
+    suites = {run.get("checkSuiteId") for run in observation.get("unboundRuns", []) if run.get("checkSuiteId") is not None}
+    if "checks" in observation:
+        observation["checks"] = [
+            check for check in observation["checks"]
+            # A commit status's source is "status", not a workflow event.
+            if check.get("source") == "status" or (
+                check.get("suite") not in suites
+                and str(check.get("source") or "").rsplit("/", 1)[-1] not in UNBOUND_EVENTS
+            )
+        ]
+
+
+def rekey_census_checkpoint(path: Path | None, identity: dict[str, Any], transition_key: Any) -> None:
+    """Re-read a census checkpoint saved before unbound runs were set aside, so upgrading is not a change.
+
+    Such a checkpoint lists unbound runs, and their checks, as deciding. They
+    move to `unboundRuns` and the digest is taken again from the same
+    observation; the saved head and GitHub limits stay as they are.
+    """
+    prior = load_state(path)
+    observation = (prior or {}).get("observation")
+    if (not observation or prior.get("kind") != "checks-terminal" or prior.get("identity") != identity
+            or prior.get("digest") is None or "unboundRuns" in observation):
+        return
+    runs = observation.get("runs") or []
+    unbound = [run for run in runs if run.get("event") in UNBOUND_EVENTS]
+    normalized = {**observation, "runs": [run for run in runs if run not in unbound], "unboundRuns": [
+        {"id": run.get("id"), "name": run.get("name"), "event": run.get("event"), "checkSuiteId": run.get("checkSuiteId"),
+         "status": run.get("status"), "conclusion": run.get("conclusion"), "url": run.get("url")}
+        for run in unbound
+    ]}
+    drop_unbound_checks(normalized)
+    key = transition_key(normalized)
+    if key is not None:
+        write_state(path, {**prior, "observation": normalized, "digest": stable_digest(key)})
 
 
 def mark_superseded_runs(runs: list[dict[str, Any]]) -> None:
@@ -982,6 +1036,9 @@ def parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = parser().parse_args()
     metrics = Metrics(time.monotonic())
+    if args.kind == "checks-terminal" and args.pr is None and args.head and FULL_SHA.fullmatch(args.head.lower()):
+        # Git accepts a SHA in either case; GitHub lists runs by the lowercase one.
+        args.head = args.head.lower()
     identity = {
         "repo": args.repo,
         "pr": args.pr,
@@ -995,6 +1052,9 @@ def main() -> int:
         # Added only when requested, so existing checkpoints keep their identity.
         identity["allWorkflows"] = True
     try:
+        if args.head is not None and not args.head.strip():
+            # An empty variable must not turn an optional check into no check.
+            raise WaitError("--head is empty: pass the commit SHA, or leave --head out where it is optional")
         # wake-at observes nothing external, so it keeps no checkpoint.
         state_path = (
             None
@@ -1142,6 +1202,8 @@ def main() -> int:
                         expected_head.resume(state_path, args.kind, identity)
                     if args.kind == "checks-terminal" and not args.all_workflows:
                         rekey_legacy_checkpoint(state_path, identity, transition_key)
+                    if args.kind == "checks-terminal" and args.all_workflows:
+                        rekey_census_checkpoint(state_path, identity, transition_key)
                     output = wait_for_transition(kind=args.kind, identity=identity, observe=observe, classify=classify, state_path=state_path, deadline=deadline, interval=args.interval, metrics=metrics, transition_key=transition_key, pace=gh.pace, not_before=gh.not_before, limits=gh, wake_by=ExpectedHead.due if pull_request else None, keep={"expectedHead": expected_head} if pull_request else None)
         emit(output, args.json)
         return 0

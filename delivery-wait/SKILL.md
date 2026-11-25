@@ -154,7 +154,8 @@ requires its own identity flags, which `--help` also lists:
     newest run with `cancelledDuplicate` instead of counting it as a failure
     when it raced the older run: both come from the same branch of the same
     repository and, where GitHub names their pull requests, belong to this
-    one, the older run, on its first attempt, had started before the
+    one (without `--pr`, where both name pull requests, they share one), the
+    older run, on its first attempt, had started before the
     newer one was cancelled and was still running then, and no job of the
     cancelled run failed another way. While that older run has not finished,
     the wait waits for it. Once it has passed and every other run on the
