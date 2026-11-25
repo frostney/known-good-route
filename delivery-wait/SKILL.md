@@ -142,7 +142,7 @@ requires its own identity flags, which `--help` also lists:
     another non-success conclusion, except a cancelled duplicate run, below.
     It reports `satisfied` only when every run
     and job succeeded, was skipped or was neutral, and two consecutive
-    observations one interval apart show the same census. Jobs added by later
+    observations one interval apart show the same runs, jobs and named checks. Jobs added by later
     matrix or `needs` stages keep their run in progress. A run started after
     another run finishes shows up in the second observation. `inspect` cannot
     confirm a stable census, so it reports `waiting` instead of `satisfied` for
@@ -177,11 +177,14 @@ requires its own identity flags, which `--help` also lists:
     After a merge, these arrive on the merge commit from other work, such as a
     deployment gate dispatched for an earlier commit or another pull
     request's chained build. `--all-workflows` lists them under `unboundRuns`
-    without reading their jobs, and they decide nothing. To await one that is
-    yours, such as the gate dispatched for your own deployment, find it from
-    its own record and wait on it with `workflow-terminal`, or name the commit
-    status it posts on your commit with `--check`. A `pull_request_target` run
-    is recorded on the pull request's head and counts.
+    without reading their jobs, and they decide nothing, and neither do their
+    check runs, even under a `--check` name; a commit status still counts.
+    While one is still running, a cancelled duplicate is not yet
+    `recoverable`, since a rerun could cancel it. To await one that is yours,
+    such as the gate dispatched for your own deployment, find it from its own
+    record and wait on it with `workflow-terminal`, or name the commit status
+    it posts on your commit with `--check`. A `pull_request_target` run is
+    recorded on the pull request's head and counts.
   - `--all-workflows` does not cover commit statuses or check runs from other
     apps, such as CodeRabbit or Vercel. Add a `--check` for each one the caller
     needs; the wait then also requires those contexts to succeed.

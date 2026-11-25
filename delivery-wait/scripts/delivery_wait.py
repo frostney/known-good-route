@@ -39,11 +39,12 @@ from kgr_github import (  # noqa: E402
 )
 
 
-ROLLUP = """statusCheckRollup{contexts(first:100){nodes{
+ROLLUP_PAGE = """statusCheckRollup{contexts(first:100%s){nodes{
         __typename ... on CheckRun{name status conclusion detailsUrl startedAt completedAt databaseId
           checkSuite{databaseId app{slug} workflowRun{event workflow{databaseId}}}}
         ... on StatusContext{context state targetUrl createdAt}
-      } pageInfo{hasNextPage}}}"""
+      } pageInfo{hasNextPage endCursor}}}"""
+ROLLUP = ROLLUP_PAGE % ""
 
 
 PR_QUERY = """
@@ -63,6 +64,15 @@ query($owner:String!,$name:String!,$oid:GitObjectID!){
   repository(owner:$owner,name:$name){object(oid:$oid){__typename ... on Commit{oid %s}}}
 }
 """ % ROLLUP
+
+
+# Every page of a commit's rollup, read when its first page is not the last.
+COMMIT_ROLLUP_QUERY = """
+query($owner:String!,$name:String!,$oid:GitObjectID!,$after:String){
+  repository(owner:$owner,name:$name){object(oid:$oid){__typename ... on Commit{oid %s}}}
+}
+""" % (ROLLUP_PAGE % ",after:$after")
+ROLLUP_PAGE_LIMIT = 50
 
 
 COMMIT_HEAD_QUERY = """
@@ -148,8 +158,8 @@ def pr_snapshot(
         if early:
             return early
         checks = rollup_checks(
+            gh, repo, pull.get("headRefOid"),
             pull.get("commits", {}).get("nodes", [{}])[0].get("commit", {}).get("statusCheckRollup"),
-            "pull request",
         )
         return {"head": pull.get("headRefOid"), "state": pull.get("state"), "merged": bool(pull.get("merged")), "mergedAt": pull.get("mergedAt"), "mergeCommit": (pull.get("mergeCommit") or {}).get("oid"), "checks": checks}
     except RateLimited:
@@ -171,16 +181,40 @@ def pr_snapshot(
         return {"head": pull["head"]["sha"], "state": state, "merged": merged, "mergedAt": pull.get("merged_at"), "mergeCommit": pull.get("merge_commit_sha") if merged else None, "checks": checks}
 
 
-def rollup_checks(rollup: Any, what: str) -> list[dict[str, Any]]:
-    """The checks and statuses of a GraphQL status check rollup, sorted by name."""
+def rollup_checks(gh: Gh, repo: str, oid: Any, rollup: Any) -> list[dict[str, Any]]:
+    """The checks and statuses of a commit's GraphQL status check rollup, sorted by name.
+
+    ROLLUP is the first page. When more follow, every page is read again from
+    the commit, so all of them come from one connection. A check run of a
+    workflow run in UNBOUND_EVENTS is left out: it says nothing about the commit.
+    """
     contexts = (rollup or {}).get("contexts") or {}
+    nodes = list(contexts.get("nodes") or [])
     if contexts.get("pageInfo", {}).get("hasNextPage"):
-        raise WaitError(f"{what} has more than 100 check contexts; complete pagination is required")
+        if not isinstance(oid, str) or not oid:
+            raise WaitError("a check rollup with more than 100 contexts has no commit to read it from")
+        owner, name = repo_parts(repo)
+        nodes, after = [], None
+        for _ in range(ROLLUP_PAGE_LIMIT):
+            data = gh.graphql(COMMIT_ROLLUP_QUERY, {"owner": owner, "name": name, "oid": oid, "after": after})
+            commit = (data.get("repository") or {}).get("object") or {}
+            page = (commit.get("statusCheckRollup") or {}).get("contexts") or {}
+            nodes += page.get("nodes") or []
+            info = page.get("pageInfo") or {}
+            if not info.get("hasNextPage"):
+                break
+            after = info.get("endCursor")
+            if not after:
+                raise WaitError(f"commit {oid}'s check rollup has another page but no cursor")
+        else:
+            raise WaitError(f"commit {oid} has more than {ROLLUP_PAGE_LIMIT * 100} check contexts")
     checks = []
-    for node in contexts.get("nodes") or []:
+    for node in nodes:
         if node.get("__typename") == "CheckRun":
             suite = node.get("checkSuite") or {}
             workflow_run = suite.get("workflowRun") or {}
+            if workflow_run.get("event") in UNBOUND_EVENTS:
+                continue
             source = check_source(
                 (suite.get("app") or {}).get("slug"),
                 (workflow_run.get("workflow") or {}).get("databaseId"),
@@ -193,7 +227,7 @@ def rollup_checks(rollup: Any, what: str) -> list[dict[str, Any]]:
 
 
 def rest_checks(gh: Gh, repo: str, sha: str, rest_page_size: int) -> list[dict[str, Any]]:
-    """The checks and statuses of a commit through REST, as rollup_checks reads them."""
+    """The checks and statuses of a commit through REST, as rollup_checks reads them, unbound runs' checks left out."""
     run_pages = gh.rest_pages(f"repos/{repo}/commits/{sha}/check-runs?per_page={rest_page_size}")
     status_pages = gh.rest_pages(f"repos/{repo}/commits/{sha}/statuses?per_page={rest_page_size}")
     runs = [run for page in run_pages for run in page.get("check_runs", [])]
@@ -224,6 +258,7 @@ def rest_checks(gh: Gh, repo: str, sha: str, rest_page_size: int) -> list[dict[s
             workflows.get((run.get("check_suite") or {}).get("id"), {}).get("event"),
         )}
         for run in runs
+        if workflows.get((run.get("check_suite") or {}).get("id"), {}).get("event") not in UNBOUND_EVENTS
     ] + [
         {"name": item.get("context"), "status": "COMPLETED", "conclusion": str(item.get("state", "")).upper(), "observedAt": item.get("created_at"), "source": "status"}
         for item in statuses.values()
@@ -241,7 +276,7 @@ def commit_snapshot(gh: Gh, repo: str, sha: str, checks: bool, rest_page_size: i
             raise WaitError(f"commit {sha} was not found in {repo}")
         observation: dict[str, Any] = {"head": commit.get("oid")}
         if checks:
-            observation["checks"] = rollup_checks(commit.get("statusCheckRollup"), f"commit {sha}")
+            observation["checks"] = rollup_checks(gh, repo, commit.get("oid"), commit.get("statusCheckRollup"))
         return observation
     except RateLimited:
         gh.metrics.rate_limit_fallbacks += 1
@@ -529,8 +564,9 @@ def mark_cancelled_duplicates(runs: list[dict[str, Any]], repo: str, number: int
     no job of the cancelled run failed in any other way. A run cancelled after
     the older one finished, or with a failed job, needs its own diagnosis.
     Where GitHub names the pull requests a run belongs to, both runs belong
-    to this one: a branch can have pull requests against two bases. A
-    commit's census, with no NUMBER, has no pull request to match.
+    to this one: a branch can have pull requests against two bases. In a
+    commit's census, with no NUMBER, two runs that both name pull requests
+    must share one.
     """
     sources: dict[tuple[Any, Any], list[dict[str, Any]]] = {}
     for run in runs:
@@ -552,7 +588,12 @@ def mark_cancelled_duplicates(runs: list[dict[str, Any]], repo: str, number: int
         older = [
             run for run in source
             if run is not newest and raced(run, newest)
-            and (number is None or not run.get("pullRequests") or number in run["pullRequests"])
+            and (not run.get("pullRequests") or (
+                number in run["pullRequests"] if number is not None
+                # Without a pull request of its own, a commit's runs that both
+                # name pull requests must share one: each can target another base.
+                else not newest.get("pullRequests") or bool(set(run["pullRequests"]) & set(newest["pullRequests"]))
+            ))
         ]
         # A job that may fail without failing its run, such as one with
         # continue-on-error, still has to pass.
@@ -607,14 +648,18 @@ def cancelled_duplicates(observation: dict[str, Any], older_run: str) -> list[di
     ]
 
 
-def census_digest(observation: dict[str, Any]) -> str:
+def census_digest(observation: dict[str, Any], checks: set[str]) -> str:
     """The digest two observations must share to confirm a stable census.
 
-    Unbound runs are left out: they keep arriving on a default-branch commit,
-    for example one repository dispatch for each preview deployment, and
-    decide nothing about it.
+    It covers the runs and the named CHECKS. Unbound runs are left out: they
+    keep arriving on a default-branch commit, for example one repository
+    dispatch for each preview deployment, and decide nothing about it. So are
+    checks nobody named, which decide nothing either.
     """
-    return stable_digest({key: value for key, value in observation.items() if key != "unboundRuns"})
+    kept = {key: value for key, value in observation.items() if key != "unboundRuns"}
+    if "checks" in kept:
+        kept["checks"] = [check for check in kept["checks"] if check.get("name") in checks]
+    return stable_digest(kept)
 
 
 def deciding_runs(observation: dict[str, Any]) -> list[dict[str, Any]]:
@@ -736,9 +781,10 @@ class WorkflowCensusGate:
             self.previous = None
             return "changed", "a workflow run, job or check reached a non-success terminal result: " + "; ".join(failures)
         runs = deciding_runs(observation)
-        # Superseded runs count too: a rerun could cancel any active run.
+        # Superseded and unbound runs count too: a rerun could cancel any
+        # active run that shares its concurrency group.
         others_running = [
-            run for run in observation.get("runs", [])
+            run for run in observation.get("runs", []) + observation.get("unboundRuns", [])
             if run.get("status") != "completed" or not run.get("conclusion")
         ]
         recoverable = cancelled_duplicates(observation, "passed")
@@ -762,7 +808,7 @@ class WorkflowCensusGate:
             if not self.confirm:
                 self.previous = None
                 return "waiting", f"{reason}, once wait confirms the census is stable"
-            digest = census_digest(observation)
+            digest = census_digest(observation, self.checks)
             confirmed = digest == self.previous
             self.previous = digest
             if not confirmed:
@@ -800,7 +846,7 @@ class WorkflowCensusGate:
         summary = f"{len(runs)} workflow runs and {len(jobs)} jobs"
         if not self.confirm:
             return "waiting", f"all {summary} succeeded in this snapshot; only wait can confirm the census is stable"
-        digest = census_digest(observation)
+        digest = census_digest(observation, self.checks)
         confirmed = digest == self.previous
         self.previous = digest
         if not confirmed:
@@ -920,7 +966,10 @@ def parser() -> argparse.ArgumentParser:
         sub.add_argument("--tag", help="tag name (tag-target, release-assets)")
         sub.add_argument("--asset", action="append", default=[], help="required release asset; repeat for each")
         sub.add_argument("--check", action="append", default=[], help="check or status context that must pass; repeat for each")
-        sub.add_argument("--all-workflows", action="store_true", help="every GitHub Actions run and job on the head must pass")
+        sub.add_argument("--all-workflows", action="store_true", help=(
+            "every GitHub Actions run and job on the head must pass, except runs GitHub records on the "
+            "default branch's latest commit whatever started them (unboundRuns), such as repository_dispatch"
+        ))
         sub.add_argument("--rest-page-size", type=int, choices=range(1, 101), default=100, metavar="1..100")
         sub.add_argument("--json", action="store_true")
         if command == "wait":

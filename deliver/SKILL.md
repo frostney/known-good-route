@@ -130,8 +130,12 @@ workflow invoked returns to its caller.
 - A merge is not the end of `merged`. Where the repository delivers its
   default branch, run its configured integration path when that needs a step,
   or await the run the merge started, for the merged revision through
-  `delivery-wait`: `checks-terminal` without `--pr` waits on the merge commit
-  itself. Only after that wait reports the merged revision deployed,
+  `delivery-wait`. Wait on the deployment's own signal: its run by ID with
+  `workflow-terminal`, or the status it posts on the delivered commit with
+  `checks-terminal --check`. `checks-terminal` without `--pr` waits on the
+  merge commit itself, and its `--all-workflows` census leaves out runs GitHub
+  records on the default branch's tip, such as a repository dispatch, so
+  passing push CI alone does not show a deployment that started that way. Only after that wait reports the merged revision deployed,
   verify its destination, delivered revision or artifact provenance, and the
   required behavior in that environment. A deployment that a later merge
   superseded or held is still pending: await the one that carries the merged
