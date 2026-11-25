@@ -40,7 +40,7 @@ from kgr_github import (  # noqa: E402
 
 
 ROLLUP_PAGE = """statusCheckRollup{contexts(first:100%s){nodes{
-        __typename ... on CheckRun{name status conclusion detailsUrl startedAt completedAt databaseId
+        __typename ... on CheckRun{id name status conclusion detailsUrl startedAt completedAt databaseId
           checkSuite{databaseId app{slug} workflowRun{event workflow{databaseId}}}}
         ... on StatusContext{id context state targetUrl createdAt}
       } totalCount pageInfo{hasNextPage endCursor}}}"""
@@ -131,7 +131,7 @@ def repo_parts(repo: str) -> tuple[str, str]:
 
 def pr_snapshot(
     gh: Gh, repo: str, number: int, rest_page_size: int = 100, expected: ExpectedHead | None = None,
-    listing: dict[str, Any] | None = None,
+    listing: dict[str, Any] | None = None, names: frozenset[str] | set[str] = frozenset(),
 ) -> dict[str, Any]:
     """The pull request's head, state and checks.
 
@@ -162,7 +162,7 @@ def pr_snapshot(
             gh, repo, pull.get("headRefOid"),
             pull.get("commits", {}).get("nodes", [{}])[0].get("commit", {}).get("statusCheckRollup"),
         )
-        checks = attribute_actions_checks(gh, repo, pull.get("headRefOid"), checks, rest_page_size, listing)
+        checks = attribute_actions_checks(gh, repo, pull.get("headRefOid"), checks, names, rest_page_size, listing)
         return {"head": pull.get("headRefOid"), "state": pull.get("state"), "merged": bool(pull.get("merged")), "mergedAt": pull.get("mergedAt"), "mergeCommit": (pull.get("mergeCommit") or {}).get("oid"), "checks": checks}
     except RateLimited:
         gh.metrics.rate_limit_fallbacks += 1
@@ -192,7 +192,8 @@ def rollup_checks(gh: Gh, repo: str, oid: Any, rollup: Any) -> list[dict[str, An
     """
     contexts = (rollup or {}).get("contexts") or {}
     nodes = list(contexts.get("nodes") or [])
-    if not contexts.get("pageInfo", {}).get("hasNextPage") and type(contexts.get("totalCount")) is int \
+    paged = bool(contexts.get("pageInfo", {}).get("hasNextPage"))
+    if not paged and type(contexts.get("totalCount")) is int \
             and len(nodes) != contexts["totalCount"]:
         raise TransientError(f"commit {oid}'s check rollup listed {len(nodes)} of {contexts['totalCount']} contexts")
     if contexts.get("pageInfo", {}).get("hasNextPage"):
@@ -224,15 +225,12 @@ def rollup_checks(gh: Gh, repo: str, oid: Any, rollup: Any) -> list[dict[str, An
             raise WaitError(f"commit {oid} has more than {ROLLUP_PAGE_LIMIT * 100} check contexts")
         if len(nodes) != total:
             raise TransientError(f"commit {oid}'s check rollup listed {len(nodes)} of {total} contexts")
-    # Pages that overlap could make up the total while hiding a context.
-    seen = set()
-    for node in nodes:
-        identity = (node.get("__typename"), node.get("databaseId") if node.get("__typename") == "CheckRun" else node.get("id"))
-        if identity[1] is None:
-            continue
-        if identity in seen:
-            raise TransientError(f"commit {oid}'s check rollup lists a context twice")
-        seen.add(identity)
+    # Pages that overlap could make up the total while hiding a context, so
+    # across pages every context must carry its own global id.
+    if paged:
+        ids = [node.get("id") for node in nodes]
+        if not all(isinstance(node_id, str) and node_id for node_id in ids) or len(set(ids)) != len(ids):
+            raise TransientError(f"commit {oid}'s check rollup lists a context twice or without an id")
     checks = []
     for node in nodes:
         if node.get("__typename") == "CheckRun":
@@ -266,14 +264,19 @@ def head_runs(gh: Gh, repo: str, sha: str, rest_page_size: int, listing: dict[st
 
 
 def attribute_actions_checks(
-    gh: Gh, repo: str, sha: Any, checks: list[dict[str, Any]], rest_page_size: int, listing: dict[str, Any] | None = None,
+    gh: Gh, repo: str, sha: Any, checks: list[dict[str, Any]], names: frozenset[str] | set[str],
+    rest_page_size: int, listing: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
-    """Give a GitHub Actions check GraphQL did not tie to its workflow run that run's workflow and event.
+    """Give a named GitHub Actions check GraphQL did not tie to its workflow run that run's workflow and event.
 
     The commit's run listing names each suite's run, so an unbound run's check
-    is left out here too.
+    is left out here too. Only checks in NAMES decide, so only they are looked
+    up: another app's or workflow's check never holds a wait.
     """
-    unknown = [check for check in checks if check.get("source") == "github-actions" and check.get("suite") is not None]
+    unknown = [
+        check for check in checks
+        if check.get("name") in names and check.get("source") == "github-actions" and check.get("suite") is not None
+    ]
     if not unknown or not isinstance(sha, str):
         return checks
     workflows = {run.get("check_suite_id"): run for run in head_runs(gh, repo, sha, rest_page_size, listing)}
@@ -328,6 +331,7 @@ def rest_checks(gh: Gh, repo: str, sha: str, rest_page_size: int, listing: dict[
 
 def commit_snapshot(
     gh: Gh, repo: str, sha: str, checks: bool, rest_page_size: int = 100, listing: dict[str, Any] | None = None,
+    names: frozenset[str] | set[str] = frozenset(),
 ) -> dict[str, Any]:
     """A commit with no pull request, such as a merge commit on the default branch: its head and, with CHECKS, its checks."""
     owner, name = repo_parts(repo)
@@ -340,7 +344,7 @@ def commit_snapshot(
         if checks:
             observation["checks"] = attribute_actions_checks(
                 gh, repo, commit.get("oid"),
-                rollup_checks(gh, repo, commit.get("oid"), commit.get("statusCheckRollup")), rest_page_size, listing,
+                rollup_checks(gh, repo, commit.get("oid"), commit.get("statusCheckRollup")), names, rest_page_size, listing,
             )
         return observation
     except RateLimited:
@@ -502,7 +506,7 @@ def rest_census(pages: list[Any], field: str, label: str) -> list[dict[str, Any]
 
 def workflow_census(
     gh: Gh, repo: str, number: int | None, head: str, checks: bool, rest_page_size: int = 100,
-    expected: ExpectedHead | None = None,
+    expected: ExpectedHead | None = None, names: frozenset[str] | set[str] = frozenset(),
 ) -> dict[str, Any]:
     """Every GitHub Actions run for the exact head, with its jobs.
 
@@ -512,9 +516,9 @@ def workflow_census(
     """
     listing: dict[str, Any] = {}  # One run listing serves check attribution and the census.
     if number is None:
-        snapshot = commit_snapshot(gh, repo, head, checks, rest_page_size, listing)
+        snapshot = commit_snapshot(gh, repo, head, checks, rest_page_size, listing, names)
     else:
-        snapshot = pr_snapshot(gh, repo, number, rest_page_size, expected, listing) if checks else {"head": pr_head(gh, repo, number)}
+        snapshot = pr_snapshot(gh, repo, number, rest_page_size, expected, listing, names) if checks else {"head": pr_head(gh, repo, number)}
     observed = snapshot.get("head")
     if not isinstance(observed, str) or not observed:
         raise WaitError(f"pull request {repo}#{number} has no verified head" if number is not None else f"commit {head} has no verified head")
@@ -609,14 +613,18 @@ def drop_unbound_checks(observation: dict[str, Any]) -> None:
         ]
 
 
-def rekey_unbound_checkpoint(path: Path | None, identity: dict[str, Any], transition_key: Any) -> None:
+def rekey_unbound_checkpoint(
+    path: Path | None, identity: dict[str, Any], transition_key: Any, suite_events: Any = None,
+) -> None:
     """Re-read a checks-terminal checkpoint saved before unbound runs were set aside, so upgrading is not a change.
 
     Such a checkpoint counts unbound runs, in a census, and their check runs
     as deciding. The runs move to `unboundRuns`, their checks are dropped, and
     the digest is taken again from the same observation; the saved head and
-    GitHub limits stay as they are. A checkpoint that has nothing unbound is
-    left alone.
+    GitHub limits stay as they are. A saved Actions check GraphQL did not tie
+    to its workflow run takes its event from SUITE_EVENTS, the head's current
+    run listing by suite, read only when such a check is there. A checkpoint
+    that has nothing unbound is left alone.
     """
     prior = load_state(path)
     observation = (prior or {}).get("observation")
@@ -632,6 +640,19 @@ def rekey_unbound_checkpoint(path: Path | None, identity: dict[str, Any], transi
             {"id": run.get("id"), "name": run.get("name"), "event": run.get("event"), "checkSuiteId": run.get("checkSuiteId"),
              "status": run.get("status"), "conclusion": run.get("conclusion"), "url": run.get("url")}
             for run in unbound
+        ]
+    untied = [
+        check for check in normalized.get("checks") or []
+        if check.get("source") == "github-actions" and check.get("suite") is not None and check_event(check) is None
+    ]
+    if untied and suite_events is not None:
+        try:
+            events = suite_events()
+        except WaitError:
+            events = {}  # Unresolved, the check stays as it was saved.
+        normalized["checks"] = [
+            {**check, "event": events[check["suite"]]} if check in untied and check["suite"] in events else check
+            for check in normalized["checks"]
         ]
     drop_unbound_checks(normalized)
     if normalized.get("runs") == observation.get("runs") and normalized.get("checks") == observation.get("checks"):
@@ -1170,22 +1191,22 @@ def main() -> int:
                     )
             if args.kind == "checks-terminal" and not pull_request:
                 if args.all_workflows:
-                    observe = lambda: workflow_census(gh, args.repo, None, args.head, bool(args.check), args.rest_page_size)
+                    observe = lambda: workflow_census(gh, args.repo, None, args.head, bool(args.check), args.rest_page_size, names=set(args.check))
                     gate = WorkflowCensusGate(args.head, set(args.check), args.command == "wait")
                     classify = gate
                 else:
-                    observe = lambda: commit_snapshot(gh, args.repo, args.head, True, args.rest_page_size, {})
+                    observe = lambda: commit_snapshot(gh, args.repo, args.head, True, args.rest_page_size, {}, set(args.check))
                     classify = lambda value: classify_pr(args.kind, args.head, set(args.check), value)
             elif pull_request:
                 expected_head = ExpectedHead(gh, args.repo, args.head)
                 if args.all_workflows:
                     observe = lambda: expected_head.annotate(
-                        workflow_census(gh, args.repo, args.pr, args.head, bool(args.check), args.rest_page_size, expected_head)
+                        workflow_census(gh, args.repo, args.pr, args.head, bool(args.check), args.rest_page_size, expected_head, set(args.check))
                     )
                     gate = WorkflowCensusGate(args.head, set(args.check), args.command == "wait")
                     classify = gate
                 else:
-                    observe = lambda: expected_head.annotate(pr_snapshot(gh, args.repo, args.pr, args.rest_page_size, expected_head, {}))
+                    observe = lambda: expected_head.annotate(pr_snapshot(gh, args.repo, args.pr, args.rest_page_size, expected_head, {}, set(args.check)))
                     classify = lambda value: classify_pr(args.kind, args.head, set(args.check), value)
             elif args.kind == "workflow-terminal":
                 if not args.run_id:
@@ -1269,7 +1290,10 @@ def main() -> int:
                     if args.kind == "checks-terminal" and not args.all_workflows:
                         rekey_legacy_checkpoint(state_path, identity, transition_key)
                     if args.kind == "checks-terminal":
-                        rekey_unbound_checkpoint(state_path, identity, transition_key)
+                        rekey_unbound_checkpoint(state_path, identity, transition_key, lambda: {
+                            run.get("check_suite_id"): run.get("event")
+                            for run in head_runs(gh, args.repo, args.head, args.rest_page_size)
+                        })
                     output = wait_for_transition(kind=args.kind, identity=identity, observe=observe, classify=classify, state_path=state_path, deadline=deadline, interval=args.interval, metrics=metrics, transition_key=transition_key, pace=gh.pace, not_before=gh.not_before, limits=gh, wake_by=ExpectedHead.due if pull_request else None, keep={"expectedHead": expected_head} if pull_request else None)
         emit(output, args.json)
         return 0

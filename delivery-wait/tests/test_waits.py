@@ -1753,7 +1753,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(output["reason"], "workflow-terminal requires --run-id")
 
     def deploy_status(self, context: str = "deploy", state: str = "SUCCESS") -> dict:
-        return {"__typename": "StatusContext", "context": context, "state": state,
+        return {"__typename": "StatusContext", "id": f"status-{context}", "context": context, "state": state,
                 "targetUrl": "https://example.invalid", "createdAt": "2026-08-12T08:00:00Z"}
 
     def test_checks_from_unbound_runs_neither_decide_nor_unsettle_a_commit_census(self) -> None:
@@ -1994,6 +1994,61 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(output["metrics"]["observations"], 1)
         listings = [entry for entry in self.rest_requests() if "/actions/runs?" in entry["args"][-1]]
         self.assertEqual(len(listings), 1, listings)
+
+    def test_an_unnamed_untied_actions_check_holds_neither_a_merge_nor_a_named_wait(self) -> None:
+        # GraphQL did not tie this Actions check to a workflow run, and the run listing has no run for its suite.
+        untied = check("lint", "COMPLETED", "FAILURE", app="github-actions", suite_id=603)
+        merged = pull("head-1", [untied, self.deploy_status()], merged=True)
+        self.write_scenario(pull=merged)
+        _, output = self.run_json(DELIVERY, "inspect", "pr-merged", "--repo", "owner/repo", "--pr", "7", "--head", "head-1")
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        _, output = self.run_json(DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+                                  "--check", "deploy")
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertFalse([entry for entry in self.rest_requests() if "/actions/runs?" in entry["args"][-1]])
+        # A named one is looked up, and waits while its suite has no listed run.
+        _, output = self.run_json(DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+                                  "--check", "lint")
+        self.assertIn("no workflow run is listed yet for check suite 603", output["reason"])
+
+    def test_a_saved_untied_check_is_resolved_by_its_suite_before_the_wait_resumes(self) -> None:
+        sys.path.insert(0, str(DELIVERY.parent))
+        try:
+            from kgr_github import stable_digest
+        finally:
+            sys.path.pop(0)
+        state = self.directory / "untied.json"
+        identity = {"repo": "owner/repo", "pr": 7, "head": "head-1", "runId": None, "tag": None, "checks": ["deploy"], "assets": []}
+        pending = {"name": "deploy", "status": "COMPLETED", "conclusion": "PENDING", "observedAt": "2026-08-12T08:00:00Z", "source": "status"}
+        untied = {"name": "deploy", "status": "COMPLETED", "conclusion": "FAILURE", "completedAt": "2026-08-12T08:00:00Z",
+                  "observedAt": "2026-08-12T08:00:00Z", "suite": 603, "source": "github-actions"}
+        state.write_text(json.dumps({
+            "schemaVersion": 1, "kind": "checks-terminal", "identity": identity,
+            "observation": {"head": "head-1", "state": "OPEN", "merged": False, "mergedAt": None, "mergeCommit": None,
+                            "checks": [untied, pending]},
+            "digest": stable_digest({"head": "head-1", "nonSuccess": ["deploy"], "terminal": False}),
+            "expectedHead": {"seen": True, "since": None, "relation": "missing"},
+            "updatedAt": "2026-08-12T08:06:00Z",
+        }))
+        dispatch = workflow_run(103, [], event="repository_dispatch", workflow_id=7, check_suite_id=603, conclusion="failure")
+        self.write_scenario(pull=pull("head-1", [self.deploy_status(state="PENDING"),
+                                                 check("deploy", "COMPLETED", "FAILURE", app="github-actions", suite_id=603)]),
+                            census=[census(dispatch)])
+        _, output = self.run_json(DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+                                  "--check", "deploy", "--state", str(state), "--deadline", self.short_deadline(), "--interval", "0.05")
+        self.assertEqual(output["state"], "timed-out", output["reason"])
+
+    def test_pages_that_repeat_a_context_without_a_database_id_are_retried(self) -> None:
+        deploy = self.deploy_status()
+        repeated = {**check("build", "COMPLETED", "SUCCESS", app="other-app"), "databaseId": None}
+        self.write_scenario(commitPages={
+            "": {"contexts": {"nodes": [repeated, deploy, *[self.deploy_status(f"other-{n}") for n in range(98)]], "totalCount": 101,
+                              "pageInfo": {"hasNextPage": True, "endCursor": "c1"}}},
+            "c1": {"contexts": {"nodes": [repeated], "totalCount": 101, "pageInfo": {"hasNextPage": False}}},
+        })
+        result, output = self.commit_wait("--check", "deploy", command="inspect")
+        self.assertEqual(result.returncode, 2, output["reason"])
+        self.assertIn("twice or without an id", output["reason"])
 
     def test_help_names_each_kind_and_the_flags_it_needs(self) -> None:
         for args in ((), ("wait",), ("inspect",)):
