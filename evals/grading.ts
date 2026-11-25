@@ -1013,13 +1013,11 @@ export function validateCases(
         );
       }
     }
-    for (const action of evalCase.expected.requiredAnyActions ?? []) {
-      if (forbiddenActions.has(action)) {
-        throw new Error(
-          `${evalCase.id} both accepts and forbids action ${action}`,
-        );
-      }
-    }
+    // An alternative list passes with any one of its actions, so only a list
+    // whose every action is forbidden leaves the case unpassable.
+    const alternatives = evalCase.expected.requiredAnyActions ?? [];
+    if (alternatives.length && alternatives.every((action) => forbiddenActions.has(action)))
+      throw new Error(`${evalCase.id} accepts only forbidden actions ${alternatives.join(", ")}`);
     // A sequence or a positive minimum count needs the action recorded, so
     // forbidding it leaves the case unpassable.
     for (const action of [

@@ -283,9 +283,9 @@ test("native Agent evidence uses the actual returned result, not the user's task
 });
 
 test("a new action name moves no case hash", async () => {
-  // Case modules are loaded in a fresh process after actionNames gains an
-  // action in an existing namespace and one in a new namespace, so a case
-  // that derives its content from the inventory in any way changes hash.
+  // Case modules are loaded in a fresh process after actionNames gains a
+  // forge action and an action in a new namespace, so a case that derives its
+  // content from the inventory, by namespace or by exclusion, changes hash.
   const manifest = await Bun.file(new URL("./calibration.json", import.meta.url)).json();
   const directory = await mkdtemp(join(tmpdir(), "kgr-action-names-"));
   try {
@@ -293,7 +293,7 @@ test("a new action name moves no case hash", async () => {
     await Bun.write(script, [
       `import { createHash } from "node:crypto";`,
       `import { actionNames } from ${JSON.stringify(new URL("./types.ts", import.meta.url).href)};`,
-      `(actionNames as unknown as string[]).push("ci.calibrationProbe", "probe.calibration");`,
+      `(actionNames as unknown as string[]).push("forge.calibrationProbe", "probe.calibration");`,
       `const { evalCases } = await import(${JSON.stringify(new URL("./cases.ts", import.meta.url).href)});`,
       `console.log(JSON.stringify(Object.fromEntries(evalCases.map((c: { id: string }) => [c.id, createHash("sha256").update(JSON.stringify(c)).digest("hex")]))));`,
     ].join("\n"));
@@ -329,6 +329,9 @@ test("preflight rejects a selector that matches nothing and a requirement on a f
     { forbiddenActions: ["forge.*"], requiredActionSequence: ["forge.openDraftPr"] },
   ] as Array<EvalCase["expected"]>)
     expect(() => validateCases([scenario(expected)], new Set())).toThrow("requires and forbids");
+  // An alternative list needs one permitted action, not all of them.
+  expect(() => validateCases([scenario({ permittedActions: ["report", "validation.run"], requiredAnyActions: ["validation.run", "validation.reuse"] })], new Set())).not.toThrow();
+  expect(() => validateCases([scenario({ permittedActions: ["report"], requiredAnyActions: ["validation.run", "validation.reuse"] })], new Set())).toThrow("accepts only forbidden actions");
   expect(() => validateCases([scenario({ permittedActions: ["report"], minActionCounts: { "file.edit": 0 } })], new Set())).not.toThrow();
 });
 test("calibration provenance covers and hashes the current loaded scenario inventory", async () => {
