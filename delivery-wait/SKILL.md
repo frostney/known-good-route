@@ -120,11 +120,16 @@ python3 scripts/delivery_wait.py wait checks-terminal --repo <owner/repo> \
 `wait <kind> --repo <owner/repo> --deadline <ISO 8601> [--interval <seconds>]
 [--state <path>] [--json]` runs a wait; `inspect <kind>` takes the
 same identity flags without `--deadline`, `--interval`, or `--state`. Each kind
-requires its own identity flags:
+requires its own identity flags, which `--help` also lists:
 
-- `checks-terminal`: `--pr <number>`, `--head <sha>`, and `--all-workflows`,
-  one `--check <name>` per expected check context, or both. A run with neither
-  exits with an operational error instead of waiting.
+- `checks-terminal`: `--head <sha>`, and `--all-workflows`, one
+  `--check <name>` per expected check context, or both. A run with neither
+  exits with an operational error instead of waiting. With `--pr <number>` it
+  waits on that pull request's head. Without `--pr` it waits on the commit
+  itself, such as a merge commit on the default branch after a merge:
+  `--head` is then the full commit SHA, which `pr-merged` reports as
+  `mergeCommit`, and `--check` reads that commit's own checks and statuses.
+  A commit has no head to move, so the head-lag rules below do not apply.
   - `--all-workflows` needs no check names. It finds every GitHub Actions
     workflow run for the exact head and every job in each run's latest attempt.
     Of several runs of one workflow for the same event, only the newest
@@ -137,7 +142,7 @@ requires its own identity flags:
     another non-success conclusion, except a cancelled duplicate run, below.
     It reports `satisfied` only when every run
     and job succeeded, was skipped or was neutral, and two consecutive
-    observations one interval apart show the same census. Jobs added by later
+    observations one interval apart show the same runs, jobs and named checks. Jobs added by later
     matrix or `needs` stages keep their run in progress. A run started after
     another run finishes shows up in the second observation. `inspect` cannot
     confirm a stable census, so it reports `waiting` instead of `satisfied` for
@@ -149,7 +154,8 @@ requires its own identity flags:
     newest run with `cancelledDuplicate` instead of counting it as a failure
     when it raced the older run: both come from the same branch of the same
     repository and, where GitHub names their pull requests, belong to this
-    one, the older run, on its first attempt, had started before the
+    one (without `--pr`, where both name pull requests, they share one), the
+    older run, on its first attempt, had started before the
     newer one was cancelled and was still running then, and no job of the
     cancelled run failed another way. While that older run has not finished,
     the wait waits for it. Once it has passed and every other run on the
@@ -165,6 +171,21 @@ requires its own identity flags:
     check of a first attempt that has an older run of its source waits for
     its run to complete. `inspect` reports a cancelled duplicate as `waiting`, naming
     the rerun.
+  - A run whose event GitHub records on the default branch's latest commit,
+    whatever started it, says nothing about that commit: `repository_dispatch`,
+    `workflow_run`, `schedule`, `check_run`, `check_suite`, `status`, and
+    activity on issues, comments, labels, discussions and the repository.
+    After a merge, these arrive on the merge commit from other work, such as a
+    deployment gate dispatched for an earlier commit or another pull
+    request's chained build. `--all-workflows` lists them under `unboundRuns`
+    without reading their jobs, and they decide nothing, and neither do their
+    check runs, even under a `--check` name; a commit status still counts.
+    While one is still running, a cancelled duplicate is not yet
+    `recoverable`, since a rerun could cancel it. To await one that is yours,
+    such as the gate dispatched for your own deployment, find it from its own
+    record and wait on it with `workflow-terminal`, or name the commit status
+    it posts on your commit with `--check`. A `pull_request_target` run is
+    recorded on the pull request's head and counts.
   - `--all-workflows` does not cover commit statuses or check runs from other
     apps, such as CodeRabbit or Vercel. Add a `--check` for each one the caller
     needs; the wait then also requires those contexts to succeed.
@@ -186,8 +207,10 @@ requires its own identity flags:
     time are not that set: workflows add jobs in stages.
 - `pr-merged`: `--pr <number>` and `--head <sha>`. It reports `changed` when
   the pull request is closed without merging.
-- `workflow-terminal`: `--run-id <id>` and `--head <sha>`. Use it for a
-  dispatched or other run whose checks do not appear on the pull request.
+- `workflow-terminal`: `--run-id <id>`. Use it for a dispatched or other run
+  whose checks do not appear on the pull request. A run keeps its commit, so
+  `--head <sha>` is optional: given, it reports `invalidated` when the run is
+  for another commit.
 - `tag-target`: `--tag <name>` and `--head <sha>`.
 - `release-assets`: `--tag <name>`, `--head <sha>`, and one `--asset <name>` per
   required asset.

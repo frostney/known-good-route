@@ -125,6 +125,22 @@ if args[:2] == ["api", "graphql"]:
         output({"data":{"repository":{"pullRequest":with_connection_counts(scenario["review"])}}})
     if "releaseAssets" in query:
         output({"data":{"repository":scenario["tag"]}})
+    if "object(oid:" in query and "commitPages" in scenario:
+        # Pages of a commit's rollup, keyed by the cursor that asks for each.
+        page = scenario["commitPages"][request["variables"].get("after") or ""]
+        output({"data":{"repository":{"object":{"__typename":"Commit","oid":request["variables"]["oid"],"statusCheckRollup":page}}}})
+    if "object(oid:" in query:
+        # A commit with no pull request; a missing "commit" is one GitHub does not know.
+        # "commitsByRequest" gives one commit per lookup, the last repeating.
+        commit = scenario.get("commit")
+        if scenario.get("commitsByRequest"):
+            lookups = pathlib.Path(os.environ["FAKE_GH_COUNTER"] + ".commits")
+            seen = int(lookups.read_text()) if lookups.exists() else 0
+            lookups.write_text(str(seen + 1))
+            commit = scenario["commitsByRequest"][min(seen, len(scenario["commitsByRequest"]) - 1)]
+        if commit is not None and "statusCheckRollup" not in query:
+            commit = {key: value for key, value in commit.items() if key != "statusCheckRollup"}
+        output({"data":{"repository":{"object":commit}}})
     pulls = scenario.get("pullsByRequest") or [scenario["pull"]]
     selected = pulls[min(counter, len(pulls) - 1)]
     if "state" not in query.split("commits(")[0].split():
@@ -170,8 +186,20 @@ if endpoint.endswith("/pulls/comments/10"):
     output({"id":10,"pull_request_url":"https://api.github.com/repos/owner/repo/pulls/7","body":"finding","user":{"login":"reviewer"}})
 if endpoint.endswith("/pulls/7"):
     output(scenario["restPull"])
+import re
+if re.fullmatch(r"repos/[^/]+/[^/]+/commits/[^/?]+", endpoint):
+    if "restCommit" not in scenario:
+        print("HTTP/2.0 404 Not Found\r\n\r\n" + json.dumps({"message": "Not Found"}))
+        print("gh: Not Found (HTTP 404)", file=sys.stderr)
+        sys.exit(1)
+    output(scenario["restCommit"])
 if "/check-runs" in endpoint:
-    output(pages=[scenario.get("restChecks", {"check_runs":[]})])
+    # GitHub numbers each check run and counts the list, as the census needs.
+    page = scenario.get("restChecks", {"check_runs":[]})
+    for index, item in enumerate(page["check_runs"]):
+        item.setdefault("id", 9000 + index)
+    page.setdefault("total_count", len(page["check_runs"]))
+    output(pages=[page])
 if "/statuses" in endpoint:
     output(pages=[scenario.get("restStatuses", [])])
 if endpoint.endswith("/comments?per_page=100"):
@@ -679,7 +707,10 @@ class WaitCommandsTest(unittest.TestCase):
     def test_the_expected_head_stays_seen_after_an_operational_error(self) -> None:
         crowded = pull("head-1", [])
         crowded["commits"]["nodes"][0]["commit"]["statusCheckRollup"]["contexts"]["pageInfo"] = {"hasNextPage": True}
-        self.write_scenario(pull=crowded)
+        # Pages past the helper's limit are an error, not a retry.
+        endless = {("" if n == 0 else f"c{n}"): {"contexts": {"nodes": [], "totalCount": 0, "pageInfo": {"hasNextPage": True, "endCursor": f"c{n + 1}"}}}
+                   for n in range(60)}
+        self.write_scenario(pull=crowded, commitPages=endless)
         state = self.directory / "wait.json"
         self.assertEqual(self.lagging_head_wait(state=state, seconds=0.3)["state"], "operational-error")
         self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
@@ -1606,6 +1637,437 @@ class WaitCommandsTest(unittest.TestCase):
         # The changed census answered in full; only the third observation was unchanged.
         self.assertEqual(output["metrics"]["observations"], 3)
         self.assertEqual(output["metrics"]["notModified"], 2)
+
+    MERGE = "ecaaad4ed6e5f3f849cd7a828e4755b5b8fe5256"
+
+    def commit_wait(self, *extra: str, head: str | None = None, command: str = "wait") -> tuple[subprocess.CompletedProcess[str], dict]:
+        timing = ("--deadline", self.deadline(), "--interval", "0.01") if command == "wait" else ()
+        return self.run_json(
+            DELIVERY, command, "checks-terminal", "--repo", "owner/repo", "--head", head or self.MERGE, *extra, *timing,
+        )
+
+    def merge_commit(self, checks: list[dict] | None = None) -> dict:
+        return {"__typename": "Commit", "oid": self.MERGE,
+                "statusCheckRollup": {"contexts": {"nodes": checks or [], "pageInfo": {"hasNextPage": False}}}}
+
+    def merge_run(self, run_id: int, event: str, conclusion: str = "success", name: str = "CI", **values: Any) -> dict:
+        return workflow_run(run_id, [workflow_job(run_id * 10, "job", conclusion=conclusion, run_id=run_id)],
+                            conclusion=conclusion, head=self.MERGE, name=name, event=event, branch="main",
+                            workflow_id=run_id, **values)
+
+    def test_a_merge_commit_census_needs_no_pull_request(self) -> None:
+        self.write_scenario(commit=self.merge_commit(), census=[census(self.merge_run(101, "push"))])
+        result, output = self.commit_wait("--all-workflows")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output["state"], "satisfied")
+        self.assertIsNone(output["identity"]["pr"])
+        self.assertEqual([run["id"] for run in output["observation"]["runs"]], [101])
+
+    def test_runs_github_records_on_the_default_branch_tip_do_not_decide_a_commit(self) -> None:
+        # Seen on a merge commit: the previous deployment's gate, dispatched after the merge,
+        # failed holding a superseded deployment, and another PR's build chained a workflow_run.
+        own = [self.merge_run(101, "push"), self.merge_run(102, "deployment_status", name="Smoke")]
+        held = self.merge_run(103, "repository_dispatch", "failure", "Deployment Gate")
+        chained = self.merge_run(104, "workflow_run", "failure", "Image build for pull request 12")
+        later = self.merge_run(105, "repository_dispatch", "skipped", "Deployment Gate")
+        # Unbound runs arriving between two observations do not stop them confirming the census.
+        self.write_scenario(commit=self.merge_commit(), census=[census(*own, held), census(*own, held, chained, later)])
+        result, output = self.commit_wait("--all-workflows")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertEqual(output["metrics"]["observations"], 2)
+        self.assertEqual([run["id"] for run in output["observation"]["runs"]], [101, 102])
+        self.assertEqual([(run["id"], run["event"]) for run in output["observation"]["unboundRuns"]],
+                         [(103, "repository_dispatch"), (104, "workflow_run"), (105, "repository_dispatch")])
+        self.assertIn("3 runs of events GitHub records on the default branch's latest commit were not counted", output["reason"])
+        # An unbound run's jobs are never read.
+        jobs = [entry["args"] for entry in self.rest_requests() if "/jobs" in entry["args"][-1]]
+        self.assertTrue(jobs)
+        self.assertFalse([args for args in jobs if any(f"/runs/{run_id}/" in arg for arg in args for run_id in (103, 104, 105))])
+
+    def test_a_failed_run_the_commit_started_still_fails_its_census(self) -> None:
+        self.write_scenario(commit=self.merge_commit(), census=[census(
+            self.merge_run(101, "push", "failure"), self.merge_run(102, "pull_request_target"),
+        )])
+        _, output = self.commit_wait("--all-workflows")
+        self.assertEqual(output["state"], "changed")
+        self.assertIn("CI: failure", output["reason"])
+        self.reset_census()
+        # pull_request_target runs are recorded on the pull request's head and count.
+        self.write_scenario(commit=self.merge_commit(), census=[census(
+            self.merge_run(101, "push"), self.merge_run(102, "pull_request_target", "failure", "Label"),
+        )])
+        _, output = self.commit_wait("--all-workflows")
+        self.assertEqual(output["state"], "changed")
+        self.assertEqual(output["observation"]["unboundRuns"], [])
+
+    def test_a_pull_request_census_does_not_count_unbound_runs_either(self) -> None:
+        self.write_scenario(census=[census(
+            workflow_run(101, matrix_jobs(1)),
+            workflow_run(102, [workflow_job(1020, "gate", conclusion="failure", run_id=102)], conclusion="failure",
+                         event="repository_dispatch", workflow_id=9),
+        )])
+        _, output = self.census_wait()
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertEqual([run["id"] for run in output["observation"]["unboundRuns"]], [102])
+
+    def test_named_checks_on_a_commit_read_its_own_rollup(self) -> None:
+        status = {"__typename": "StatusContext", "context": "deploy/production", "state": "SUCCESS",
+                  "targetUrl": "https://example.invalid", "createdAt": "2026-08-12T08:00:00Z"}
+        self.write_scenario(commit=self.merge_commit([status, check("CI", "COMPLETED", "SUCCESS", event="push")]))
+        result, output = self.commit_wait("--check", "deploy/production", "--check", "CI")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        status["state"] = "PENDING"
+        self.write_scenario(commit=self.merge_commit([status]))
+        _, output = self.commit_wait("--check", "deploy/production", command="inspect")
+        self.assertEqual(output["state"], "waiting")
+
+    def test_a_commit_falls_back_to_rest_when_graphql_is_rate_limited(self) -> None:
+        self.write_scenario(
+            graphqlRateLimited=True, restCommit={"sha": self.MERGE},
+            restStatuses=[{"context": "deploy", "state": "success", "created_at": "2026-08-12T08:00:00Z"}],
+        )
+        _, output = self.commit_wait("--check", "deploy", command="inspect")
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertEqual(output["metrics"]["rateLimitFallbacks"], 1)
+        self.write_scenario(graphqlRateLimited=True)
+        result, output = self.commit_wait("--check", "deploy", command="inspect")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn(f"commit {self.MERGE} was not found in owner/repo", output["reason"])
+
+    def test_a_commit_wait_names_what_it_needs(self) -> None:
+        self.write_scenario()
+        result, output = self.commit_wait("--all-workflows", head="ecaaad4")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("needs its full SHA", output["reason"])
+        result, output = self.commit_wait("--all-workflows")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn(f"commit {self.MERGE} was not found in owner/repo", output["reason"])
+        result, output = self.run_json(DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--all-workflows")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("without --pr a commit such as a merge commit", output["reason"])
+        result, output = self.run_json(DELIVERY, "inspect", "pr-merged", "--repo", "owner/repo", "--head", "head-1")
+        self.assertEqual(output["reason"], "pr-merged requires --pr and --head")
+        result, output = self.run_json(DELIVERY, "inspect", "workflow-terminal", "--repo", "owner/repo", "--head", "head-1")
+        self.assertEqual(output["reason"], "workflow-terminal requires --run-id")
+
+    def deploy_status(self, context: str = "deploy", state: str = "SUCCESS") -> dict:
+        return {"__typename": "StatusContext", "id": f"status-{context}", "context": context, "state": state,
+                "targetUrl": "https://example.invalid", "createdAt": "2026-08-12T08:00:00Z"}
+
+    def test_checks_from_unbound_runs_neither_decide_nor_unsettle_a_commit_census(self) -> None:
+        # Each observation sees one more failed check, named like the requested status,
+        # from a repository dispatch; the commit's own status decides.
+        dispatched = [check("deploy", "COMPLETED", "FAILURE", app="github-actions", event="repository_dispatch",
+                            suite_id=600 + n, workflow=7, started_at=f"2026-08-12T08:0{n}:00Z") for n in range(3)]
+        self.write_scenario(commitsByRequest=[self.merge_commit([self.deploy_status(), *dispatched[:n]]) for n in (1, 2, 3)],
+                            census=[census(self.merge_run(101, "push"))])
+        _, output = self.commit_wait("--all-workflows", "--check", "deploy")
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertEqual(output["metrics"]["observations"], 2)
+        self.assertEqual([(c["name"], c["source"]) for c in output["observation"]["checks"]], [("deploy", "status")])
+        # Through REST too: the dispatch run's check run is left out by its run's event.
+        self.reset_census()
+        self.counter.unlink()  # GraphQL refuses the first call only.
+        dispatch = workflow_run(103, [], head=self.MERGE, event="repository_dispatch", branch="main", workflow_id=7,
+                                check_suite_id=603, conclusion="failure")
+        self.write_scenario(
+            graphqlRateLimited=True, restCommit={"sha": self.MERGE}, census=[census(dispatch)],
+            restChecks={"check_runs": [{"name": "deploy", "status": "completed", "conclusion": "failure",
+                                        "app": {"slug": "github-actions"}, "check_suite": {"id": 603}}]},
+            restStatuses=[{"context": "deploy", "state": "success", "created_at": "2026-08-12T08:00:00Z"}],
+        )
+        _, output = self.commit_wait("--check", "deploy", command="inspect")
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertEqual(len(output["observation"]["checks"]), 1)
+
+    def test_unnamed_checks_arriving_do_not_stop_the_census_confirming(self) -> None:
+        previews = [self.deploy_status(f"preview-{n}", "PENDING") for n in range(3)]
+        self.write_scenario(commitsByRequest=[self.merge_commit([self.deploy_status(), *previews[:n]]) for n in (1, 2, 3)],
+                            census=[census(self.merge_run(101, "push"))])
+        _, output = self.commit_wait("--all-workflows", "--check", "deploy")
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertEqual(output["metrics"]["observations"], 2)
+
+    def test_a_rerun_waits_for_active_unbound_runs_on_the_commit(self) -> None:
+        older = self.merge_run(101, "push")
+        cancelled = workflow_run(102, [workflow_job(1021, "job", conclusion="cancelled", run_id=102)], conclusion="cancelled",
+                                 head=self.MERGE, event="push", branch="main", workflow_id=101, updated_at="2026-08-12T08:00:02Z")
+        dispatch = workflow_run(103, [], status="in_progress", conclusion=None, head=self.MERGE, event="repository_dispatch",
+                                branch="main", workflow_id=103, name="Gate")
+        self.write_scenario(commit=self.merge_commit(), census=[census(older, cancelled, dispatch)])
+        _, output = self.commit_wait("--all-workflows", command="inspect")
+        self.assertEqual(output["state"], "waiting")
+        self.assertIn("can be rerun once the other 1 workflow runs", output["reason"])
+        self.reset_census()
+        dispatch["run"].update(status="completed", conclusion="failure")
+        self.write_scenario(commit=self.merge_commit(), census=[census(older, cancelled, dispatch)])
+        _, output = self.commit_wait("--all-workflows")
+        self.assertEqual(output["state"], "recoverable", output["reason"])
+
+    def test_commit_runs_of_different_pull_requests_are_not_duplicates(self) -> None:
+        older = workflow_run(101, [workflow_job(1011, "job", run_id=101)], head=self.MERGE, event="push", branch="main",
+                             workflow_id=9, pull_requests=[7])
+        cancelled = workflow_run(102, [workflow_job(1021, "job", conclusion="cancelled", run_id=102)], conclusion="cancelled",
+                                 head=self.MERGE, event="push", branch="main", workflow_id=9, pull_requests=[8],
+                                 updated_at="2026-08-12T08:00:02Z")
+        self.write_scenario(commit=self.merge_commit(), census=[census(older, cancelled)])
+        _, output = self.commit_wait("--all-workflows")
+        self.assertEqual(output["state"], "changed", output["reason"])
+        self.reset_census()
+        cancelled["run"]["pull_requests"] = [{"number": 8}, {"number": 7}]
+        self.write_scenario(commit=self.merge_commit(), census=[census(older, cancelled)])
+        _, output = self.commit_wait("--all-workflows")
+        self.assertEqual(output["state"], "recoverable", output["reason"])
+
+    def test_a_named_check_past_the_first_hundred_contexts_is_read(self) -> None:
+        filler = [self.deploy_status(f"other-{n}") for n in range(100)]
+        deploy = self.deploy_status()
+        self.write_scenario(commitPages={
+            "": {"contexts": {"nodes": filler, "totalCount": 101, "pageInfo": {"hasNextPage": True, "endCursor": "c1"}}},
+            "c1": {"contexts": {"nodes": [deploy], "totalCount": 101, "pageInfo": {"hasNextPage": False, "endCursor": None}}},
+        })
+        result, output = self.commit_wait("--check", "deploy", command="inspect")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        # A pull request's rollup is read the same way.
+        crowded = pull("head-1", filler)
+        crowded["commits"]["nodes"][0]["commit"]["statusCheckRollup"]["contexts"]["pageInfo"] = {"hasNextPage": True, "endCursor": "c1"}
+        self.write_scenario(pull=crowded, commitPages={
+            "": {"contexts": {"nodes": filler, "totalCount": 101, "pageInfo": {"hasNextPage": True, "endCursor": "c1"}}},
+            "c1": {"contexts": {"nodes": [deploy], "totalCount": 101, "pageInfo": {"hasNextPage": False}}},
+        })
+        _, output = self.run_json(DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
+                                  "--head", "head-1", "--check", "deploy")
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+
+    def test_an_incomplete_rollup_page_is_never_the_end_of_the_list(self) -> None:
+        filler = [self.deploy_status(f"other-{n}") for n in range(100)]
+        failed = check("deploy", "COMPLETED", "FAILURE", app="other-app")
+        first = {"contexts": {"nodes": filler, "totalCount": 101, "pageInfo": {"hasNextPage": True, "endCursor": "c1"}}}
+        for second in (None, {"contexts": {"nodes": [], "totalCount": 100, "pageInfo": {"hasNextPage": False}}}):
+            with self.subTest(second=second):
+                self.write_scenario(commitPages={"": first, "c1": second})
+                result, output = self.commit_wait("--check", "deploy", command="inspect")
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("check rollup", output["reason"])
+        self.write_scenario(commitPages={"": first, "c1": {"contexts": {"nodes": [failed], "totalCount": 101, "pageInfo": {"hasNextPage": False}}}})
+        _, output = self.commit_wait("--check", "deploy", command="inspect")
+        self.assertEqual(output["state"], "changed", output["reason"])
+
+    def test_a_census_checkpoint_saved_before_unbound_runs_were_set_aside_resumes_without_a_change(self) -> None:
+        sys.path.insert(0, str(DELIVERY.parent))
+        try:
+            from kgr_github import stable_digest
+        finally:
+            sys.path.pop(0)
+        def run(run_id: int, event: str, conclusion: str, name: str) -> dict:
+            return {"id": run_id, "name": name, "workflowId": run_id, "event": event, "checkSuiteId": 500 + run_id,
+                    "headBranch": "feature", "headRepositoryId": 1, "pullRequests": [], "runStartedAt": "2026-08-12T08:00:00Z",
+                    "updatedAt": "2026-08-12T08:05:00Z", "attempt": 1, "status": "completed", "conclusion": conclusion,
+                    "url": f"https://example.invalid/runs/{run_id}",
+                    "jobs": [{"id": run_id * 10, "name": "job", "status": "completed", "conclusion": conclusion,
+                              "completedAt": "2026-08-12T08:05:00Z"}]}
+        state = self.directory / "census.json"
+        identity = {"repo": "owner/repo", "pr": 7, "head": "head-1", "runId": None, "tag": None, "checks": [], "assets": [],
+                    "allWorkflows": True}
+        # What the helper before this change saved: the dispatch run's failure in the census key.
+        state.write_text(json.dumps({
+            "schemaVersion": 1, "kind": "checks-terminal", "identity": identity,
+            "observation": {"head": "head-1", "runs": [run(101, "pull_request", "success", "PR"),
+                                                       run(102, "repository_dispatch", "failure", "Gate")]},
+            "digest": stable_digest({"head": "head-1", "failures": ["Gate / job: failure", "Gate: failure"]}),
+            "updatedAt": "2026-08-12T08:06:00Z",
+        }))
+        self.write_scenario(census=[census(
+            workflow_run(101, [workflow_job(1010, "job", run_id=101)], workflow_id=101, check_suite_id=601),
+            workflow_run(102, [workflow_job(1020, "job", conclusion="failure", run_id=102)], conclusion="failure",
+                         event="repository_dispatch", workflow_id=102, check_suite_id=602, name="Gate"),
+        )])
+        _, output = self.census_wait("--state", str(state))
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+
+    def test_an_empty_head_is_refused_rather_than_skipped(self) -> None:
+        self.write_scenario()
+        result, output = self.run_json(DELIVERY, "inspect", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("--head is empty", output["reason"])
+
+    def test_a_check_graphql_cannot_tie_to_its_unbound_run_is_left_out_by_its_suite(self) -> None:
+        orphan = check("deploy", "COMPLETED", "FAILURE", app="github-actions", suite_id=603)
+        dispatch = workflow_run(103, [], head=self.MERGE, event="repository_dispatch", branch="main", workflow_id=7,
+                                check_suite_id=603, conclusion="failure")
+        self.write_scenario(commit=self.merge_commit([self.deploy_status(), orphan]),
+                            census=[census(self.merge_run(101, "push"), dispatch)])
+        _, output = self.commit_wait("--all-workflows", "--check", "deploy")
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+
+    def test_an_uppercase_full_sha_names_the_same_commit(self) -> None:
+        self.write_scenario(commit=self.merge_commit(), census=[census(self.merge_run(101, "push"))])
+        _, output = self.commit_wait("--all-workflows", head=self.MERGE.upper())
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertEqual(output["identity"]["head"], self.MERGE)
+
+    def test_a_rollup_that_lists_fewer_or_repeated_contexts_is_retried(self) -> None:
+        failed = {**check("deploy", "COMPLETED", "FAILURE", app="other-app"), "databaseId": 1}
+        status = self.deploy_status()
+        cases = {
+            "short single page": {"": {"contexts": {"nodes": [status], "totalCount": 2, "pageInfo": {"hasNextPage": False}}}},
+            "overlapping pages": {
+                "": {"contexts": {"nodes": [failed, *[self.deploy_status(f"other-{n}") for n in range(99)]], "totalCount": 101,
+                                  "pageInfo": {"hasNextPage": True, "endCursor": "c1"}}},
+                "c1": {"contexts": {"nodes": [failed, status], "totalCount": 101, "pageInfo": {"hasNextPage": False}}},
+            },
+        }
+        for label, pages in cases.items():
+            with self.subTest(label):
+                self.write_scenario(commitPages=pages)
+                result, output = self.commit_wait("--check", "deploy", command="inspect")
+                self.assertEqual(result.returncode, 2, output["reason"])
+                self.assertIn("check rollup", output["reason"])
+        # Through REST, a check-run list shorter than its count is retried too.
+        self.counter.unlink(missing_ok=True)
+        self.write_scenario(graphqlRateLimited=True, restCommit={"sha": self.MERGE},
+                            restChecks={"total_count": 2, "check_runs": [{"name": "deploy", "status": "completed", "conclusion": "success",
+                                                                         "app": {"slug": "other-app"}, "check_suite": {"id": 1}}]})
+        result, output = self.commit_wait("--check", "deploy", command="inspect")
+        self.assertEqual(result.returncode, 2, output["reason"])
+        self.assertIn("check run", output["reason"])
+
+    def test_a_named_check_of_an_untied_actions_suite_is_attributed_from_the_run_listing(self) -> None:
+        orphan = check("deploy", "COMPLETED", "SUCCESS", app="github-actions", suite_id=603)
+        dispatch = workflow_run(103, [], head=self.MERGE, event="repository_dispatch", branch="main", workflow_id=7,
+                                check_suite_id=603, conclusion="success")
+        self.write_scenario(commit=self.merge_commit([orphan]), census=[census(dispatch)])
+        _, output = self.commit_wait("--check", "deploy", command="inspect")
+        # The dispatch run's success is not the commit's deployment signal.
+        self.assertEqual(output["state"], "waiting", output["reason"])
+        self.assertIn("have not appeared", output["reason"])
+        self.reset_census()
+        push = workflow_run(101, [], head=self.MERGE, event="push", branch="main", workflow_id=8, check_suite_id=603)
+        self.write_scenario(commit=self.merge_commit([orphan]), census=[census(push)])
+        _, output = self.commit_wait("--check", "deploy", command="inspect")
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertEqual(output["observation"]["checks"][0]["event"], "push")
+
+    def test_an_app_named_like_an_event_keeps_its_check(self) -> None:
+        watched = check("deploy", "COMPLETED", "FAILURE", app="watch")
+        self.write_scenario(commit=self.merge_commit([self.deploy_status(), watched]), census=[census(self.merge_run(101, "push"))])
+        _, output = self.commit_wait("--all-workflows", "--check", "deploy")
+        self.assertEqual(output["state"], "changed", output["reason"])
+
+    def test_a_named_check_checkpoint_saved_before_unbound_checks_were_left_out_resumes_without_a_change(self) -> None:
+        sys.path.insert(0, str(DELIVERY.parent))
+        try:
+            from kgr_github import stable_digest
+        finally:
+            sys.path.pop(0)
+        state = self.directory / "named.json"
+        identity = {"repo": "owner/repo", "pr": 7, "head": "head-1", "runId": None, "tag": None, "checks": ["deploy"], "assets": []}
+        pending = {"name": "deploy", "status": "COMPLETED", "conclusion": "PENDING", "observedAt": "2026-08-12T08:00:00Z", "source": "status"}
+        dispatched = {"name": "deploy", "status": "COMPLETED", "conclusion": "FAILURE", "completedAt": "2026-08-12T08:00:00Z",
+                      "observedAt": "2026-08-12T08:00:00Z", "suite": 603, "source": "github-actions/7/repository_dispatch"}
+        # What the helper before this change saved: the dispatch run's failed check in the key.
+        state.write_text(json.dumps({
+            "schemaVersion": 1, "kind": "checks-terminal", "identity": identity,
+            "observation": {"head": "head-1", "state": "OPEN", "merged": False, "mergedAt": None, "mergeCommit": None,
+                            "checks": [dispatched, pending]},
+            "digest": stable_digest({"head": "head-1", "nonSuccess": ["deploy"], "terminal": False}),
+            "expectedHead": {"seen": True, "since": None, "relation": "missing"},
+            "updatedAt": "2026-08-12T08:06:00Z",
+        }))
+        status = {**self.deploy_status(state="PENDING")}
+        self.write_scenario(pull=pull("head-1", [status, check("deploy", "COMPLETED", "FAILURE", app="github-actions",
+                                                               event="repository_dispatch", suite_id=603, workflow=7)]))
+        _, output = self.run_json(DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+                                  "--check", "deploy", "--state", str(state), "--deadline", self.short_deadline(), "--interval", "0.05")
+        self.assertEqual(output["state"], "timed-out", output["reason"])
+
+    def test_a_census_with_named_checks_lists_the_runs_once_per_observation(self) -> None:
+        self.write_scenario(graphqlRateLimited=True, restCommit={"sha": self.MERGE},
+                            restChecks={"check_runs": [{"name": "CI", "status": "completed", "conclusion": "success",
+                                                        "app": {"slug": "github-actions"}, "check_suite": {"id": 601}}]},
+                            census=[census(workflow_run(101, [workflow_job(1010, "job", run_id=101)], head=self.MERGE,
+                                                        event="push", branch="main", workflow_id=9, check_suite_id=601))])
+        _, output = self.commit_wait("--all-workflows", "--check", "CI", command="inspect")
+        self.assertEqual(output["metrics"]["observations"], 1)
+        listings = [entry for entry in self.rest_requests() if "/actions/runs?" in entry["args"][-1]]
+        self.assertEqual(len(listings), 1, listings)
+
+    def test_an_unnamed_untied_actions_check_holds_neither_a_merge_nor_a_named_wait(self) -> None:
+        # GraphQL did not tie this Actions check to a workflow run, and the run listing has no run for its suite.
+        untied = check("lint", "COMPLETED", "FAILURE", app="github-actions", suite_id=603)
+        merged = pull("head-1", [untied, self.deploy_status()], merged=True)
+        self.write_scenario(pull=merged)
+        _, output = self.run_json(DELIVERY, "inspect", "pr-merged", "--repo", "owner/repo", "--pr", "7", "--head", "head-1")
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        _, output = self.run_json(DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+                                  "--check", "deploy")
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertFalse([entry for entry in self.rest_requests() if "/actions/runs?" in entry["args"][-1]])
+        # A named one is looked up, and waits while its suite has no listed run.
+        _, output = self.run_json(DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+                                  "--check", "lint")
+        self.assertIn("no workflow run is listed yet for check suite 603", output["reason"])
+
+    def test_a_saved_untied_check_is_resolved_by_its_suite_before_the_wait_resumes(self) -> None:
+        sys.path.insert(0, str(DELIVERY.parent))
+        try:
+            from kgr_github import stable_digest
+        finally:
+            sys.path.pop(0)
+        state = self.directory / "untied.json"
+        identity = {"repo": "owner/repo", "pr": 7, "head": "head-1", "runId": None, "tag": None, "checks": ["deploy"], "assets": []}
+        pending = {"name": "deploy", "status": "COMPLETED", "conclusion": "PENDING", "observedAt": "2026-08-12T08:00:00Z", "source": "status"}
+        untied = {"name": "deploy", "status": "COMPLETED", "conclusion": "FAILURE", "completedAt": "2026-08-12T08:00:00Z",
+                  "observedAt": "2026-08-12T08:00:00Z", "suite": 603, "source": "github-actions"}
+        state.write_text(json.dumps({
+            "schemaVersion": 1, "kind": "checks-terminal", "identity": identity,
+            "observation": {"head": "head-1", "state": "OPEN", "merged": False, "mergedAt": None, "mergeCommit": None,
+                            "checks": [untied, pending]},
+            "digest": stable_digest({"head": "head-1", "nonSuccess": ["deploy"], "terminal": False}),
+            "expectedHead": {"seen": True, "since": None, "relation": "missing"},
+            "updatedAt": "2026-08-12T08:06:00Z",
+        }))
+        dispatch = workflow_run(103, [], event="repository_dispatch", workflow_id=7, check_suite_id=603, conclusion="failure")
+        self.write_scenario(pull=pull("head-1", [self.deploy_status(state="PENDING"),
+                                                 check("deploy", "COMPLETED", "FAILURE", app="github-actions", suite_id=603)]),
+                            census=[census(dispatch)])
+        _, output = self.run_json(DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+                                  "--check", "deploy", "--state", str(state), "--deadline", self.short_deadline(), "--interval", "0.05")
+        self.assertEqual(output["state"], "timed-out", output["reason"])
+
+    def test_pages_that_repeat_a_context_without_a_database_id_are_retried(self) -> None:
+        deploy = self.deploy_status()
+        repeated = {**check("build", "COMPLETED", "SUCCESS", app="other-app"), "databaseId": None}
+        self.write_scenario(commitPages={
+            "": {"contexts": {"nodes": [repeated, deploy, *[self.deploy_status(f"other-{n}") for n in range(98)]], "totalCount": 101,
+                              "pageInfo": {"hasNextPage": True, "endCursor": "c1"}}},
+            "c1": {"contexts": {"nodes": [repeated], "totalCount": 101, "pageInfo": {"hasNextPage": False}}},
+        })
+        result, output = self.commit_wait("--check", "deploy", command="inspect")
+        self.assertEqual(result.returncode, 2, output["reason"])
+        self.assertIn("twice or without an id", output["reason"])
+
+    def test_help_names_each_kind_and_the_flags_it_needs(self) -> None:
+        for args in ((), ("wait",), ("inspect",)):
+            result = subprocess.run([sys.executable, str(DELIVERY), *args, "--help"], text=True, capture_output=True, timeout=6)
+            with self.subTest(args=args):
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("without --pr, on the commit itself", result.stdout)
+                self.assertIn("workflow-terminal  --run-id ID; --head SHA also checks the run's commit", result.stdout)
+
+    def test_a_workflow_run_is_awaited_by_its_id_alone(self) -> None:
+        self.write_scenario()
+        result, output = self.run_json(
+            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44",
+            "--deadline", self.deadline(), "--interval", "0.01",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output["state"], "satisfied")
+        _, output = self.run_json(DELIVERY, "inspect", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "other")
+        self.assertEqual(output["state"], "invalidated")
 
     def rest_budget_wait(self, remaining: int, reset_in: float, seconds: float = 1.0, **scenario: object) -> dict:
         reset = int(datetime.now(timezone.utc).timestamp() + reset_in)
