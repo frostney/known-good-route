@@ -1020,6 +1020,15 @@ export function validateCases(
         );
       }
     }
+    // A sequence or a positive minimum count needs the action recorded, so
+    // forbidding it leaves the case unpassable.
+    for (const action of [
+      ...(evalCase.expected.requiredActionSequence ?? []),
+      ...Object.entries(evalCase.expected.minActionCounts ?? {})
+        .filter(([, minimum]) => (minimum ?? 0) > 0).map(([action]) => action as ActionName),
+    ])
+      if (forbiddenActions.has(action))
+        throw new Error(`${evalCase.id} both requires and forbids action ${action}`);
     validateEnvironment(evalCase);
   }
 }

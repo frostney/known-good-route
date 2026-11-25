@@ -228,8 +228,9 @@ inventory. `forbiddenActions` takes action names and `namespace.*` selectors,
 such as `forge.*` for every forge action, and `permittedActions` forbids every
 action it does not list. Both cover actions added to `actionNames` later, so a
 new action changes no case's content and moves no hash in `calibration.json`.
-A case file that filters `actionNames` fails a test, and a selector that
-matches no action fails `validateCases`.
+A test loads the cases after adding action names and fails when any hash
+moves. `validateCases` rejects a selector that matches no action, and a case
+whose required actions, sequence or minimum counts need a forbidden action.
 
 ## Judged answers
 
