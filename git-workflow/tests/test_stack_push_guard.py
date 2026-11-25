@@ -47,6 +47,30 @@ class ValidationTests(unittest.TestCase):
         with self.assertRaises(guard.GuardError):
             guard.validate_admission(c)
 
+    def test_a_misnamed_key_is_refused_with_the_keys_the_entry_needs(self):
+        c = copy.deepcopy(self.admission)
+        c["refs"][0]["name"] = c["refs"][0].pop("ref")
+        with self.assertRaises(guard.GuardError) as raised:
+            guard.validate_admission(c)
+        self.assertEqual(str(raised.exception), 'invalid admitted ref fields in refs[0]: unexpected "name"; '
+                         'missing "ref"; the keys are "ref", "source" and "expected"')
+        c = copy.deepcopy(self.admission)
+        c["refs"].append({"name": "refs/heads/other", "source": "c" * 40, "expect": "d" * 40})
+        with self.assertRaises(guard.GuardError) as raised:
+            guard.validate_admission(c)
+        self.assertEqual(str(raised.exception), 'invalid admitted ref fields in refs[1]: unexpected "name" and "expect"; '
+                         'missing "ref" and "expected"; the keys are "ref", "source" and "expected"')
+        c = copy.deepcopy(self.admission)
+        c["refs"][0] = ["refs/heads/feature/naïve-key"]
+        with self.assertRaisesRegex(guard.GuardError, r'invalid admitted ref fields in refs\[0\]: expected a JSON object'):
+            guard.validate_admission(c)
+        c = copy.deepcopy(self.admission)
+        c["refs"][0]["re\u2028f"] = c["refs"][0].pop("ref")
+        with self.assertRaises(guard.GuardError) as raised:
+            guard.validate_admission(c)
+        self.assertIn('unexpected "re\\u2028f"', str(raised.exception))
+        self.assertEqual(len(str(raised.exception).splitlines()), 1)
+
     def test_corrupt_redirected_deleted_or_duplicated_updates_fail(self):
         for text in ["invalid\n", self.line * 2, self.line.replace("feature/naïve-key", "other", 1),
                      self.line.replace("a" * 40, "0" * 40), self.line.replace("b" * 40, "c" * 40)]:
@@ -360,11 +384,14 @@ class RewriteTests(unittest.TestCase):
     def test_invalid_rewrite_entries(self):
         for rewrite in [[{"ref": "refs/heads/stack/three", "reason": "not admitted"}],
                         [{"ref": "refs/heads/stack/one", "reason": "  "}],
-                        [{"ref": "refs/heads/stack/one"}], [{"ref": ["refs/heads/stack/one"], "reason": "x"}],
+                        [{"ref": ["refs/heads/stack/one"], "reason": "x"}],
                         [{"ref": "refs/heads/stack/one", "reason": "x"}] * 2, [], "refs/heads/stack/one"]:
             with self.subTest(rewrite=rewrite), self.assertRaises(guard.GuardError):
                 guard.validate_admission({**self.admission, "rewrite": rewrite})
-        with self.assertRaisesRegex(guard.GuardError, "invalid admission fields"):
+        with self.assertRaisesRegex(guard.GuardError, r'invalid rewrite fields in rewrite\[0\]: missing "reason"'):
+            guard.validate_admission({**self.admission, "rewrite": [{"ref": "refs/heads/stack/one"}]})
+        with self.assertRaisesRegex(guard.GuardError, 'invalid admission fields: unexpected "rewrites"; '
+                                    'the keys are "directory", "remote", "url" and "refs", optionally "rewrite"'):
             guard.validate_admission({**self.admission, "rewrites": []})
 
     def test_lookup_failure_refuses(self):

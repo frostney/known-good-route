@@ -74,9 +74,38 @@ def read_record(path):
     return value["request"]
 
 
+ADMISSION_FIELDS = ("directory", "remote", "url", "refs")
+REF_FIELDS = ("ref", "source", "expected")
+REWRITE_FIELDS = ("ref", "reason")
+
+
+def quoted(keys):
+    # ASCII escapes keep a key with a line separator from splitting the message.
+    names = [json.dumps(key) for key in keys]
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+
+
+def check_fields(value, what, required, optional=(), where=""):
+    """Refuse an object whose keys differ from the documented ones, naming each key that differs.
+
+    The message starts `invalid WHAT fields` and names the entry after it, so
+    a match on that prefix still holds.
+    """
+    expected = quoted(required) + (", optionally " + quoted(optional) if optional else "")
+    if not isinstance(value, dict):
+        raise GuardError(f"invalid {what} fields{where}: expected a JSON object with the keys {expected}")
+    missing = [key for key in required if key not in value]
+    unexpected = [key for key in value if key not in required and key not in optional]
+    if missing or unexpected:
+        found = "; ".join(part for part in (
+            "unexpected " + quoted(unexpected) if unexpected else "",
+            "missing " + quoted(missing) if missing else "",
+        ) if part)
+        raise GuardError(f"invalid {what} fields{where}: {found}; the keys are {expected}")
+
+
 def validate_admission(value):
-    if not isinstance(value, dict) or set(value) - {"rewrite"} != {"directory", "remote", "url", "refs"}:
-        raise GuardError("invalid admission fields")
+    check_fields(value, "admission", ADMISSION_FIELDS, ("rewrite",))
     if not isinstance(value["directory"], str) or not Path(value["directory"]).is_absolute():
         raise GuardError("checkout must be an absolute path")
     if not isinstance(value["remote"], str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]*", value["remote"]):
@@ -86,9 +115,8 @@ def validate_admission(value):
     if not isinstance(value["refs"], list) or not value["refs"]:
         raise GuardError("admission needs explicit branch refs")
     refs, seen, lengths = [], set(), set()
-    for row in value["refs"]:
-        if not isinstance(row, dict) or set(row) != {"ref", "source", "expected"}:
-            raise GuardError("invalid admitted ref fields")
+    for index, row in enumerate(value["refs"]):
+        check_fields(row, "admitted ref", REF_FIELDS, where=f" in refs[{index}]")
         ref = row["ref"]
         if (not isinstance(ref, str) or not ref.startswith("refs/heads/") or ref.endswith(("/", "."))
                 or any(ord(c) <= 32 or ord(c) == 127 or c in "~^:?*[\\" for c in ref)
@@ -110,9 +138,8 @@ def validate_admission(value):
         if not isinstance(value["rewrite"], list) or not value["rewrite"]:
             raise GuardError("rewrite needs explicit entries")
         rewrite, listed = [], set()
-        for row in value["rewrite"]:
-            if not isinstance(row, dict) or set(row) - {"draftOnly"} != {"ref", "reason"}:
-                raise GuardError("invalid rewrite fields")
+        for index, row in enumerate(value["rewrite"]):
+            check_fields(row, "rewrite", REWRITE_FIELDS, ("draftOnly",), where=f" in rewrite[{index}]")
             if "draftOnly" in row and row["draftOnly"] is not True:
                 raise GuardError("rewrite draftOnly must be true when given")
             if not isinstance(row["ref"], str) or row["ref"] not in seen or row["ref"] in listed:
