@@ -4,6 +4,7 @@ import { toolReceiptSchema } from "./tool-receipts.ts";
 import { actionNames, orchestrationEndpoints, orchestrationEntryPoints } from "./types.ts";
 import type {
   ActionName,
+  ActionSelector,
   EvalCase,
   ExactValue,
   GradeCheck,
@@ -18,6 +19,20 @@ function includesEvery(actual: string[], expected: string[]): boolean {
 
 function actionCount(ledger: RunLedger, action: ActionName): number {
   return ledger.actions.filter((record) => record.action === action).length;
+}
+
+const selects = (selector: ActionSelector, action: ActionName) =>
+  selector === action || (selector.endsWith(".*") && action.startsWith(selector.slice(0, -1)));
+
+// The actions a case forbids: its forbiddenActions, with each `namespace.*`
+// standing for every action in that namespace, and every action outside its
+// permittedActions.
+export function forbiddenActionSet(expected: EvalCase["expected"]): Set<ActionName> {
+  const selectors = expected.forbiddenActions ?? [];
+  const permitted = expected.permittedActions;
+  return new Set(actionNames.filter((action) =>
+    (permitted !== undefined && !permitted.includes(action)) ||
+    selectors.some((selector) => selects(selector, action))));
 }
 
 const communication = new Set<ActionName>([
@@ -727,8 +742,8 @@ export function gradeRun(
     });
   }
 
-  if (expected.forbiddenActions) {
-    const performed = expected.forbiddenActions.filter(
+  if (expected.forbiddenActions || expected.permittedActions) {
+    const performed = [...forbiddenActionSet(expected)].filter(
       (action) => actionCount(ledger, action) > 0,
     );
     checks.push({
@@ -786,6 +801,7 @@ const listFields = new Set([
   "requiredActions",
   "requiredAnyActions",
   "forbiddenActions",
+  "permittedActions",
   "allowedEditPaths",
   "discoverySkills",
   "allowedDelegateWorkflows",
@@ -986,7 +1002,10 @@ export function validateCases(
       }
     }
 
-    const forbiddenActions = new Set(evalCase.expected.forbiddenActions ?? []);
+    for (const selector of evalCase.expected.forbiddenActions ?? [])
+      if (!actionNames.some((action) => selects(selector, action)))
+        throw new Error(`${evalCase.id}: forbidden action ${selector} matches no action`);
+    const forbiddenActions = forbiddenActionSet(evalCase.expected);
     for (const action of evalCase.expected.requiredActions ?? []) {
       if (forbiddenActions.has(action)) {
         throw new Error(
@@ -994,13 +1013,20 @@ export function validateCases(
         );
       }
     }
-    for (const action of evalCase.expected.requiredAnyActions ?? []) {
-      if (forbiddenActions.has(action)) {
-        throw new Error(
-          `${evalCase.id} both accepts and forbids action ${action}`,
-        );
-      }
-    }
+    // An alternative list passes with any one of its actions, so only a list
+    // whose every action is forbidden leaves the case unpassable.
+    const alternatives = evalCase.expected.requiredAnyActions ?? [];
+    if (alternatives.length && alternatives.every((action) => forbiddenActions.has(action)))
+      throw new Error(`${evalCase.id} accepts only forbidden actions ${alternatives.join(", ")}`);
+    // A sequence or a positive minimum count needs the action recorded, so
+    // forbidding it leaves the case unpassable.
+    for (const action of [
+      ...(evalCase.expected.requiredActionSequence ?? []),
+      ...Object.entries(evalCase.expected.minActionCounts ?? {})
+        .filter(([, minimum]) => (minimum ?? 0) > 0).map(([action]) => action as ActionName),
+    ])
+      if (forbiddenActions.has(action))
+        throw new Error(`${evalCase.id} both requires and forbids action ${action}`);
     validateEnvironment(evalCase);
   }
 }

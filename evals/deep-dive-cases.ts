@@ -1,4 +1,4 @@
-import { actionNames, type ActionName, type EvalCase, type EvalEnvironment } from "./types.ts";
+import type { ActionName, EvalCase, EvalEnvironment } from "./types.ts";
 
 // Three reconstructed diagnosis failures with invented data. Each scenario offers
 // a plausible first explanation that a note, a document or a person's claim
@@ -9,8 +9,8 @@ import { actionNames, type ActionName, type EvalCase, type EvalEnvironment } fro
 // only the symptom; nothing points at the record.
 // Diagnosis may record read-only checks and a delegation, but must not change
 // state or hand the investigation back to the person.
-const readOnlyActions = ["report", "validation.focused", "validation.reuse", "validation.run", "behaviorTest.run", "codeReview.run"];
-const mutations = actionNames.filter((a) => ![...readOnlyActions, "delegate"].includes(a));
+// A case permits these, with or without delegate, and so forbids every other action.
+const readOnlyActions: ActionName[] = ["report", "validation.focused", "validation.reuse", "validation.run", "behaviorTest.run", "codeReview.run"];
 const reviewer = "codex:gpt-6-astra";
 // Diagnosis ends with the explanation; nothing continues into delivery.
 // deep-dive applies through the AGENTS.md skills block generated from its own
@@ -326,7 +326,7 @@ function reviewCase(id: string, scenario: string, evidence: Record<string, strin
       rubric,
       requiredInspections: [inspection].flat(),
       requiredVerdictFile: true,
-      forbiddenActions: [...mutations, "delegate"],
+      permittedActions: readOnlyActions,
     },
   };
 }
@@ -442,7 +442,7 @@ export const deepDiveCases: EvalCase[] = [
       requiredInspections: ["processList", "lockFile", "lockProbe"],
       requiredWorker: true,
       citedReviewVerdict: true,
-      forbiddenActions: mutations,
+      permittedActions: [...readOnlyActions, "delegate"],
     },
   },
   reviewCase("deep-dive-wrong-lock-holder-review", "the lock-holder diagnosis", lockEvidence, "lockFile"),
@@ -466,7 +466,7 @@ export const deepDiveCases: EvalCase[] = [
       requiredInspections: ["sessionTranscript", "agentsMd"],
       requiredWorker: true,
       citedReviewVerdict: true,
-      forbiddenActions: mutations,
+      permittedActions: [...readOnlyActions, "delegate"],
     },
   },
   reviewCase("deep-dive-unloaded-instruction-blamed-review", "the reply-length diagnosis", replyEvidence, "sessionTranscript"),
@@ -489,7 +489,7 @@ export const deepDiveCases: EvalCase[] = [
       requiredInspections: ["taskBrief", "sessionTranscript", "repoVisibility"],
       requiredWorker: true,
       citedReviewVerdict: true,
-      forbiddenActions: mutations,
+      permittedActions: [...readOnlyActions, "delegate"],
     },
   },
   reviewCase("deep-dive-private-data-leak-review", "the data-leak diagnosis", leakEvidence, "sessionTranscript"),
@@ -512,7 +512,7 @@ export const deepDiveCases: EvalCase[] = [
       requiredInspections: ["errorSummary", "headlessRun", "blockProbe"],
       requiredWorker: true,
       citedReviewVerdict: true,
-      forbiddenActions: mutations,
+      permittedActions: [...readOnlyActions, "delegate"],
     },
   },
   reviewCase("deep-dive-script-error-masked-duplicate-review", "the script-error diagnosis", scriptErrorEvidence, "headlessRun"),
@@ -605,7 +605,7 @@ export const deepDiveCases: EvalCase[] = [
       requiredSkills: ["deep-dive"],
       requiredInspections: ["gateOutput", "currentRunTrace"],
       forbiddenWorker: true,
-      forbiddenActions: [...mutations, "delegate"],
+      permittedActions: readOnlyActions,
     },
   },
   reviewCase("deep-dive-explicit-invocation-runs-full-procedure-review", "the recovery-mapper diagnosis", establishedLoopEvidence, "currentRunTrace"),
@@ -643,7 +643,7 @@ export const deepDiveCases: EvalCase[] = [
       ],
       requiredWorker: true,
       citedReviewVerdict: true,
-      forbiddenActions: mutations,
+      permittedActions: [...readOnlyActions, "delegate"],
     },
   },
   earlierFindingsReview,

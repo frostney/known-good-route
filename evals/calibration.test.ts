@@ -1,8 +1,11 @@
 import { createHash } from "node:crypto";
 import { expect, test } from "bun:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { gradeRun, validateCases } from "./grading.ts";
 import { createEvalTools } from "./tools.ts";
-import type { EvalCase, RunLedger } from "./types.ts";
+import type { ActionName, ActionSelector, EvalCase, RunLedger } from "./types.ts";
 import { evalCases } from "./cases.ts";
 test("synthetic full revisions are valid SHA-1 lengths and do not override concrete case revisions", () => {
   for (const c of evalCases) {
@@ -279,6 +282,58 @@ test("native Agent evidence uses the actual returned result, not the user's task
   ).toBeDefined();
 });
 
+test("a new action name moves no case hash", async () => {
+  // Case modules are loaded in a fresh process after actionNames gains a
+  // forge action and an action in a new namespace, so a case that derives its
+  // content from the inventory, by namespace or by exclusion, changes hash.
+  const manifest = await Bun.file(new URL("./calibration.json", import.meta.url)).json();
+  const directory = await mkdtemp(join(tmpdir(), "kgr-action-names-"));
+  try {
+    const script = join(directory, "hashes.ts");
+    await Bun.write(script, [
+      `import { createHash } from "node:crypto";`,
+      `import { actionNames } from ${JSON.stringify(new URL("./types.ts", import.meta.url).href)};`,
+      `(actionNames as unknown as string[]).push("forge.calibrationProbe", "probe.calibration");`,
+      `const { evalCases } = await import(${JSON.stringify(new URL("./cases.ts", import.meta.url).href)});`,
+      `console.log(JSON.stringify(Object.fromEntries(evalCases.map((c: { id: string }) => [c.id, createHash("sha256").update(JSON.stringify(c)).digest("hex")]))));`,
+    ].join("\n"));
+    const run = Bun.spawnSync([process.execPath, script], { stderr: "pipe" });
+    expect(run.exitCode, run.stderr.toString()).toBe(0);
+    const hashes: Record<string, string> = JSON.parse(run.stdout.toString());
+    expect(Object.keys(hashes)).toHaveLength(evalCases.length);
+    for (const entry of manifest.cases as Array<{ caseId: string; afterSha256: string }>)
+      expect(`${entry.caseId} ${hashes[entry.caseId]}`).toBe(`${entry.caseId} ${entry.afterSha256}`);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+test("a namespace selector forbids every action in its namespace, and permittedActions every action it omits", () => {
+  const graded = (expected: EvalCase["expected"], action: ActionName) => {
+    const ledger = empty();
+    ledger.actions.push({ action, details: action });
+    ledger.events.push({ kind: "action", name: action });
+    return gradeRun(scenario(expected), ledger, "Done").passed;
+  };
+  expect(graded({ forbiddenActions: ["forge.*"] }, "forge.createIssue")).toBe(false);
+  expect(graded({ forbiddenActions: ["forge.*"] }, "git.commit")).toBe(true);
+  expect(graded({ permittedActions: ["report", "validation.run"] }, "validation.run")).toBe(true);
+  expect(graded({ permittedActions: ["report", "validation.run"] }, "file.edit")).toBe(false);
+  expect(graded({ permittedActions: ["report", "file.edit"], forbiddenActions: ["file.edit"] }, "file.edit")).toBe(false);
+});
+test("preflight rejects a selector that matches nothing and a requirement on a forbidden action", () => {
+  expect(() => validateCases([scenario({ forbiddenActions: ["no-such-namespace.*" as ActionSelector] })], new Set())).toThrow("matches no action");
+  for (const expected of [
+    { permittedActions: ["report"], requiredActions: ["file.edit"] },
+    { permittedActions: ["report"], requiredActionSequence: ["report", "file.edit"] },
+    { permittedActions: ["report"], minActionCounts: { "file.edit": 1 } },
+    { forbiddenActions: ["forge.*"], requiredActionSequence: ["forge.openDraftPr"] },
+  ] as Array<EvalCase["expected"]>)
+    expect(() => validateCases([scenario(expected)], new Set())).toThrow("requires and forbids");
+  // An alternative list needs one permitted action, not all of them.
+  expect(() => validateCases([scenario({ permittedActions: ["report", "validation.run"], requiredAnyActions: ["validation.run", "validation.reuse"] })], new Set())).not.toThrow();
+  expect(() => validateCases([scenario({ permittedActions: ["report"], requiredAnyActions: ["validation.run", "validation.reuse"] })], new Set())).toThrow("accepts only forbidden actions");
+  expect(() => validateCases([scenario({ permittedActions: ["report"], minActionCounts: { "file.edit": 0 } })], new Set())).not.toThrow();
+});
 test("calibration provenance covers and hashes the current loaded scenario inventory", async () => {
   const manifest = await Bun.file(
     new URL("./calibration.json", import.meta.url),
