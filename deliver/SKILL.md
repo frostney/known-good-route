@@ -130,7 +130,8 @@ workflow invoked returns to its caller.
 - A merge is not the end of `merged`. Where the repository delivers its
   default branch, run its configured integration path when that needs a step,
   or await the run the merge started, for the merged revision through
-  `delivery-wait`. Only after that wait reports the merged revision deployed,
+  `delivery-wait`: `checks-terminal` without `--pr` waits on the merge commit
+  itself. Only after that wait reports the merged revision deployed,
   verify its destination, delivered revision or artifact provenance, and the
   required behavior in that environment. A deployment that a later merge
   superseded or held is still pending: await the one that carries the merged

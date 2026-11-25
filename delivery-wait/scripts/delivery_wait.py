@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -38,20 +39,52 @@ from kgr_github import (  # noqa: E402
 )
 
 
+ROLLUP = """statusCheckRollup{contexts(first:100){nodes{
+        __typename ... on CheckRun{name status conclusion detailsUrl startedAt completedAt databaseId
+          checkSuite{databaseId app{slug} workflowRun{event workflow{databaseId}}}}
+        ... on StatusContext{context state targetUrl createdAt}
+      } pageInfo{hasNextPage}}}"""
+
+
 PR_QUERY = """
 query($owner:String!,$name:String!,$number:Int!){
   repository(owner:$owner,name:$name){
     pullRequest(number:$number){
       headRefOid state merged mergedAt mergeCommit{oid}
-      commits(last:1){nodes{commit{statusCheckRollup{contexts(first:100){nodes{
-        __typename ... on CheckRun{name status conclusion detailsUrl startedAt completedAt databaseId
-          checkSuite{databaseId app{slug} workflowRun{event workflow{databaseId}}}}
-        ... on StatusContext{context state targetUrl createdAt}
-      } pageInfo{hasNextPage}}}}}}
+      commits(last:1){nodes{commit{%s}}}
     }
   }
 }
+""" % ROLLUP
+
+
+COMMIT_QUERY = """
+query($owner:String!,$name:String!,$oid:GitObjectID!){
+  repository(owner:$owner,name:$name){object(oid:$oid){__typename ... on Commit{oid %s}}}
+}
+""" % ROLLUP
+
+
+COMMIT_HEAD_QUERY = """
+query($owner:String!,$name:String!,$oid:GitObjectID!){
+  repository(owner:$owner,name:$name){object(oid:$oid){__typename ... on Commit{oid}}}
+}
 """
+
+
+# Events whose workflow runs GitHub records on the default branch's latest
+# commit, whatever started them: a repository dispatch from a deployment of
+# another commit, a workflow_run chained to another branch's run, a schedule,
+# or activity on an issue or a comment. A run of one says nothing about the
+# commit it is recorded on. pull_request_target, though documented with the
+# default branch's commit, is recorded on the pull request's head, so it counts.
+UNBOUND_EVENTS = {
+    "branch_protection_rule", "check_run", "check_suite", "delete", "discussion",
+    "discussion_comment", "fork", "gollum", "image_version", "issue_comment", "issues",
+    "label", "milestone", "page_build", "public", "repository_dispatch", "schedule",
+    "status", "watch", "workflow_run",
+}
+FULL_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 
 
 TAG_QUERY = """
@@ -114,28 +147,11 @@ def pr_snapshot(
         )
         if early:
             return early
-        contexts = (
-            pull.get("commits", {}).get("nodes", [{}])[0]
-            .get("commit", {}).get("statusCheckRollup") or {}
+        checks = rollup_checks(
+            pull.get("commits", {}).get("nodes", [{}])[0].get("commit", {}).get("statusCheckRollup"),
+            "pull request",
         )
-        contexts = contexts.get("contexts") or {}
-        if contexts.get("pageInfo", {}).get("hasNextPage"):
-            raise WaitError("pull request has more than 100 check contexts; complete pagination is required")
-        nodes = contexts.get("nodes", [])
-        checks = []
-        for node in nodes or []:
-            if node.get("__typename") == "CheckRun":
-                suite = node.get("checkSuite") or {}
-                workflow_run = suite.get("workflowRun") or {}
-                source = check_source(
-                    (suite.get("app") or {}).get("slug"),
-                    (workflow_run.get("workflow") or {}).get("databaseId"),
-                    workflow_run.get("event"),
-                )
-                checks.append({"name": node.get("name"), "status": node.get("status"), "conclusion": node.get("conclusion"), "completedAt": node.get("completedAt"), "observedAt": node.get("startedAt") or node.get("completedAt"), "suite": suite.get("databaseId"), "source": source})
-            else:
-                checks.append({"name": node.get("context"), "status": "COMPLETED", "conclusion": node.get("state"), "observedAt": node.get("createdAt"), "source": "status"})
-        return {"head": pull.get("headRefOid"), "state": pull.get("state"), "merged": bool(pull.get("merged")), "mergedAt": pull.get("mergedAt"), "mergeCommit": (pull.get("mergeCommit") or {}).get("oid"), "checks": sorted(checks, key=lambda item: str(item["name"]))}
+        return {"head": pull.get("headRefOid"), "state": pull.get("state"), "merged": bool(pull.get("merged")), "mergedAt": pull.get("mergedAt"), "mergeCommit": (pull.get("mergeCommit") or {}).get("oid"), "checks": checks}
     except RateLimited:
         gh.metrics.rate_limit_fallbacks += 1
         pull = gh.rest(f"repos/{repo}/pulls/{number}")
@@ -147,49 +163,100 @@ def pr_snapshot(
         )
         if early:
             return early
-        run_pages = gh.rest_pages(
-            f"repos/{repo}/commits/{pull['head']['sha']}/check-runs?per_page={rest_page_size}"
-        )
-        status_pages = gh.rest_pages(
-            f"repos/{repo}/commits/{pull['head']['sha']}/statuses?per_page={rest_page_size}"
-        )
-        runs = [run for page in run_pages for run in page.get("check_runs", [])]
-        # A check run names only its suite; the workflow run of that suite
-        # names the workflow and event, as GraphQL does in one query.
-        workflows = {
-            item.get("check_suite_id"): item
-            for item in rest_census(
-                gh.rest_pages(f"repos/{repo}/actions/runs?head_sha={quote(pull['head']['sha'], safe='')}&per_page={rest_page_size}"),
-                "workflow_runs",
-                "workflow run",
-            )
-        } if runs else {}
-        for run in runs:
-            suite = (run.get("check_suite") or {}).get("id")
-            if (run.get("app") or {}).get("slug") == "github-actions" and suite not in workflows:
-                raise TransientError(f"no workflow run is listed yet for check suite {suite}")
-        # The statuses endpoint lists every state a context has had, newest
-        # first; the GraphQL rollup has only the current one.
-        statuses: dict[str, dict[str, Any]] = {}
-        for page in status_pages:
-            for item in page:
-                statuses.setdefault(item.get("context"), item)
-        checks = [
-            {"name": run.get("name"), "status": str(run.get("status", "")).upper(), "conclusion": str(run.get("conclusion") or "").upper(), "completedAt": run.get("completed_at"), "observedAt": run.get("started_at") or run.get("completed_at"), "suite": (run.get("check_suite") or {}).get("id"), "source": check_source(
-                (run.get("app") or {}).get("slug"),
-                workflows.get((run.get("check_suite") or {}).get("id"), {}).get("workflow_id"),
-                workflows.get((run.get("check_suite") or {}).get("id"), {}).get("event"),
-            )}
-            for run in runs
-        ] + [
-            {"name": item.get("context"), "status": "COMPLETED", "conclusion": str(item.get("state", "")).upper(), "observedAt": item.get("created_at"), "source": "status"}
-            for item in statuses.values()
-        ]
+        checks = rest_checks(gh, repo, pull["head"]["sha"], rest_page_size)
         # REST reports a merged pull request as closed and gives an unmerged one
         # its test merge commit; GraphQL reports MERGED and no merge commit.
         merged = bool(pull.get("merged"))
         state = "MERGED" if merged else str(pull.get("state") or "").upper() or None
-        return {"head": pull["head"]["sha"], "state": state, "merged": merged, "mergedAt": pull.get("merged_at"), "mergeCommit": pull.get("merge_commit_sha") if merged else None, "checks": sorted(checks, key=lambda item: str(item["name"]))}
+        return {"head": pull["head"]["sha"], "state": state, "merged": merged, "mergedAt": pull.get("merged_at"), "mergeCommit": pull.get("merge_commit_sha") if merged else None, "checks": checks}
+
+
+def rollup_checks(rollup: Any, what: str) -> list[dict[str, Any]]:
+    """The checks and statuses of a GraphQL status check rollup, sorted by name."""
+    contexts = (rollup or {}).get("contexts") or {}
+    if contexts.get("pageInfo", {}).get("hasNextPage"):
+        raise WaitError(f"{what} has more than 100 check contexts; complete pagination is required")
+    checks = []
+    for node in contexts.get("nodes") or []:
+        if node.get("__typename") == "CheckRun":
+            suite = node.get("checkSuite") or {}
+            workflow_run = suite.get("workflowRun") or {}
+            source = check_source(
+                (suite.get("app") or {}).get("slug"),
+                (workflow_run.get("workflow") or {}).get("databaseId"),
+                workflow_run.get("event"),
+            )
+            checks.append({"name": node.get("name"), "status": node.get("status"), "conclusion": node.get("conclusion"), "completedAt": node.get("completedAt"), "observedAt": node.get("startedAt") or node.get("completedAt"), "suite": suite.get("databaseId"), "source": source})
+        else:
+            checks.append({"name": node.get("context"), "status": "COMPLETED", "conclusion": node.get("state"), "observedAt": node.get("createdAt"), "source": "status"})
+    return sorted(checks, key=lambda item: str(item["name"]))
+
+
+def rest_checks(gh: Gh, repo: str, sha: str, rest_page_size: int) -> list[dict[str, Any]]:
+    """The checks and statuses of a commit through REST, as rollup_checks reads them."""
+    run_pages = gh.rest_pages(f"repos/{repo}/commits/{sha}/check-runs?per_page={rest_page_size}")
+    status_pages = gh.rest_pages(f"repos/{repo}/commits/{sha}/statuses?per_page={rest_page_size}")
+    runs = [run for page in run_pages for run in page.get("check_runs", [])]
+    # A check run names only its suite; the workflow run of that suite
+    # names the workflow and event, as GraphQL does in one query.
+    workflows = {
+        item.get("check_suite_id"): item
+        for item in rest_census(
+            gh.rest_pages(f"repos/{repo}/actions/runs?head_sha={quote(sha, safe='')}&per_page={rest_page_size}"),
+            "workflow_runs",
+            "workflow run",
+        )
+    } if runs else {}
+    for run in runs:
+        suite = (run.get("check_suite") or {}).get("id")
+        if (run.get("app") or {}).get("slug") == "github-actions" and suite not in workflows:
+            raise TransientError(f"no workflow run is listed yet for check suite {suite}")
+    # The statuses endpoint lists every state a context has had, newest
+    # first; the GraphQL rollup has only the current one.
+    statuses: dict[str, dict[str, Any]] = {}
+    for page in status_pages:
+        for item in page:
+            statuses.setdefault(item.get("context"), item)
+    checks = [
+        {"name": run.get("name"), "status": str(run.get("status", "")).upper(), "conclusion": str(run.get("conclusion") or "").upper(), "completedAt": run.get("completed_at"), "observedAt": run.get("started_at") or run.get("completed_at"), "suite": (run.get("check_suite") or {}).get("id"), "source": check_source(
+            (run.get("app") or {}).get("slug"),
+            workflows.get((run.get("check_suite") or {}).get("id"), {}).get("workflow_id"),
+            workflows.get((run.get("check_suite") or {}).get("id"), {}).get("event"),
+        )}
+        for run in runs
+    ] + [
+        {"name": item.get("context"), "status": "COMPLETED", "conclusion": str(item.get("state", "")).upper(), "observedAt": item.get("created_at"), "source": "status"}
+        for item in statuses.values()
+    ]
+    return sorted(checks, key=lambda item: str(item["name"]))
+
+
+def commit_snapshot(gh: Gh, repo: str, sha: str, checks: bool, rest_page_size: int = 100) -> dict[str, Any]:
+    """A commit with no pull request, such as a merge commit on the default branch: its head and, with CHECKS, its checks."""
+    owner, name = repo_parts(repo)
+    try:
+        data = gh.graphql(COMMIT_QUERY if checks else COMMIT_HEAD_QUERY, {"owner": owner, "name": name, "oid": sha})
+        commit = (data.get("repository") or {}).get("object")
+        if not isinstance(commit, dict) or commit.get("__typename") != "Commit":
+            raise WaitError(f"commit {sha} was not found in {repo}")
+        observation: dict[str, Any] = {"head": commit.get("oid")}
+        if checks:
+            observation["checks"] = rollup_checks(commit.get("statusCheckRollup"), f"commit {sha}")
+        return observation
+    except RateLimited:
+        gh.metrics.rate_limit_fallbacks += 1
+        try:
+            commit = gh.rest(f"repos/{repo}/commits/{sha}")
+        except WaitError as error:
+            if not isinstance(error, (RateLimited, TransientError)) and (
+                "404" in str(error) or "422" in str(error) or "not found" in str(error).lower()
+            ):
+                raise WaitError(f"commit {sha} was not found in {repo}") from error
+            raise
+        observation = {"head": commit.get("sha")}
+        if checks:
+            observation["checks"] = rest_checks(gh, repo, sha, rest_page_size)
+        return observation
 
 
 def check_is_terminal(check: dict[str, Any]) -> bool:
@@ -334,14 +401,22 @@ def rest_census(pages: list[Any], field: str, label: str) -> list[dict[str, Any]
 
 
 def workflow_census(
-    gh: Gh, repo: str, number: int, head: str, checks: bool, rest_page_size: int = 100,
+    gh: Gh, repo: str, number: int | None, head: str, checks: bool, rest_page_size: int = 100,
     expected: ExpectedHead | None = None,
 ) -> dict[str, Any]:
-    """Every GitHub Actions run for the pull request's exact head, with its jobs."""
-    snapshot = pr_snapshot(gh, repo, number, rest_page_size, expected) if checks else {"head": pr_head(gh, repo, number)}
+    """Every GitHub Actions run for the exact head, with its jobs.
+
+    The head is the pull request's, or with no NUMBER the commit HEAD itself.
+    A run of an event in UNBOUND_EVENTS is listed under `unboundRuns`
+    without its jobs and decides nothing.
+    """
+    if number is None:
+        snapshot = commit_snapshot(gh, repo, head, checks, rest_page_size)
+    else:
+        snapshot = pr_snapshot(gh, repo, number, rest_page_size, expected) if checks else {"head": pr_head(gh, repo, number)}
     observed = snapshot.get("head")
     if not isinstance(observed, str) or not observed:
-        raise WaitError(f"pull request {repo}#{number} has no verified head")
+        raise WaitError(f"pull request {repo}#{number} has no verified head" if number is not None else f"commit {head} has no verified head")
     if expected:
         expected.note(observed)
     observation: dict[str, Any] = {"head": observed}
@@ -355,9 +430,20 @@ def workflow_census(
         "workflow run",
     )
     observation["runs"] = []
+    observation["unboundRuns"] = []
     for run in runs:
         if run.get("head_sha") != head:
             raise WaitError(f"workflow run {run['id']} is for head {run.get('head_sha')}, not {head}")
+        if run.get("event") in UNBOUND_EVENTS:
+            observation["unboundRuns"].append({
+                "id": run["id"],
+                "name": run.get("name"),
+                "event": run.get("event"),
+                "status": run.get("status"),
+                "conclusion": run.get("conclusion"),
+                "url": run.get("html_url"),
+            })
+            continue
         jobs = rest_census(
             gh.rest_pages(f"repos/{repo}/actions/runs/{run['id']}/jobs?filter=latest&per_page={rest_page_size}"),
             "jobs",
@@ -421,7 +507,7 @@ def mark_superseded_runs(runs: list[dict[str, Any]]) -> None:
             run["superseded"] = True
 
 
-def mark_cancelled_duplicates(runs: list[dict[str, Any]], repo: str, number: int) -> None:
+def mark_cancelled_duplicates(runs: list[dict[str, Any]], repo: str, number: int | None) -> None:
     """Flag a newest run that was cancelled beside an older run of its source.
 
     One event can start two runs of a workflow for the same head, for example
@@ -443,7 +529,8 @@ def mark_cancelled_duplicates(runs: list[dict[str, Any]], repo: str, number: int
     no job of the cancelled run failed in any other way. A run cancelled after
     the older one finished, or with a failed job, needs its own diagnosis.
     Where GitHub names the pull requests a run belongs to, both runs belong
-    to this one: a branch can have pull requests against two bases.
+    to this one: a branch can have pull requests against two bases. A
+    commit's census, with no NUMBER, has no pull request to match.
     """
     sources: dict[tuple[Any, Any], list[dict[str, Any]]] = {}
     for run in runs:
@@ -455,7 +542,7 @@ def mark_cancelled_duplicates(runs: list[dict[str, Any]], repo: str, number: int
             continue
         if (newest.get("attempt") or 1) > 1:
             continue
-        if newest.get("pullRequests") and number not in newest["pullRequests"]:
+        if number is not None and newest.get("pullRequests") and number not in newest["pullRequests"]:
             continue
         if any(
             job.get("conclusion") not in PASSING_WORKFLOW_CONCLUSIONS | {"cancelled", None}
@@ -465,7 +552,7 @@ def mark_cancelled_duplicates(runs: list[dict[str, Any]], repo: str, number: int
         older = [
             run for run in source
             if run is not newest and raced(run, newest)
-            and (not run.get("pullRequests") or number in run["pullRequests"])
+            and (number is None or not run.get("pullRequests") or number in run["pullRequests"])
         ]
         # A job that may fail without failing its run, such as one with
         # continue-on-error, still has to pass.
@@ -518,6 +605,16 @@ def cancelled_duplicates(observation: dict[str, Any], older_run: str) -> list[di
         run for run in deciding_runs(observation)
         if (run.get("cancelledDuplicate") or {}).get("olderRun") == older_run
     ]
+
+
+def census_digest(observation: dict[str, Any]) -> str:
+    """The digest two observations must share to confirm a stable census.
+
+    Unbound runs are left out: they keep arriving on a default-branch commit,
+    for example one repository dispatch for each preview deployment, and
+    decide nothing about it.
+    """
+    return stable_digest({key: value for key, value in observation.items() if key != "unboundRuns"})
 
 
 def deciding_runs(observation: dict[str, Any]) -> list[dict[str, Any]]:
@@ -665,7 +762,7 @@ class WorkflowCensusGate:
             if not self.confirm:
                 self.previous = None
                 return "waiting", f"{reason}, once wait confirms the census is stable"
-            digest = stable_digest(observation)
+            digest = census_digest(observation)
             confirmed = digest == self.previous
             self.previous = digest
             if not confirmed:
@@ -703,12 +800,17 @@ class WorkflowCensusGate:
         summary = f"{len(runs)} workflow runs and {len(jobs)} jobs"
         if not self.confirm:
             return "waiting", f"all {summary} succeeded in this snapshot; only wait can confirm the census is stable"
-        digest = stable_digest(observation)
+        digest = census_digest(observation)
         confirmed = digest == self.previous
         self.previous = digest
         if not confirmed:
             return "waiting", f"all {summary} succeeded; confirming the census is stable"
-        return "satisfied", f"all {summary} on the head succeeded across two identical observations"
+        unbound = observation.get("unboundRuns") or []
+        uncounted = (
+            f"; {len(unbound)} runs of events GitHub records on the default branch's latest commit "
+            "were not counted (unboundRuns)" if unbound else ""
+        )
+        return "satisfied", f"all {summary} on the head succeeded across two identical observations{uncounted}"
 
 
 def workflow_snapshot(gh: Gh, repo: str, run_id: int) -> dict[str, Any]:
@@ -784,27 +886,45 @@ def rekey_legacy_checkpoint(path: Path | None, identity: dict[str, Any], transit
         write_state(path, {**prior, "digest": digest})
 
 
+KINDS_HELP = """kinds and the flags each needs besides --repo:
+  checks-terminal    --head SHA, and --all-workflows, one --check NAME per
+                     context, or both. With --pr N it waits on that pull
+                     request's head; without --pr, on the commit itself, such
+                     as a merge commit on the default branch (full SHA).
+  pr-merged          --pr N and --head SHA
+  workflow-terminal  --run-id ID; --head SHA also checks the run's commit
+  tag-target         --tag NAME and --head SHA
+  release-assets     --tag NAME, --head SHA and one --asset NAME per asset
+  wake-at            (wait only) --deadline alone"""
+
+
 def parser() -> argparse.ArgumentParser:
-    result = argparse.ArgumentParser()
+    result = argparse.ArgumentParser(
+        description="Wait for, or inspect, one GitHub delivery transition.",
+        epilog=KINDS_HELP, formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     commands = result.add_subparsers(dest="command", required=True)
     for command in ("inspect", "wait"):
-        sub = commands.add_parser(command)
+        sub = commands.add_parser(
+            command, epilog=KINDS_HELP, formatter_class=argparse.RawDescriptionHelpFormatter,
+            help="await a transition" if command == "wait" else "take one snapshot",
+        )
         kinds = ["checks-terminal", "pr-merged", "workflow-terminal", "tag-target", "release-assets"]
         if command == "wait":
             kinds.append("wake-at")
         sub.add_argument("kind", choices=kinds)
-        sub.add_argument("--repo")
-        sub.add_argument("--pr", type=int)
-        sub.add_argument("--head")
-        sub.add_argument("--run-id", type=int)
-        sub.add_argument("--tag")
-        sub.add_argument("--asset", action="append", default=[])
-        sub.add_argument("--check", action="append", default=[])
-        sub.add_argument("--all-workflows", action="store_true")
+        sub.add_argument("--repo", help="OWNER/REPO")
+        sub.add_argument("--pr", type=int, help="pull request number (checks-terminal, pr-merged)")
+        sub.add_argument("--head", help="expected commit SHA")
+        sub.add_argument("--run-id", type=int, help="workflow run id (workflow-terminal)")
+        sub.add_argument("--tag", help="tag name (tag-target, release-assets)")
+        sub.add_argument("--asset", action="append", default=[], help="required release asset; repeat for each")
+        sub.add_argument("--check", action="append", default=[], help="check or status context that must pass; repeat for each")
+        sub.add_argument("--all-workflows", action="store_true", help="every GitHub Actions run and job on the head must pass")
         sub.add_argument("--rest-page-size", type=int, choices=range(1, 101), default=100, metavar="1..100")
         sub.add_argument("--json", action="store_true")
         if command == "wait":
-            sub.add_argument("--deadline", required=True)
+            sub.add_argument("--deadline", required=True, help="absolute ISO 8601 time with a timezone")
             sub.add_argument("--interval", type=float, default=30.0)
             sub.add_argument("--state", type=Path)
     return result
@@ -854,14 +974,34 @@ def main() -> int:
             gh = Gh(metrics, reserve=CORE_RESERVE if args.command == "wait" else None)
             if args.all_workflows and args.kind != "checks-terminal":
                 raise WaitError("--all-workflows applies only to checks-terminal")
-            pull_request = args.kind in {"checks-terminal", "pr-merged"}
-            if pull_request:
-                if not args.pr or not args.head:
-                    raise WaitError("--pr and --head are required")
-                if args.kind == "checks-terminal" and not args.check and not args.all_workflows:
+            # Only a pull request's head can move; a commit's census has none to follow.
+            pull_request = args.kind == "pr-merged" or (args.kind == "checks-terminal" and args.pr is not None)
+            if args.kind == "pr-merged" and (not args.pr or not args.head):
+                raise WaitError("pr-merged requires --pr and --head")
+            if args.kind == "checks-terminal":
+                if not args.head:
+                    raise WaitError(
+                        "checks-terminal requires --head: the pull request's head with --pr, "
+                        "or without --pr a commit such as a merge commit on the default branch"
+                    )
+                if not args.check and not args.all_workflows:
                     raise WaitError(
                         "checks-terminal requires --all-workflows or at least one --check context"
                     )
+                if not pull_request and not FULL_SHA.fullmatch(args.head):
+                    raise WaitError(
+                        "checks-terminal without --pr waits on a commit and needs its full SHA; "
+                        f"{args.head!r} is not one"
+                    )
+            if args.kind == "checks-terminal" and not pull_request:
+                if args.all_workflows:
+                    observe = lambda: workflow_census(gh, args.repo, None, args.head, bool(args.check), args.rest_page_size)
+                    gate = WorkflowCensusGate(args.head, set(args.check), args.command == "wait")
+                    classify = gate
+                else:
+                    observe = lambda: commit_snapshot(gh, args.repo, args.head, True, args.rest_page_size)
+                    classify = lambda value: classify_pr(args.kind, args.head, set(args.check), value)
+            elif pull_request:
                 expected_head = ExpectedHead(gh, args.repo, args.head)
                 if args.all_workflows:
                     observe = lambda: expected_head.annotate(
@@ -873,11 +1013,12 @@ def main() -> int:
                     observe = lambda: expected_head.annotate(pr_snapshot(gh, args.repo, args.pr, args.rest_page_size, expected_head))
                     classify = lambda value: classify_pr(args.kind, args.head, set(args.check), value)
             elif args.kind == "workflow-terminal":
-                if not args.run_id or not args.head:
-                    raise WaitError("--run-id and --head are required")
+                if not args.run_id:
+                    raise WaitError("workflow-terminal requires --run-id")
                 observe = lambda: workflow_snapshot(gh, args.repo, args.run_id)
                 def classify(value: dict[str, Any]) -> tuple[str, str]:
-                    if value.get("head") != args.head:
+                    # A run never changes its commit, so --head only checks the run is the intended one.
+                    if args.head and value.get("head") != args.head:
                         return "invalidated", f"expected head {args.head}, observed {value.get('head')}"
                     if value.get("status") != "completed":
                         return "waiting", "workflow is not terminal"
