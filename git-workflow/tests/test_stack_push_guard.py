@@ -55,6 +55,12 @@ class ValidationTests(unittest.TestCase):
         self.assertEqual(str(raised.exception), 'invalid admitted ref fields in refs[0]: unexpected "name"; '
                          'missing "ref"; the keys are "ref", "source" and "expected"')
         c = copy.deepcopy(self.admission)
+        c["refs"].append({"name": "refs/heads/other", "source": "c" * 40, "expect": "d" * 40})
+        with self.assertRaises(guard.GuardError) as raised:
+            guard.validate_admission(c)
+        self.assertEqual(str(raised.exception), 'invalid admitted ref fields in refs[1]: unexpected "name" and "expect"; '
+                         'missing "ref" and "expected"; the keys are "ref", "source" and "expected"')
+        c = copy.deepcopy(self.admission)
         c["refs"][0] = ["refs/heads/feature/naïve-key"]
         with self.assertRaisesRegex(guard.GuardError, r'invalid admitted ref fields in refs\[0\]: expected a JSON object'):
             guard.validate_admission(c)
