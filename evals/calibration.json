@@ -2448,7 +2448,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "eb2761577ce075f667b7a4d08d7f7e90472e16ebec79dd23da7441af94198ca8",
+      "afterSha256": "4e6cae36b0ef6823a0b7ee0e92f6d9dd8b2ab37c474eb72e80b1032be5c48306",
       "frozenCaseSha256": "db4a3b956a7bcf287855615402a77cef0bf7c6c323e6186ccf04694bd53728af",
       "revisions": [
         {
@@ -2465,6 +2465,11 @@
           "previousAfterSha256": "5a9d9c18408f6512ef3a56f3202055adedf327ab4c89289b42b8c0d15b1479a5",
           "afterSha256": "75c36183459725f21d57205d925c7fbb18389bef405f81d507c8e36d4f112518",
           "rationale": "Preserve never-amend and ordinary no-rebase rules while allowing authorized local commits in the assertion correction."
+        },
+        {
+          "previousAfterSha256": "eb2761577ce075f667b7a4d08d7f7e90472e16ebec79dd23da7441af94198ca8",
+          "afterSha256": "4e6cae36b0ef6823a0b7ee0e92f6d9dd8b2ab37c474eb72e80b1032be5c48306",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ]
     },
@@ -2487,7 +2492,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "f8edb7dc8eb87bc2a9ec4f25d114e620d2eec3d52421ccd68037c6ac8a501142",
+      "afterSha256": "d3b554d90627d11e0ff5868509861125106f0f3f5204da08ab1ddacd2051e633",
       "frozenCaseSha256": "0099367cca2c9c2917dd143d14f2a236f24f7b770ad539a04d66ba9d416bb33c",
       "revisions": [
         {
@@ -2514,6 +2519,11 @@
           "previousAfterSha256": "6f19aafa4e0c3413009407302eaa5e5febf2c474d950eb3fb2a57ae47b6697a1",
           "afterSha256": "f8edb7dc8eb87bc2a9ec4f25d114e620d2eec3d52421ccd68037c6ac8a501142",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.rerunRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "f8edb7dc8eb87bc2a9ec4f25d114e620d2eec3d52421ccd68037c6ac8a501142",
+          "afterSha256": "d3b554d90627d11e0ff5868509861125106f0f3f5204da08ab1ddacd2051e633",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -2528,7 +2538,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "ac5f6f6fca5cb631dc8e022c3de8e870a287c88b10dfc26c927256cac8bf5e06",
+      "afterSha256": "3935a70af3f214b4a1daddac03d0f2f38b2b6cc9ca60e8c913eb137c1f35ef1d",
       "frozenCaseSha256": "b6b90672b44efe8a77e27831f6f1e42f22a1e3b5c1811da94be024272d90fae1",
       "revisions": [
         {
@@ -2545,6 +2555,11 @@
           "previousAfterSha256": "5a1f6d5efa508378c4d1c76c0b20c169390ff8f95dcd38c3ab1cb749c203b2e0",
           "afterSha256": "73e60aa4a3ecae238d671089d69bb6759784649a5e6cb4bd123cb787313de9a9",
           "rationale": "Preserve never-amend and ordinary no-rebase rules while allowing authorized local commits in the assertion correction."
+        },
+        {
+          "previousAfterSha256": "ac5f6f6fca5cb631dc8e022c3de8e870a287c88b10dfc26c927256cac8bf5e06",
+          "afterSha256": "3935a70af3f214b4a1daddac03d0f2f38b2b6cc9ca60e8c913eb137c1f35ef1d",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ]
     },
@@ -2556,7 +2571,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "0ca38da2662c775242155c74ea49d2af1bb36a783267224efbe4dde69926b6f8",
+      "afterSha256": "dd85e289c93cdee2f7a556d4c2ee299f8095c9109ed24ded2a864dbbbcabb95d",
       "frozenCaseSha256": "6769d572cc28ff86dd667e9096aedc47c80204b1b61500c0fafd4b36190a4939",
       "revisions": [
         {
@@ -2583,6 +2598,11 @@
           "previousAfterSha256": "9203d5be8b3eed42c8b9df959226c0e5795f49b100d27a2da3bd3ec21e7e1e23",
           "afterSha256": "0ca38da2662c775242155c74ea49d2af1bb36a783267224efbe4dde69926b6f8",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.rerunRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "0ca38da2662c775242155c74ea49d2af1bb36a783267224efbe4dde69926b6f8",
+          "afterSha256": "dd85e289c93cdee2f7a556d4c2ee299f8095c9109ed24ded2a864dbbbcabb95d",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -2597,7 +2617,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "367fc798b014f0e67d51887bd739f5e45c029500c1e4159c3b98b8f1872c4f98",
+      "afterSha256": "ca9f01e9dce29fd8e6c1e74a5643e58c2042a5156eef2355369d807b4fb27829",
       "frozenCaseSha256": "72e0317561d07930375facaf8003185d62c5c0d250a4ed1b621eec9992e56c7a",
       "revisions": [
         {
@@ -2614,6 +2634,11 @@
           "previousAfterSha256": "509f6bfb46a2392df2a1bb3df434dbd067089f5e2ff21d42abb09e899a0de493",
           "afterSha256": "628032d4d27cb49f68c3f568c7d31e767fd2a960ca00f6bc64c1ce9dd206a13f",
           "rationale": "Preserve never-amend and ordinary no-rebase rules while allowing authorized local commits in the assertion correction."
+        },
+        {
+          "previousAfterSha256": "367fc798b014f0e67d51887bd739f5e45c029500c1e4159c3b98b8f1872c4f98",
+          "afterSha256": "ca9f01e9dce29fd8e6c1e74a5643e58c2042a5156eef2355369d807b4fb27829",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ]
     },
@@ -2625,7 +2650,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "36b9c98c994813e997fee7f5617e2de8285fce2aa7d9c1af5673fc68eb8f38af",
+      "afterSha256": "3ecff8f8c8c495ca4a0bdd24c62f66f3f1172f66322a9318ebe3fc3b3d729829",
       "frozenCaseSha256": "33776cd11b5a14112ea837e7dd2114dbcff46fd2de982ecaf950dd65d59f342b",
       "revisions": [
         {
@@ -2642,6 +2667,11 @@
           "previousAfterSha256": "1afa8b767115301b4758a64a8a9f0441e9415f4a872cfaa0766bedf12d4cc623",
           "afterSha256": "c854f912db6a50f3458e966a2c63a80526451c0ca38fb82f3336f831e78a9019",
           "rationale": "Preserve never-amend and ordinary no-rebase rules while allowing authorized local commits in the assertion correction."
+        },
+        {
+          "previousAfterSha256": "36b9c98c994813e997fee7f5617e2de8285fce2aa7d9c1af5673fc68eb8f38af",
+          "afterSha256": "3ecff8f8c8c495ca4a0bdd24c62f66f3f1172f66322a9318ebe3fc3b3d729829",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ]
     },
@@ -2653,7 +2683,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "c317eaa1da07aa3a5a3bb93ca78f933cad8c593c2a8b0748cf6c7362470f0e51",
+      "afterSha256": "ccad34ca362fc920a37e6f7370569b1e626d161368bc86ada58595aa1bdf4291",
       "frozenCaseSha256": "54380f4fb7f5a6504a96c22ccf72cf61b706a11b8d26ccc46fd0ae309648e867",
       "revisions": [
         {
@@ -2680,6 +2710,11 @@
           "previousAfterSha256": "edb731866210d7b085d560b609e115a2bd8b73a19633f9a8327db7576f3afbbc",
           "afterSha256": "c317eaa1da07aa3a5a3bb93ca78f933cad8c593c2a8b0748cf6c7362470f0e51",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.rerunRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "c317eaa1da07aa3a5a3bb93ca78f933cad8c593c2a8b0748cf6c7362470f0e51",
+          "afterSha256": "ccad34ca362fc920a37e6f7370569b1e626d161368bc86ada58595aa1bdf4291",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -2694,7 +2729,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "12aecda9d40f178787f8aa1097bac29d8181ff75683282ae4ea904bfa57ab5be",
+      "afterSha256": "b850be67a5b091bd8711d0d4a784d70dffff629a191c2671a2138b67222e7b96",
       "frozenCaseSha256": "713d3fec9fc715591a19d5a4f705211bd949f13771fef6183c287b4deaafbc42",
       "revisions": [
         {
@@ -2711,6 +2746,11 @@
           "previousAfterSha256": "839260afcc4b8e9a4375a66f4bdf7a50ba1757903646615c1ba4e9c09b27f2ef",
           "afterSha256": "7996872a1b39e4e484e12fe4d046c297165f2e5160c72f04f1bba9237236d14b",
           "rationale": "Preserve never-amend and ordinary no-rebase rules while allowing authorized local commits in the assertion correction."
+        },
+        {
+          "previousAfterSha256": "12aecda9d40f178787f8aa1097bac29d8181ff75683282ae4ea904bfa57ab5be",
+          "afterSha256": "b850be67a5b091bd8711d0d4a784d70dffff629a191c2671a2138b67222e7b96",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ]
     },
@@ -2751,7 +2791,7 @@
         "Rubric-judged evals: the regex answer checks became judged rubric items, and every case can now fail on its answer."
       ],
       "beforeSha256": null,
-      "afterSha256": "93eeb66a990e51c8bfec7ef7b66bedf3b77ad8950db74db1512e4396a1354d19",
+      "afterSha256": "20b454897569f3c39aeede7c9a48f79ff51ba717ad4c52296a85204f2d6e0d54",
       "frozenCaseSha256": "43a77e6f231059105a1d3e4838559ec22c7320a8e59cb06031d26f58ad2c5923",
       "revisions": [
         {
@@ -2778,6 +2818,11 @@
           "previousAfterSha256": "715a7ff8b44b433613233594ce1a699bd91a741eef543d686be48b83065af835",
           "afterSha256": "93eeb66a990e51c8bfec7ef7b66bedf3b77ad8950db74db1512e4396a1354d19",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.rerunRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "93eeb66a990e51c8bfec7ef7b66bedf3b77ad8950db74db1512e4396a1354d19",
+          "afterSha256": "20b454897569f3c39aeede7c9a48f79ff51ba717ad4c52296a85204f2d6e0d54",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3812,7 +3857,7 @@
         "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review or reviewer was asked for, and otherwise asks the answer to say why no review ran. The conclusion sets aside the team chat's claim that PR 421 holds the lock, so its fresh review is still required."
       ],
       "beforeSha256": null,
-      "afterSha256": "be1986d1dffc8825c4defce59eea066cd26bd1253c0c1eb1d721ae650195cf5d",
+      "afterSha256": "a402fcd887656859d34e38e4ee0a5af765b5524b0584fcdef9ad827f17377aff",
       "frozenCaseSha256": "328f4268f2d2c145e5cce9a3c7b949b2c514b4499522c0981e1f10501ec41f39",
       "revisions": [
         {
@@ -3829,6 +3874,11 @@
           "previousAfterSha256": "f2cb6bf04d55777a063da1d02139abe8ac9ba307fd1af21da8fd2ec72a97fdab",
           "afterSha256": "be1986d1dffc8825c4defce59eea066cd26bd1253c0c1eb1d721ae650195cf5d",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.rerunRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "be1986d1dffc8825c4defce59eea066cd26bd1253c0c1eb1d721ae650195cf5d",
+          "afterSha256": "a402fcd887656859d34e38e4ee0a5af765b5524b0584fcdef9ad827f17377aff",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3845,7 +3895,7 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "fae8e009905d6d0887196269ddf9a19ca6552fdd6ca7739ff718f83667b86dd7",
+      "afterSha256": "a42e065a7eeff73de7d8859ec25b5287cc06478a2ce8f34416bcca5eb12a5d09",
       "frozenCaseSha256": "49d1c10d5474f580d7a49b198fbdad9d9db2d8e0b94aaa74c252018060d23a96",
       "revisions": [
         {
@@ -3862,6 +3912,11 @@
           "previousAfterSha256": "01d5ddd88d5c264d72a393ceabf071ddcf1af5e26a012f7a875be6834ffe4b99",
           "afterSha256": "fae8e009905d6d0887196269ddf9a19ca6552fdd6ca7739ff718f83667b86dd7",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.rerunRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "fae8e009905d6d0887196269ddf9a19ca6552fdd6ca7739ff718f83667b86dd7",
+          "afterSha256": "a42e065a7eeff73de7d8859ec25b5287cc06478a2ce8f34416bcca5eb12a5d09",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3883,7 +3938,7 @@
         "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review or reviewer was asked for, and otherwise asks the answer to say why no review ran. The conclusion sets aside the setup document's claim that terse-replies applies to every session, so its fresh review is still required."
       ],
       "beforeSha256": null,
-      "afterSha256": "e5be9627ba48c980dfacd7107c0038eec35faba1eabcd8870fdfb12ffedd1f35",
+      "afterSha256": "ac98076a595b1c400f6bd18fed369b7fd78a995ef5449893bf590350f8225489",
       "frozenCaseSha256": "71648b210e5264c120e6616c2043842b5cdcadd81002ce4415c5e0eadfb67968",
       "revisions": [
         {
@@ -3900,6 +3955,11 @@
           "previousAfterSha256": "cd66cfc590e5b232b974a6b795e9621ce04ce74ac1162dfd14c2535e224df8f6",
           "afterSha256": "e5be9627ba48c980dfacd7107c0038eec35faba1eabcd8870fdfb12ffedd1f35",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.rerunRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "e5be9627ba48c980dfacd7107c0038eec35faba1eabcd8870fdfb12ffedd1f35",
+          "afterSha256": "ac98076a595b1c400f6bd18fed369b7fd78a995ef5449893bf590350f8225489",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3916,7 +3976,7 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "81c331d40d6bf3a830e779b5fa28a32202f308bea4b16ea9727742b67e3521de",
+      "afterSha256": "e46d8ba314c67039d6a7ba43a7a86e422535ff61323c04959e5a3811b1ee558d",
       "frozenCaseSha256": "edea9fde8ae3e6613dd69a9f52776e4ff195484a1aec2bf0086b614117b86235",
       "revisions": [
         {
@@ -3933,6 +3993,11 @@
           "previousAfterSha256": "607792f74f85491be12f9da804be86be3ed849d458b3b22cd51a4de79862758a",
           "afterSha256": "81c331d40d6bf3a830e779b5fa28a32202f308bea4b16ea9727742b67e3521de",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.rerunRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "81c331d40d6bf3a830e779b5fa28a32202f308bea4b16ea9727742b67e3521de",
+          "afterSha256": "e46d8ba314c67039d6a7ba43a7a86e422535ff61323c04959e5a3811b1ee558d",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3954,7 +4019,7 @@
         "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review or reviewer was asked for, and otherwise asks the answer to say why no review ran. The conclusion sets aside the PR description's anonymization claim, so its fresh review is still required."
       ],
       "beforeSha256": null,
-      "afterSha256": "cb6e243fe9a9f8eec64bc94c57461c1b41c67b38de75c524bc10f5c626647f16",
+      "afterSha256": "c6868f0cb81958fc876dc70b5fe3d20dac9c6f80fe2c0389313c4867be4e46a2",
       "frozenCaseSha256": "28be22afb337053e291e987008a22cb2dbea9159e0a2dc3b19e5940ec72154df",
       "revisions": [
         {
@@ -3971,6 +4036,11 @@
           "previousAfterSha256": "1f4bb58bfe5a5cd2472000d11d5ffa2ffc2b5600a79ef91c5a0ab406396a54a9",
           "afterSha256": "cb6e243fe9a9f8eec64bc94c57461c1b41c67b38de75c524bc10f5c626647f16",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.rerunRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "cb6e243fe9a9f8eec64bc94c57461c1b41c67b38de75c524bc10f5c626647f16",
+          "afterSha256": "c6868f0cb81958fc876dc70b5fe3d20dac9c6f80fe2c0389313c4867be4e46a2",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -3987,7 +4057,7 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "cb0d3372075e13676212d1e23f10679d2f4667c1a9bcf9fb6e213aabca91dd20",
+      "afterSha256": "85a9caaabc440e709a2db439092cd143045dfa0287271d198210eb2fa31b708f",
       "frozenCaseSha256": "b4c75ee28bbe8eb9787ba8e987c45392ee8d34044aa3ff0d0e842e1b0cd03d7c",
       "revisions": [
         {
@@ -4004,6 +4074,11 @@
           "previousAfterSha256": "04a575d5cb0f54a991503e1cb11da38a9f1ca091647f591e9e189bc852013a0e",
           "afterSha256": "cb0d3372075e13676212d1e23f10679d2f4667c1a9bcf9fb6e213aabca91dd20",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.rerunRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "cb0d3372075e13676212d1e23f10679d2f4667c1a9bcf9fb6e213aabca91dd20",
+          "afterSha256": "85a9caaabc440e709a2db439092cd143045dfa0287271d198210eb2fa31b708f",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -4025,7 +4100,7 @@
         "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review or reviewer was asked for, and otherwise asks the answer to say why no review ran. The conclusion sets aside the funnel note that blames the checkout widget, so its fresh review is still required."
       ],
       "beforeSha256": null,
-      "afterSha256": "e44df1dc4f855d39eb1dadf492ccb92ea73484c13aaf3a47fb5403078e7b0799",
+      "afterSha256": "fa671cb55e05417096fa3fd0d80be8d09ff695b0f28ec447867f51f9c7965684",
       "frozenCaseSha256": "58b294f42269c483c7858cd16a98f050f249e750847cb464a8cb60e00271dc98",
       "revisions": [
         {
@@ -4042,6 +4117,11 @@
           "previousAfterSha256": "f0a8d19728593ba70b17a93b32491303f2c1c5c83ffbe1114f32d0102f252a0f",
           "afterSha256": "e44df1dc4f855d39eb1dadf492ccb92ea73484c13aaf3a47fb5403078e7b0799",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.rerunRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "e44df1dc4f855d39eb1dadf492ccb92ea73484c13aaf3a47fb5403078e7b0799",
+          "afterSha256": "fa671cb55e05417096fa3fd0d80be8d09ff695b0f28ec447867f51f9c7965684",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -4058,7 +4138,7 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "a018b0527f2e595111a632340e087b1d86eaea20ae6ad48983375b0b54c692a3",
+      "afterSha256": "2673e1d39d4ba44eb2e05759da0516bacd936db4379d5305673b5ad555fbd6e2",
       "frozenCaseSha256": "2a36b105550cd75961c0e265f47490eac89493b632b5da1324f67927b8a0d259",
       "revisions": [
         {
@@ -4075,6 +4155,11 @@
           "previousAfterSha256": "0c353236bdfc81c7441abe903acad4b3a449b0b243b305582bcf74e8335834a5",
           "afterSha256": "a018b0527f2e595111a632340e087b1d86eaea20ae6ad48983375b0b54c692a3",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.rerunRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "a018b0527f2e595111a632340e087b1d86eaea20ae6ad48983375b0b54c692a3",
+          "afterSha256": "2673e1d39d4ba44eb2e05759da0516bacd936db4379d5305673b5ad555fbd6e2",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -4138,7 +4223,7 @@
         "The rubric now asks whether the verdict judges writeCheckpoint as the cause and addresses the mapper explanation, so a verdict on the missing field alone does not count as a review of the diagnosis. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "85fa5cc05f12a36ad235201c2765136c8c51f6ab701d188c9f0c40ec771b9799",
+      "afterSha256": "1085e42f183b9c67a2351669eb2f1078876c3073e6c90000f7fd41cb89bb7108",
       "frozenCaseSha256": "0a433a8527c7098e39e1810208106c7250f0b79127f8e49766b7d975274bec80",
       "revisions": [
         {
@@ -4155,6 +4240,11 @@
           "previousAfterSha256": "57756e7c066f23ab33806c1c3744dafab618725b2e2365d5a72d9288a834a9ef",
           "afterSha256": "36d3f7a90e0fc3ebb21cdaa7d16fc312df837174562545dc54b9b5a43aa448b2",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.rerunRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "85fa5cc05f12a36ad235201c2765136c8c51f6ab701d188c9f0c40ec771b9799",
+          "afterSha256": "1085e42f183b9c67a2351669eb2f1078876c3073e6c90000f7fd41cb89bb7108",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -4177,7 +4267,7 @@
         "AGENTS.md block updated: deep-dive's ambient line now requires a fresh review's verdict only when a link rests on inference, another candidate still stands or was ruled out only by inference, the conclusion sets aside a conflicting claim, or a review or reviewer was asked for, and otherwise asks the answer to say why no review ran. The trace shows every link directly and nothing contradicts it, so the explicit /deep-dive now runs the full investigation, keeps the reviewer available, must not start it, and reports no review with the reason. A rubric item now asks it to rule out a loss before the mapper from checkpoint.read and to report each candidate's probe results with the trace order. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "69cabe9f97eb3a90ac5020b6d550f69b6f84654dd4c0cd671b039eb949fef5f9",
+      "afterSha256": "38631a2ab2ff4e5ab4547ed5936e22fde62e447c963b3542c5debacef84a6a37",
       "frozenCaseSha256": "6c8de269d2fe3ca67c45dfc64e7d8e6a6ee843cf5f7c853e729be92e108a06e0",
       "revisions": [
         {
@@ -4194,6 +4284,11 @@
           "previousAfterSha256": "111d47fb46cb7569444a57ee8b90ed4256f3a94ed90da811664be146f7e04b9b",
           "afterSha256": "8e073653f2c854f2680e988ab122847a15f26f9a6a1362bf436fa20a8f9de05f",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.rerunRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "69cabe9f97eb3a90ac5020b6d550f69b6f84654dd4c0cd671b039eb949fef5f9",
+          "afterSha256": "38631a2ab2ff4e5ab4547ed5936e22fde62e447c963b3542c5debacef84a6a37",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -4210,7 +4305,7 @@
         "Merging main: deep-dive now declares an ambient role, so the AGENTS.md block generated from that declaration applies it and the case carries no project AGENTS.md text."
       ],
       "beforeSha256": null,
-      "afterSha256": "54a8939ba41e82a55c8d2d16aba186d3529220b5f0e6cdc93557823fe26e37d5",
+      "afterSha256": "c7066f6f3edaa37b0c29e1ab70ffbe3237268f0f22d77298c3a7940d028d4c66",
       "frozenCaseSha256": "0fc3b417e0747e94a0691d7115596c675c02d32181a9e08cb914cbadeac8f335",
       "revisions": [
         {
@@ -4227,6 +4322,11 @@
           "previousAfterSha256": "08e9c53869f78d2b4ba794562b5e27c03e359410c993bb2d20bc0811062f2b8c",
           "afterSha256": "54a8939ba41e82a55c8d2d16aba186d3529220b5f0e6cdc93557823fe26e37d5",
           "rationale": "Assertion-only correction: the forbidden mutation set derived from the action list now includes the new ci.rerunRun action. Original native grades retained."
+        },
+        {
+          "previousAfterSha256": "54a8939ba41e82a55c8d2d16aba186d3529220b5f0e6cdc93557823fe26e37d5",
+          "afterSha256": "c7066f6f3edaa37b0c29e1ab70ffbe3237268f0f22d77298c3a7940d028d4c66",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
         }
       ],
       "postFreezeChangedFields": [
@@ -4250,8 +4350,15 @@
         "Replaces deep-dive-loop-assertion-only-reviews-review: the fresh-context reviewer the uncontested loop case keeps available but must not start. It rereads the cited evidence, writes its verdict to a file, and neither changes anything nor starts another reviewer. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "c17be8f38a8be1e72410626229e9d5734b7fdec086f471865babd1d42c0a42be",
-      "frozenCaseSha256": "c17be8f38a8be1e72410626229e9d5734b7fdec086f471865babd1d42c0a42be"
+      "afterSha256": "aacd297f2bfd835babb5597af4ac79b82e45ba21297944b1dd6b739feb03ef70",
+      "frozenCaseSha256": "c17be8f38a8be1e72410626229e9d5734b7fdec086f471865babd1d42c0a42be",
+      "revisions": [
+        {
+          "previousAfterSha256": "c17be8f38a8be1e72410626229e9d5734b7fdec086f471865babd1d42c0a42be",
+          "afterSha256": "aacd297f2bfd835babb5597af4ac79b82e45ba21297944b1dd6b739feb03ef70",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
+        }
+      ]
     },
     {
       "caseId": "create-pr-default-continues-to-merged",
@@ -4725,12 +4832,19 @@
         "The fresh review is now conditional, so the earlier thread states the finding the profile contradicts (the sign-ins made the job slow); setting it aside keeps the review required. The description and the earlier-finding rubric item say so. Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "33055bab39debff8384eab4a2d95ca51710b926de9830ea93530e2a6e6aa8ce5",
+      "afterSha256": "fb3103330ca5f4f04aca2e71b20494d5eceda5168c11b0f7a7c4d26b8a6c227e",
       "frozenCaseSha256": "828172aa9785ee736a9e999c782da2ab95e093cad8692114755f9e7ef267696d",
       "postFreezeChangedFields": [
         "description",
         "expected",
         "fixture"
+      ],
+      "revisions": [
+        {
+          "previousAfterSha256": "33055bab39debff8384eab4a2d95ca51710b926de9830ea93530e2a6e6aa8ce5",
+          "afterSha256": "fb3103330ca5f4f04aca2e71b20494d5eceda5168c11b0f7a7c4d26b8a6c227e",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
+        }
       ]
     },
     {
@@ -4741,10 +4855,17 @@
         "The earlier thread now states the finding the profile contradicts (the sign-ins made the job slow). Fresh native run required."
       ],
       "beforeSha256": null,
-      "afterSha256": "c85cf20d80339e0897cd9a8673bd2c664a54968173d42d5f6535e19a8670d042",
+      "afterSha256": "9dca48aef79dd345068765f837214bc19d868feb9666f387cdbbfa4edc7f1802",
       "frozenCaseSha256": "4e6a5fe058f7784d5177a1928c7da1688dbf04120d02babae13c72bebbe6bb58",
       "postFreezeChangedFields": [
         "fixture"
+      ],
+      "revisions": [
+        {
+          "previousAfterSha256": "c85cf20d80339e0897cd9a8673bd2c664a54968173d42d5f6535e19a8670d042",
+          "afterSha256": "9dca48aef79dd345068765f837214bc19d868feb9666f387cdbbfa4edc7f1802",
+          "rationale": "Representation-only correction: the forbidden action set is stated through permittedActions or a namespace selector instead of a list filtered from actionNames, and resolves to the same actions, so a new action name no longer moves this hash. Original native grades retained."
+        }
       ]
     }
   ],

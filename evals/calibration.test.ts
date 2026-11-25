@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { expect, test } from "bun:test";
-import { gradeRun, validateCases } from "./grading.ts";
+import { forbiddenActionSet, gradeRun, validateCases } from "./grading.ts";
 import { createEvalTools } from "./tools.ts";
-import type { EvalCase, RunLedger } from "./types.ts";
+import { actionNames, type ActionSelector, type EvalCase, type RunLedger } from "./types.ts";
 import { evalCases } from "./cases.ts";
 test("synthetic full revisions are valid SHA-1 lengths and do not override concrete case revisions", () => {
   for (const c of evalCases) {
@@ -279,6 +279,18 @@ test("native Agent evidence uses the actual returned result, not the user's task
   ).toBeDefined();
 });
 
+test("a forbidden set is stated through selectors, so a new action name moves no case hash", async () => {
+  // A case that filtered actionNames changed its content, and its hash in
+  // calibration.json, whenever an action was added.
+  for (const file of new Bun.Glob("*cases*.ts").scanSync(new URL(".", import.meta.url).pathname))
+    expect(`${file}: ${await Bun.file(new URL(`./${file}`, import.meta.url)).text()}`).not.toMatch(/\bactionNames\b/);
+  const expected = { forbiddenActions: ["forge.*", "git.push"], permittedActions: ["report", "forge.mergePr", "git.push", "user.ask"] } as EvalCase["expected"];
+  expect([...forbiddenActionSet(expected)].sort()).toEqual(
+    actionNames.filter((action) => action.startsWith("forge.") || action === "git.push" || !["report", "user.ask"].includes(action)).sort(),
+  );
+  expect(() => validateCases([scenario({ forbiddenActions: ["no-such-namespace.*" as ActionSelector] })], new Set())).toThrow("matches no action");
+  expect(() => validateCases([scenario({ permittedActions: ["report"], requiredActions: ["file.edit"] })], new Set())).toThrow("both requires and forbids");
+});
 test("calibration provenance covers and hashes the current loaded scenario inventory", async () => {
   const manifest = await Bun.file(
     new URL("./calibration.json", import.meta.url),

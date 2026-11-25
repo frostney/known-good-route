@@ -223,6 +223,14 @@ remain outcome gates. Exact allowed edit paths are checked from structured
 tool arguments, not path mentions in prose. Whether the answer is right is
 judged against the case's rubric, described next.
 
+A case states its forbidden actions without listing the whole action
+inventory. `forbiddenActions` takes action names and `namespace.*` selectors,
+such as `forge.*` for every forge action, and `permittedActions` forbids every
+action it does not list. Both cover actions added to `actionNames` later, so a
+new action changes no case's content and moves no hash in `calibration.json`.
+A case file that filters `actionNames` fails a test, and a selector that
+matches no action fails `validateCases`.
+
 ## Judged answers
 
 Every case carries a `rubric` of yes/no questions in its case file, written

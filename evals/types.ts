@@ -42,6 +42,15 @@ export const actionNames = [
 
 export type ActionName = (typeof actionNames)[number];
 
+// A forbidden-action entry: one action, or `namespace.*` for every action in
+// that namespace, including actions added to actionNames later. A case states
+// its forbidden set this way, or through permittedActions, instead of filtering
+// actionNames, so adding an action does not change the case's content or its
+// hash in calibration.json.
+type NamespaceOf<Action> = Action extends `${infer Namespace}.${string}` ? Namespace : never;
+export type ActionNamespace = NamespaceOf<ActionName>;
+export type ActionSelector = ActionName | `${ActionNamespace}.*`;
+
 export interface ActionRecord {
   action: ActionName;
   details: string;
@@ -222,7 +231,10 @@ export interface EvalExpectations {
   requiredActionSequence?: ActionName[];
   requiredActions?: ActionName[];
   requiredAnyActions?: ActionName[];
-  forbiddenActions?: ActionName[];
+  forbiddenActions?: ActionSelector[];
+  // Every action not listed is forbidden, including actions added to
+  // actionNames later; combines with forbiddenActions.
+  permittedActions?: ActionName[];
   minActionCounts?: Partial<Record<ActionName, number>>;
   maxActionCounts?: Partial<Record<ActionName, number>>;
 }
