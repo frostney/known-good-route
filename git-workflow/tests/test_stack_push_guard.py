@@ -47,6 +47,23 @@ class ValidationTests(unittest.TestCase):
         with self.assertRaises(guard.GuardError):
             guard.validate_admission(c)
 
+    def test_a_misnamed_key_is_refused_with_the_keys_the_entry_needs(self):
+        c = copy.deepcopy(self.admission)
+        c["refs"][0]["name"] = c["refs"][0].pop("ref")
+        with self.assertRaises(guard.GuardError) as raised:
+            guard.validate_admission(c)
+        self.assertEqual(str(raised.exception), 'invalid admitted ref refs[0] fields: unexpected "name"; '
+                         'missing "ref"; the keys are "ref", "source" and "expected"')
+        c = copy.deepcopy(self.admission)
+        c["refs"][0] = ["refs/heads/feature/naïve-key"]
+        with self.assertRaisesRegex(guard.GuardError, r'refs\[0\] fields: expected a JSON object with the keys "ref"'):
+            guard.validate_admission(c)
+        with self.assertRaisesRegex(guard.GuardError, 'invalid admission fields: unexpected "rewrites"; '
+                                    'the keys are "directory", "remote", "url" and "refs", optionally "rewrite"'):
+            guard.validate_admission({**self.admission, "rewrites": []})
+        with self.assertRaisesRegex(guard.GuardError, r'invalid rewrite\[0\] fields: missing "reason"'):
+            guard.validate_admission({**self.admission, "rewrite": [{"ref": self.admission["refs"][0]["ref"]}]})
+
     def test_corrupt_redirected_deleted_or_duplicated_updates_fail(self):
         for text in ["invalid\n", self.line * 2, self.line.replace("feature/naïve-key", "other", 1),
                      self.line.replace("a" * 40, "0" * 40), self.line.replace("b" * 40, "c" * 40)]:

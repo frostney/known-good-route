@@ -242,9 +242,17 @@ native-topology checks still apply.
 After validating the local commits and reading the exact remote heads, write
 an admission JSON file outside the worktree's tracked/untracked files. It has
 `directory` (the physical absolute checkout path), `remote`, `url` (the observed
-push URL), and `refs`. Each ref entry has a fully qualified `refs/heads/...` name,
-the approved local commit as `source`, and the previously approved remote
-commit as `expected`. Use all-zero object IDs of the repository's object format
+push URL), and `refs`. Each entry of `refs` has exactly the keys `ref`, the
+fully qualified `refs/heads/...` branch; `source`, the approved local commit;
+and `expected`, the previously approved remote commit:
+
+```json
+{"directory": "/abs/checkout", "remote": "origin", "url": "<push URL>",
+ "refs": [{"ref": "refs/heads/<branch>", "source": "<commit>", "expected": "<commit>"}]}
+```
+
+The helper refuses an object with any other key and names each key that is
+unexpected or missing. Use all-zero object IDs of the repository's object format
 only for branches verified absent remotely. Frozen members have equal source
 and expected IDs. Include every branch the native command may push; never
 refresh an approved expectation, or list a ref under `rewrite`, merely to make
