@@ -181,17 +181,18 @@ CI the project requires on default-branch commits, such as its push CI, not an
 integration deployment. For each required workflow, list its recent
 default-branch runs, for example with `gh run list --workflow WORKFLOW
 --branch DEFAULT --limit 50 --json
-databaseId,headSha,event,status,conclusion,createdAt`. Raise `--limit` until
-the listing reaches a run that succeeded or failed (`failure`, `timed_out` or
-`startup_failure`), or the workflow's whole history. Only runs that test the
-commit they are recorded on count: `push`, `schedule`, and `workflow_dispatch`,
-such as the [coverage sampler](#coverage-sampler)'s. GitHub records a run that
-another event starts, such as `workflow_run`, `repository_dispatch` or
-`issue_comment`, on whatever commit was the default branch's tip at the time,
-and it can test the work that started it, such as a pull request's code, so
-it says nothing about that commit. The deciding commit is the newest commit in
-`git log --first-parent origin/DEFAULT` with a counted run that succeeded or
-failed. List every run for that commit by its full SHA (`gh run list
+databaseId,headSha,event,status,conclusion,createdAt`. Only runs that test
+the commit they are recorded on count: `push`, `schedule`, and
+`workflow_dispatch`, such as the [coverage sampler](#coverage-sampler)'s.
+GitHub records a run that another event starts, such as `workflow_run`,
+`repository_dispatch` or `issue_comment`, on whatever commit was the default
+branch's tip at the time, and it can test the work that started it, such as a
+pull request's code, so it says nothing about that commit. Raise `--limit`
+until the listing reaches a counted run that succeeded or failed (`failure`,
+`timed_out` or `startup_failure`), or the workflow's whole history: uncounted
+runs, however many, never end the search. The deciding commit is the newest
+commit in `git log --first-parent origin/DEFAULT` with a counted run that
+succeeded or failed. List every run for that commit by its full SHA (`gh run list
 --workflow WORKFLOW --commit SHA --json
 databaseId,event,status,conclusion,attempt,updatedAt`; a short SHA lists no
 runs and no error), and keep its counted runs: the one whose latest attempt
@@ -199,23 +200,23 @@ completed last is the deciding run. Cancelled, superseded and skipped runs
 carry no result.
 
 - **Green:** each deciding run succeeded, or the project requires no CI on
-  default-branch commits, and no run for a later commit was cancelled or
-  superseded. Work starts and merges. Runs still queued or in progress for
+  default-branch commits, and no counted run for a later commit was cancelled
+  or superseded. Work starts and merges. Runs still queued or in progress for
   later commits hold neither, and a merge may supersede or cancel them. Never
   make parallel deliveries take turns or hold a shared merge token to keep a
   run alive.
-- **Stale:** each deciding run succeeded, but a run for a later commit was
-  cancelled or superseded, usually because the workflow cancels in-progress
+- **Stale:** each deciding run succeeded, but a counted run for a later commit
+  was cancelled or superseded, usually because the workflow cancels in-progress
   runs on each push (a `concurrency` group with `cancel-in-progress`), so
   completed runs no longer cover every commit that landed. A required workflow
-  with no run that succeeded or failed is Stale too. Merging never pauses
+  with no counted run that succeeded or failed is Stale too. Merging never pauses
   for it: each PR's own required checks, and any full CI run its declared rule
   requires, stay the merge gate, and only a completed failed run stops
   merging. The [coverage sampler](#coverage-sampler) closes the gap, unless
   the repository declares a [staleness bound](#declared-staleness-bound).
 - **Red:** a deciding run failed. Stop merging: getting the branch green comes
   first, and only its repair starts or merges. It stays red until a rerun of
-  that run, or a run of that workflow for the same or a newer commit,
+  that run, or a counted run of that workflow for the same or a newer commit,
   succeeds, even after the repair lands. Identify the failing job and its cause; when a sampler run failed,
   the culprit is among the commits it newly covered, `git log --first-parent
   PREVIOUS-DECIDING-SHA..SAMPLER-SHA`. A flake is cleared by rerunning the
@@ -265,7 +266,7 @@ on the deciding commit's age, or both. Without one there is no bound, only the
 sampler. A declared bound applies whenever the deciding run lags the tip,
 whatever the cause. A setting that is malformed or contradicts
 higher-authority instructions counts as already exceeded; report it. A
-required workflow with no run that succeeded or failed is past the bound.
+required workflow with no counted run that succeeded or failed is past the bound.
 
 Past the bound, merging pauses until a completed run brings the gap back
 within it. Await the run that does, with `delivery-wait`'s

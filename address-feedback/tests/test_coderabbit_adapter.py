@@ -2368,6 +2368,7 @@ class TriggerLockTest(unittest.TestCase):
                 code, output = main(gh, *argv)
                 self.assertEqual((code, output["state"]), (2, "operational-error"))
                 self.assertIn(f"{head[:7]!r} is not a full commit SHA", output["reason"])
+                self.assertEqual(gh.root_reads, 0)
         self.assertFalse(ADAPTER.lock_status(GITHUB_API, "quillworks")["held"])
         self.assertEqual(gh.posts, [])
         code, upper = main(gh, "status", "--repo", "quillworks/duetto", "--pr", "55", "--head", f"55={head.upper()}", "--json")
