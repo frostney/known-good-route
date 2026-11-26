@@ -183,14 +183,20 @@ default-branch runs, for example with `gh run list --workflow WORKFLOW
 --branch DEFAULT --limit 50 --json
 databaseId,headSha,event,status,conclusion,createdAt`. Raise `--limit` until
 the listing reaches a run that succeeded or failed (`failure`, `timed_out` or
-`startup_failure`), or the workflow's whole history. Push runs and the
-[coverage sampler](#coverage-sampler)'s dispatched runs both count. The
-deciding commit is the newest commit in `git log --first-parent
-origin/DEFAULT` with a run that succeeded or failed, whichever event started
-it. List every run for that commit (`gh run list --workflow WORKFLOW --commit
-SHA --json databaseId,event,status,conclusion,attempt,updatedAt`); the one
-whose latest attempt completed last is the deciding run. Cancelled, superseded
-and skipped runs carry no result.
+`startup_failure`), or the workflow's whole history. Only runs that test the
+commit they are recorded on count: `push`, `schedule`, and `workflow_dispatch`,
+such as the [coverage sampler](#coverage-sampler)'s. GitHub records a run that
+another event starts, such as `workflow_run`, `repository_dispatch` or
+`issue_comment`, on whatever commit was the default branch's tip at the time,
+and it can test the work that started it, such as a pull request's code, so
+it says nothing about that commit. The deciding commit is the newest commit in
+`git log --first-parent origin/DEFAULT` with a counted run that succeeded or
+failed. List every run for that commit by its full SHA (`gh run list
+--workflow WORKFLOW --commit SHA --json
+databaseId,event,status,conclusion,attempt,updatedAt`; a short SHA lists no
+runs and no error), and keep its counted runs: the one whose latest attempt
+completed last is the deciding run. Cancelled, superseded and skipped runs
+carry no result.
 
 - **Green:** each deciding run succeeded, or the project requires no CI on
   default-branch commits, and no run for a later commit was cancelled or

@@ -283,7 +283,7 @@ def workflow_run(
     jobs: list[dict],
     status: str = "completed",
     conclusion: str | None = "success",
-    head: str = "head-1",
+    head: str = "b111111111111111111111111111111111111111",
     name: str = "PR",
     workflow_id: int | None = None,
     event: str = "pull_request",
@@ -401,18 +401,18 @@ class WaitCommandsTest(unittest.TestCase):
 
     def write_scenario(self, **values: object) -> None:
         defaults = {
-            "pull": pull("head-1", [check("CI", "COMPLETED", "SUCCESS")]),
-            "restPull": {"head":{"sha":"head-1"},"merged":False,"merged_at":None,"merge_commit_sha":None},
+            "pull": pull("b111111111111111111111111111111111111111", [check("CI", "COMPLETED", "SUCCESS")]),
+            "restPull": {"head":{"sha":"b111111111111111111111111111111111111111"},"merged":False,"merged_at":None,"merge_commit_sha":None},
             "review": {
-                "headRefOid":"head-1",
+                "headRefOid":"b111111111111111111111111111111111111111",
                 "comments":{"nodes":[],"pageInfo":{"hasNextPage":False}},
                 "reviews":{"nodes":[],"pageInfo":{"hasNextPage":False}},
                 "reviewThreads":{"nodes":[],"pageInfo":{"hasNextPage":False}},
                 "commits":{"nodes":[{"commit":{"statusCheckRollup":{"contexts":{"nodes":[check("Automated review","COMPLETED","SUCCESS")],"pageInfo":{"hasNextPage":False}}}}}]},
             },
             "tag":{"ref":None,"release":None},
-            "workflow":{"id":44,"head_sha":"head-1","status":"completed","conclusion":"success","html_url":"https://example.invalid/run"},
-            "thread":{"id":"thread-1","isResolved":False,"pullRequest":{"number":7,"headRefOid":"head-1","repository":{"nameWithOwner":"owner/repo"}}},
+            "workflow":{"id":44,"head_sha":"b111111111111111111111111111111111111111","status":"completed","conclusion":"success","html_url":"https://example.invalid/run"},
+            "thread":{"id":"thread-1","isResolved":False,"pullRequest":{"number":7,"headRefOid":"b111111111111111111111111111111111111111","repository":{"nameWithOwner":"owner/repo"}}},
         }
         defaults.update(values)
         self.scenario.write_text(json.dumps(defaults))
@@ -421,7 +421,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.write_scenario()
         result, output = self.run_json(
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01",
+            "--head", "b111111111111111111111111111111111111111", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01",
         )
         self.assertEqual(result.returncode, 0)
         self.assertEqual(output["state"], "satisfied")
@@ -431,27 +431,74 @@ class WaitCommandsTest(unittest.TestCase):
         self.write_scenario()
         result, output = self.run_json(
             DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
-            "--pr", "7", "--head", "head-1", "--check", "CI",
+            "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--check", "CI",
         )
         self.assertEqual(result.returncode, 0)
         self.assertEqual(output["state"], "satisfied")
         self.assertEqual(output["metrics"]["observations"], 1)
 
+    def test_a_short_head_is_refused_by_every_kind_before_github_is_asked(self) -> None:
+        # GitHub lists runs only by a full SHA, so a short one would find a
+        # commit with no CI, and it never equals the head GitHub reports.
+        self.write_scenario()
+        short = "b111111"
+        kinds = {
+            "pull request checks": ("checks-terminal", "--pr", "7", "--check", "CI"),
+            "pull request census": ("checks-terminal", "--pr", "7", "--all-workflows"),
+            "commit census": ("checks-terminal", "--all-workflows"),
+            "merge": ("pr-merged", "--pr", "7"),
+            "workflow run": ("workflow-terminal", "--run-id", "44"),
+            "tag": ("tag-target", "--tag", "v1"),
+            "release": ("release-assets", "--tag", "v1", "--asset", "a.zip"),
+        }
+        for name, (kind, *extra) in kinds.items():
+            for command in ("inspect", "wait"):
+                state = self.directory / f"{kind}-{command}.json"
+                waiting = ("--deadline", self.deadline(), "--state", str(state)) if command == "wait" else ()
+                with self.subTest(kind=name, command=command):
+                    result, output = self.run_json(
+                        DELIVERY, command, kind, "--repo", "owner/repo", "--head", short, *extra, *waiting,
+                    )
+                    self.assertEqual(result.returncode, 2)
+                    self.assertEqual(output["state"], "operational-error")
+                    self.assertIn("'b111111' is not a full commit SHA", output["reason"])
+                    self.assertIn("git rev-parse b111111", output["reason"])
+                    self.assertEqual(output["metrics"]["apiRequests"], 0)
+                    self.assertEqual(output["identity"]["head"], short)
+                    self.assertFalse(state.exists())
+
+    def test_an_uppercase_full_head_names_the_same_commit_in_every_kind(self) -> None:
+        upper = "B111111111111111111111111111111111111111"
+        self.write_scenario(
+            pull=pull("b111111111111111111111111111111111111111", [check("CI", "COMPLETED", "SUCCESS")], merged=True),
+            tag={"ref": {"target": {"oid": "b111111111111111111111111111111111111111"}}, "release": None},
+        )
+        for kind, *extra in (
+            ("checks-terminal", "--pr", "7", "--check", "CI"),
+            ("pr-merged", "--pr", "7"),
+            ("workflow-terminal", "--run-id", "44"),
+            ("tag-target", "--tag", "v1"),
+        ):
+            with self.subTest(kind=kind):
+                result, output = self.run_json(DELIVERY, "inspect", kind, "--repo", "owner/repo", "--head", upper, *extra)
+                self.assertEqual(output["state"], "satisfied", output["reason"])
+                self.assertEqual(output["identity"]["head"], upper.lower())
+
     def test_completed_check_with_stale_status_satisfies_inspect_and_wait(self) -> None:
         completed_at = "2026-08-12T08:01:00Z"
         self.write_scenario(
             pull=pull(
-                "head-1",
+                "b111111111111111111111111111111111111111",
                 [check("CI", "IN_PROGRESS", "SUCCESS", completed_at=completed_at)],
             )
         )
         _, inspected = self.run_json(
             DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
-            "--pr", "7", "--head", "head-1", "--check", "CI",
+            "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--check", "CI",
         )
         _, waited = self.run_json(
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01",
+            "--head", "b111111111111111111111111111111111111111", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01",
         )
         self.assertEqual(inspected["state"], "satisfied")
         self.assertEqual(waited["state"], "satisfied")
@@ -461,18 +508,18 @@ class WaitCommandsTest(unittest.TestCase):
 
     def test_success_without_completion_remains_waiting(self) -> None:
         self.write_scenario(
-            pull=pull("head-1", [check("CI", "IN_PROGRESS", "SUCCESS")])
+            pull=pull("b111111111111111111111111111111111111111", [check("CI", "IN_PROGRESS", "SUCCESS")])
         )
         _, output = self.run_json(
             DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
-            "--pr", "7", "--head", "head-1", "--check", "CI",
+            "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--check", "CI",
         )
         self.assertEqual(output["state"], "waiting")
 
     def test_a_running_context_keeps_its_check_name_waiting(self) -> None:
         self.write_scenario(
             pull=pull(
-                "head-1",
+                "b111111111111111111111111111111111111111",
                 [
                     check("CI", "COMPLETED", "SUCCESS", "2026-08-12T08:00:00Z"),
                     check("CI", "IN_PROGRESS", None, "2026-08-12T08:01:00Z"),
@@ -481,7 +528,7 @@ class WaitCommandsTest(unittest.TestCase):
         )
         _, output = self.run_json(
             DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
-            "--pr", "7", "--head", "head-1", "--check", "CI",
+            "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--check", "CI",
         )
         self.assertEqual(output["state"], "waiting")
 
@@ -489,7 +536,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.write_scenario()
         result, output = self.run_json(
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo",
-            "--pr", "7", "--head", "head-1", "--check", "CI",
+            "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--check", "CI",
             "--deadline", "2026-08-12T12:00:00", "--interval", "0.01",
         )
         self.assertEqual(result.returncode, 2)
@@ -497,20 +544,20 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertIn("timezone", output["reason"])
 
     def test_head_change_invalidates(self) -> None:
-        self.write_scenario(pull=pull("head-2", []), compare={"head-2...head-1": {"status": "behind"}})
+        self.write_scenario(pull=pull("c222222222222222222222222222222222222222", []), compare={"c222222222222222222222222222222222222222...b111111111111111111111111111111111111111": {"status": "behind"}})
         _, output = self.run_json(
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01",
+            "--head", "b111111111111111111111111111111111111111", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01",
         )
         self.assertEqual(output["state"], "invalidated")
-        self.assertEqual(output["observation"]["head"], "head-2")
+        self.assertEqual(output["observation"]["head"], "c222222222222222222222222222222222222222")
         self.assertIn("a later commit than the expected one", output["reason"])
         self.assertEqual(output["metrics"]["observations"], 1)
 
     def lagging_head_wait(self, *selector: str, state: Path | None = None, seconds: float = 3) -> dict:
         deadline = (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat()
         return self.run_json(
-            DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+            DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111",
             *(selector or ("--check", "CI")), "--deadline", deadline, "--interval", "0.05",
             *(("--state", str(state)) if state else ()),
         )[1]
@@ -520,35 +567,35 @@ class WaitCommandsTest(unittest.TestCase):
         for relation, status in (("ancestor", "ahead"), ("diverged", "diverged")):
             with self.subTest(relation=relation):
                 self.counter.unlink(missing_ok=True)
-                before = pull("head-0", [check("CI", "COMPLETED", "SUCCESS")])
+                before = pull("a000000000000000000000000000000000000000", [check("CI", "COMPLETED", "SUCCESS")])
                 self.write_scenario(
-                    pullsByRequest=[before] * 4 + [pull("head-1", [check("CI", "IN_PROGRESS", None)])] * 4
-                    + [pull("head-1", [check("CI", "COMPLETED", "SUCCESS")])],
-                    compare={"head-0...head-1": {"status": status}},
+                    pullsByRequest=[before] * 4 + [pull("b111111111111111111111111111111111111111", [check("CI", "IN_PROGRESS", None)])] * 4
+                    + [pull("b111111111111111111111111111111111111111", [check("CI", "COMPLETED", "SUCCESS")])],
+                    compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": status}},
                 )
                 output = self.lagging_head_wait(state=self.directory / f"{relation}.json")
                 self.assertEqual(output["state"], "satisfied", output["reason"])
-                self.assertEqual(output["observation"]["head"], "head-1")
+                self.assertEqual(output["observation"]["head"], "b111111111111111111111111111111111111111")
                 self.assertGreaterEqual(output["metrics"]["observations"], 4)
 
     def test_a_lagging_head_is_reported_as_waiting_with_its_relation(self) -> None:
-        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        self.write_scenario(pull=pull("a000000000000000000000000000000000000000", []), compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}})
         _, inspected = self.run_json(
             DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
-            "--pr", "7", "--head", "head-1", "--check", "CI",
+            "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--check", "CI",
         )
         self.assertEqual(inspected["state"], "waiting")
         self.assertIn("an ancestor of the expected commit", inspected["reason"])
         self.assertEqual(inspected["observation"]["headLag"]["relation"], "ancestor")
         # A commit GitHub does not know yet is given the same grace.
-        self.write_scenario(pull=pull("head-0", []))
+        self.write_scenario(pull=pull("a000000000000000000000000000000000000000", []))
         state = self.directory / "wait.json"
         output = self.lagging_head_wait(state=state, seconds=0.3)
         self.assertEqual(output["state"], "timed-out")
         self.assertEqual(output["observation"]["headLag"]["relation"], "missing")
 
     def test_a_resumed_wait_keeps_the_grace_its_first_lagging_observation_started(self) -> None:
-        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        self.write_scenario(pull=pull("a000000000000000000000000000000000000000", []), compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}})
         state = self.directory / "wait.json"
         first = self.lagging_head_wait(state=state, seconds=0.3)
         self.assertEqual(first["state"], "timed-out")
@@ -563,7 +610,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.counter.with_name("counter.log").unlink()
         expired = self.lagging_head_wait(state=state)
         self.assertEqual(expired["state"], "invalidated")
-        self.assertIn("expected head head-1, observed head-0", expired["reason"])
+        self.assertIn("expected head b111111111111111111111111111111111111111, observed a000000000000000000000000000000000000000", expired["reason"])
         self.assertIn("check that the push reached", expired["reason"])
         self.assertEqual(expired["metrics"]["observations"], 1)
         # GitHub is not asked again once the grace has passed.
@@ -571,13 +618,13 @@ class WaitCommandsTest(unittest.TestCase):
 
     def test_a_head_that_moves_off_the_expected_one_invalidates_at_once(self) -> None:
         # Seen by this wait, then replaced: even an ancestor is not a lag.
-        self.write_scenario(pull=pull("head-1", [check("CI", "IN_PROGRESS", None)]))
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [check("CI", "IN_PROGRESS", None)]))
         state = self.directory / "wait.json"
         self.assertEqual(self.lagging_head_wait(state=state, seconds=0.3)["state"], "timed-out")
-        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        self.write_scenario(pull=pull("a000000000000000000000000000000000000000", []), compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}})
         output = self.lagging_head_wait(state=state)
         self.assertEqual(output["state"], "invalidated")
-        self.assertEqual(output["reason"], "expected head head-1, observed head-0, after this wait had seen the expected head")
+        self.assertEqual(output["reason"], "expected head b111111111111111111111111111111111111111, observed a000000000000000000000000000000000000000, after this wait had seen the expected head")
         # The checkpoint keeps that the expected head was seen, so a rerun gives no grace either.
         again = self.lagging_head_wait(state=state)
         self.assertEqual(again["state"], "invalidated")
@@ -588,8 +635,8 @@ class WaitCommandsTest(unittest.TestCase):
         # The census for head-1 is incomplete, then GitHub reports head-0.
         incomplete = {"runPages": [{"total_count": 2, "workflow_runs": []}], "jobPages": {}}
         self.write_scenario(
-            pullsByRequest=[pull("head-1", [])] * 2 + [pull("head-0", [])],
-            census=[incomplete], compare={"head-0...head-1": {"status": "ahead"}},
+            pullsByRequest=[pull("b111111111111111111111111111111111111111", [])] * 2 + [pull("a000000000000000000000000000000000000000", [])],
+            census=[incomplete], compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}},
         )
         _, output = self.census_wait()
         self.assertEqual(output["state"], "invalidated")
@@ -597,11 +644,11 @@ class WaitCommandsTest(unittest.TestCase):
 
     def test_the_expected_head_stays_seen_when_every_census_after_it_failed(self) -> None:
         incomplete = {"runPages": [{"total_count": 2, "workflow_runs": []}], "jobPages": {}}
-        self.write_scenario(pull=pull("head-1", []), census=[incomplete])
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", []), census=[incomplete])
         state = self.directory / "wait.json"
         self.assertEqual(self.lagging_head_wait("--all-workflows", state=state, seconds=0.3)["state"], "timed-out")
         self.assertEqual(json.loads(state.read_text()).get("expectedHead", {}).get("seen"), True)
-        self.write_scenario(pull=pull("head-0", []), census=[incomplete], compare={"head-0...head-1": {"status": "ahead"}})
+        self.write_scenario(pull=pull("a000000000000000000000000000000000000000", []), census=[incomplete], compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}})
         output = self.lagging_head_wait("--all-workflows", state=state)
         self.assertEqual(output["state"], "invalidated")
         self.assertIn("after this wait had seen the expected head", output["reason"])
@@ -609,27 +656,27 @@ class WaitCommandsTest(unittest.TestCase):
     def test_the_checks_of_another_head_are_not_read(self) -> None:
         # Through the REST fallback, no check runs or statuses are read for a lagging head.
         self.write_scenario(
-            graphqlRateLimited=True, restPull={"head": {"sha": "head-0"}, "merged": False, "merged_at": None, "merge_commit_sha": None},
-            compare={"head-0...head-1": {"status": "ahead"}},
+            graphqlRateLimited=True, restPull={"head": {"sha": "a000000000000000000000000000000000000000"}, "merged": False, "merged_at": None, "merge_commit_sha": None},
+            compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}},
         )
         _, output = self.run_json(
-            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--check", "CI",
+            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--check", "CI",
         )
         self.assertEqual(output["state"], "waiting", output["reason"])
         log = self.counter.with_name("counter.log").read_text()
         self.assertNotIn("/check-runs", log)
         self.assertNotIn("/statuses", log)
         # Nor are more than 100 contexts on a lagging head an error.
-        crowded = pull("head-0", [])
+        crowded = pull("a000000000000000000000000000000000000000", [])
         crowded["commits"]["nodes"][0]["commit"]["statusCheckRollup"]["contexts"]["pageInfo"] = {"hasNextPage": True}
-        self.write_scenario(pull=crowded, compare={"head-0...head-1": {"status": "ahead"}})
+        self.write_scenario(pull=crowded, compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}})
         _, output = self.run_json(
-            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--check", "CI",
+            DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--check", "CI",
         )
         self.assertEqual(output["state"], "waiting", output["reason"])
 
     def test_a_retry_after_a_lagging_head_still_looks_again_when_its_grace_ends(self) -> None:
-        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        self.write_scenario(pull=pull("a000000000000000000000000000000000000000", []), compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}})
         state = self.directory / "wait.json"
         self.lagging_head_wait(state=state, seconds=0.3)
         checkpoint = json.loads(state.read_text())
@@ -640,12 +687,12 @@ class WaitCommandsTest(unittest.TestCase):
         state.write_text(json.dumps(checkpoint))
         self.counter.unlink()
         self.write_scenario(
-            pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}}, transientFailures=1,
+            pull=pull("a000000000000000000000000000000000000000", []), compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}}, transientFailures=1,
         )
         deadline = (datetime.now(timezone.utc) + timedelta(seconds=5.5)).isoformat()
         started = time.monotonic()
         _, output = self.run_json(
-            DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+            DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111",
             "--check", "CI", "--deadline", deadline, "--interval", "600", "--state", str(state),
         )
         self.assertEqual(output["state"], "invalidated", output["reason"])
@@ -654,7 +701,7 @@ class WaitCommandsTest(unittest.TestCase):
 
     def grace_nearly_over(self, state: Path, seconds_left: float) -> None:
         """A checkpoint of a lagging wait whose grace ends SECONDS_LEFT from now."""
-        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        self.write_scenario(pull=pull("a000000000000000000000000000000000000000", []), compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}})
         self.lagging_head_wait(state=state, seconds=0.3)
         checkpoint = json.loads(state.read_text())
         since = datetime.now(timezone.utc) - timedelta(seconds=300 - seconds_left)
@@ -671,7 +718,7 @@ class WaitCommandsTest(unittest.TestCase):
         started = time.monotonic()
         result = subprocess.run(
             [sys.executable, str(DELIVERY), "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-             "--head", "head-1", "--check", "CI", "--deadline", deadline, "--interval", "600",
+             "--head", "b111111111111111111111111111111111111111", "--check", "CI", "--deadline", deadline, "--interval", "600",
              "--state", str(state), "--json"],
             text=True, capture_output=True, cwd=self.directory, env=self.environment, timeout=seconds + 5,
         )
@@ -681,10 +728,10 @@ class WaitCommandsTest(unittest.TestCase):
         # The comparison finishes after the grace ends; the head GitHub then reports decides.
         state = self.directory / "wait.json"
         self.grace_nearly_over(state, 0.5)
-        arrived = pull("head-1", [check("CI", "COMPLETED", "SUCCESS")])
+        arrived = pull("b111111111111111111111111111111111111111", [check("CI", "COMPLETED", "SUCCESS")])
         self.write_scenario(
-            pullsByRequest=[pull("head-0", [])] * 2 + [arrived],
-            compare={"head-0...head-1": {"status": "ahead"}}, compareSeconds=1,
+            pullsByRequest=[pull("a000000000000000000000000000000000000000", [])] * 2 + [arrived],
+            compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}}, compareSeconds=1,
         )
         output, elapsed = self.slow_wait(state, 6)
         self.assertEqual(output["state"], "satisfied", output["reason"])
@@ -693,10 +740,10 @@ class WaitCommandsTest(unittest.TestCase):
     def test_a_comparison_that_fails_at_the_end_of_the_grace_is_retried_promptly(self) -> None:
         state = self.directory / "wait.json"
         self.grace_nearly_over(state, 0.5)
-        arrived = pull("head-1", [check("CI", "COMPLETED", "SUCCESS")])
+        arrived = pull("b111111111111111111111111111111111111111", [check("CI", "COMPLETED", "SUCCESS")])
         self.write_scenario(
-            pullsByRequest=[pull("head-0", [])] * 2 + [arrived],
-            compare={"head-0...head-1": {"status": "ahead"}}, compareUnavailableOnce=True, compareSeconds=1,
+            pullsByRequest=[pull("a000000000000000000000000000000000000000", [])] * 2 + [arrived],
+            compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}}, compareUnavailableOnce=True, compareSeconds=1,
         )
         output, elapsed = self.slow_wait(state, 10)
         self.assertEqual(output["state"], "satisfied", output["reason"])
@@ -705,7 +752,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertLess(elapsed, 8.5)
 
     def test_the_expected_head_stays_seen_after_an_operational_error(self) -> None:
-        crowded = pull("head-1", [])
+        crowded = pull("b111111111111111111111111111111111111111", [])
         crowded["commits"]["nodes"][0]["commit"]["statusCheckRollup"]["contexts"]["pageInfo"] = {"hasNextPage": True}
         # Pages past the helper's limit are an error, not a retry.
         endless = {("" if n == 0 else f"c{n}"): {"contexts": {"nodes": [], "totalCount": 0, "pageInfo": {"hasNextPage": True, "endCursor": f"c{n + 1}"}}}
@@ -713,13 +760,13 @@ class WaitCommandsTest(unittest.TestCase):
         self.write_scenario(pull=crowded, commitPages=endless)
         state = self.directory / "wait.json"
         self.assertEqual(self.lagging_head_wait(state=state, seconds=0.3)["state"], "operational-error")
-        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        self.write_scenario(pull=pull("a000000000000000000000000000000000000000", []), compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}})
         output = self.lagging_head_wait(state=state)
         self.assertEqual(output["state"], "invalidated")
         self.assertIn("after this wait had seen the expected head", output["reason"])
 
     def test_a_checkpoint_digest_of_no_head_is_no_baseline(self) -> None:
-        self.write_scenario(pull=pull("head-1", [check("CI", "IN_PROGRESS", None)]))
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [check("CI", "IN_PROGRESS", None)]))
         state = self.directory / "wait.json"
         self.lagging_head_wait(state=state, seconds=0.3)
         checkpoint = json.loads(state.read_text())
@@ -731,29 +778,29 @@ class WaitCommandsTest(unittest.TestCase):
 
     def test_a_checkpoint_digest_of_another_head_is_no_baseline(self) -> None:
         # An earlier helper saved the stale head's digest when it invalidated the wait.
-        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        self.write_scenario(pull=pull("a000000000000000000000000000000000000000", []), compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}})
         for selector in (("--check", "CI"), ("--all-workflows",)):
             with self.subTest(selector=selector):
                 state = self.directory / f"{selector[0]}.json"
-                self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+                self.write_scenario(pull=pull("a000000000000000000000000000000000000000", []), compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}})
                 self.lagging_head_wait(*selector, state=state, seconds=0.3)
                 checkpoint = json.loads(state.read_text())
                 checkpoint["observation"].pop("headLag")
                 checkpoint["digest"] = "0" * 64
                 for lagging in (True, False):
                     state.write_text(json.dumps(checkpoint))
-                    arrived = [pull("head-1", [check("CI", "IN_PROGRESS", None)])]
+                    arrived = [pull("b111111111111111111111111111111111111111", [check("CI", "IN_PROGRESS", None)])]
                     self.write_scenario(
-                        pullsByRequest=([pull("head-0", [])] * 2 if lagging else []) + arrived,
+                        pullsByRequest=([pull("a000000000000000000000000000000000000000", [])] * 2 if lagging else []) + arrived,
                         census=[census(workflow_run(101, matrix_jobs(1, "in_progress", None), status="in_progress", conclusion=None))],
-                        compare={"head-0...head-1": {"status": "ahead"}},
+                        compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}},
                     )
                     self.counter.unlink(missing_ok=True)
                     output = self.lagging_head_wait(*selector, state=state, seconds=0.5)
                     self.assertEqual(output["state"], "timed-out", output["reason"])
 
     def test_a_lagging_head_is_looked_at_again_when_its_grace_ends(self) -> None:
-        self.write_scenario(pull=pull("head-0", []), compare={"head-0...head-1": {"status": "ahead"}})
+        self.write_scenario(pull=pull("a000000000000000000000000000000000000000", []), compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}})
         state = self.directory / "wait.json"
         self.lagging_head_wait(state=state, seconds=0.3)
         checkpoint = json.loads(state.read_text())
@@ -763,7 +810,7 @@ class WaitCommandsTest(unittest.TestCase):
         deadline = (datetime.now(timezone.utc) + timedelta(seconds=5.5)).isoformat()
         started = time.monotonic()
         _, output = self.run_json(
-            DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+            DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111",
             "--check", "CI", "--deadline", deadline, "--interval", "600", "--state", str(state),
         )
         self.assertEqual(output["state"], "invalidated", output["reason"])
@@ -776,7 +823,7 @@ class WaitCommandsTest(unittest.TestCase):
         past = (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()
         _, output = self.run_json(
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo",
-            "--pr", "7", "--head", "head-1", "--check", "CI",
+            "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--check", "CI",
             "--deadline", past, "--interval", "0.01",
         )
         self.assertEqual(output["state"], "satisfied")
@@ -790,7 +837,7 @@ class WaitCommandsTest(unittest.TestCase):
         )
         _, output = self.run_json(
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01",
+            "--head", "b111111111111111111111111111111111111111", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01",
         )
         self.assertEqual(output["state"], "satisfied")
         self.assertEqual(output["metrics"]["rateLimitFallbacks"], 1)
@@ -807,7 +854,7 @@ class WaitCommandsTest(unittest.TestCase):
         )
         _, output = self.run_json(
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01",
+            "--head", "b111111111111111111111111111111111111111", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01",
         )
         self.assertEqual(output["state"], "satisfied")
         self.assertEqual(output["metrics"]["observations"], 1)
@@ -815,16 +862,16 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(output["observation"]["checks"][0]["completedAt"], completed_at)
 
     def test_checkpoint_reconciliation_reports_missed_change(self) -> None:
-        self.write_scenario(pull=pull("head-1", []))
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", []))
         state = self.directory / "wait.json"
         state.write_text(json.dumps({
             "schemaVersion":1, "kind":"checks-terminal",
-            "identity":{"repo":"owner/repo","pr":7,"head":"head-1","runId":None,"tag":None,"checks":["CI"],"assets":[]},
-            "observation":{"head":"head-1","checks":[]}, "digest":"old", "updatedAt":"earlier",
+            "identity":{"repo":"owner/repo","pr":7,"head":"b111111111111111111111111111111111111111","runId":None,"tag":None,"checks":["CI"],"assets":[]},
+            "observation":{"head":"b111111111111111111111111111111111111111","checks":[]}, "digest":"old", "updatedAt":"earlier",
         }))
         _, output = self.run_json(
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01", "--state", str(state),
+            "--head", "b111111111111111111111111111111111111111", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01", "--state", str(state),
         )
         self.assertEqual(output["state"], "changed")
 
@@ -832,7 +879,7 @@ class WaitCommandsTest(unittest.TestCase):
         deadline = (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat()
         return self.run_json(
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", *(part for name in checks for part in ("--check", name)),
+            "--head", "b111111111111111111111111111111111111111", *(part for name in checks for part in ("--check", name)),
             "--deadline", deadline, "--interval", "0.05",
             *(("--state", str(state)) if state else ()),
         )[1]
@@ -841,19 +888,19 @@ class WaitCommandsTest(unittest.TestCase):
         pending = check("CI", "IN_PROGRESS", None)
         others = [check(f"other {conclusion}", "COMPLETED", conclusion) for conclusion in ("SKIPPED", "NEUTRAL", "FAILURE")]
         with self.subTest("one wait"):
-            self.write_scenario(pullsByRequest=[pull("head-1", [pending]), pull("head-1", [pending, *others])])
+            self.write_scenario(pullsByRequest=[pull("b111111111111111111111111111111111111111", [pending]), pull("b111111111111111111111111111111111111111", [pending, *others])])
             output = self.named_check_wait("CI", seconds=2)
             self.assertEqual(output["state"], "timed-out")
             self.assertEqual(len(output["observation"]["checks"]), 4)
         with self.subTest("resumed checkpoint"):
             state = self.directory / "wait.json"
-            self.write_scenario(pull=pull("head-1", [pending]))
+            self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [pending]))
             self.assertEqual(self.named_check_wait("CI", state=state)["state"], "timed-out")
-            self.write_scenario(pull=pull("head-1", [pending, *others]))
+            self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [pending, *others]))
             self.assertEqual(self.named_check_wait("CI", state=state)["state"], "timed-out")
 
     def test_named_checks_are_judged_alone_and_pass_when_skipped_or_neutral(self) -> None:
-        self.write_scenario(pull=pull("head-1", [
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [
             check("CI", "COMPLETED", "SKIPPED"),
             check("Lint", "COMPLETED", "NEUTRAL"),
             check("optional", "COMPLETED", "FAILURE"),
@@ -865,8 +912,8 @@ class WaitCommandsTest(unittest.TestCase):
     def test_named_check_failure_wakes_the_wait_while_another_named_check_runs(self) -> None:
         deploy = check("Deploy", "IN_PROGRESS", None)
         self.write_scenario(pullsByRequest=[
-            pull("head-1", [check("CI", "IN_PROGRESS", None), deploy]),
-            pull("head-1", [check("CI", "COMPLETED", "FAILURE"), deploy]),
+            pull("b111111111111111111111111111111111111111", [check("CI", "IN_PROGRESS", None), deploy]),
+            pull("b111111111111111111111111111111111111111", [check("CI", "COMPLETED", "FAILURE"), deploy]),
         ])
         output = self.named_check_wait("CI", "Deploy", seconds=3)
         self.assertEqual(output["state"], "changed")
@@ -876,18 +923,18 @@ class WaitCommandsTest(unittest.TestCase):
     def test_named_check_that_ends_skipped_or_neutral_does_not_wake_the_wait(self) -> None:
         deploy = check("Deploy", "IN_PROGRESS", None)
         state = self.directory / "wait.json"
-        self.write_scenario(pull=pull("head-1", [check("CI", "IN_PROGRESS", None), check("Lint", "IN_PROGRESS", None), deploy]))
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [check("CI", "IN_PROGRESS", None), check("Lint", "IN_PROGRESS", None), deploy]))
         self.assertEqual(self.named_check_wait("CI", "Lint", "Deploy", state=state)["state"], "timed-out")
-        self.write_scenario(pull=pull("head-1", [check("CI", "COMPLETED", "SKIPPED"), check("Lint", "COMPLETED", "NEUTRAL"), deploy]))
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [check("CI", "COMPLETED", "SKIPPED"), check("Lint", "COMPLETED", "NEUTRAL"), deploy]))
         self.assertEqual(self.named_check_wait("CI", "Lint", "Deploy", state=state)["state"], "timed-out")
 
     def test_named_check_that_already_failed_ends_the_wait_while_others_run(self) -> None:
-        self.write_scenario(pull=pull("head-1", [
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [
             check("CI", "COMPLETED", "FAILURE"), check("Deploy", "IN_PROGRESS", None),
         ]))
         _, inspected = self.run_json(
             DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
-            "--pr", "7", "--head", "head-1", "--check", "CI", "--check", "Deploy",
+            "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--check", "CI", "--check", "Deploy",
         )
         self.assertEqual(inspected["state"], "changed")
         self.assertIn("CI", inspected["reason"])
@@ -906,7 +953,7 @@ class WaitCommandsTest(unittest.TestCase):
         ):
             with self.subTest(name):
                 shutil.rmtree(self.directory / ".agent", ignore_errors=True)
-                self.write_scenario(pull=pull("head-1", [
+                self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [
                     check("test", "COMPLETED" if conclusion else "IN_PROGRESS", conclusion, f"2026-08-12T08:00:0{index}Z",
                           app=app, event=event, suite_id=10 + index, workflow=workflow)
                     for index, (event, workflow, app, conclusion) in enumerate(runs)
@@ -924,14 +971,14 @@ class WaitCommandsTest(unittest.TestCase):
         ):
             with self.subTest(name):
                 shutil.rmtree(self.directory / ".agent", ignore_errors=True)
-                self.write_scenario(pull=pull("head-1", [
+                self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [
                     check("conventional-title", "COMPLETED", newer, newer_started, event="pull_request", suite_id=12),
                     check("conventional-title", "COMPLETED", older, "2026-09-08T07:43:25Z", event="pull_request", suite_id=11),
                 ]))
                 self.assertEqual(self.named_check_wait("conventional-title", seconds=3)["state"], expected)
 
     def test_jobs_with_one_name_in_one_suite_all_count(self) -> None:
-        self.write_scenario(pull=pull("head-1", [
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [
             check("test", "COMPLETED", "SUCCESS", "2026-08-12T08:00:05Z", event="pull_request", suite_id=11),
             check("test", "COMPLETED", "FAILURE", "2026-08-12T08:00:00Z", event="pull_request", suite_id=11),
         ]))
@@ -968,10 +1015,10 @@ class WaitCommandsTest(unittest.TestCase):
         # Both are conclusions in GitHub's GraphQL CheckConclusionState.
         for conclusion in ("STARTUP_FAILURE", "STALE"):
             with self.subTest(conclusion=conclusion):
-                self.write_scenario(pull=pull("head-1", [check("CI", "COMPLETED", conclusion)]))
+                self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [check("CI", "COMPLETED", conclusion)]))
                 _, output = self.run_json(
                     DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
-                    "--pr", "7", "--head", "head-1", "--check", "CI",
+                    "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--check", "CI",
                 )
                 self.assertEqual(output["state"], "changed")
 
@@ -1000,21 +1047,21 @@ class WaitCommandsTest(unittest.TestCase):
         # The earlier key listed every terminal check that did not succeed.
         pending = check("CI", "IN_PROGRESS", None)
         skipped = check("optional", "COMPLETED", "SKIPPED")
-        self.write_scenario(pull=pull("head-1", [pending, skipped]))
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [pending, skipped]))
         state = self.directory / "wait.json"
         self.assertEqual(self.named_check_wait("CI", state=state)["state"], "timed-out")
         checkpoint = json.loads(state.read_text())
-        earlier = {"head": "head-1", "nonSuccess": ["optional"], "terminal": False}
+        earlier = {"head": "b111111111111111111111111111111111111111", "nonSuccess": ["optional"], "terminal": False}
         checkpoint["digest"] = hashlib.sha256(
             json.dumps(earlier, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest()
         state.write_text(json.dumps(checkpoint))
         self.assertEqual(self.named_check_wait("CI", state=state)["state"], "timed-out")
-        self.write_scenario(pull=pull("head-1", [check("CI", "COMPLETED", "FAILURE"), skipped]))
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [check("CI", "COMPLETED", "FAILURE"), skipped]))
         state.write_text(json.dumps(checkpoint))
         self.assertEqual(self.named_check_wait("CI", state=state)["state"], "changed")
         # A wait for other checks on the same state file leaves it untouched.
-        self.write_scenario(pull=pull("head-1", [pending, skipped]))
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [pending, skipped]))
         state.write_text(json.dumps(checkpoint))
         self.assertEqual(self.named_check_wait("optional", state=state)["state"], "invalidated")
         self.assertEqual(json.loads(state.read_text())["digest"], checkpoint["digest"])
@@ -1024,30 +1071,30 @@ class WaitCommandsTest(unittest.TestCase):
         deadline = (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat()
         timing = ("--deadline", deadline, "--interval", "0.05") if command == "wait" else ()
         return self.run_json(
-            DELIVERY, command, "pr-merged", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", *timing,
+            DELIVERY, command, "pr-merged", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111", *timing,
         )[1]
 
     def test_pr_merged_reports_a_merge(self) -> None:
-        self.write_scenario(pull=pull("head-1", [], merged=True))
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [], merged=True))
         output = self.merge_wait()
         self.assertEqual(output["state"], "satisfied")
         self.assertEqual(output["observation"]["mergeCommit"], "merge-sha")
 
     def test_pr_merged_keeps_waiting_on_an_open_pull_request(self) -> None:
-        self.write_scenario(pull=pull("head-1", []))
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", []))
         output = self.merge_wait(seconds=0.3)
         self.assertEqual(output["state"], "timed-out")
         self.assertEqual(output["reason"], "deadline reached")
 
     def test_pr_merged_ends_when_the_pull_request_closes_without_merging(self) -> None:
-        self.write_scenario(pull=pull("head-1", [], state="CLOSED"))
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [], state="CLOSED"))
         for command in ("wait", "inspect"):
             with self.subTest(command=command):
                 output = self.merge_wait(command)
                 self.assertEqual(output["state"], "changed")
                 self.assertIn("closed without merging", output["reason"])
                 self.assertEqual(output["metrics"]["observations"], 1)
-        self.write_scenario(pull=pull("head-2", [], state="CLOSED"), compare={"head-2...head-1": {"status": "behind"}})
+        self.write_scenario(pull=pull("c222222222222222222222222222222222222222", [], state="CLOSED"), compare={"c222222222222222222222222222222222222222...b111111111111111111111111111111111111111": {"status": "behind"}})
         self.assertEqual(self.merge_wait()["state"], "invalidated")
 
     def test_pr_merged_rest_fallback_tells_closed_from_merged(self) -> None:
@@ -1059,7 +1106,7 @@ class WaitCommandsTest(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.counter.unlink(missing_ok=True)
                 shutil.rmtree(self.directory / ".agent", ignore_errors=True)
-                self.write_scenario(graphqlRateLimited=True, restPull={"head": {"sha": "head-1"}, **rest})
+                self.write_scenario(graphqlRateLimited=True, restPull={"head": {"sha": "b111111111111111111111111111111111111111"}, **rest})
                 output = self.merge_wait()
                 self.assertEqual(output["state"], expected)
                 self.assertEqual(output["observation"]["state"], state)
@@ -1078,7 +1125,7 @@ class WaitCommandsTest(unittest.TestCase):
     def test_digestless_checkpoint_does_not_turn_a_satisfied_review_into_changed(self) -> None:
         state = self.directory / "review.json"
         arguments = (
-            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111",
             "--policy", str(self.policy), "--interval", "0.01", "--state", str(state),
         )
         self.write_digestless_checkpoint(*arguments)
@@ -1090,10 +1137,10 @@ class WaitCommandsTest(unittest.TestCase):
         state = self.directory / "wait.json"
         arguments = (
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--check", "CI", "--interval", "0.01", "--state", str(state),
+            "--head", "b111111111111111111111111111111111111111", "--check", "CI", "--interval", "0.01", "--state", str(state),
         )
         self.write_digestless_checkpoint(*arguments)
-        self.write_scenario(pull=pull("head-1", []))
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", []))
         deadline = (datetime.now(timezone.utc) + timedelta(seconds=0.3)).isoformat()
         _, output = self.run_json(*arguments, "--deadline", deadline)
         self.assertEqual(output["state"], "timed-out")
@@ -1118,16 +1165,16 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertFalse((self.directory / ".agent" / "waits").exists())
 
     def test_checkpoint_identity_change_invalidates(self) -> None:
-        self.write_scenario(pull=pull("head-1", []))
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", []))
         state = self.directory / "wait.json"
         state.write_text(json.dumps({
             "schemaVersion":1, "kind":"checks-terminal",
-            "identity":{"repo":"other/repo","pr":7,"head":"head-1","runId":None,"tag":None,"checks":["CI"],"assets":[]},
-            "observation":{"head":"head-1","checks":[]}, "digest":"old", "updatedAt":"earlier",
+            "identity":{"repo":"other/repo","pr":7,"head":"b111111111111111111111111111111111111111","runId":None,"tag":None,"checks":["CI"],"assets":[]},
+            "observation":{"head":"b111111111111111111111111111111111111111","checks":[]}, "digest":"old", "updatedAt":"earlier",
         }))
         _, output = self.run_json(
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01", "--state", str(state),
+            "--head", "b111111111111111111111111111111111111111", "--check", "CI", "--deadline", self.deadline(), "--interval", "0.01", "--state", str(state),
         )
         self.assertEqual(output["state"], "invalidated")
 
@@ -1137,7 +1184,7 @@ class WaitCommandsTest(unittest.TestCase):
         Path(f"{state}.lock").write_text("99999999:stale\n")
         _, output = self.run_json(
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--check", "CI", "--deadline", self.deadline(),
+            "--head", "b111111111111111111111111111111111111111", "--check", "CI", "--deadline", self.deadline(),
             "--interval", "0.01", "--state", str(state),
         )
         self.assertEqual(output["state"], "satisfied")
@@ -1146,27 +1193,27 @@ class WaitCommandsTest(unittest.TestCase):
     def test_review_convergence_uses_policy_and_thread_state(self) -> None:
         self.write_scenario()
         _, output = self.run_json(
-            REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--policy", str(self.policy),
+            REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--policy", str(self.policy),
         )
         self.assertEqual(output["state"], "satisfied")
         self.assertEqual(output["observation"]["unresolvedThreads"], 0)
 
     def test_review_wait_retries_racing_census_then_reports_changed_head(self) -> None:
-        self.write_scenario(reviewHeadsByRequest=["head-1", "head-2", "head-2", "head-2"])
+        self.write_scenario(reviewHeadsByRequest=["b111111111111111111111111111111111111111", "c222222222222222222222222222222222222222", "c222222222222222222222222222222222222222", "c222222222222222222222222222222222222222"])
         result, output = self.run_json(
-            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111",
             "--policy", str(self.policy), "--deadline", self.deadline(), "--interval", "0.01",
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(output["state"], "invalidated")
         self.assertEqual(output["metrics"]["retries"], 1)
         self.assertEqual(output["metrics"]["observations"], 1)
-        self.assertEqual(output["observation"]["head"], "head-2")
+        self.assertEqual(output["observation"]["head"], "c222222222222222222222222222222222222222")
 
     def review_wait(self, state: Path, seconds: float = 3) -> dict:
         deadline = (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat()
         return self.run_json(
-            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--policy", str(self.policy),
+            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--policy", str(self.policy),
             "--deadline", deadline, "--interval", "0.05", "--state", str(state),
         )[1]
 
@@ -1177,18 +1224,18 @@ class WaitCommandsTest(unittest.TestCase):
                 self.counter.unlink(missing_ok=True)
                 # Each observation reads the census twice; a lagging one also compares the heads.
                 self.write_scenario(
-                    reviewHeadsByRequest=["head-0"] * 6 + ["head-1"],
-                    compare={"head-0...head-1": {"status": status}},
+                    reviewHeadsByRequest=["a000000000000000000000000000000000000000"] * 6 + ["b111111111111111111111111111111111111111"],
+                    compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": status}},
                 )
                 output = self.review_wait(self.directory / f"{relation}.json")
                 self.assertEqual(output["state"], "satisfied", output["reason"])
-                self.assertEqual(output["observation"]["head"], "head-1")
+                self.assertEqual(output["observation"]["head"], "b111111111111111111111111111111111111111")
                 self.assertGreaterEqual(output["metrics"]["observations"], 3)
 
     def test_a_review_wait_reports_a_lagging_head_without_judging_its_reviews(self) -> None:
-        self.write_scenario(reviewHeadsByRequest=["head-0"], compare={"head-0...head-1": {"status": "ahead"}})
+        self.write_scenario(reviewHeadsByRequest=["a000000000000000000000000000000000000000"], compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}})
         _, inspected = self.run_json(
-            REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--policy", str(self.policy),
+            REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--policy", str(self.policy),
         )
         self.assertEqual(inspected["state"], "waiting")
         self.assertIn("an ancestor of the expected commit", inspected["reason"])
@@ -1204,11 +1251,11 @@ class WaitCommandsTest(unittest.TestCase):
         # GitHub answers two review censuses, one for each observation (the second at the deadline),
         # and refuses any more: each observation confirms the lagging head by its head alone.
         self.write_scenario(
-            reviewHeadsByRequest=["head-0"], compare={"head-0...head-1": {"status": "ahead"}}, reviewQueriesAllowed=2,
+            reviewHeadsByRequest=["a000000000000000000000000000000000000000"], compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}}, reviewQueriesAllowed=2,
         )
         deadline = (datetime.now(timezone.utc) + timedelta(seconds=0.3)).isoformat()
         output = self.run_json(
-            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--policy", str(self.policy),
+            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--policy", str(self.policy),
             "--deadline", deadline, "--interval", "5", "--state", str(self.directory / "review.json"),
         )[1]
         self.assertEqual(output["state"], "timed-out", output["reason"])
@@ -1217,8 +1264,8 @@ class WaitCommandsTest(unittest.TestCase):
     def test_a_review_wait_counts_the_expected_head_its_confirmation_saw(self) -> None:
         # The census sees head-0, its confirmation head-1, and then GitHub shows a force-push replacing head-1.
         self.write_scenario(
-            reviewHeadsByRequest=["head-0", "head-1", "head-2"],
-            compare={"head-0...head-1": {"status": "ahead"}, "head-2...head-1": {"status": "diverged"}},
+            reviewHeadsByRequest=["a000000000000000000000000000000000000000", "b111111111111111111111111111111111111111", "c222222222222222222222222222222222222222"],
+            compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}, "c222222222222222222222222222222222222222...b111111111111111111111111111111111111111": {"status": "diverged"}},
         )
         output = self.review_wait(self.directory / "review.json")
         self.assertEqual(output["state"], "invalidated", output["reason"])
@@ -1226,7 +1273,7 @@ class WaitCommandsTest(unittest.TestCase):
 
     def test_a_review_wait_classifies_another_head_when_github_refuses_its_census(self) -> None:
         self.write_scenario(
-            reviewHeadsByRequest=["head-0"], compare={"head-0...head-1": {"status": "ahead"}}, reviewQueriesAllowed=0,
+            reviewHeadsByRequest=["a000000000000000000000000000000000000000"], compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}}, reviewQueriesAllowed=0,
         )
         output = self.review_wait(self.directory / "review.json", seconds=0.3)
         self.assertEqual(output["state"], "timed-out", output["reason"])
@@ -1238,15 +1285,15 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(output["state"], "operational-error")
 
     def test_a_review_wait_classifies_another_head_when_its_census_times_out(self) -> None:
-        self.write_scenario(reviewHeadsByRequest=["head-2"], compare={"head-2...head-1": {"status": "behind"}}, reviewCensusTimesOut=True)
+        self.write_scenario(reviewHeadsByRequest=["c222222222222222222222222222222222222222"], compare={"c222222222222222222222222222222222222222...b111111111111111111111111111111111111111": {"status": "behind"}}, reviewCensusTimesOut=True)
         output = self.review_wait(self.directory / "review.json")
         self.assertEqual(output["state"], "invalidated", output["reason"])
         self.assertIn("a later commit than the expected one", output["reason"])
 
     def test_a_review_inspection_keeps_its_census_when_github_cannot_compare_the_heads(self) -> None:
-        self.write_scenario(reviewHeadsByRequest=["head-0"], compareUnavailableOnce=True)
+        self.write_scenario(reviewHeadsByRequest=["a000000000000000000000000000000000000000"], compareUnavailableOnce=True)
         result, inspected = self.run_json(
-            REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--policy", str(self.policy),
+            REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--policy", str(self.policy),
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(inspected["state"], "invalidated")
@@ -1256,21 +1303,21 @@ class WaitCommandsTest(unittest.TestCase):
 
     def test_a_review_wait_with_a_rejected_deadline_leaves_its_checkpoint_alone(self) -> None:
         state = self.directory / "review.json"
-        self.write_scenario(reviewHeadsByRequest=["head-0"], compare={"head-0...head-1": {"status": "ahead"}})
+        self.write_scenario(reviewHeadsByRequest=["a000000000000000000000000000000000000000"], compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}})
         self.review_wait(state, seconds=0.3)
         checkpoint = json.loads(state.read_text())
         checkpoint.pop("expectedHead", None)
         checkpoint["digest"] = "digest-of-head-0"
         state.write_text(json.dumps(checkpoint))
         result, output = self.run_json(
-            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--policy", str(self.policy),
+            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--policy", str(self.policy),
             "--deadline", "mistyped", "--state", str(state),
         )
         self.assertEqual((result.returncode, output["state"]), (2, "operational-error"))
         self.assertEqual(json.loads(state.read_text()), checkpoint)
 
     def test_a_review_wait_invalidates_a_later_push_at_once(self) -> None:
-        self.write_scenario(reviewHeadsByRequest=["head-2"], compare={"head-2...head-1": {"status": "behind"}})
+        self.write_scenario(reviewHeadsByRequest=["c222222222222222222222222222222222222222"], compare={"c222222222222222222222222222222222222222...b111111111111111111111111111111111111111": {"status": "behind"}})
         output = self.review_wait(self.directory / "review.json")
         self.assertEqual(output["state"], "invalidated")
         self.assertIn("a later commit than the expected one", output["reason"])
@@ -1278,7 +1325,7 @@ class WaitCommandsTest(unittest.TestCase):
 
     def test_a_review_wait_keeps_the_expected_head_seen_and_the_grace_in_its_checkpoint(self) -> None:
         state = self.directory / "review.json"
-        self.write_scenario(reviewHeadsByRequest=["head-0"], compare={"head-0...head-1": {"status": "ahead"}})
+        self.write_scenario(reviewHeadsByRequest=["a000000000000000000000000000000000000000"], compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}})
         first = self.review_wait(state, seconds=0.3)
         self.assertEqual(first["state"], "timed-out")
         since = first["observation"]["headLag"]["since"]
@@ -1293,7 +1340,7 @@ class WaitCommandsTest(unittest.TestCase):
         # A wait that saw the expected head gives a head that moves off it no grace, on a rerun too.
         state.unlink()
         self.counter.unlink(missing_ok=True)
-        self.write_scenario(reviewHeadsByRequest=["head-1"] * 2 + ["head-0"], compare={"head-0...head-1": {"status": "ahead"}})
+        self.write_scenario(reviewHeadsByRequest=["b111111111111111111111111111111111111111"] * 2 + ["a000000000000000000000000000000000000000"], compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}})
         scenario = json.loads(self.scenario.read_text())
         scenario["review"]["commits"]["nodes"][0]["commit"]["statusCheckRollup"]["contexts"]["nodes"] = [
             check("Automated review", "IN_PROGRESS", None)
@@ -1308,7 +1355,7 @@ class WaitCommandsTest(unittest.TestCase):
     def test_a_review_checkpoint_digest_of_another_head_is_no_baseline(self) -> None:
         # An earlier helper saved the later push's digest when it invalidated at once.
         state = self.directory / "review.json"
-        self.write_scenario(reviewHeadsByRequest=["head-0"], compare={"head-0...head-1": {"status": "ahead"}})
+        self.write_scenario(reviewHeadsByRequest=["a000000000000000000000000000000000000000"], compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}})
         self.review_wait(state, seconds=0.3)
         checkpoint = json.loads(state.read_text())
         checkpoint.pop("expectedHead", None)
@@ -1327,7 +1374,7 @@ class WaitCommandsTest(unittest.TestCase):
         }]}))
         _, output = self.run_json(
             REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--policy", str(self.policy),
+            "--head", "b111111111111111111111111111111111111111", "--policy", str(self.policy),
         )
         self.assertEqual(output["state"], "satisfied")
 
@@ -1340,7 +1387,7 @@ class WaitCommandsTest(unittest.TestCase):
         }]
         self.scenario.write_text(json.dumps(scenario))
         _, output = self.run_json(
-            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--policy", str(self.policy),
+            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--policy", str(self.policy),
             "--deadline", (datetime.now(timezone.utc) + timedelta(seconds=.08)).isoformat(), "--interval", "0.02",
         )
         self.assertEqual(output["state"], "judgment-required")
@@ -1363,7 +1410,7 @@ class WaitCommandsTest(unittest.TestCase):
             "id":"review-node-1", "databaseId":31,
             "author":{"login":"review-bot[bot]"}, "authorAssociation":"NONE",
             "state":"COMMENTED", "body":"Critical: unsafe state transition.",
-            "submittedAt":"2026-08-12T08:02:00Z", "commit":{"oid":"head-1"},
+            "submittedAt":"2026-08-12T08:02:00Z", "commit":{"oid":"b111111111111111111111111111111111111111"},
         }]
         scenario["review"]["comments"]["nodes"] = [{
             "id":"comment-node-1", "databaseId":32,
@@ -1375,7 +1422,7 @@ class WaitCommandsTest(unittest.TestCase):
 
         _, output = self.run_json(
             REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--policy", str(self.policy),
+            "--head", "b111111111111111111111111111111111111111", "--policy", str(self.policy),
         )
 
         self.assertEqual(output["state"], "judgment-required")
@@ -1400,7 +1447,7 @@ class WaitCommandsTest(unittest.TestCase):
                 scenario["review"]["reviews"]["nodes"] = [{
                     "id":"unknown-review", "body":"Falsy values disappear.",
                     "author":{"login":"unconfigured-bot[bot]"},
-                    "state":"COMMENTED", "commit":{"oid":"head-1"},
+                    "state":"COMMENTED", "commit":{"oid":"b111111111111111111111111111111111111111"},
                 }]
                 scenario["review"]["reviewThreads"]["nodes"] = [{
                     "id":"thread", "isResolved":False,
@@ -1413,7 +1460,7 @@ class WaitCommandsTest(unittest.TestCase):
                     self.policy.write_text(content)
                 result, output = self.run_json(
                     REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7",
-                    "--head", "head-1", "--policy", str(self.policy),
+                    "--head", "b111111111111111111111111111111111111111", "--policy", str(self.policy),
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(output["state"], "waiting")
@@ -1430,17 +1477,17 @@ class WaitCommandsTest(unittest.TestCase):
                 self.assertEqual(observation["unclassifiedTopLevelComments"][0]["body"], "Please handle rollback.")
 
     def test_missing_policy_never_turns_empty_feedback_into_success(self) -> None:
-        self.write_scenario(compare={"head-1...old-head": {"status": "behind"}})
+        self.write_scenario(compare={"b111111111111111111111111111111111111111...d333333333333333333333333333333333333333": {"status": "behind"}})
         self.policy.unlink()
         _, output = self.run_json(
             REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--policy", str(self.policy),
+            "--head", "b111111111111111111111111111111111111111", "--policy", str(self.policy),
         )
         self.assertEqual(output["state"], "waiting")
         self.assertEqual(output["observation"]["findingSurfaceCount"], 0)
         _, output = self.run_json(
             REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7",
-            "--head", "old-head", "--policy", str(self.policy),
+            "--head", "d333333333333333333333333333333333333333", "--policy", str(self.policy),
         )
         self.assertEqual(output["state"], "invalidated")
 
@@ -1450,7 +1497,7 @@ class WaitCommandsTest(unittest.TestCase):
         state = self.directory / "review.json"
         result, output = self.run_json(
             REVIEW, "wait", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--policy", str(self.policy),
+            "--head", "b111111111111111111111111111111111111111", "--policy", str(self.policy),
             "--deadline", self.deadline(), "--state", str(state),
         )
         self.assertNotEqual(result.returncode, 0)
@@ -1460,10 +1507,10 @@ class WaitCommandsTest(unittest.TestCase):
 
     def test_current_review_feedback_does_not_depend_on_automation_membership(self) -> None:
         for author, body, state, head, expected in (
-            ("maintainer", "Rollback fails.", "COMMENTED", "head-1", "judgment-required"),
-            ("other-bot[bot]", "Rollback fails.", "COMMENTED", "head-1", "judgment-required"),
-            ("maintainer", "", "CHANGES_REQUESTED", "head-1", "judgment-required"),
-            ("maintainer", "Previous review.", "COMMENTED", "old-head", "satisfied"),
+            ("maintainer", "Rollback fails.", "COMMENTED", "b111111111111111111111111111111111111111", "judgment-required"),
+            ("other-bot[bot]", "Rollback fails.", "COMMENTED", "b111111111111111111111111111111111111111", "judgment-required"),
+            ("maintainer", "", "CHANGES_REQUESTED", "b111111111111111111111111111111111111111", "judgment-required"),
+            ("maintainer", "Previous review.", "COMMENTED", "d333333333333333333333333333333333333333", "satisfied"),
         ):
             with self.subTest(author=author, body=body, head=head):
                 self.write_scenario()
@@ -1475,7 +1522,7 @@ class WaitCommandsTest(unittest.TestCase):
                 self.scenario.write_text(json.dumps(scenario))
                 _, output = self.run_json(
                     REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7",
-                    "--head", "head-1", "--policy", str(self.policy),
+                    "--head", "b111111111111111111111111111111111111111", "--policy", str(self.policy),
                 )
                 self.assertEqual(output["state"], expected)
                 if expected == "judgment-required":
@@ -1491,7 +1538,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.scenario.write_text(json.dumps(scenario))
         _, output = self.run_json(
             REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--policy", str(self.policy),
+            "--head", "b111111111111111111111111111111111111111", "--policy", str(self.policy),
         )
         self.assertEqual(output["state"], "judgment-required")
         self.assertEqual(output["observation"]["findingSurfaces"][0]["id"], "human-comment")
@@ -1503,12 +1550,12 @@ class WaitCommandsTest(unittest.TestCase):
         scenario = json.loads(self.scenario.read_text())
         scenario["review"]["reviews"]["nodes"] = [{
             "id":"human-review", "body":"First finding.", "state":"COMMENTED",
-            "author":{"login":"maintainer"}, "commit":{"oid":"head-1"},
+            "author":{"login":"maintainer"}, "commit":{"oid":"b111111111111111111111111111111111111111"},
         }]
         self.scenario.write_text(json.dumps(scenario))
         state = self.directory / "review.json"
         arguments = (
-            "wait", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+            "wait", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111",
             "--policy", str(self.policy), "--deadline", self.deadline(),
             "--interval", "0.01", "--state", str(state),
         )
@@ -1529,7 +1576,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.scenario.write_text(json.dumps(scenario))
         result, output = self.run_json(
             REVIEW, "inspect", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--policy", str(self.policy),
+            "--head", "b111111111111111111111111111111111111111", "--policy", str(self.policy),
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(output["state"], "waiting")
@@ -1539,18 +1586,18 @@ class WaitCommandsTest(unittest.TestCase):
         self.write_scenario()
         state = self.directory / "review.json"
         identity = {
-            "repo":"owner/repo", "pr":7, "head":"head-1",
+            "repo":"owner/repo", "pr":7, "head":"b111111111111111111111111111111111111111",
             "policyDigest": hashlib.sha256(
                 json.dumps(json.loads(self.policy.read_text()), sort_keys=True, separators=(",", ":")).encode()
             ).hexdigest(),
         }
         state.write_text(json.dumps({
             "schemaVersion":1, "kind":"review", "identity":identity,
-            "observation":{"head":"head-1"}, "digest":"prior", "updatedAt":"earlier",
+            "observation":{"head":"b111111111111111111111111111111111111111"}, "digest":"prior", "updatedAt":"earlier",
         }))
         _, output = self.run_json(
             REVIEW, "wait", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--policy", str(self.policy),
+            "--head", "b111111111111111111111111111111111111111", "--policy", str(self.policy),
             "--deadline", self.deadline(), "--interval", "0.01", "--state", str(state),
         )
         self.assertEqual(output["state"], "changed")
@@ -1565,7 +1612,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.scenario.write_text(json.dumps(scenario))
         state = self.directory / "review.json"
         self.run_json(
-            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+            REVIEW, "wait", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111",
             "--policy", str(self.policy), "--deadline",
             (datetime.now(timezone.utc) + timedelta(seconds=.05)).isoformat(),
             "--interval", "0.01", "--state", str(state),
@@ -1579,7 +1626,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.write_scenario(comments=[{"id":777,"body":f"already done {marker}"}])
         _, output = self.run_json(
             REVIEW, "reply", "--repo", "owner/repo", "--pr", "7", "--comment-id", "10",
-            "--head", "head-1", "--body", "Fixed with regression coverage.", "--operation-id", "op-1",
+            "--head", "b111111111111111111111111111111111111111", "--body", "Fixed with regression coverage.", "--operation-id", "op-1",
         )
         self.assertEqual(output["state"], "operational-error")
         self.assertIn("does not match", output["reason"])
@@ -1587,10 +1634,35 @@ class WaitCommandsTest(unittest.TestCase):
     def test_resolve_operation_is_explicit(self) -> None:
         self.write_scenario()
         _, output = self.run_json(
-            REVIEW, "resolve", "--repo", "owner/repo", "--pr", "7", "--head", "head-1", "--thread-id", "thread-1",
+            REVIEW, "resolve", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--thread-id", "thread-1",
         )
         self.assertEqual(output["state"], "satisfied")
         self.assertTrue(output["observation"]["resolved"])
+
+    def test_the_review_helper_refuses_a_short_head_before_github_is_asked(self) -> None:
+        self.write_scenario()
+        policy = ("--policy", str(self.policy))
+        for command, *extra in (
+            ("inspect", *policy),
+            ("wait", *policy, "--deadline", self.deadline(), "--state", str(self.directory / "review-short.json")),
+            ("reply", "--comment-id", "10", "--body", "Fixed.", "--operation-id", "op-short"),
+            ("resolve", "--thread-id", "thread-1"),
+        ):
+            with self.subTest(command=command):
+                result, output = self.run_json(
+                    REVIEW, command, "--repo", "owner/repo", "--pr", "7", "--head", "b111111", *extra,
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertEqual(output["state"], "operational-error")
+                self.assertIn("'b111111' is not a full commit SHA", output["reason"])
+                self.assertEqual(output["metrics"]["apiRequests"], 0)
+        self.assertFalse((self.directory / "review-short.json").exists())
+        _, output = self.run_json(
+            REVIEW, "resolve", "--repo", "owner/repo", "--pr", "7",
+            "--head", "B111111111111111111111111111111111111111", "--thread-id", "thread-1",
+        )
+        self.assertEqual(output["state"], "satisfied", output["reason"])
+        self.assertEqual(output["identity"]["head"], "b111111111111111111111111111111111111111")
 
     def short_deadline(self) -> str:
         return (datetime.now(timezone.utc) + timedelta(seconds=0.3)).isoformat()
@@ -1603,7 +1675,7 @@ class WaitCommandsTest(unittest.TestCase):
     def census_wait(self, *extra: str, deadline: str | None = None) -> tuple[subprocess.CompletedProcess[str], dict]:
         return self.run_json(
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--all-workflows", *extra,
+            "--head", "b111111111111111111111111111111111111111", "--all-workflows", *extra,
             "--deadline", deadline or self.deadline(), "--interval", "0.01",
         )
 
@@ -1740,16 +1812,16 @@ class WaitCommandsTest(unittest.TestCase):
         self.write_scenario()
         result, output = self.commit_wait("--all-workflows", head="ecaaad4")
         self.assertEqual(result.returncode, 2)
-        self.assertIn("needs its full SHA", output["reason"])
+        self.assertIn("'ecaaad4' is not a full commit SHA", output["reason"])
         result, output = self.commit_wait("--all-workflows")
         self.assertEqual(result.returncode, 2)
         self.assertIn(f"commit {self.MERGE} was not found in owner/repo", output["reason"])
         result, output = self.run_json(DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--all-workflows")
         self.assertEqual(result.returncode, 2)
         self.assertIn("without --pr a commit such as a merge commit", output["reason"])
-        result, output = self.run_json(DELIVERY, "inspect", "pr-merged", "--repo", "owner/repo", "--head", "head-1")
+        result, output = self.run_json(DELIVERY, "inspect", "pr-merged", "--repo", "owner/repo", "--head", "b111111111111111111111111111111111111111")
         self.assertEqual(output["reason"], "pr-merged requires --pr and --head")
-        result, output = self.run_json(DELIVERY, "inspect", "workflow-terminal", "--repo", "owner/repo", "--head", "head-1")
+        result, output = self.run_json(DELIVERY, "inspect", "workflow-terminal", "--repo", "owner/repo", "--head", "b111111111111111111111111111111111111111")
         self.assertEqual(output["reason"], "workflow-terminal requires --run-id")
 
     def deploy_status(self, context: str = "deploy", state: str = "SUCCESS") -> dict:
@@ -1832,14 +1904,14 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(output["state"], "satisfied", output["reason"])
         # A pull request's rollup is read the same way.
-        crowded = pull("head-1", filler)
+        crowded = pull("b111111111111111111111111111111111111111", filler)
         crowded["commits"]["nodes"][0]["commit"]["statusCheckRollup"]["contexts"]["pageInfo"] = {"hasNextPage": True, "endCursor": "c1"}
         self.write_scenario(pull=crowded, commitPages={
             "": {"contexts": {"nodes": filler, "totalCount": 101, "pageInfo": {"hasNextPage": True, "endCursor": "c1"}}},
             "c1": {"contexts": {"nodes": [deploy], "totalCount": 101, "pageInfo": {"hasNextPage": False}}},
         })
         _, output = self.run_json(DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-                                  "--head", "head-1", "--check", "deploy")
+                                  "--head", "b111111111111111111111111111111111111111", "--check", "deploy")
         self.assertEqual(output["state"], "satisfied", output["reason"])
 
     def test_an_incomplete_rollup_page_is_never_the_end_of_the_list(self) -> None:
@@ -1870,14 +1942,14 @@ class WaitCommandsTest(unittest.TestCase):
                     "jobs": [{"id": run_id * 10, "name": "job", "status": "completed", "conclusion": conclusion,
                               "completedAt": "2026-08-12T08:05:00Z"}]}
         state = self.directory / "census.json"
-        identity = {"repo": "owner/repo", "pr": 7, "head": "head-1", "runId": None, "tag": None, "checks": [], "assets": [],
+        identity = {"repo": "owner/repo", "pr": 7, "head": "b111111111111111111111111111111111111111", "runId": None, "tag": None, "checks": [], "assets": [],
                     "allWorkflows": True}
         # What the helper before this change saved: the dispatch run's failure in the census key.
         state.write_text(json.dumps({
             "schemaVersion": 1, "kind": "checks-terminal", "identity": identity,
-            "observation": {"head": "head-1", "runs": [run(101, "pull_request", "success", "PR"),
+            "observation": {"head": "b111111111111111111111111111111111111111", "runs": [run(101, "pull_request", "success", "PR"),
                                                        run(102, "repository_dispatch", "failure", "Gate")]},
-            "digest": stable_digest({"head": "head-1", "failures": ["Gate / job: failure", "Gate: failure"]}),
+            "digest": stable_digest({"head": "b111111111111111111111111111111111111111", "failures": ["Gate / job: failure", "Gate: failure"]}),
             "updatedAt": "2026-08-12T08:06:00Z",
         }))
         self.write_scenario(census=[census(
@@ -1964,23 +2036,23 @@ class WaitCommandsTest(unittest.TestCase):
         finally:
             sys.path.pop(0)
         state = self.directory / "named.json"
-        identity = {"repo": "owner/repo", "pr": 7, "head": "head-1", "runId": None, "tag": None, "checks": ["deploy"], "assets": []}
+        identity = {"repo": "owner/repo", "pr": 7, "head": "b111111111111111111111111111111111111111", "runId": None, "tag": None, "checks": ["deploy"], "assets": []}
         pending = {"name": "deploy", "status": "COMPLETED", "conclusion": "PENDING", "observedAt": "2026-08-12T08:00:00Z", "source": "status"}
         dispatched = {"name": "deploy", "status": "COMPLETED", "conclusion": "FAILURE", "completedAt": "2026-08-12T08:00:00Z",
                       "observedAt": "2026-08-12T08:00:00Z", "suite": 603, "source": "github-actions/7/repository_dispatch"}
         # What the helper before this change saved: the dispatch run's failed check in the key.
         state.write_text(json.dumps({
             "schemaVersion": 1, "kind": "checks-terminal", "identity": identity,
-            "observation": {"head": "head-1", "state": "OPEN", "merged": False, "mergedAt": None, "mergeCommit": None,
+            "observation": {"head": "b111111111111111111111111111111111111111", "state": "OPEN", "merged": False, "mergedAt": None, "mergeCommit": None,
                             "checks": [dispatched, pending]},
-            "digest": stable_digest({"head": "head-1", "nonSuccess": ["deploy"], "terminal": False}),
+            "digest": stable_digest({"head": "b111111111111111111111111111111111111111", "nonSuccess": ["deploy"], "terminal": False}),
             "expectedHead": {"seen": True, "since": None, "relation": "missing"},
             "updatedAt": "2026-08-12T08:06:00Z",
         }))
         status = {**self.deploy_status(state="PENDING")}
-        self.write_scenario(pull=pull("head-1", [status, check("deploy", "COMPLETED", "FAILURE", app="github-actions",
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [status, check("deploy", "COMPLETED", "FAILURE", app="github-actions",
                                                                event="repository_dispatch", suite_id=603, workflow=7)]))
-        _, output = self.run_json(DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+        _, output = self.run_json(DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111",
                                   "--check", "deploy", "--state", str(state), "--deadline", self.short_deadline(), "--interval", "0.05")
         self.assertEqual(output["state"], "timed-out", output["reason"])
 
@@ -1998,16 +2070,16 @@ class WaitCommandsTest(unittest.TestCase):
     def test_an_unnamed_untied_actions_check_holds_neither_a_merge_nor_a_named_wait(self) -> None:
         # GraphQL did not tie this Actions check to a workflow run, and the run listing has no run for its suite.
         untied = check("lint", "COMPLETED", "FAILURE", app="github-actions", suite_id=603)
-        merged = pull("head-1", [untied, self.deploy_status()], merged=True)
+        merged = pull("b111111111111111111111111111111111111111", [untied, self.deploy_status()], merged=True)
         self.write_scenario(pull=merged)
-        _, output = self.run_json(DELIVERY, "inspect", "pr-merged", "--repo", "owner/repo", "--pr", "7", "--head", "head-1")
+        _, output = self.run_json(DELIVERY, "inspect", "pr-merged", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111")
         self.assertEqual(output["state"], "satisfied", output["reason"])
-        _, output = self.run_json(DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+        _, output = self.run_json(DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111",
                                   "--check", "deploy")
         self.assertEqual(output["state"], "satisfied", output["reason"])
         self.assertFalse([entry for entry in self.rest_requests() if "/actions/runs?" in entry["args"][-1]])
         # A named one is looked up, and waits while its suite has no listed run.
-        _, output = self.run_json(DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+        _, output = self.run_json(DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111",
                                   "--check", "lint")
         self.assertIn("no workflow run is listed yet for check suite 603", output["reason"])
 
@@ -2018,23 +2090,23 @@ class WaitCommandsTest(unittest.TestCase):
         finally:
             sys.path.pop(0)
         state = self.directory / "untied.json"
-        identity = {"repo": "owner/repo", "pr": 7, "head": "head-1", "runId": None, "tag": None, "checks": ["deploy"], "assets": []}
+        identity = {"repo": "owner/repo", "pr": 7, "head": "b111111111111111111111111111111111111111", "runId": None, "tag": None, "checks": ["deploy"], "assets": []}
         pending = {"name": "deploy", "status": "COMPLETED", "conclusion": "PENDING", "observedAt": "2026-08-12T08:00:00Z", "source": "status"}
         untied = {"name": "deploy", "status": "COMPLETED", "conclusion": "FAILURE", "completedAt": "2026-08-12T08:00:00Z",
                   "observedAt": "2026-08-12T08:00:00Z", "suite": 603, "source": "github-actions"}
         state.write_text(json.dumps({
             "schemaVersion": 1, "kind": "checks-terminal", "identity": identity,
-            "observation": {"head": "head-1", "state": "OPEN", "merged": False, "mergedAt": None, "mergeCommit": None,
+            "observation": {"head": "b111111111111111111111111111111111111111", "state": "OPEN", "merged": False, "mergedAt": None, "mergeCommit": None,
                             "checks": [untied, pending]},
-            "digest": stable_digest({"head": "head-1", "nonSuccess": ["deploy"], "terminal": False}),
+            "digest": stable_digest({"head": "b111111111111111111111111111111111111111", "nonSuccess": ["deploy"], "terminal": False}),
             "expectedHead": {"seen": True, "since": None, "relation": "missing"},
             "updatedAt": "2026-08-12T08:06:00Z",
         }))
         dispatch = workflow_run(103, [], event="repository_dispatch", workflow_id=7, check_suite_id=603, conclusion="failure")
-        self.write_scenario(pull=pull("head-1", [self.deploy_status(state="PENDING"),
+        self.write_scenario(pull=pull("b111111111111111111111111111111111111111", [self.deploy_status(state="PENDING"),
                                                  check("deploy", "COMPLETED", "FAILURE", app="github-actions", suite_id=603)]),
                             census=[census(dispatch)])
-        _, output = self.run_json(DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "head-1",
+        _, output = self.run_json(DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7", "--head", "b111111111111111111111111111111111111111",
                                   "--check", "deploy", "--state", str(state), "--deadline", self.short_deadline(), "--interval", "0.05")
         self.assertEqual(output["state"], "timed-out", output["reason"])
 
@@ -2066,16 +2138,16 @@ class WaitCommandsTest(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(output["state"], "satisfied")
-        _, output = self.run_json(DELIVERY, "inspect", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "other")
+        _, output = self.run_json(DELIVERY, "inspect", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "e444444444444444444444444444444444444444")
         self.assertEqual(output["state"], "invalidated")
 
     def rest_budget_wait(self, remaining: int, reset_in: float, seconds: float = 1.0, **scenario: object) -> dict:
         reset = int(datetime.now(timezone.utc).timestamp() + reset_in)
-        running = {"id": 44, "head_sha": "head-1", "status": "in_progress", "conclusion": None, "html_url": "https://example.invalid/run"}
+        running = {"id": 44, "head_sha": "b111111111111111111111111111111111111111", "status": "in_progress", "conclusion": None, "html_url": "https://example.invalid/run"}
         self.write_scenario(**{"workflow": running, "coreRemaining": remaining, "coreReset": reset, **scenario})
         self.counter.unlink(missing_ok=True)
         _, output = self.run_json(
-            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "head-1",
+            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "b111111111111111111111111111111111111111",
             "--deadline", (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat(), "--interval", "0.05",
             "--state", str(self.directory / f"budget-{remaining}.json"),
         )
@@ -2132,7 +2204,7 @@ class WaitCommandsTest(unittest.TestCase):
         reset = int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
         self.write_scenario(restRateLimited=True, coreReset=reset)
         _, output = self.run_json(
-            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "head-1",
+            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "b111111111111111111111111111111111111111",
             "--deadline", (datetime.now(timezone.utc) + timedelta(seconds=1)).isoformat(), "--interval", "0.05",
         )
         self.assertEqual(output["state"], "timed-out")
@@ -2142,7 +2214,7 @@ class WaitCommandsTest(unittest.TestCase):
         reset = int(datetime.now(timezone.utc).timestamp()) + 2
         self.write_scenario(restRateLimited=True, coreReset=reset)
         _, output = self.run_json(
-            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "head-1",
+            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "b111111111111111111111111111111111111111",
             "--deadline", (datetime.now(timezone.utc) + timedelta(seconds=5)).isoformat(), "--interval", "0.05",
         )
         self.assertEqual(output["state"], "satisfied")
@@ -2151,7 +2223,7 @@ class WaitCommandsTest(unittest.TestCase):
     def test_a_retry_after_past_the_deadline_ends_the_wait_without_another_read(self) -> None:
         self.write_scenario(restSecondaryLimited=True)
         _, output = self.run_json(
-            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "head-1",
+            DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "b111111111111111111111111111111111111111",
             "--deadline", (datetime.now(timezone.utc) + timedelta(seconds=1)).isoformat(), "--interval", "30",
         )
         self.assertEqual(output["state"], "timed-out")
@@ -2204,7 +2276,7 @@ class WaitCommandsTest(unittest.TestCase):
 
     def test_a_resumed_wait_honours_the_hold_an_earlier_run_learned(self) -> None:
         state = str(self.directory / "held.json")
-        command = [DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "head-1",
+        command = [DELIVERY, "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44", "--head", "b111111111111111111111111111111111111111",
                    "--interval", "0.05", "--state", state, "--deadline"]
         self.write_scenario(restSecondaryLimited=True)
         _, first = self.run_json(*command, (datetime.now(timezone.utc) + timedelta(seconds=0.5)).isoformat())
@@ -2230,12 +2302,12 @@ class WaitCommandsTest(unittest.TestCase):
 
     def test_a_paced_wait_stops_promptly_when_asked(self) -> None:
         reset = int(datetime.now(timezone.utc).timestamp() + 3600)
-        running = {"id": 44, "head_sha": "head-1", "status": "in_progress", "conclusion": None, "html_url": "https://example.invalid/run"}
+        running = {"id": 44, "head_sha": "b111111111111111111111111111111111111111", "status": "in_progress", "conclusion": None, "html_url": "https://example.invalid/run"}
         # 1,100 left: the allowance paces the next observation minutes away, inside the deadline.
         self.write_scenario(workflow=running, coreRemaining=1_100, coreReset=reset)
         process = subprocess.Popen(
             [sys.executable, str(DELIVERY), "wait", "workflow-terminal", "--repo", "owner/repo", "--run-id", "44",
-             "--head", "head-1", "--deadline", (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat(),
+             "--head", "b111111111111111111111111111111111111111", "--deadline", (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat(),
              "--interval", "0.05", "--json"],
             cwd=self.directory, env=self.environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
         )
@@ -2253,7 +2325,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.write_scenario()
         result, output = self.run_json(
             DELIVERY, "wait", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--deadline", self.deadline(), "--interval", "0.01",
+            "--head", "b111111111111111111111111111111111111111", "--deadline", self.deadline(), "--interval", "0.01",
         )
         self.assertEqual(result.returncode, 2)
         self.assertEqual(output["state"], "operational-error")
@@ -2267,7 +2339,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.write_scenario(census=[partial])
         _, inspected = self.run_json(
             DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
-            "--pr", "7", "--head", "head-1", "--all-workflows",
+            "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--all-workflows",
         )
         self.assertEqual(inspected["state"], "waiting")
         # The census sequence, not a wall-clock deadline, bounds the wait: a
@@ -2396,7 +2468,7 @@ class WaitCommandsTest(unittest.TestCase):
                 else:
                     result, output = self.run_json(
                         DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
-                        "--pr", "7", "--head", "head-1", "--all-workflows",
+                        "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--all-workflows",
                     )
                 self.assertEqual(result.returncode, 0, result.stderr)
                 # Like success, only wait can confirm the census is stable.
@@ -2459,7 +2531,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.assertEqual(output["state"], "timed-out")
         _, output = self.run_json(
             DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
-            "--pr", "7", "--head", "head-1", "--all-workflows",
+            "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--all-workflows",
         )
         self.assertEqual(output["state"], "waiting")
         self.assertIn("waiting for the older run of the same workflow and event (101)", output["reason"])
@@ -2510,7 +2582,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.write_scenario(census=[census(*self.cancelled_duplicate(), active, replaced)])
         _, output = self.run_json(
             DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
-            "--pr", "7", "--head", "head-1", "--all-workflows",
+            "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--all-workflows",
         )
         self.assertEqual(output["state"], "waiting")
         self.assertIn("can be rerun once", output["reason"])
@@ -2522,7 +2594,7 @@ class WaitCommandsTest(unittest.TestCase):
         stale = check("build", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=502, workflow=9)
         fresh = check("build", "COMPLETED", "SUCCESS", app="github-actions", event="pull_request", suite_id=502, workflow=9)
         self.write_scenario(
-            pullsByRequest=[pull("head-1", [stale])] * 3 + [pull("head-1", [fresh])],
+            pullsByRequest=[pull("b111111111111111111111111111111111111111", [stale])] * 3 + [pull("b111111111111111111111111111111111111111", [fresh])],
             census=[census(older, passed)],
         )
         _, output = self.census_wait("--check", "build")
@@ -2543,7 +2615,7 @@ class WaitCommandsTest(unittest.TestCase):
     def test_a_failed_named_check_from_a_cancelled_duplicate_still_counts(self) -> None:
         # The rollup shows a failure the job census has not caught up with.
         self.write_scenario(
-            pull=pull("head-1", [check("build", "COMPLETED", "FAILURE", app="github-actions", event="pull_request", suite_id=502, workflow=9)]),
+            pull=pull("b111111111111111111111111111111111111111", [check("build", "COMPLETED", "FAILURE", app="github-actions", event="pull_request", suite_id=502, workflow=9)]),
             census=[census(*self.cancelled_duplicate())],
         )
         _, output = self.census_wait("--check", "build")
@@ -2571,7 +2643,7 @@ class WaitCommandsTest(unittest.TestCase):
         # No earlier attempt exists for the cancellation to be left from.
         running = workflow_run(103, [workflow_job(1002, "build-x", "in_progress", None, run_id=103)], status="in_progress", conclusion=None, workflow_id=10, name="Build", check_suite_id=503)
         self.write_scenario(
-            pull=pull("head-1", [check("build-x", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=503, workflow=10)]),
+            pull=pull("b111111111111111111111111111111111111111", [check("build-x", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=503, workflow=10)]),
             census=[census(running)],
         )
         _, output = self.census_wait("--check", "build-x")
@@ -2595,7 +2667,7 @@ class WaitCommandsTest(unittest.TestCase):
         finishing = workflow_run(102, [workflow_job(1001, "build", conclusion="cancelled", run_id=102)], status="in_progress", conclusion=None, workflow_id=9, check_suite_id=502)
         cancelled_check = check("build", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=502, workflow=9)
         self.write_scenario(
-            pull=pull("head-1", [cancelled_check]),
+            pull=pull("b111111111111111111111111111111111111111", [cancelled_check]),
             census=[census(running, finishing), census(*self.cancelled_duplicate())],
         )
         _, output = self.census_wait("--check", "build")
@@ -2607,7 +2679,7 @@ class WaitCommandsTest(unittest.TestCase):
         superseded = workflow_run(102, [workflow_job(1001, "lint", conclusion="cancelled", run_id=102)], status="in_progress", conclusion=None, workflow_id=9, check_suite_id=502)
         newest = workflow_run(103, [workflow_job(1002, "build", run_id=103)], workflow_id=9, check_suite_id=503)
         self.write_scenario(
-            pull=pull("head-1", [check("lint", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=502, workflow=9)]),
+            pull=pull("b111111111111111111111111111111111111111", [check("lint", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=502, workflow=9)]),
             census=[census(first, superseded, newest)],
         )
         _, output = self.census_wait("--check", "lint")
@@ -2618,7 +2690,7 @@ class WaitCommandsTest(unittest.TestCase):
         older = self.cancelled_duplicate()[0]
         passed = workflow_run(102, [workflow_job(1003, "build", run_id=102)], workflow_id=9, check_suite_id=502, attempt=2)
         self.write_scenario(
-            pull=pull("head-1", [check("shard-9", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=502, workflow=9)]),
+            pull=pull("b111111111111111111111111111111111111111", [check("shard-9", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=502, workflow=9)]),
             census=[census(older, passed)],
         )
         _, output = self.census_wait("--check", "shard-9")
@@ -2635,7 +2707,7 @@ class WaitCommandsTest(unittest.TestCase):
         # A running workflow's check failed before its job census shows it.
         running = workflow_run(103, [workflow_job(1002, "lint", "in_progress", None, run_id=103)], status="in_progress", conclusion=None, workflow_id=10, name="Lint", check_suite_id=503)
         self.write_scenario(
-            pull=pull("head-1", [check("lint", "COMPLETED", "FAILURE", app="github-actions", event="pull_request", suite_id=503, workflow=10)]),
+            pull=pull("b111111111111111111111111111111111111111", [check("lint", "COMPLETED", "FAILURE", app="github-actions", event="pull_request", suite_id=503, workflow=10)]),
             census=[census(*self.cancelled_duplicate(), running)],
         )
         _, output = self.census_wait("--check", "lint")
@@ -2649,7 +2721,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.write_scenario(census=[census(*self.cancelled_duplicate(), running)])
         _, output = self.run_json(
             DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
-            "--pr", "7", "--head", "head-1", "--all-workflows",
+            "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--all-workflows",
         )
         self.assertEqual(output["state"], "waiting")
         self.assertIn("can be rerun once the other 1 workflow runs", output["reason"])
@@ -2667,7 +2739,7 @@ class WaitCommandsTest(unittest.TestCase):
         cancelled_check = check("build", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=502, workflow=9)
         passed_check = check("build", "COMPLETED", "SUCCESS", app="github-actions", event="pull_request", suite_id=502, workflow=9)
         self.write_scenario(
-            pullsByRequest=[pull("head-1", [cancelled_check]), pull("head-1", [cancelled_check]), pull("head-1", [passed_check])],
+            pullsByRequest=[pull("b111111111111111111111111111111111111111", [cancelled_check]), pull("b111111111111111111111111111111111111111", [cancelled_check]), pull("b111111111111111111111111111111111111111", [passed_check])],
             census=[census(older, queued), census(older, queued), census(older, passed)],
         )
         _, output = self.census_wait("--check", "build")
@@ -2686,7 +2758,7 @@ class WaitCommandsTest(unittest.TestCase):
     def test_a_named_check_from_a_cancelled_duplicate_run_is_recoverable(self) -> None:
         # The run's jobs are also its check runs, numbered by its check suite.
         self.write_scenario(
-            pull=pull("head-1", [
+            pull=pull("b111111111111111111111111111111111111111", [
                 check("build", "COMPLETED", "SUCCESS", app="github-actions", event="pull_request", suite_id=501, workflow=9),
                 check("build", "COMPLETED", "CANCELLED", app="github-actions", event="pull_request", suite_id=502, workflow=9),
             ]),
@@ -2710,7 +2782,7 @@ class WaitCommandsTest(unittest.TestCase):
         self.write_scenario(census=[census(workflow_run(101, matrix_jobs(2)))])
         _, output = self.run_json(
             DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo",
-            "--pr", "7", "--head", "head-1", "--all-workflows",
+            "--pr", "7", "--head", "b111111111111111111111111111111111111111", "--all-workflows",
         )
         self.assertEqual(output["state"], "waiting")
         self.assertIn("stable", output["reason"])
@@ -2771,7 +2843,7 @@ class WaitCommandsTest(unittest.TestCase):
         )
         result, output = self.run_json(
             DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--check", "CI", "--rest-page-size", "5",
+            "--head", "b111111111111111111111111111111111111111", "--check", "CI", "--rest-page-size", "5",
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(output["state"], "satisfied")
@@ -2789,7 +2861,7 @@ class WaitCommandsTest(unittest.TestCase):
         )
         result, output = self.run_json(
             DELIVERY, "inspect", "checks-terminal", "--repo", "owner/repo", "--pr", "7",
-            "--head", "head-1", "--all-workflows", "--check", "CI", "--rest-page-size", "5",
+            "--head", "b111111111111111111111111111111111111111", "--all-workflows", "--check", "CI", "--rest-page-size", "5",
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(output["metrics"]["rateLimitFallbacks"], 1)
@@ -2852,23 +2924,23 @@ class WaitCommandsTest(unittest.TestCase):
 
     def test_all_workflows_invalidates_a_changed_head(self) -> None:
         self.write_scenario(
-            pull=pull("head-2", []), census=[census(workflow_run(101, matrix_jobs(2)))],
-            compare={"head-2...head-1": {"status": "behind"}},
+            pull=pull("c222222222222222222222222222222222222222", []), census=[census(workflow_run(101, matrix_jobs(2)))],
+            compare={"c222222222222222222222222222222222222222...b111111111111111111111111111111111111111": {"status": "behind"}},
         )
         _, output = self.census_wait()
         self.assertEqual(output["state"], "invalidated")
-        self.assertEqual(output["observation"]["head"], "head-2")
+        self.assertEqual(output["observation"]["head"], "c222222222222222222222222222222222222222")
         self.assertIn("a later commit than the expected one", output["reason"])
 
     def test_all_workflows_waits_for_github_to_move_the_head_after_a_push(self) -> None:
         self.write_scenario(
-            pullsByRequest=[pull("head-0", [])] * 4 + [pull("head-1", [])],
+            pullsByRequest=[pull("a000000000000000000000000000000000000000", [])] * 4 + [pull("b111111111111111111111111111111111111111", [])],
             census=[census(workflow_run(101, matrix_jobs(2)))],
-            compare={"head-0...head-1": {"status": "ahead"}},
+            compare={"a000000000000000000000000000000000000000...b111111111111111111111111111111111111111": {"status": "ahead"}},
         )
         _, output = self.census_wait()
         self.assertEqual(output["state"], "satisfied", output["reason"])
-        self.assertEqual(output["observation"]["head"], "head-1")
+        self.assertEqual(output["observation"]["head"], "b111111111111111111111111111111111111111")
 
     def test_all_workflows_refuses_a_pull_request_without_a_head(self) -> None:
         self.write_scenario(pull={"headRefOid": None}, census=[census(workflow_run(101, matrix_jobs(2)))])
@@ -2882,7 +2954,7 @@ class WaitCommandsTest(unittest.TestCase):
         missing_run_total = dict(good, runPages=[{"workflow_runs": good["runPages"][0]["workflow_runs"]}])
         missing_runs = dict(good, runPages=[{"total_count": 1}])
         missing_job_total = dict(good, jobPages={"101": [{"jobs": matrix_jobs(2)}]})
-        other_head = census(workflow_run(101, matrix_jobs(2), head="head-2"))
+        other_head = census(workflow_run(101, matrix_jobs(2), head="c222222222222222222222222222222222222222"))
         for name, state in (
             ("missing run total", missing_run_total),
             ("missing runs", missing_runs),
@@ -2915,14 +2987,14 @@ class WaitCommandsTest(unittest.TestCase):
     def test_all_workflows_also_gates_named_third_party_checks(self) -> None:
         workflows = census(workflow_run(101, matrix_jobs(2)))
         self.write_scenario(
-            pull=pull("head-1", [check("Vercel", "IN_PROGRESS", None)]),
+            pull=pull("b111111111111111111111111111111111111111", [check("Vercel", "IN_PROGRESS", None)]),
             census=[workflows],
         )
         _, output = self.census_wait("--check", "Vercel", deadline=self.short_deadline())
         self.assertEqual(output["state"], "timed-out")
         self.reset_census()
         self.write_scenario(
-            pull=pull("head-1", [check("Vercel", "COMPLETED", "SUCCESS")]),
+            pull=pull("b111111111111111111111111111111111111111", [check("Vercel", "COMPLETED", "SUCCESS")]),
             census=[workflows],
         )
         _, output = self.census_wait("--check", "Vercel")
@@ -2931,7 +3003,7 @@ class WaitCommandsTest(unittest.TestCase):
 
     def test_all_workflows_reports_a_failed_named_check_at_once_and_once(self) -> None:
         self.write_scenario(
-            pull=pull("head-1", [
+            pull=pull("b111111111111111111111111111111111111111", [
                 check("Preview", "IN_PROGRESS", None),
                 check("Review", "COMPLETED", "FAILURE", "2026-08-12T08:00:00Z"),
                 check("Review", "COMPLETED", "FAILURE", "2026-08-12T08:00:02Z"),

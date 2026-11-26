@@ -78,6 +78,7 @@ from kgr_github import (  # noqa: E402
     TransientError,
     WaitError,
     classify_head,
+    commit_sha,
     emit,
     parse_time,
     positive_interval,
@@ -1642,7 +1643,7 @@ def parse_heads(values: list[str], prs: list[int]) -> dict[int, str]:
         pr = positive_pr(int(number))
         if pr in heads:
             raise WaitError(f"duplicate --head for PR #{pr}")
-        heads[pr] = head
+        heads[pr] = commit_sha(head, f"--head for PR #{pr}")
     if set(heads) != set(prs):
         raise WaitError("--head entries must match every --pr exactly")
     return heads
@@ -1687,6 +1688,7 @@ def main() -> int:
             args.interval = positive_interval(args.interval)
             gh.reserve = CORE_RESERVE
             deadline = parse_time(args.deadline)
+            args.head = commit_sha(args.head)
             identity = {"repo": args.repo, "prs": [args.pr], "heads": {args.pr: args.head}}
             holder = {"repo": args.repo, "pr": args.pr, "head": args.head}
             lock = acquire_lock(root, owner, holder, deadline, args.interval)

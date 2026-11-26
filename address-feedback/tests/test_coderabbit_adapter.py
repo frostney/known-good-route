@@ -2356,6 +2356,24 @@ class TriggerLockTest(unittest.TestCase):
         self.assertEqual((lock["apiRoot"], lock["owner"], lock["holder"]["pr"]), (GITHUB_API, "quillworks", 58))
         self.assertEqual((gh.root_reads, gh.posts), (1, []))
 
+    def test_a_short_head_is_refused_and_an_uppercase_one_is_the_same_commit(self) -> None:
+        gh = owned("duetto#55", "quillworks", now="2026-09-25T19:50:00Z")
+        head = gh.head_at("quillworks/duetto", 55)
+        for argv in (
+            ("status", "--repo", "quillworks/duetto", "--pr", "55", "--head", f"55={head[:7]}", "--json"),
+            ("run", "--repo", "quillworks/duetto", "--pr", "55", "--head", head[:7],
+             "--deadline", "2026-09-25T20:50:00Z", "--interval", "1", "--json"),
+        ):
+            with self.subTest(command=argv[0]):
+                code, output = main(gh, *argv)
+                self.assertEqual((code, output["state"]), (2, "operational-error"))
+                self.assertIn(f"{head[:7]!r} is not a full commit SHA", output["reason"])
+        self.assertFalse(ADAPTER.lock_status(GITHUB_API, "quillworks")["held"])
+        self.assertEqual(gh.posts, [])
+        code, upper = main(gh, "status", "--repo", "quillworks/duetto", "--pr", "55", "--head", f"55={head.upper()}", "--json")
+        code, lower = main(gh, "status", "--repo", "quillworks/duetto", "--pr", "55", "--head", f"55={head}", "--json")
+        self.assertEqual((code, upper["state"], upper["identity"]), (0, lower["state"], lower["identity"]))
+
     def test_a_run_for_another_owner_does_not_wait_for_the_held_lock(self) -> None:
         gh = owned("duetto#55", "marlowe-labs", now="2026-09-25T19:50:00Z")
         head = gh.head_at("marlowe-labs/duetto", 55)

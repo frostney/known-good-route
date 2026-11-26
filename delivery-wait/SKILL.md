@@ -119,7 +119,11 @@ python3 scripts/delivery_wait.py wait checks-terminal --repo <owner/repo> \
 
 `wait <kind> --repo <owner/repo> --deadline <ISO 8601> [--interval <seconds>]
 [--state <path>] [--json]` runs a wait; `inspect <kind>` takes the
-same identity flags without `--deadline`, `--interval`, or `--state`. Each kind
+same identity flags without `--deadline`, `--interval`, or `--state`. Every
+`<sha>` is a commit's full SHA: GitHub lists runs only by it, and a short SHA
+matches no run without an error, so the helper refuses one, in every kind and
+before asking GitHub, and names the full SHA's source (`git rev-parse`). An
+uppercase full SHA names the same commit and is read in lowercase. Each kind
 requires its own identity flags, which `--help` also lists:
 
 - `checks-terminal`: `--head <sha>`, and `--all-workflows`, one
@@ -127,7 +131,7 @@ requires its own identity flags, which `--help` also lists:
   exits with an operational error instead of waiting. With `--pr <number>` it
   waits on that pull request's head. Without `--pr` it waits on the commit
   itself, such as a merge commit on the default branch after a merge:
-  `--head` is then the full commit SHA, which `pr-merged` reports as
+  `--head` is then the commit SHA, which `pr-merged` reports as
   `mergeCommit`, and `--check` reads that commit's own checks and statuses.
   A commit has no head to move, so the head-lag rules below do not apply.
   - `--all-workflows` needs no check names. It finds every GitHub Actions

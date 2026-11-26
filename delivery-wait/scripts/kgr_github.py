@@ -48,6 +48,30 @@ SECONDARY_BACKOFF = 60
 # A retry for a follow-up read that is already due waits this long first.
 FOLLOW_UP_RETRY = 5
 NEXT_LINK = re.compile(r'<([^>]+)>\s*;\s*rel="next"')
+# A commit's full object ID: SHA-1, or SHA-256 in a repository that uses it.
+FULL_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
+
+
+def commit_sha(value: str, flag: str = "--head") -> str:
+    """VALUE as GitHub names a commit: its full object ID, in lowercase.
+
+    GitHub lists workflow runs only by a commit's full SHA: a short one
+    matches no run and gets no error, so a wait would see a commit with
+    no CI. It also reports a pull request's, run's or tag's commit in full
+    and lowercase, which a short or uppercase SHA never equals. Git accepts
+    either case, so an uppercase full SHA is the same commit; anything
+    shorter is refused here, before GitHub is asked.
+    """
+    if not value.strip():
+        # An empty variable must not turn an optional check into no check.
+        raise WaitError(f"{flag} is empty: pass the commit SHA, or leave {flag} out where it is optional")
+    if not FULL_SHA.fullmatch(value.lower()):
+        raise WaitError(
+            f"{flag} {value!r} is not a full commit SHA: GitHub matches commits by their full 40-character "
+            f"SHA (64 in a SHA-256 repository), and a short one matches no workflow run; pass the full SHA, "
+            f"such as `git rev-parse {value}` prints"
+        )
+    return value.lower()
 
 
 def utc_now() -> str:

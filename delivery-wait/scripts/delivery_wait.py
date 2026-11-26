@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 import time
 from pathlib import Path
@@ -27,6 +26,7 @@ from kgr_github import (  # noqa: E402
     TransientError,
     WaitError,
     classify_head,
+    commit_sha,
     default_state_path,
     emit,
     load_state,
@@ -94,7 +94,6 @@ UNBOUND_EVENTS = {
     "label", "milestone", "page_build", "public", "repository_dispatch", "schedule",
     "status", "watch", "workflow_run",
 }
-FULL_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 
 
 TAG_QUERY = """
@@ -1123,9 +1122,6 @@ def parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = parser().parse_args()
     metrics = Metrics(time.monotonic())
-    if args.kind == "checks-terminal" and args.pr is None and args.head and FULL_SHA.fullmatch(args.head.lower()):
-        # Git accepts a SHA in either case; GitHub lists runs by the lowercase one.
-        args.head = args.head.lower()
     identity = {
         "repo": args.repo,
         "pr": args.pr,
@@ -1139,9 +1135,10 @@ def main() -> int:
         # Added only when requested, so existing checkpoints keep their identity.
         identity["allWorkflows"] = True
     try:
-        if args.head is not None and not args.head.strip():
-            # An empty variable must not turn an optional check into no check.
-            raise WaitError("--head is empty: pass the commit SHA, or leave --head out where it is optional")
+        if args.head is not None:
+            # Every kind compares --head with a commit GitHub names in full,
+            # so a short SHA is refused before any wait starts on it.
+            args.head = identity["head"] = commit_sha(args.head)
         # wake-at observes nothing external, so it keeps no checkpoint.
         state_path = (
             None
@@ -1183,11 +1180,6 @@ def main() -> int:
                 if not args.check and not args.all_workflows:
                     raise WaitError(
                         "checks-terminal requires --all-workflows or at least one --check context"
-                    )
-                if not pull_request and not FULL_SHA.fullmatch(args.head):
-                    raise WaitError(
-                        "checks-terminal without --pr waits on a commit and needs its full SHA; "
-                        f"{args.head!r} is not one"
                     )
             if args.kind == "checks-terminal" and not pull_request:
                 if args.all_workflows:
