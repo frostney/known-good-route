@@ -24,6 +24,7 @@ from kgr_github import (  # noqa: E402
     StateLock,
     WaitError,
     classify_head,
+    commit_sha,
     default_state_path,
     emit,
     parse_time,
@@ -434,6 +435,9 @@ def main() -> int:
     metrics = Metrics(time.monotonic())
     identity = {"repo": args.repo, "pr": getattr(args, "pr", None), "head": getattr(args, "head", None)}
     try:
+        # The pull request's head is compared with --head as GitHub names it,
+        # in full and lowercase, so a short SHA is refused before any read.
+        args.head = identity["head"] = commit_sha(args.head)
         gh = Gh(metrics)
         if args.command in {"inspect", "wait"}:
             try:

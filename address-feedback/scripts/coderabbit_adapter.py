@@ -78,6 +78,7 @@ from kgr_github import (  # noqa: E402
     TransientError,
     WaitError,
     classify_head,
+    commit_sha,
     emit,
     parse_time,
     positive_interval,
@@ -1642,7 +1643,7 @@ def parse_heads(values: list[str], prs: list[int]) -> dict[int, str]:
         pr = positive_pr(int(number))
         if pr in heads:
             raise WaitError(f"duplicate --head for PR #{pr}")
-        heads[pr] = head
+        heads[pr] = commit_sha(head, f"--head for PR #{pr}")
     if set(heads) != set(prs):
         raise WaitError("--head entries must match every --pr exactly")
     return heads
@@ -1669,24 +1670,29 @@ def main() -> int:
     identity: dict[str, Any] = {"repo": args.repo, "prs": getattr(args, "pr", None)}
     try:
         owner = lock_owner(args.repo)
-        gh = Gh(metrics)
-        root = api_root(gh)
+        # Every argument, each head's full SHA included, is checked before
+        # the first GitHub request, so a malformed one costs no read.
         if args.command == "status":
             prs = [positive_pr(value) for value in args.pr]
             if len(set(prs)) != len(prs):
                 raise WaitError("--pr values must be unique")
             heads = parse_heads(args.head, prs)
             identity["heads"] = heads
+        else:
+            args.pr = positive_pr(args.pr)
+            args.interval = positive_interval(args.interval)
+            deadline = parse_time(args.deadline)
+            args.head = commit_sha(args.head)
+        gh = Gh(metrics)
+        root = api_root(gh)
+        if args.command == "status":
             lock = lock_status(root, owner)
             value = observation(gh, args.repo, prs, heads, time.time(), clock=time.time) | {"lock": lock}
             metrics.observations += 1
             state, reason = aggregate_status(value)
             output = envelope("status", state, identity, value, metrics, reason)
         else:
-            args.pr = positive_pr(args.pr)
-            args.interval = positive_interval(args.interval)
             gh.reserve = CORE_RESERVE
-            deadline = parse_time(args.deadline)
             identity = {"repo": args.repo, "prs": [args.pr], "heads": {args.pr: args.head}}
             holder = {"repo": args.repo, "pr": args.pr, "head": args.head}
             lock = acquire_lock(root, owner, holder, deadline, args.interval)
